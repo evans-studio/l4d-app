@@ -1,6 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/lib/contexts/AuthContext';
 import { Button } from '@/components/ui/primitives/Button';
 import { ResponsiveLogo } from '@/components/ui/primitives/Logo';
 import { Container, Section } from '@/components/layout/templates/PageLayout';
@@ -11,17 +13,23 @@ import { VehicleDetails } from '@/components/booking/steps/VehicleDetails';
 import { AddressCollection } from '@/components/booking/steps/AddressCollection';
 import { TimeSlotSelection } from '@/components/booking/steps/TimeSlotSelection';
 import { PricingConfirmation } from '@/components/booking/steps/PricingConfirmation';
-import { ArrowLeft, Phone } from 'lucide-react';
+import { ArrowLeft, Phone, User, LogIn } from 'lucide-react';
 
 const TOTAL_STEPS = 5;
 
 export default function BookingPage(): React.JSX.Element {
+  const router = useRouter();
+  const { isAuthenticated, profile, isLoading: authLoading } = useAuth();
+  
   const [bookingData, setBookingData] = useState<BookingFlowData>({
     currentStep: 1,
     totalSteps: TOTAL_STEPS,
   });
 
   const [isLoading, setIsLoading] = useState<boolean>(false);
+
+  // The auth state will be passed to individual components
+  // which can use the user profile information as needed
 
   const updateBookingData = (updates: Partial<BookingFlowData>): void => {
     setBookingData(prev => ({ ...prev, ...updates }));
@@ -122,9 +130,44 @@ export default function BookingPage(): React.JSX.Element {
                 </div>
               </div>
             </div>
-            <div className="hidden md:flex items-center gap-2 text-text-secondary">
-              <Phone className="w-4 h-4 text-brand-400" />
-              <span>Need help? Call 07123 456789</span>
+            <div className="flex items-center gap-4">
+              {/* Authentication Status */}
+              {!authLoading && (
+                <div className="flex items-center gap-2">
+                  {isAuthenticated && profile ? (
+                    <div className="flex items-center gap-2 text-text-secondary">
+                      <User className="w-4 h-4 text-brand-400" />
+                      <span className="hidden sm:inline">Welcome, {profile.first_name}</span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => router.push('/dashboard')}
+                        className="text-brand-400 hover:text-brand-300"
+                      >
+                        Dashboard
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => router.push('/auth/login')}
+                        leftIcon={<LogIn className="w-4 h-4" />}
+                        className="text-brand-400 hover:text-brand-300"
+                      >
+                        <span className="hidden sm:inline">Sign In</span>
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
+              
+              {/* Help Contact */}
+              <div className="hidden md:flex items-center gap-2 text-text-secondary">
+                <Phone className="w-4 h-4 text-brand-400" />
+                <span>Need help? Call 07123 456789</span>
+              </div>
             </div>
           </div>
         </Container>

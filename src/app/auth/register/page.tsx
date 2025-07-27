@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/contexts/AuthContext'
 import { Button } from '@/components/ui/primitives/Button'
@@ -11,7 +11,7 @@ import Link from 'next/link'
 
 export default function RegisterPage() {
   const router = useRouter()
-  const { register } = useAuth()
+  const { register, profile, isAuthenticated, isLoading: authLoading } = useAuth()
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -26,6 +26,17 @@ export default function RegisterPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (!authLoading && isAuthenticated && profile) {
+      if (profile.role === 'admin' || profile.role === 'super_admin') {
+        router.push('/admin')
+      } else {
+        router.push('/dashboard')
+      }
+    }
+  }, [authLoading, isAuthenticated, profile, router])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -56,15 +67,15 @@ export default function RegisterPage() {
       })
 
       if (result.success) {
-        // Redirect to customer dashboard (new users are customers by default)
-        router.push('/dashboard')
+        // The useEffect will handle the redirect based on profile
+        // No need to manually redirect here
       } else {
         setError(result.error || 'Registration failed. Please try again.')
+        setIsLoading(false)
       }
     } catch (error) {
       console.error('Registration error:', error)
       setError('Something went wrong. Please try again.')
-    } finally {
       setIsLoading(false)
     }
   }

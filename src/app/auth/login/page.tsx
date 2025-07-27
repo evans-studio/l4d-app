@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/contexts/AuthContext'
 import { Button } from '@/components/ui/primitives/Button'
@@ -11,7 +11,7 @@ import Link from 'next/link'
 
 export default function LoginPage() {
   const router = useRouter()
-  const { login, profile } = useAuth()
+  const { login, profile, isAuthenticated, isLoading: authLoading } = useAuth()
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -19,6 +19,17 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (!authLoading && isAuthenticated && profile) {
+      if (profile.role === 'admin' || profile.role === 'super_admin') {
+        router.push('/admin')
+      } else {
+        router.push('/dashboard')
+      }
+    }
+  }, [authLoading, isAuthenticated, profile, router])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -29,15 +40,15 @@ export default function LoginPage() {
       const result = await login(formData.email, formData.password)
       
       if (result.success) {
-        // Redirect to dashboard immediately - the AuthContext will handle profile loading
-        router.push('/dashboard')
+        // The useEffect will handle the redirect based on profile
+        // No need to manually redirect here
       } else {
         setError(result.error || 'Login failed. Please try again.')
+        setIsLoading(false)
       }
     } catch (error) {
       console.error('Login error:', error)
       setError('Something went wrong. Please try again.')
-    } finally {
       setIsLoading(false)
     }
   }

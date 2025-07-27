@@ -119,21 +119,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = async (email: string, password: string) => {
     try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
       })
 
-      const data = await response.json()
+      if (error) {
+        console.error('Login error:', error)
+        return { success: false, error: error.message || 'Login failed' }
+      }
 
-      if (data.success) {
-        // Manually refresh the session to ensure auth state is updated
-        await supabase.auth.refreshSession()
+      if (data.user) {
         // The auth state change listener will handle setting user/profile
         return { success: true }
       } else {
-        return { success: false, error: data.error?.message || data.error || 'Login failed' }
+        return { success: false, error: 'Login failed' }
       }
     } catch (error) {
       console.error('Login error:', error)
@@ -143,21 +143,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const register = async (registerData: RegisterData) => {
     try {
-      const response = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(registerData),
+      // First, create the user with Supabase auth
+      const { data, error } = await supabase.auth.signUp({
+        email: registerData.email,
+        password: registerData.password,
+        options: {
+          data: {
+            first_name: registerData.firstName,
+            last_name: registerData.lastName,
+            phone: registerData.phone || '',
+          },
+        },
       })
 
-      const data = await response.json()
+      if (error) {
+        console.error('Registration error:', error)
+        return { success: false, error: error.message || 'Registration failed' }
+      }
 
-      if (data.success) {
-        // Manually refresh the session to ensure auth state is updated
-        await supabase.auth.refreshSession()
+      if (data.user) {
+        // Create the user profile
+        const { error: profileError } = await supabase
+          .from('user_profiles')
+          .insert({
+            id: data.user.id,
+            email: registerData.email,
+            first_name: registerData.firstName,
+            last_name: registerData.lastName,
+            phone: registerData.phone || '',
+            role: 'customer',
+          })
+
+        if (profileError) {
+          console.error('Profile creation error:', profileError)
+          // Continue anyway - the profile creation can be handled by triggers
+        }
+
         // The auth state change listener will handle setting user/profile
         return { success: true }
       } else {
-        return { success: false, error: data.error?.message || data.error || 'Registration failed' }
+        return { success: false, error: 'Registration failed' }
       }
     } catch (error) {
       console.error('Registration error:', error)
@@ -167,7 +192,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = async () => {
     try {
-      await fetch('/api/auth/logout', { method: 'POST' })
+      await supabase.auth.signOut()
       // The auth state change listener will handle clearing user/profile
     } catch (error) {
       console.error('Logout error:', error)
