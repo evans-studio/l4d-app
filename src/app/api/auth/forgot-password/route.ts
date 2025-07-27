@@ -16,6 +16,8 @@ export async function POST(request: NextRequest) {
 
     const supabase = await createClient()
 
+    console.log('Forgot password request for:', email.toLowerCase())
+    
     // Check if user exists
     const { data: existingUser, error: userError } = await supabase
       .from('user_profiles')
@@ -23,13 +25,18 @@ export async function POST(request: NextRequest) {
       .eq('email', email.toLowerCase())
       .single()
 
+    console.log('User lookup result:', { existingUser: !!existingUser, userError: !!userError })
+
     // Don't reveal if user exists or not for security
     if (userError || !existingUser) {
+      console.log('User not found or error occurred, skipping email send')
       // Still return success to prevent email enumeration
       return ApiResponseHandler.success({
         message: 'If an account with this email exists, you will receive a password reset link.'
       })
     }
+
+    console.log('User found, proceeding with password reset for:', existingUser.email)
 
     // Generate reset token
     const resetToken = crypto.randomBytes(32).toString('hex')
@@ -53,9 +60,12 @@ export async function POST(request: NextRequest) {
       return ApiResponseHandler.serverError('Failed to generate reset token')
     }
 
+    console.log('Stored reset token in database, now sending email...')
+
     // Send reset email
     try {
       const resetUrl = `${process.env.NEXT_PUBLIC_APP_URL}/auth/reset-password?token=${resetToken}`
+      console.log('Reset URL generated:', resetUrl)
       
       // Generate email template
       const emailTemplate = EmailService.generatePasswordReset({
@@ -64,8 +74,12 @@ export async function POST(request: NextRequest) {
         email
       })
 
+      console.log('Generated email template, now calling EmailService.sendEmail...')
+
       // Send the email
       const emailSent = await EmailService.sendEmail(email, emailTemplate)
+      
+      console.log('EmailService.sendEmail returned:', emailSent)
       
       if (!emailSent) {
         console.error('Failed to send password reset email to:', email)
