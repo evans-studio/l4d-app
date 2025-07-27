@@ -28,32 +28,27 @@ export default function RegisterPage() {
     setError('')
 
     try {
-      // Create user account
+      // Create user account with email confirmation
       const { data, error } = await supabase.auth.signUp({
         email: formData.email,
-        password: formData.password
+        password: formData.password,
+        options: {
+          emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL || 'https://l4d-app.vercel.app'}/auth/verify-email`,
+          data: {
+            first_name: formData.firstName,
+            last_name: formData.lastName,
+            phone: formData.phone,
+            role: 'customer'
+          }
+        }
       })
 
       if (error) {
         setError(error.message)
       } else if (data.user) {
-        // Create user profile
-        const { error: profileError } = await supabase
-          .from('user_profiles')
-          .insert({
-            id: data.user.id,
-            email: formData.email,
-            first_name: formData.firstName,
-            last_name: formData.lastName,
-            phone: formData.phone,
-            role: 'customer'
-          })
-
-        if (profileError) {
-          setError('Account created but profile setup failed. Please contact support.')
-        } else {
-          setSuccess(true)
-        }
+        // Profile will be created automatically via database trigger when email is confirmed
+        // For now, just show success and redirect to verification
+        router.push(`/auth/verify-email?email=${encodeURIComponent(formData.email)}`)
       }
     } catch (error) {
       setError('Registration failed. Please try again.')

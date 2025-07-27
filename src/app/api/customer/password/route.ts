@@ -1,7 +1,10 @@
 import { NextRequest } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { supabase } from '@/lib/supabase'
 import { ApiResponseHandler } from '@/lib/api/response'
 import { z } from 'zod'
+
+// Force Node.js runtime
+export const runtime = 'nodejs'
 
 const passwordUpdateSchema = z.object({
   currentPassword: z.string().min(1, 'Current password is required'),
@@ -10,14 +13,14 @@ const passwordUpdateSchema = z.object({
 
 export async function PUT(request: NextRequest) {
   try {
-    const supabase = await createClient()
+    // Get current user session
+    const { data: { session }, error: authError } = await supabase.auth.getSession()
     
-    // Get current user
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    
-    if (authError || !user) {
+    if (authError || !session?.user) {
       return ApiResponseHandler.unauthorized('Authentication required')
     }
+
+    const user = session.user
 
     // Validate request body
     const body = await request.json()

@@ -1,6 +1,7 @@
 'use client'
 
 import { useRouter, usePathname } from 'next/navigation'
+import { useAuth } from '@/lib/auth/AuthContext'
 import { 
   HomeIcon, 
   CalendarIcon, 
@@ -26,6 +27,7 @@ interface AdminSidebarProps {
 export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
   const router = useRouter()
   const pathname = usePathname()
+  const { signOut } = useAuth()
 
   const navigation = [
     {
@@ -96,10 +98,12 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
 
   const handleLogout = async () => {
     try {
-      await fetch('/api/auth/logout', { method: 'POST' })
+      await signOut()
       router.push('/')
     } catch (error) {
       console.error('Logout failed:', error)
+      // Still redirect even if signOut fails
+      router.push('/')
     }
   }
 

@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useAuth } from '@/lib/auth/AuthContext'
 import { Button } from '@/components/ui/primitives/Button'
 import { 
   MenuIcon, 
@@ -21,13 +22,16 @@ interface DashboardHeaderProps {
 export function DashboardHeader({ onMenuClick, userType }: DashboardHeaderProps) {
   const router = useRouter()
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
+  const { signOut } = useAuth()
 
   const handleLogout = async () => {
     try {
-      await fetch('/api/auth/logout', { method: 'POST' })
+      await signOut()
       router.push('/')
     } catch (error) {
       console.error('Logout failed:', error)
+      // Still redirect even if signOut fails
+      router.push('/')
     }
   }
 

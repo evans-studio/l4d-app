@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/primitives/Button'
 import { CustomerLayout } from '@/components/layout/templates/CustomerLayout'
 import { CustomerRoute } from '@/components/TempProtectedRoute'
+import { useAuth } from '@/lib/auth/AuthContext'
 import { 
   User, 
   Mail, 
@@ -38,10 +39,7 @@ interface NotificationSettings {
 }
 
 export default function AccountSettingsPage() {
-  // TODO: Replace with simple auth
-  const user = null;
-  const profile = null;
-  const refreshProfile = () => {};
+  const { user, profile, refreshProfile } = useAuth()
   const [activeTab, setActiveTab] = useState<'profile' | 'password' | 'notifications' | 'privacy'>('profile')
   const [isLoading, setIsLoading] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
