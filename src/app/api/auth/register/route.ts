@@ -38,16 +38,15 @@ export async function POST(request: NextRequest) {
       hasUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL
     })
 
-    // Create auth user
-    const { data: authData, error: authError } = await supabase.auth.signUp({
+    // Create auth user using admin API (bypasses email confirmation)
+    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email: body.email,
       password: body.password,
-      options: {
-        data: {
-          first_name: body.firstName,
-          last_name: body.lastName,
-          phone: body.phone,
-        },
+      email_confirm: true, // Skip email confirmation
+      user_metadata: {
+        first_name: body.firstName,
+        last_name: body.lastName,
+        phone: body.phone,
       },
     })
 
