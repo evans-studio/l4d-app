@@ -18,17 +18,20 @@ function ResetPasswordPageContent() {
   const [isSuccess, setIsSuccess] = useState(false)
   const [error, setError] = useState('')
   const [tokenError, setTokenError] = useState('')
+  const [resetToken, setResetToken] = useState('')
   
   const router = useRouter()
   const searchParams = useSearchParams()
 
   useEffect(() => {
-    // Check if we have the required hash parameters
-    const hash = window.location.hash
-    if (!hash.includes('access_token') || !hash.includes('type=recovery')) {
+    // Check if we have the reset token from URL params
+    const token = searchParams.get('token')
+    if (!token) {
       setTokenError('Invalid or expired reset link. Please request a new password reset.')
+    } else {
+      setResetToken(token)
     }
-  }, [])
+  }, [searchParams])
 
   const validatePassword = (pass: string) => {
     if (pass.length < 8) {
@@ -66,20 +69,19 @@ function ResetPasswordPageContent() {
     }
 
     try {
-      // Update the user's password
-      const { error: updateError } = await supabase.auth.updateUser({
-        password: password
+      // Call our custom password reset API
+      const response = await fetch('/api/auth/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          token: resetToken,
+          password: password 
+        }),
       })
 
-      if (updateError) {
-        console.error('Password update error:', updateError)
-        
-        if (updateError.message.includes('Invalid token')) {
-          setError('Your reset link has expired. Please request a new password reset.')
-        } else {
-          setError(updateError.message || 'Failed to update password. Please try again.')
-        }
-      } else {
+      const data = await response.json()
+
+      if (data.success) {
         console.log('Password updated successfully')
         setIsSuccess(true)
         
@@ -87,6 +89,14 @@ function ResetPasswordPageContent() {
         setTimeout(() => {
           router.push('/auth/login?message=password-updated')
         }, 3000)
+      } else {
+        if (data.error?.code === 'TOKEN_EXPIRED') {
+          setError('Your reset link has expired. Please request a new password reset.')
+        } else if (data.error?.code === 'INVALID_TOKEN') {
+          setError('Invalid reset link. Please request a new password reset.')
+        } else {
+          setError(data.error?.message || 'Failed to update password. Please try again.')
+        }
       }
     } catch (error) {
       console.error('Reset password error:', error)
