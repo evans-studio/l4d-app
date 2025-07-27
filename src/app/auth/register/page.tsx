@@ -28,26 +28,27 @@ export default function RegisterPage() {
     setError('')
 
     try {
-      // Use our custom registration API endpoint
-      const response = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: formData.email,
-          password: formData.password,
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          phone: formData.phone
-        })
+      console.log('Starting registration with Supabase direct signup...')
+      
+      // Use Supabase direct signup (should trigger database function)
+      const { data, error } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: {
+          data: {
+            first_name: formData.firstName,
+            last_name: formData.lastName,
+            phone: formData.phone,
+            role: 'customer'
+          }
+        }
       })
 
-      const result = await response.json()
-
-      if (!result.success) {
-        setError(result.error?.message || 'Registration failed')
-      } else {
+      if (error) {
+        console.error('Supabase signup error:', error)
+        setError(error.message)
+      } else if (data.user) {
+        console.log('Signup successful:', data.user.id)
         // Registration successful - redirect to login
         setSuccess(true)
         setTimeout(() => {
