@@ -24,6 +24,9 @@ export async function POST(request: NextRequest) {
       return ApiResponseHandler.serverError('Email service not configured')
     }
 
+    console.log('RESEND_API_KEY exists:', process.env.RESEND_API_KEY ? 'YES' : 'NO')
+    console.log('RESEND_API_KEY length:', process.env.RESEND_API_KEY?.length || 0)
+
     console.log('=== SENDING EMAIL VIA RESEND ===')
     console.log('To:', to)
     console.log('Subject:', subject)
