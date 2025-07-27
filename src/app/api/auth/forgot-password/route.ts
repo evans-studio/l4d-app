@@ -163,16 +163,16 @@ export async function POST(request: NextRequest) {
         })
 
         if (emailError) {
-          console.error('Resend email error:', emailError)
-          return ApiResponseHandler.error(
-            'Failed to send reset email', 
-            'EMAIL_SEND_FAILED',
-            500
-          )
+          console.error('❌ Resend email API error:', emailError)
+          console.error('Error details:', JSON.stringify(emailError, null, 2))
+          throw new Error(`Resend API error: ${emailError.message || 'Unknown error'}`)
         }
 
-        console.log('Password reset email sent successfully via Resend to:', email)
+        console.log('✅ Password reset email sent successfully via Resend')
         console.log('Email ID:', data?.id)
+        console.log('Recipient:', email)
+        console.log('Sender:', process.env.NEXT_PUBLIC_FROM_EMAIL || 'zell@love4detailing.co.uk')
+        console.log('Full Resend response:', JSON.stringify(data, null, 2))
         
       } catch (customEmailError) {
         console.error('Custom email system failed:', customEmailError)
