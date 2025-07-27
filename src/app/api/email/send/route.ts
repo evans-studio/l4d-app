@@ -27,13 +27,13 @@ export async function POST(request: NextRequest) {
     console.log('=== SENDING EMAIL VIA RESEND ===')
     console.log('To:', to)
     console.log('Subject:', subject)
-    console.log('From: Love 4 Detailing <zell@love4detailing.com>')
+    console.log('From: Love 4 Detailing <onboarding@resend.dev>')
     console.log('===============================')
 
     try {
       // Send email using Resend
       const { data, error } = await resend.emails.send({
-        from: 'Love 4 Detailing <zell@love4detailing.com>',
+        from: 'Love 4 Detailing <onboarding@resend.dev>',
         to: [to],
         subject,
         html,
