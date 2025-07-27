@@ -37,12 +37,15 @@ function LoginPageContent() {
     setError('')
 
     try {
+      console.log('Starting login process...')
+      
       const { data, error } = await supabase.auth.signInWithPassword({
         email: formData.email,
         password: formData.password
       })
 
       if (error) {
+        console.error('Auth error:', error)
         // Handle specific authentication errors
         if (error.message.includes('Invalid login credentials')) {
           setError('Invalid email or password. Please check your credentials and try again.')
@@ -54,20 +57,38 @@ function LoginPageContent() {
           setError(error.message)
         }
       } else if (data.user) {
+        console.log('Auth successful, user ID:', data.user.id)
+        
         // Check user role to redirect appropriately
-        const { data: profile } = await supabase
-          .from('user_profiles')
-          .select('role')
-          .eq('id', data.user.id)
-          .single()
+        try {
+          const { data: profile, error: profileError } = await supabase
+            .from('user_profiles')
+            .select('role')
+            .eq('id', data.user.id)
+            .single()
 
-        if (profile?.role === 'admin' || profile?.role === 'super_admin') {
-          router.push('/admin')
-        } else {
-          router.push('/dashboard')
+          if (profileError) {
+            console.error('Profile lookup error:', profileError)
+            setError('Unable to load user profile. Please try again.')
+            return
+          }
+
+          console.log('Profile found:', profile)
+          
+          if (profile?.role === 'admin' || profile?.role === 'super_admin') {
+            console.log('Redirecting to admin dashboard')
+            router.push('/admin')
+          } else {
+            console.log('Redirecting to customer dashboard')
+            router.push('/dashboard')
+          }
+        } catch (profileError) {
+          console.error('Profile fetch exception:', profileError)
+          setError('Unable to load user profile. Please try again.')
         }
       }
     } catch (error) {
+      console.error('Login exception:', error)
       setError('Login failed. Please try again.')
     } finally {
       setIsLoading(false)
