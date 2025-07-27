@@ -28,29 +28,34 @@ export default function RegisterPage() {
     setError('')
 
     try {
-      // Create user account with email confirmation
-      const { data, error } = await supabase.auth.signUp({
-        email: formData.email,
-        password: formData.password,
-        options: {
-          emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL || 'https://l4d-app.vercel.app'}/auth/verify-email`,
-          data: {
-            first_name: formData.firstName,
-            last_name: formData.lastName,
-            phone: formData.phone,
-            role: 'customer'
-          }
-        }
+      // Use our custom registration API endpoint
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          phone: formData.phone
+        })
       })
 
-      if (error) {
-        setError(error.message)
-      } else if (data.user) {
-        // Profile will be created automatically via database trigger when email is confirmed
-        // For now, just show success and redirect to verification
-        router.push(`/auth/verify-email?email=${encodeURIComponent(formData.email)}`)
+      const result = await response.json()
+
+      if (!result.success) {
+        setError(result.error?.message || 'Registration failed')
+      } else {
+        // Registration successful - redirect to login
+        setSuccess(true)
+        setTimeout(() => {
+          router.push('/auth/login?message=Account created successfully')
+        }, 2000)
       }
     } catch (error) {
+      console.error('Registration error:', error)
       setError('Registration failed. Please try again.')
     } finally {
       setIsLoading(false)
