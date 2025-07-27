@@ -77,11 +77,11 @@ function LoginPageContent() {
           
           console.log('Login successful, redirecting based on role...')
           
-          if (profile?.role === 'admin' || profile?.role === 'super_admin') {
-            router.push('/admin')
-          } else {
-            router.push('/dashboard')
-          }
+          const redirectPath = (profile?.role === 'admin' || profile?.role === 'super_admin') ? '/admin' : '/dashboard'
+          console.log('Redirecting to:', redirectPath)
+          
+          // Force a hard refresh to ensure authentication state is properly set
+          window.location.assign(redirectPath)
         } catch (profileError) {
           console.error('Profile fetch exception:', profileError)
           setError('Unable to load user profile. Please try again.')
