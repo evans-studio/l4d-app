@@ -30,9 +30,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
 
   const refreshProfile = async () => {
-    if (!user) return
+    if (!user) {
+      console.log('No user available for profile refresh')
+      return
+    }
 
     try {
+      console.log('Fetching profile for user:', user.id)
       const { data, error } = await supabase
         .from('user_profiles')
         .select('*')
@@ -41,7 +45,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (error) {
         console.error('Error fetching profile:', error)
+        // If profile doesn't exist, create it
+        if (error.code === 'PGRST116') {
+          console.log('Profile not found, user may need profile creation')
+        }
       } else {
+        console.log('Profile fetched successfully:', data)
         setProfile(data)
       }
     } catch (error) {
@@ -63,12 +72,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Get initial session
     const getInitialSession = async () => {
       try {
+        console.log('Getting initial session...')
         const { data: { session }, error } = await supabase.auth.getSession()
         
         if (error) {
           console.error('Session error:', error)
         } else if (session?.user) {
+          console.log('Initial session found for user:', session.user.id)
           setUser(session.user)
+        } else {
+          console.log('No initial session found')
         }
       } catch (error) {
         console.error('Initial session error:', error)

@@ -80,8 +80,8 @@ function LoginPageContent() {
           const redirectPath = (profile?.role === 'admin' || profile?.role === 'super_admin') ? '/admin' : '/dashboard'
           console.log('Redirecting to:', redirectPath)
           
-          // Force a hard refresh to ensure authentication state is properly set
-          window.location.assign(redirectPath)
+          // Use Next.js router to maintain auth state
+          router.push(redirectPath)
         } catch (profileError) {
           console.error('Profile fetch exception:', profileError)
           setError('Unable to load user profile. Please try again.')
