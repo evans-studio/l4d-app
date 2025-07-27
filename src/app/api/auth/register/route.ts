@@ -38,31 +38,44 @@ export async function POST(request: NextRequest) {
       hasUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL
     })
 
-    // Create auth user and immediately confirm email
-    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+    // Try regular signUp first (works better with login)
+    const { data: authData, error: authError } = await supabase.auth.signUp({
       email: body.email,
       password: body.password,
-      email_confirm: true,
-      user_metadata: {
-        first_name: body.firstName,
-        last_name: body.lastName,
-        phone: body.phone,
+      options: {
+        data: {
+          first_name: body.firstName,
+          last_name: body.lastName,
+          phone: body.phone,
+        },
       },
-      app_metadata: {
-        provider: 'email',
-        providers: ['email']
-      }
     })
 
-    if (authError) {
-      if (authError.message.includes('already registered')) {
+    // If signUp fails due to email confirmation, try admin create as fallback
+    if (authError && authError.message.includes('confirmation')) {
+      console.log('SignUp failed due to email confirmation, trying admin create...')
+      const { data: adminData, error: adminError } = await supabase.auth.admin.createUser({
+        email: body.email,
+        password: body.password,
+        email_confirm: true,
+        user_metadata: {
+          first_name: body.firstName,
+          last_name: body.lastName,
+          phone: body.phone,
+        },
+      })
+      
+      if (adminError) {
         return ApiResponseHandler.error(
-          'An account with this email already exists',
-          'EMAIL_ALREADY_EXISTS',
-          409
+          'Registration failed',
+          'REGISTRATION_FAILED',
+          400,
+          adminError.message
         )
       }
       
+      authData = adminData
+    } else if (authError) {
       return ApiResponseHandler.error(
         'Registration failed',
         'REGISTRATION_FAILED',
