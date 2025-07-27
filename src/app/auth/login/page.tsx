@@ -75,12 +75,21 @@ function LoginPageContent() {
 
           console.log('Profile found:', profile)
           
+          // Wait a bit for session to be set in cookies
+          console.log('Waiting for session to be established...')
+          
           if (profile?.role === 'admin' || profile?.role === 'super_admin') {
             console.log('Redirecting to admin dashboard')
-            router.push('/admin')
+            setTimeout(() => {
+              console.log('Executing redirect to admin...')
+              window.location.href = '/admin'
+            }, 1000)
           } else {
             console.log('Redirecting to customer dashboard')
-            router.push('/dashboard')
+            setTimeout(() => {
+              console.log('Executing redirect to dashboard...')
+              window.location.href = '/dashboard'
+            }, 1000)
           }
         } catch (profileError) {
           console.error('Profile fetch exception:', profileError)
