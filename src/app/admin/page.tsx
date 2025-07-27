@@ -11,7 +11,12 @@ import {
   TrendingUpIcon,
   ClockIcon,
   PlusIcon,
-  AlertCircleIcon
+  AlertCircleIcon,
+  CheckCircleIcon,
+  XCircleIcon,
+  EyeIcon,
+  EditIcon,
+  MoreHorizontalIcon
 } from 'lucide-react'
 
 interface AdminStats {
@@ -29,6 +34,7 @@ interface RecentBooking {
   id: string
   booking_reference: string
   customer_name: string
+  customer_email: string
   scheduled_date: string
   start_time: string
   status: 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled'
@@ -39,418 +45,450 @@ interface RecentBooking {
   vehicle: {
     make: string
     model: string
+    year?: number
   }
   address: {
+    address_line_1: string
     city: string
     postal_code: string
   }
+  created_at: string
 }
 
 const statusConfig = {
   pending: {
     label: 'Pending',
-    color: 'text-[var(--warning)]',
-    bgColor: 'bg-[var(--warning-bg)]',
-    borderColor: 'border-[var(--warning)]'
+    color: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+    icon: ClockIcon
   },
   confirmed: {
     label: 'Confirmed',
-    color: 'text-[var(--success)]',
-    bgColor: 'bg-[var(--success-bg)]',
-    borderColor: 'border-[var(--success)]'
+    color: 'bg-blue-100 text-blue-800 border-blue-200',
+    icon: CheckCircleIcon
   },
   in_progress: {
     label: 'In Progress',
-    color: 'text-[var(--info)]',
-    bgColor: 'bg-[var(--info-bg)]',
-    borderColor: 'border-[var(--info)]'
+    color: 'bg-purple-100 text-purple-800 border-purple-200',
+    icon: ClockIcon
   },
   completed: {
     label: 'Completed',
-    color: 'text-[var(--success)]',
-    bgColor: 'bg-[var(--success-bg)]',
-    borderColor: 'border-[var(--success)]'
+    color: 'bg-green-100 text-green-800 border-green-200',
+    icon: CheckCircleIcon
   },
   cancelled: {
     label: 'Cancelled',
-    color: 'text-[var(--error)]',
-    bgColor: 'bg-[var(--error-bg)]',
-    borderColor: 'border-[var(--error)]'
+    color: 'bg-red-100 text-red-800 border-red-200',
+    icon: XCircleIcon
   }
 }
 
-export default function AdminDashboardPage() {
+export default function AdminDashboard() {
   const router = useRouter()
   const [stats, setStats] = useState<AdminStats | null>(null)
   const [recentBookings, setRecentBookings] = useState<RecentBooking[]>([])
-  const [todaysBookings, setTodaysBookings] = useState<RecentBooking[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState('')
 
   useEffect(() => {
-    const fetchAdminData = async () => {
-      try {
-        // Fetch admin stats
-        const statsResponse = await fetch('/api/admin/stats')
-        const statsData = await statsResponse.json()
-        
-        if (statsData.success) {
-          setStats(statsData.data)
-        }
-
-        // Fetch recent bookings
-        const bookingsResponse = await fetch('/api/admin/bookings/recent')
-        const bookingsData = await bookingsResponse.json()
-        
-        if (bookingsData.success) {
-          setRecentBookings(bookingsData.data)
-        }
-
-        // Fetch today's bookings
-        const todayResponse = await fetch('/api/admin/bookings/today')
-        const todayData = await todayResponse.json()
-        
-        if (todayData.success) {
-          setTodaysBookings(todayData.data)
-        }
-      } catch (error) {
-        console.error('Failed to fetch admin data:', error)
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    fetchAdminData()
+    loadDashboardData()
   }, [])
 
-  const formatTime = (time: string) => {
-    const [hours, minutes] = time.split(':')
+  const loadDashboardData = async () => {
+    try {
+      setIsLoading(true)
+      setError('')
+
+      // Load stats and recent bookings in parallel
+      const [statsResponse, bookingsResponse] = await Promise.all([
+        fetch('/api/admin/stats'),
+        fetch('/api/admin/bookings/recent')
+      ])
+
+      if (!statsResponse.ok || !bookingsResponse.ok) {
+        throw new Error('Failed to load dashboard data')
+      }
+
+      const [statsData, bookingsData] = await Promise.all([
+        statsResponse.json(),
+        bookingsResponse.json()
+      ])
+
+      if (statsData.success) {
+        setStats(statsData.data)
+      }
+
+      if (bookingsData.success) {
+        setRecentBookings(bookingsData.data.bookings || [])
+      }
+
+    } catch (error) {
+      console.error('Dashboard data error:', error)
+      setError('Failed to load dashboard data')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleBookingAction = async (bookingId: string, action: 'confirm' | 'cancel' | 'complete') => {
+    try {
+      const response = await fetch(`/api/admin/bookings/${bookingId}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: action === 'confirm' ? 'confirmed' : action === 'cancel' ? 'cancelled' : 'completed' })
+      })
+
+      if (response.ok) {
+        // Reload the data to reflect changes
+        loadDashboardData()
+      }
+    } catch (error) {
+      console.error('Status update error:', error)
+    }
+  }
+
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr)
+    return date.toLocaleDateString('en-GB', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric'
+    })
+  }
+
+  const formatTime = (timeStr: string) => {
+    const [hours, minutes] = timeStr.split(':')
     const hour = parseInt(hours || '0')
     const ampm = hour >= 12 ? 'PM' : 'AM'
     const displayHour = hour % 12 || 12
     return `${displayHour}:${minutes || '00'} ${ampm}`
   }
 
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr)
-    return date.toLocaleDateString('en-US', {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric'
-    })
-  }
-
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[var(--bg-primary)] flex items-center justify-center">
-        <div className="animate-spin w-8 h-8 border-4 border-[var(--primary)] border-t-transparent rounded-full"></div>
-      </div>
+      <AdminLayout>
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-purple"></div>
+        </div>
+      </AdminLayout>
     )
   }
 
   return (
     <AdminLayout>
-      <div className="max-w-7xl mx-auto">
+      <div className="space-y-8">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8">
+        <div className="flex justify-between items-start">
           <div>
-            <h1 className="text-3xl font-bold text-[var(--text-primary)]">
-              Admin Dashboard
-            </h1>
-            <p className="text-[var(--text-secondary)]">
-              Manage your detailing business
+            <h1 className="text-2xl font-bold text-text-primary">Admin Dashboard</h1>
+            <p className="text-text-secondary mt-2">
+              Overview of your business performance and recent activities
             </p>
           </div>
-          
-          <div className="flex gap-3">
-            <Button
-              onClick={() => router.push('/admin/bookings')}
-              variant="outline"
-              className="flex items-center gap-2"
-            >
-              <CalendarIcon className="w-4 h-4" />
-              Manage Bookings
-            </Button>
-            <Button
-              onClick={() => router.push('/admin/time-slots')}
-              className="flex items-center gap-2"
-            >
-              <PlusIcon className="w-4 h-4" />
-              Add Time Slots
-            </Button>
-          </div>
+          <Button 
+            onClick={() => router.push('/admin/bookings')}
+            className="flex items-center space-x-2"
+          >
+            <PlusIcon className="w-4 h-4" />
+            <span>Manage Bookings</span>
+          </Button>
         </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {/* Total Bookings */}
-          <div className="bg-[var(--surface-secondary)] rounded-lg p-6 border border-[var(--border-secondary)]">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-[var(--text-secondary)] text-sm mb-1">Total Bookings</p>
-                <p className="text-2xl font-bold text-[var(--text-primary)]">
-                  {stats?.totalBookings || 0}
-                </p>
-                <p className="text-[var(--text-muted)] text-xs">
-                  {stats?.pendingBookings || 0} pending
-                </p>
-              </div>
-              <div className="bg-[var(--surface-tertiary)] rounded-lg p-3">
-                <CalendarIcon className="w-6 h-6 text-[var(--primary)]" />
-              </div>
-            </div>
+        {error && (
+          <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-800">
+            {error}
           </div>
+        )}
 
-          {/* Monthly Revenue */}
-          <div className="bg-[var(--surface-secondary)] rounded-lg p-6 border border-[var(--border-secondary)]">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-[var(--text-secondary)] text-sm mb-1">Monthly Revenue</p>
-                <p className="text-2xl font-bold text-[var(--text-primary)]">
-                  £{stats?.monthlyRevenue || 0}
-                </p>
-                <p className="text-[var(--text-muted)] text-xs">
-                  £{stats?.totalRevenue || 0} total
-                </p>
-              </div>
-              <div className="bg-[var(--surface-tertiary)] rounded-lg p-3">
-                <DollarSignIcon className="w-6 h-6 text-[var(--primary)]" />
-              </div>
-            </div>
-          </div>
-
-          {/* Active Customers */}
-          <div className="bg-[var(--surface-secondary)] rounded-lg p-6 border border-[var(--border-secondary)]">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-[var(--text-secondary)] text-sm mb-1">Active Customers</p>
-                <p className="text-2xl font-bold text-[var(--text-primary)]">
-                  {stats?.activeCustomers || 0}
-                </p>
-                <p className="text-[var(--text-muted)] text-xs">
-                  {stats?.totalCustomers || 0} total
-                </p>
-              </div>
-              <div className="bg-[var(--surface-tertiary)] rounded-lg p-3">
-                <UsersIcon className="w-6 h-6 text-[var(--primary)]" />
-              </div>
-            </div>
-          </div>
-
-          {/* Completion Rate */}
-          <div className="bg-[var(--surface-secondary)] rounded-lg p-6 border border-[var(--border-secondary)]">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-[var(--text-secondary)] text-sm mb-1">Completion Rate</p>
-                <p className="text-2xl font-bold text-[var(--text-primary)]">
-                  {stats?.totalBookings ? Math.round((stats.completedBookings / stats.totalBookings) * 100) : 0}%
-                </p>
-                <p className="text-[var(--text-muted)] text-xs">
-                  {stats?.completedBookings || 0} completed
-                </p>
-              </div>
-              <div className="bg-[var(--surface-tertiary)] rounded-lg p-3">
-                <TrendingUpIcon className="w-6 h-6 text-[var(--primary)]" />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Today's Schedule */}
-          <div className="bg-[var(--surface-secondary)] rounded-lg border border-[var(--border-secondary)]">
-            <div className="p-6 border-b border-[var(--border-secondary)]">
-              <h2 className="text-xl font-semibold text-[var(--text-primary)] flex items-center gap-2">
-                <ClockIcon className="w-5 h-5 text-[var(--primary)]" />
-                Today&apos;s Schedule
-              </h2>
-            </div>
-            
-            <div className="p-6">
-              {todaysBookings.length === 0 ? (
-                <div className="text-center py-8">
-                  <CalendarIcon className="w-12 h-12 text-[var(--text-muted)] mx-auto mb-4" />
-                  <p className="text-[var(--text-secondary)]">No bookings scheduled for today</p>
+        {/* Stats Cards */}
+        {stats && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="bg-surface-secondary rounded-lg border border-border-primary p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-text-secondary text-sm font-medium">Total Bookings</p>
+                  <p className="text-2xl font-bold text-text-primary">{stats.totalBookings}</p>
                 </div>
-              ) : (
-                <div className="space-y-4">
-                  {todaysBookings.map((booking) => {
-                    const status = statusConfig[booking.status]
-                    
-                    return (
-                      <div
-                        key={booking.id}
-                        className="flex items-center justify-between p-4 bg-[var(--surface-tertiary)] rounded-lg"
-                      >
-                        <div className="flex items-center gap-4">
-                          <div className="text-center">
-                            <p className="text-lg font-bold text-[var(--text-primary)]">
-                              {formatTime(booking.start_time)}
-                            </p>
-                          </div>
-                          
-                          <div className="flex-1">
-                            <p className="font-medium text-[var(--text-primary)]">
-                              {booking.customer_name}
-                            </p>
-                            <p className="text-[var(--text-secondary)] text-sm">
-                              {booking.vehicle.make} {booking.vehicle.model} • {booking.address.city}
-                            </p>
-                            <div className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs ${status.bgColor} ${status.color} mt-1`}>
-                              {status.label}
-                            </div>
-                          </div>
-                        </div>
-                        
-                        <div className="text-right">
-                          <p className="font-bold text-[var(--primary)]">£{booking.total_price}</p>
-                          <Button
-                            onClick={() => router.push(`/admin/bookings/${booking.id}`)}
-                            variant="outline"
-                            size="sm"
-                            className="mt-2"
-                          >
-                            View
-                          </Button>
-                        </div>
-                      </div>
-                    )
-                  })}
+                <CalendarIcon className="w-8 h-8 text-brand-purple" />
+              </div>
+              <div className="mt-4 flex items-center text-sm">
+                <span className="text-yellow-600 font-medium">{stats.pendingBookings} pending</span>
+              </div>
+            </div>
+
+            <div className="bg-surface-secondary rounded-lg border border-border-primary p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-text-secondary text-sm font-medium">Monthly Revenue</p>
+                  <p className="text-2xl font-bold text-text-primary">£{stats.monthlyRevenue.toLocaleString()}</p>
                 </div>
-              )}
+                <DollarSignIcon className="w-8 h-8 text-green-600" />
+              </div>
+              <div className="mt-4 flex items-center text-sm">
+                <span className="text-text-secondary">£{stats.totalRevenue.toLocaleString()} total</span>
+              </div>
+            </div>
+
+            <div className="bg-surface-secondary rounded-lg border border-border-primary p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-text-secondary text-sm font-medium">Active Customers</p>
+                  <p className="text-2xl font-bold text-text-primary">{stats.activeCustomers}</p>
+                </div>
+                <UsersIcon className="w-8 h-8 text-blue-600" />
+              </div>
+              <div className="mt-4 flex items-center text-sm">
+                <span className="text-text-secondary">{stats.totalCustomers} total</span>
+              </div>
+            </div>
+
+            <div className="bg-surface-secondary rounded-lg border border-border-primary p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-text-secondary text-sm font-medium">Completed</p>
+                  <p className="text-2xl font-bold text-text-primary">{stats.completedBookings}</p>
+                </div>
+                <TrendingUpIcon className="w-8 h-8 text-brand-purple" />
+              </div>
+              <div className="mt-4 flex items-center text-sm">
+                <span className="text-green-600 font-medium">{stats.confirmedBookings} confirmed</span>
+              </div>
             </div>
           </div>
+        )}
 
-          {/* Recent Bookings */}
-          <div className="bg-[var(--surface-secondary)] rounded-lg border border-[var(--border-secondary)]">
-            <div className="p-6 border-b border-[var(--border-secondary)] flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-[var(--text-primary)] flex items-center gap-2">
-                <CalendarIcon className="w-5 h-5 text-[var(--primary)]" />
-                Recent Bookings
-              </h2>
-              <Button
-                onClick={() => router.push('/admin/bookings')}
-                variant="outline"
+        {/* Recent Bookings */}
+        <div className="bg-surface-secondary rounded-lg border border-border-primary">
+          <div className="px-6 py-4 border-b border-border-secondary">
+            <div className="flex justify-between items-center">
+              <h2 className="text-lg font-semibold text-text-primary">Recent Bookings</h2>
+              <Button 
+                variant="outline" 
                 size="sm"
+                onClick={() => router.push('/admin/bookings')}
               >
                 View All
               </Button>
             </div>
-            
-            <div className="p-6">
-              {recentBookings.length === 0 ? (
-                <div className="text-center py-8">
-                  <CalendarIcon className="w-12 h-12 text-[var(--text-muted)] mx-auto mb-4" />
-                  <p className="text-[var(--text-secondary)]">No recent bookings</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {recentBookings.slice(0, 5).map((booking) => {
-                    const status = statusConfig[booking.status]
-                    
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-surface-primary">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
+                    Booking
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
+                    Customer
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
+                    Date & Time
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
+                    Vehicle
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
+                    Total
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border-secondary">
+                {recentBookings.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="px-6 py-8 text-center">
+                      <div className="flex flex-col items-center">
+                        <CalendarIcon className="w-12 h-12 text-text-muted mb-4" />
+                        <p className="text-text-secondary">No recent bookings found</p>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  recentBookings.map((booking) => {
+                    const statusInfo = statusConfig[booking.status]
+                    const StatusIcon = statusInfo.icon
+
                     return (
-                      <div
-                        key={booking.id}
-                        className="flex items-center justify-between p-4 bg-[var(--surface-tertiary)] rounded-lg hover:bg-[var(--surface-hover)] transition-colors cursor-pointer"
-                        onClick={() => router.push(`/admin/bookings/${booking.id}`)}
-                      >
-                        <div className="flex items-center gap-4">
-                          <div className="text-center">
-                            <p className="text-sm font-medium text-[var(--text-primary)]">
-                              {formatDate(booking.scheduled_date)}
-                            </p>
-                            <p className="text-xs text-[var(--text-secondary)]">
-                              {formatTime(booking.start_time)}
-                            </p>
-                          </div>
-                          
-                          <div className="flex-1">
-                            <p className="font-medium text-[var(--text-primary)]">
-                              #{booking.booking_reference}
-                            </p>
-                            <p className="text-[var(--text-secondary)] text-sm">
-                              {booking.customer_name} • {booking.vehicle.make} {booking.vehicle.model}
-                            </p>
-                            <div className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs ${status.bgColor} ${status.color} mt-1`}>
-                              {status.label}
+                      <tr key={booking.id} className="hover:bg-surface-hover transition-colors">
+                        <td className="px-6 py-4">
+                          <div>
+                            <div className="font-medium text-text-primary">
+                              {booking.booking_reference}
+                            </div>
+                            <div className="text-sm text-text-secondary">
+                              {booking.services.map(s => s.name).join(', ')}
                             </div>
                           </div>
-                        </div>
-                        
-                        <div className="text-right">
-                          <p className="font-bold text-[var(--primary)]">£{booking.total_price}</p>
-                          <p className="text-[var(--text-muted)] text-xs">
-                            {booking.services.length} service{booking.services.length !== 1 ? 's' : ''}
-                          </p>
-                        </div>
-                      </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div>
+                            <div className="font-medium text-text-primary">
+                              {booking.customer_name}
+                            </div>
+                            <div className="text-sm text-text-secondary">
+                              {booking.customer_email}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div>
+                            <div className="font-medium text-text-primary">
+                              {formatDate(booking.scheduled_date)}
+                            </div>
+                            <div className="text-sm text-text-secondary">
+                              {formatTime(booking.start_time)}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="text-sm">
+                            <div className="font-medium text-text-primary">
+                              {booking.vehicle.year} {booking.vehicle.make} {booking.vehicle.model}
+                            </div>
+                            <div className="text-text-secondary">
+                              {booking.address.city}, {booking.address.postal_code}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${statusInfo.color}`}>
+                            <StatusIcon className="w-3 h-3 mr-1" />
+                            {statusInfo.label}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="font-medium text-text-primary">
+                            £{booking.total_price}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center space-x-2">
+                            {booking.status === 'pending' && (
+                              <>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleBookingAction(booking.id, 'confirm')}
+                                  className="text-green-600 border-green-200 hover:bg-green-50"
+                                >
+                                  <CheckCircleIcon className="w-3 h-3" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleBookingAction(booking.id, 'cancel')}
+                                  className="text-red-600 border-red-200 hover:bg-red-50"
+                                >
+                                  <XCircleIcon className="w-3 h-3" />
+                                </Button>
+                              </>
+                            )}
+                            {booking.status === 'confirmed' && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleBookingAction(booking.id, 'complete')}
+                                className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                              >
+                                Complete
+                              </Button>
+                            )}
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => router.push(`/admin/bookings/${booking.id}`)}
+                            >
+                              <EyeIcon className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
                     )
-                  })}
-                </div>
-              )}
-            </div>
+                  })
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
 
         {/* Quick Actions */}
-        <div className="mt-8 bg-[var(--surface-secondary)] rounded-lg p-6 border border-[var(--border-secondary)]">
-          <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-6">Quick Actions</h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Button
-              onClick={() => router.push('/admin/bookings?status=pending')}
-              variant="outline"
-              className="flex items-center gap-2 p-4 h-auto"
-            >
-              <AlertCircleIcon className="w-5 h-5 text-[var(--warning)]" />
-              <div className="text-left">
-                <p className="font-medium">Review Pending</p>
-                <p className="text-sm text-[var(--text-secondary)]">
-                  {stats?.pendingBookings || 0} bookings
-                </p>
-              </div>
-            </Button>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="bg-surface-secondary rounded-lg border border-border-primary p-6">
+            <h3 className="text-lg font-semibold text-text-primary mb-4">Quick Actions</h3>
+            <div className="space-y-3">
+              <Button
+                variant="outline"
+                className="w-full justify-start"
+                onClick={() => router.push('/admin/bookings')}
+              >
+                <CalendarIcon className="w-4 h-4 mr-2" />
+                Manage All Bookings
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full justify-start"
+                onClick={() => router.push('/admin/customers')}
+              >
+                <UsersIcon className="w-4 h-4 mr-2" />
+                View Customers
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full justify-start"
+                onClick={() => router.push('/admin/services')}
+              >
+                <EditIcon className="w-4 h-4 mr-2" />
+                Manage Services
+              </Button>
+            </div>
+          </div>
 
-            <Button
-              onClick={() => router.push('/admin/time-slots')}
-              variant="outline"
-              className="flex items-center gap-2 p-4 h-auto"
-            >
-              <PlusIcon className="w-5 h-5 text-[var(--primary)]" />
-              <div className="text-left">
-                <p className="font-medium">Add Slots</p>
-                <p className="text-sm text-[var(--text-secondary)]">
-                  Manage availability
-                </p>
+          <div className="bg-surface-secondary rounded-lg border border-border-primary p-6">
+            <h3 className="text-lg font-semibold text-text-primary mb-4">Alerts</h3>
+            <div className="space-y-3">
+              {stats && stats.pendingBookings > 0 && (
+                <div className="flex items-center p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <AlertCircleIcon className="w-5 h-5 text-yellow-600 mr-3" />
+                  <div>
+                    <p className="text-sm font-medium text-yellow-800">
+                      {stats.pendingBookings} booking{stats.pendingBookings > 1 ? 's' : ''} pending confirmation
+                    </p>
+                  </div>
+                </div>
+              )}
+              <div className="flex items-center p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <CheckCircleIcon className="w-5 h-5 text-blue-600 mr-3" />
+                <div>
+                  <p className="text-sm font-medium text-blue-800">
+                    All systems operational
+                  </p>
+                </div>
               </div>
-            </Button>
+            </div>
+          </div>
 
-            <Button
-              onClick={() => router.push('/admin/customers')}
-              variant="outline"
-              className="flex items-center gap-2 p-4 h-auto"
-            >
-              <UsersIcon className="w-5 h-5 text-[var(--primary)]" />
-              <div className="text-left">
-                <p className="font-medium">View Customers</p>
-                <p className="text-sm text-[var(--text-secondary)]">
-                  {stats?.totalCustomers || 0} total
-                </p>
+          <div className="bg-surface-secondary rounded-lg border border-border-primary p-6">
+            <h3 className="text-lg font-semibold text-text-primary mb-4">Recent Activity</h3>
+            <div className="space-y-3 text-sm">
+              <div className="flex items-center text-text-secondary">
+                <div className="w-2 h-2 bg-green-500 rounded-full mr-3"></div>
+                <span>New booking received</span>
               </div>
-            </Button>
-
-            <Button
-              onClick={() => router.push('/admin/reports')}
-              variant="outline"
-              className="flex items-center gap-2 p-4 h-auto"
-            >
-              <TrendingUpIcon className="w-5 h-5 text-[var(--primary)]" />
-              <div className="text-left">
-                <p className="font-medium">View Reports</p>
-                <p className="text-sm text-[var(--text-secondary)]">
-                  Revenue & stats
-                </p>
+              <div className="flex items-center text-text-secondary">
+                <div className="w-2 h-2 bg-blue-500 rounded-full mr-3"></div>
+                <span>Service completed</span>
               </div>
-            </Button>
+              <div className="flex items-center text-text-secondary">
+                <div className="w-2 h-2 bg-purple-500 rounded-full mr-3"></div>
+                <span>Customer registered</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
