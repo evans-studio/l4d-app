@@ -19,19 +19,19 @@ export default function ForgotPasswordPage() {
     setError('')
 
     try {
-      // Use Supabase's built-in password reset instead of custom API
-      const { createClient } = await import('@/lib/supabase/client')
-      const supabase = createClient()
-      
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth/reset-password`
+      // Use server-side API to avoid client-side key issues
+      const response = await fetch('/api/auth/forgot-password-supabase', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
       })
 
-      if (error) {
-        console.error('Password reset error:', error)
-        setError(error.message || 'Failed to send reset email. Please try again.')
-      } else {
+      const data = await response.json()
+
+      if (data.success) {
         setIsSubmitted(true)
+      } else {
+        setError(data.error?.message || 'Failed to send reset email. Please try again.')
       }
     } catch (error) {
       console.error('Forgot password error:', error)
