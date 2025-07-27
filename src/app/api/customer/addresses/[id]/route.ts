@@ -1,0 +1,92 @@
+import { NextRequest } from 'next/server'
+import { BookingService } from '@/lib/services/booking'
+import { ApiResponseHandler } from '@/lib/api/response'
+import { ApiValidation } from '@/lib/api/validation'
+import { ApiAuth } from '@/lib/api/auth'
+import { z } from 'zod'
+
+const updateAddressSchema = z.object({
+  name: z.string().min(1).max(100).optional(),
+  address_line_1: z.string().min(1).max(255).optional(),
+  address_line_2: z.string().max(255).optional(),
+  city: z.string().min(1).max(100).optional(),
+  postal_code: z.string().min(1).max(20).optional(),
+  county: z.string().max(100).optional(),
+  is_primary: z.boolean().optional(),
+})
+
+export async function PUT(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  const params = await context.params
+  try {
+    const { auth, error: authError } = await ApiAuth.authenticate(request)
+    if (authError) {
+      return authError
+    }
+
+    const body = await request.json()
+    const validation = await ApiValidation.validateBody(body, updateAddressSchema)
+    if (!validation.success) {
+      return validation.error
+    }
+
+    const bookingService = new BookingService()
+    const result = await bookingService.updateCustomerAddress(
+      auth!.profile.id as string,
+      params.id,
+      validation.data
+    )
+
+    if (!result.success) {
+      if (result.error?.message?.includes('not found')) {
+        return ApiResponseHandler.error('Address not found', 'ADDRESS_NOT_FOUND', 404)
+      }
+      
+      return ApiResponseHandler.error(
+        result.error?.message || 'Failed to update address',
+        'UPDATE_ADDRESS_FAILED'
+      )
+    }
+
+    return ApiResponseHandler.success(result.data)
+
+  } catch (error) {
+    console.error('Update customer address error:', error)
+    return ApiResponseHandler.serverError('Failed to update address')
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  const params = await context.params
+  try {
+    const { auth, error: authError } = await ApiAuth.authenticate(request)
+    if (authError) {
+      return authError
+    }
+
+    const bookingService = new BookingService()
+    const result = await bookingService.deleteCustomerAddress(auth!.profile.id as string, params.id)
+
+    if (!result.success) {
+      if (result.error?.message?.includes('not found')) {
+        return ApiResponseHandler.error('Address not found', 'ADDRESS_NOT_FOUND', 404)
+      }
+      
+      return ApiResponseHandler.error(
+        result.error?.message || 'Failed to delete address',
+        'DELETE_ADDRESS_FAILED'
+      )
+    }
+
+    return ApiResponseHandler.success({ message: 'Address deleted successfully' })
+
+  } catch (error) {
+    console.error('Delete customer address error:', error)
+    return ApiResponseHandler.serverError('Failed to delete address')
+  }
+}

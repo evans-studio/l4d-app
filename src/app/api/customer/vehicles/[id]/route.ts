@@ -1,0 +1,94 @@
+import { NextRequest } from 'next/server'
+import { BookingService } from '@/lib/services/booking'
+import { ApiResponseHandler } from '@/lib/api/response'
+import { ApiValidation } from '@/lib/api/validation'
+import { ApiAuth } from '@/lib/api/auth'
+import { z } from 'zod'
+
+const updateVehicleSchema = z.object({
+  vehicle_size_id: z.string().uuid().optional(),
+  name: z.string().min(1).max(100).optional(),
+  make: z.string().min(1).max(50).optional(),
+  model: z.string().min(1).max(100).optional(),
+  year: z.number().int().min(1900).max(new Date().getFullYear() + 1).optional(),
+  color: z.string().max(50).optional(),
+  license_plate: z.string().max(20).optional(),
+  notes: z.string().optional(),
+  is_primary: z.boolean().optional(),
+})
+
+export async function PUT(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  const params = await context.params
+  try {
+    const { auth, error: authError } = await ApiAuth.authenticate(request)
+    if (authError) {
+      return authError
+    }
+
+    const body = await request.json()
+    const validation = await ApiValidation.validateBody(body, updateVehicleSchema)
+    if (!validation.success) {
+      return validation.error
+    }
+
+    const bookingService = new BookingService()
+    const result = await bookingService.updateCustomerVehicle(
+      auth!.profile.id as string,
+      params.id,
+      validation.data
+    )
+
+    if (!result.success) {
+      if (result.error?.message?.includes('not found')) {
+        return ApiResponseHandler.error('Vehicle not found', 'VEHICLE_NOT_FOUND', 404)
+      }
+      
+      return ApiResponseHandler.error(
+        result.error?.message || 'Failed to update vehicle',
+        'UPDATE_VEHICLE_FAILED'
+      )
+    }
+
+    return ApiResponseHandler.success(result.data)
+
+  } catch (error) {
+    console.error('Update customer vehicle error:', error)
+    return ApiResponseHandler.serverError('Failed to update vehicle')
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  const params = await context.params
+  try {
+    const { auth, error: authError } = await ApiAuth.authenticate(request)
+    if (authError) {
+      return authError
+    }
+
+    const bookingService = new BookingService()
+    const result = await bookingService.deleteCustomerVehicle(auth!.profile.id as string, params.id)
+
+    if (!result.success) {
+      if (result.error?.message?.includes('not found')) {
+        return ApiResponseHandler.error('Vehicle not found', 'VEHICLE_NOT_FOUND', 404)
+      }
+      
+      return ApiResponseHandler.error(
+        result.error?.message || 'Failed to delete vehicle',
+        'DELETE_VEHICLE_FAILED'
+      )
+    }
+
+    return ApiResponseHandler.success({ message: 'Vehicle deleted successfully' })
+
+  } catch (error) {
+    console.error('Delete customer vehicle error:', error)
+    return ApiResponseHandler.serverError('Failed to delete vehicle')
+  }
+}

@@ -1,0 +1,169 @@
+import { BaseService, ServiceResponse } from './base'
+import { ServiceWithCategory, Service, ServiceCategory, VehicleSize } from '@/lib/utils/database'
+
+export interface ServiceFilters {
+  categoryId?: string
+  search?: string
+  isActive?: boolean
+}
+
+export interface ServiceWithPricing extends ServiceWithCategory {
+  priceRange: {
+    min: number
+    max: number
+  }
+  category: ServiceCategory
+}
+
+export class ServicesService extends BaseService {
+  
+  async getAllServices(filters: ServiceFilters = {}): Promise<ServiceResponse<ServiceWithPricing[]>> {
+    return this.executeQuery(async () => {
+      const supabase = await this.supabase
+      let query = supabase
+        .from('services')
+        .select(`
+          *,
+          category:service_categories(*)
+        `)
+        .order('display_order')
+
+      // Apply filters
+      if (filters.categoryId) {
+        query = query.eq('category_id', filters.categoryId)
+      }
+
+      if (filters.search) {
+        query = query.or(`name.ilike.%${filters.search}%,short_description.ilike.%${filters.search}%`)
+      }
+
+      if (filters.isActive !== undefined) {
+        query = query.eq('is_active', filters.isActive)
+      }
+
+      const { data: services, error } = await query
+
+      if (error) return { data: null, error }
+
+      // Get vehicle sizes for price calculation
+      const { data: vehicleSizes, error: sizesError } = await supabase
+        .from('vehicle_sizes')
+        .select('*')
+        .eq('is_active', true)
+        .order('price_multiplier')
+
+      if (sizesError) return { data: null, error: sizesError }
+
+      // Calculate price ranges for each service
+      const servicesWithPricing: ServiceWithPricing[] = services.map(service => {
+        const minMultiplier = vehicleSizes[0]?.price_multiplier || 1
+        const maxMultiplier = vehicleSizes[vehicleSizes.length - 1]?.price_multiplier || 1
+
+        return {
+          ...service,
+          priceRange: {
+            min: Math.round(service.base_price * minMultiplier),
+            max: Math.round(service.base_price * maxMultiplier),
+          },
+        }
+      })
+
+      return { data: servicesWithPricing, error: null }
+    }, 'Failed to fetch services')
+  }
+
+  async getServiceById(id: string): Promise<ServiceResponse<ServiceWithPricing>> {
+    return this.executeQuery(async () => {
+      const supabase = await this.supabase
+      const { data: service, error } = await supabase
+        .from('services')
+        .select(`
+          *,
+          category:service_categories(*)
+        `)
+        .eq('id', id)
+        .eq('is_active', true)
+        .single()
+
+      if (error) return { data: null, error }
+
+      // Get vehicle sizes for price calculation
+      const { data: vehicleSizes, error: sizesError } = await supabase
+        .from('vehicle_sizes')
+        .select('*')
+        .eq('is_active', true)
+        .order('price_multiplier')
+
+      if (sizesError) return { data: null, error: sizesError }
+
+      const minMultiplier = vehicleSizes[0]?.price_multiplier || 1
+      const maxMultiplier = vehicleSizes[vehicleSizes.length - 1]?.price_multiplier || 1
+
+      const serviceWithPricing: ServiceWithPricing = {
+        ...service,
+        priceRange: {
+          min: Math.round(service.base_price * minMultiplier),
+          max: Math.round(service.base_price * maxMultiplier),
+        },
+      }
+
+      return { data: serviceWithPricing, error: null }
+    }, 'Failed to fetch service')
+  }
+
+  async getServiceCategories(): Promise<ServiceResponse<ServiceCategory[]>> {
+    return this.executeQuery(async () => {
+      const supabase = await this.supabase
+      return supabase
+        .from('service_categories')
+        .select('*')
+        .eq('is_active', true)
+        .order('display_order')
+    }, 'Failed to fetch service categories')
+  }
+
+  async getVehicleSizes(): Promise<ServiceResponse<VehicleSize[]>> {
+    return this.executeQuery(async () => {
+      const supabase = await this.supabase
+      return supabase
+        .from('vehicle_sizes')
+        .select('*')
+        .eq('is_active', true)
+        .order('display_order')
+    }, 'Failed to fetch vehicle sizes')
+  }
+
+  async createService(serviceData: Partial<Service>): Promise<ServiceResponse<Service>> {
+    return this.executeQuery(async () => {
+      const supabase = await this.supabase
+      return supabase
+        .from('services')
+        .insert(serviceData)
+        .select()
+        .single()
+    }, 'Failed to create service')
+  }
+
+  async updateService(id: string, serviceData: Partial<Service>): Promise<ServiceResponse<Service>> {
+    return this.executeQuery(async () => {
+      const supabase = await this.supabase
+      return supabase
+        .from('services')
+        .update(serviceData)
+        .eq('id', id)
+        .select()
+        .single()
+    }, 'Failed to update service')
+  }
+
+  async deleteService(id: string): Promise<ServiceResponse<void>> {
+    return this.executeQuery(async () => {
+      const supabase = await this.supabase
+      const result = await supabase
+        .from('services')
+        .update({ is_active: false })
+        .eq('id', id)
+      return { data: undefined, error: result.error }
+    }, 'Failed to delete service')
+  }
+}

@@ -1,0 +1,94 @@
+:root {
+  /* Primary Brand Colors */
+  --primary: #9747FF;           /* Main purple - CTAs, links, accents */
+  --primary-light: #B269FF;     /* Hover states, highlights */
+  --primary-dark: #7A2EE6;      /* Active states, emphasis */
+  --primary-rgb: 151, 71, 255;  /* For opacity usage */
+  
+  /* Neutral Colors - Backgrounds */
+  --bg-primary: #0a0a0a;        /* Main app background */
+  --bg-secondary: #1a1a1a;      /* Cards, sections */
+  --bg-tertiary: #252525;       /* Elevated surfaces */
+  --bg-inverse: #0a0a0a;        /* Dark theme only */
+  
+  /* Neutral Colors - Surfaces */
+  --surface-primary: #1a1a1a;   /* Primary surface */
+  --surface-secondary: #252525;  /* Secondary surface */
+  --surface-tertiary: #2f2f2f;  /* Tertiary surface */
+  --surface-hover: #333333;      /* Hover state */
+  --surface-active: #3a3a3a;     /* Active/selected state */
+  
+  /* Text Colors */
+  --text-primary: #ffffff;                    /* Primary text */
+  --text-secondary: rgba(255, 255, 255, 0.7); /* Secondary text */
+  --text-muted: rgba(255, 255, 255, 0.5);     /* Muted/disabled text */
+  --text-inverse: #ffffff;                     /* Dark theme only */
+  --text-link: #9747FF;                        /* Link color */
+  --text-link-hover: #B269FF;                  /* Link hover */
+  
+  /* Border Colors */
+  --border-primary: rgba(255, 255, 255, 0.1);    /* Primary borders */
+  --border-secondary: rgba(255, 255, 255, 0.05); /* Subtle borders */
+  --border-accent: rgba(151, 71, 255, 0.3);      /* Accent borders */
+  --border-hover: rgba(151, 71, 255, 0.5);       /* Hover borders */
+  --border-focus: #9747FF;                        /* Focus borders */
+  
+  /* Semantic Colors */
+  --success: #22c55e;           /* Success states */
+  --success-light: #4ade80;     /* Success hover */
+  --success-dark: #16a34a;      /* Success active */
+  --success-bg: rgba(34, 197, 94, 0.1);
+  
+  --warning: #f59e0b;           /* Warning states */
+  --warning-light: #fbbf24;     /* Warning hover */
+  --warning-dark: #d97706;      /* Warning active */
+  --warning-bg: rgba(245, 158, 11, 0.1);
+  
+  --error: #ef4444;             /* Error states */
+  --error-light: #f87171;       /* Error hover */
+  --error-dark: #dc2626;        /* Error active */
+  --error-bg: rgba(239, 68, 68, 0.1);
+  
+  --info: #3b82f6;              /* Info states */
+  --info-light: #60a5fa;        /* Info hover */
+  --info-dark: #2563eb;         /* Info active */
+  --info-bg: rgba(59, 130, 246, 0.1);
+  
+  /* Form Specific Colors */
+  --input-bg: #1a1a1a;
+  --input-border: rgba(255, 255, 255, 0.1);
+  --input-border-hover: rgba(255, 255, 255, 0.2);
+  --input-border-focus: #9747FF;
+  --input-text: #ffffff;
+  --input-placeholder: rgba(255, 255, 255, 0.4);
+  --input-disabled-bg: rgba(255, 255, 255, 0.05);
+  --input-disabled-text: rgba(255, 255, 255, 0.3);
+  
+  /* Button Specific Colors */
+  --btn-primary-bg: #9747FF;
+  --btn-primary-hover: #B269FF;
+  --btn-primary-active: #7A2EE6;
+  --btn-primary-text: #ffffff;
+  
+  --btn-secondary-bg: #252525;
+  --btn-secondary-hover: #333333;
+  --btn-secondary-active: #1a1a1a;
+  --btn-secondary-text: #ffffff;
+  --btn-secondary-border: rgba(255, 255, 255, 0.1);
+  
+  --btn-ghost-bg: transparent;
+  --btn-ghost-hover: rgba(151, 71, 255, 0.1);
+  --btn-ghost-active: rgba(151, 71, 255, 0.2);
+  --btn-ghost-text: #9747FF;
+  
+  /* Shadow Colors */
+  --shadow-sm: rgba(0, 0, 0, 0.3);
+  --shadow-md: rgba(0, 0, 0, 0.5);
+  --shadow-lg: rgba(0, 0, 0, 0.7);
+  --shadow-primary: rgba(151, 71, 255, 0.25);
+  
+  /* Overlay Colors */
+  --overlay-light: rgba(255, 255, 255, 0.1);
+  --overlay-dark: rgba(0, 0, 0, 0.5);
+  --overlay-heavy: rgba(0, 0, 0, 0.8);
+}
