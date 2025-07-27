@@ -26,6 +26,8 @@ export async function POST(request: NextRequest) {
 
     const supabase = await createClient()
 
+    console.log('Login attempt for:', body.email)
+
     // Authenticate user
     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
       email: body.email,
@@ -33,6 +35,7 @@ export async function POST(request: NextRequest) {
     })
 
     if (authError) {
+      console.error('Login auth error:', authError)
       return ApiResponseHandler.unauthorized('Invalid email or password')
     }
 
