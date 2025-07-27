@@ -128,10 +128,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const data = await response.json()
 
       if (data.success) {
+        // Manually refresh the session to ensure auth state is updated
+        await supabase.auth.refreshSession()
         // The auth state change listener will handle setting user/profile
         return { success: true }
       } else {
-        return { success: false, error: data.error || 'Login failed' }
+        return { success: false, error: data.error?.message || data.error || 'Login failed' }
       }
     } catch (error) {
       console.error('Login error:', error)
@@ -150,10 +152,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const data = await response.json()
 
       if (data.success) {
+        // Manually refresh the session to ensure auth state is updated
+        await supabase.auth.refreshSession()
         // The auth state change listener will handle setting user/profile
         return { success: true }
       } else {
-        return { success: false, error: data.error || 'Registration failed' }
+        return { success: false, error: data.error?.message || data.error || 'Registration failed' }
       }
     } catch (error) {
       console.error('Registration error:', error)

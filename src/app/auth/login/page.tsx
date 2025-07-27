@@ -29,14 +29,8 @@ export default function LoginPage() {
       const result = await login(formData.email, formData.password)
       
       if (result.success) {
-        // Role-based redirect - wait for profile to be set
-        setTimeout(() => {
-          if (profile?.role === 'admin' || profile?.role === 'super_admin') {
-            router.push('/admin')
-          } else {
-            router.push('/dashboard')
-          }
-        }, 100)
+        // Redirect to dashboard immediately - the AuthContext will handle profile loading
+        router.push('/dashboard')
       } else {
         setError(result.error || 'Login failed. Please try again.')
       }
