@@ -145,9 +145,10 @@ export async function GET(request: NextRequest) {
           console.log(`✅ Created profile for ${user.email}`)
           createdProfiles.push(newProfile)
         }
-      } catch (userError: any) {
+      } catch (userError: unknown) {
         console.error(`Error creating profile for ${user.email}:`, userError)
-        errors.push(`${user.email}: ${userError.message}`)
+        const errorMessage = userError instanceof Error ? userError.message : String(userError)
+        errors.push(`${user.email}: ${errorMessage}`)
       }
     }
 

@@ -126,7 +126,7 @@ export async function POST(request: NextRequest) {
         redirectTo: '/auth/login'
       })
 
-    } catch (profileError: any) {
+    } catch (profileError: unknown) {
       console.error('❌ Profile creation exception:', profileError)
       
       // Clean up the auth user
@@ -144,7 +144,7 @@ export async function POST(request: NextRequest) {
     console.error('❌ Registration error:', error)
     
     if (error instanceof z.ZodError) {
-      const firstError = error.errors[0]
+      const firstError = error.issues[0]
       return ApiResponseHandler.validationError(firstError?.message || 'Invalid input data')
     }
 

@@ -105,18 +105,18 @@ If you received this email, the Resend integration is working correctly.
 
       return ApiResponseHandler.error('Unexpected response from Resend', 'UNEXPECTED_RESPONSE', 500)
 
-    } catch (resendError: any) {
+    } catch (resendError: unknown) {
       console.error('❌ Resend API call failed:', resendError)
       
       let errorMessage = 'Unknown error'
       let errorCode = 'RESEND_ERROR'
       
-      if (resendError.message) {
-        errorMessage = resendError.message
+      if (resendError && typeof resendError === 'object' && 'message' in resendError) {
+        errorMessage = String(resendError.message)
       }
       
-      if (resendError.code) {
-        errorCode = resendError.code
+      if (resendError && typeof resendError === 'object' && 'code' in resendError) {
+        errorCode = String(resendError.code)
       }
 
       // Check for common Resend errors
