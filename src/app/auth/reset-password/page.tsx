@@ -25,9 +25,43 @@ function ResetPasswordContent() {
   const token = searchParams.get('token')
 
   useEffect(() => {
-    // For Supabase reset, we don't need to validate tokens - they handle it
-    setIsValidToken(true)
-  }, [token])
+    const initializeReset = async () => {
+      // Check if we have an email parameter (from our custom reset link)
+      const email = searchParams.get('email')
+      
+      if (email && !token) {
+        // User came from our custom reset email, trigger Supabase's reset
+        try {
+          const { createClient } = await import('@/lib/supabase/client')
+          const supabase = createClient()
+          
+          console.log('Triggering Supabase password reset for:', email)
+          
+          const { error } = await supabase.auth.resetPasswordForEmail(email, {
+            redirectTo: `${window.location.origin}/auth/reset-password`
+          })
+          
+          if (error) {
+            console.error('Supabase reset error:', error)
+            setError('Failed to initialize password reset. Please try requesting a new reset link.')
+            setIsValidToken(false)
+          } else {
+            setError('Please check your email for a new password reset link from Supabase.')
+            setIsValidToken(false)
+          }
+        } catch (error) {
+          console.error('Reset initialization error:', error)
+          setError('Failed to initialize password reset.')
+          setIsValidToken(false)
+        }
+      } else {
+        // Normal Supabase flow or token-based reset
+        setIsValidToken(true)
+      }
+    }
+    
+    initializeReset()
+  }, [token, searchParams])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
