@@ -36,7 +36,7 @@ function getOptionalEnvVar(key: string, defaultValue?: string): string | undefin
 export const env: EnvironmentConfig = {
   app: {
     env: (getOptionalEnvVar('NEXT_PUBLIC_APP_ENV', 'development') as 'development' | 'staging' | 'production'),
-    url: getRequiredEnvVar('NEXT_PUBLIC_APP_URL'),
+    url: getOptionalEnvVar('NEXT_PUBLIC_APP_URL', 'http://localhost:3000') || 'http://localhost:3000',
     name: getOptionalEnvVar('NEXT_PUBLIC_COMPANY_NAME', 'Love4Detailing')!,
   },
   supabase: {
