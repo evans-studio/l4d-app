@@ -39,7 +39,10 @@ export async function POST(request: NextRequest) {
     })
 
     // Try regular signUp first (works better with login)
-    const { data: authData, error: authError } = await supabase.auth.signUp({
+    let authData
+    let authError
+    
+    const signUpResult = await supabase.auth.signUp({
       email: body.email,
       password: body.password,
       options: {
@@ -51,10 +54,13 @@ export async function POST(request: NextRequest) {
       },
     })
 
+    authData = signUpResult.data
+    authError = signUpResult.error
+
     // If signUp fails due to email confirmation, try admin create as fallback
     if (authError && authError.message.includes('confirmation')) {
       console.log('SignUp failed due to email confirmation, trying admin create...')
-      const { data: adminData, error: adminError } = await supabase.auth.admin.createUser({
+      const adminResult = await supabase.auth.admin.createUser({
         email: body.email,
         password: body.password,
         email_confirm: true,
@@ -65,16 +71,17 @@ export async function POST(request: NextRequest) {
         },
       })
       
-      if (adminError) {
+      if (adminResult.error) {
         return ApiResponseHandler.error(
           'Registration failed',
           'REGISTRATION_FAILED',
           400,
-          adminError.message
+          adminResult.error.message
         )
       }
       
-      authData = adminData
+      authData = adminResult.data
+      authError = null
     } else if (authError) {
       return ApiResponseHandler.error(
         'Registration failed',
