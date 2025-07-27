@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/server'
 import { ApiResponseHandler } from '@/lib/api/response'
 import { ApiValidation } from '@/lib/api/validation'
 import { z } from 'zod'
@@ -28,7 +28,15 @@ export async function POST(request: NextRequest) {
     const body = validation.data
 
 
-    const supabase = await createClient()
+    const supabase = createAdminClient()
+
+    // Debug environment variables
+    console.log('Environment check:', {
+      hasServiceRole: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+      serviceRoleLength: process.env.SUPABASE_SERVICE_ROLE_KEY?.length || 0,
+      hasAnonKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+      hasUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL
+    })
 
     // Create auth user
     const { data: authData, error: authError } = await supabase.auth.signUp({
