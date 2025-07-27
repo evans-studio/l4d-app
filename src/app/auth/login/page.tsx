@@ -1,22 +1,35 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/primitives/Button'
 import { ResponsiveLogo } from '@/components/ui/primitives/Logo'
 import { Container } from '@/components/layout/templates/PageLayout'
-import { Mail, Lock, AlertCircle } from 'lucide-react'
+import { Mail, Lock, AlertCircle, CheckCircle, Eye, EyeOff } from 'lucide-react'
 import Link from 'next/link'
 
-export default function LoginPage() {
+function LoginPageContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [formData, setFormData] = useState({
     email: '',
     password: ''
   })
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
+  const [successMessage, setSuccessMessage] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+
+  // Handle success messages from URL params
+  useEffect(() => {
+    const message = searchParams.get('message')
+    if (message === 'password-updated') {
+      setSuccessMessage('Password updated successfully! You can now sign in with your new password.')
+    } else if (message === 'email-verified') {
+      setSuccessMessage('Email verified successfully! You can now sign in to your account.')
+    }
+  }, [searchParams])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -30,7 +43,16 @@ export default function LoginPage() {
       })
 
       if (error) {
-        setError(error.message)
+        // Handle specific authentication errors
+        if (error.message.includes('Invalid login credentials')) {
+          setError('Invalid email or password. Please check your credentials and try again.')
+        } else if (error.message.includes('Email not confirmed')) {
+          setError('Please verify your email address before signing in. Check your inbox for a verification link.')
+        } else if (error.message.includes('Too many requests')) {
+          setError('Too many login attempts. Please wait a moment before trying again.')
+        } else {
+          setError(error.message)
+        }
       } else if (data.user) {
         // Check user role to redirect appropriately
         const { data: profile } = await supabase
@@ -77,6 +99,13 @@ export default function LoginPage() {
                 </div>
               )}
 
+              {successMessage && (
+                <div className="bg-success-600/10 border border-success-500/20 rounded-md p-4 flex items-center gap-3">
+                  <CheckCircle className="w-5 h-5 text-success-400 flex-shrink-0" />
+                  <p className="text-success-400 text-sm">{successMessage}</p>
+                </div>
+              )}
+
               <div>
                 <label className="block text-sm font-medium text-text-primary mb-2">
                   Email Address
@@ -86,7 +115,11 @@ export default function LoginPage() {
                     type="email"
                     required
                     value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    onChange={(e) => {
+                      setFormData({ ...formData, email: e.target.value })
+                      if (error) setError('')
+                      if (successMessage) setSuccessMessage('')
+                    }}
                     className="w-full pl-12 pr-4 py-3 bg-surface-primary border border-border-secondary rounded-md text-text-primary placeholder-text-muted focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-600/20 transition-colors"
                     placeholder="Enter your email"
                   />
@@ -95,29 +128,56 @@ export default function LoginPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-text-primary mb-2">
-                  Password
-                </label>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-medium text-text-primary">
+                    Password
+                  </label>
+                  <Link
+                    href="/auth/forgot-password"
+                    className="text-sm text-brand-400 hover:text-brand-300 transition-colors"
+                  >
+                    Forgot password?
+                  </Link>
+                </div>
                 <div className="relative">
                   <input
-                    type="password"
+                    type={showPassword ? 'text' : 'password'}
                     required
                     value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    className="w-full pl-12 pr-4 py-3 bg-surface-primary border border-border-secondary rounded-md text-text-primary placeholder-text-muted focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-600/20 transition-colors"
+                    onChange={(e) => {
+                      setFormData({ ...formData, password: e.target.value })
+                      if (error) setError('')
+                      if (successMessage) setSuccessMessage('')
+                    }}
+                    className="w-full pl-12 pr-12 py-3 bg-surface-primary border border-border-secondary rounded-md text-text-primary placeholder-text-muted focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-600/20 transition-colors"
                     placeholder="Enter your password"
                   />
                   <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 w-4 h-4 text-text-muted" />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 transform -translate-y-1/2 text-text-muted hover:text-text-secondary transition-colors"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
                 </div>
               </div>
 
               <Button
                 type="submit"
                 variant="primary"
-                disabled={isLoading}
+                disabled={isLoading || !formData.email.trim() || !formData.password.trim()}
                 className="w-full"
+                leftIcon={isLoading ? undefined : <Mail className="w-4 h-4" />}
               >
-                {isLoading ? 'Signing In...' : 'Sign In'}
+                {isLoading ? (
+                  <div className="flex items-center gap-2">
+                    <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div>
+                    Signing In...
+                  </div>
+                ) : (
+                  'Sign In'
+                )}
               </Button>
             </form>
 
@@ -145,5 +205,20 @@ export default function LoginPage() {
         </div>
       </Container>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-surface-primary flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin w-8 h-8 border-4 border-brand-600 border-t-transparent rounded-full mx-auto mb-4"></div>
+          <p className="text-text-secondary">Loading...</p>
+        </div>
+      </div>
+    }>
+      <LoginPageContent />
+    </Suspense>
   )
 }
