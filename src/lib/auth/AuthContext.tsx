@@ -63,6 +63,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await supabase.auth.signOut()
       setUser(null)
       setProfile(null)
+      
+      // Clear all Supabase cookies manually
+      const cookies = document.cookie.split(';')
+      cookies.forEach(cookie => {
+        const name = cookie.split('=')[0].trim()
+        if (name.includes('sb-vwejbgfiddltdqwhfjmt')) {
+          document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`
+        }
+      })
+      
+      // Force redirect to login
+      window.location.href = '/auth/login'
     } catch (error) {
       console.error('Sign out error:', error)
     }
