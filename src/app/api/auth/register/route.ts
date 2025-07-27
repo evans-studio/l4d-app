@@ -28,13 +28,28 @@ const registerSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('=== REGISTRATION REQUEST START ===')
+    
+    // Check environment variables first
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
+      console.error('❌ Missing NEXT_PUBLIC_SUPABASE_URL')
+      return ApiResponseHandler.error('Server configuration error', 'CONFIG_ERROR', 500)
+    }
+    
+    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      console.error('❌ Missing SUPABASE_SERVICE_ROLE_KEY')
+      return ApiResponseHandler.error('Server configuration error', 'CONFIG_ERROR', 500)
+    }
+
     const body = await request.json()
+    console.log('Raw request body:', body)
+    
     const { email, password, firstName, lastName, phone } = registerSchema.parse(body)
 
-    console.log('=== REGISTRATION REQUEST ===')
-    console.log('Email:', email.toLowerCase())
-    console.log('Name:', firstName, lastName)
-    console.log('Phone:', phone || 'not provided')
+    console.log('Parsed data:')
+    console.log('- Email:', email.toLowerCase())
+    console.log('- Name:', firstName, lastName)
+    console.log('- Phone:', phone || 'not provided')
 
     // Step 1: Create user in auth.users
     const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
@@ -80,26 +95,40 @@ export async function POST(request: NextRequest) {
 
     // Step 2: Create corresponding profile in user_profiles
     try {
+      console.log('Creating profile for user:', authUser.user.id)
+      
+      const profileData = {
+        id: authUser.user.id,
+        email: email.toLowerCase(),
+        first_name: firstName,
+        last_name: lastName,
+        phone: phone || null,
+        role: 'customer',
+        is_active: true
+      }
+      
+      console.log('Profile data to insert:', profileData)
+      
       const { data: profile, error: profileError } = await supabaseAdmin
         .from('user_profiles')
-        .insert({
-          id: authUser.user.id,
-          email: email.toLowerCase(),
-          first_name: firstName,
-          last_name: lastName,
-          phone: phone || null,
-          role: 'customer',
-          is_active: true
-        })
+        .insert(profileData)
         .select()
         .single()
 
       if (profileError) {
-        console.error('❌ Profile creation failed:', profileError)
+        console.error('❌ Profile creation failed:')
+        console.error('Error code:', profileError.code)
+        console.error('Error message:', profileError.message)
+        console.error('Error details:', profileError.details)
+        console.error('Error hint:', profileError.hint)
         
         // Clean up the auth user if profile creation fails
-        await supabaseAdmin.auth.admin.deleteUser(authUser.user.id)
-        console.log('🧹 Cleaned up auth user after profile creation failure')
+        try {
+          await supabaseAdmin.auth.admin.deleteUser(authUser.user.id)
+          console.log('🧹 Cleaned up auth user after profile creation failure')
+        } catch (cleanupError) {
+          console.error('❌ Failed to cleanup auth user:', cleanupError)
+        }
         
         return ApiResponseHandler.error(
           `Profile creation failed: ${profileError.message}`,
@@ -127,27 +156,39 @@ export async function POST(request: NextRequest) {
       })
 
     } catch (profileError: unknown) {
-      console.error('❌ Profile creation exception:', profileError)
+      console.error('❌ Profile creation exception:')
+      console.error('Exception type:', typeof profileError)
+      console.error('Exception details:', profileError)
       
       // Clean up the auth user
-      await supabaseAdmin.auth.admin.deleteUser(authUser.user.id)
-      console.log('🧹 Cleaned up auth user after profile creation exception')
+      try {
+        await supabaseAdmin.auth.admin.deleteUser(authUser.user.id)
+        console.log('🧹 Cleaned up auth user after profile creation exception')
+      } catch (cleanupError) {
+        console.error('❌ Failed to cleanup auth user:', cleanupError)
+      }
+      
+      const errorMessage = profileError instanceof Error ? profileError.message : 'Unknown error creating profile'
       
       return ApiResponseHandler.error(
-        'Failed to create user profile',
+        `Failed to create user profile: ${errorMessage}`,
         'PROFILE_CREATION_EXCEPTION',
         500
       )
     }
 
   } catch (error) {
-    console.error('❌ Registration error:', error)
+    console.error('❌ Registration error:')
+    console.error('Error type:', typeof error)
+    console.error('Error details:', error)
     
     if (error instanceof z.ZodError) {
+      console.error('❌ Validation error:', error.issues)
       const firstError = error.issues[0]
       return ApiResponseHandler.validationError(firstError?.message || 'Invalid input data')
     }
 
-    return ApiResponseHandler.serverError('Registration failed')
+    const errorMessage = error instanceof Error ? error.message : 'Unknown registration error'
+    return ApiResponseHandler.error(`Registration failed: ${errorMessage}`, 'REGISTRATION_ERROR', 500)
   }
 }
