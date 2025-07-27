@@ -1,10 +1,22 @@
 import { NextRequest } from 'next/server'
-import { supabase } from '@/lib/supabase'
 import { ApiResponseHandler } from '@/lib/api/response'
+import { createClient } from '@supabase/supabase-js'
 import { z } from 'zod'
 
 // Force Node.js runtime
 export const runtime = 'nodejs'
+
+// Use service role for server-side operations
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  }
+)
 
 const profileUpdateSchema = z.object({
   firstName: z.string().min(1, 'First name is required').max(100),
@@ -15,14 +27,21 @@ const profileUpdateSchema = z.object({
 
 export async function PUT(request: NextRequest) {
   try {
-    // Get current user session
-    const { data: { session }, error: authError } = await supabase.auth.getSession()
-    
-    if (authError || !session?.user) {
-      return ApiResponseHandler.unauthorized('Authentication required')
+    // Get auth token from request headers or cookies
+    const authHeader = request.headers.get('authorization')
+    const authToken = authHeader?.replace('Bearer ', '') || 
+                     request.cookies.get('sb-vwejbgfiddltdqwhfjmt-auth-token')?.value
+
+    if (!authToken) {
+      return ApiResponseHandler.error('Authentication required', 'AUTH_REQUIRED', 401)
     }
 
-    const user = session.user
+    // Verify the token and get user
+    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(authToken)
+    
+    if (userError || !user) {
+      return ApiResponseHandler.error('Invalid authentication', 'AUTH_INVALID', 401)
+    }
 
     // Validate request body
     const body = await request.json()
@@ -30,7 +49,7 @@ export async function PUT(request: NextRequest) {
 
     // Check if email is already taken by another user
     if (validatedData.email !== user.email) {
-      const { data: existingUser } = await supabase
+      const { data: existingUser } = await supabaseAdmin
         .from('user_profiles')
         .select('id')
         .eq('email', validatedData.email.toLowerCase())
@@ -47,7 +66,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // Update user profile
-    const { data: updatedProfile, error: updateError } = await supabase
+    const { data: updatedProfile, error: updateError } = await supabaseAdmin
       .from('user_profiles')
       .update({
         first_name: validatedData.firstName,
@@ -67,7 +86,7 @@ export async function PUT(request: NextRequest) {
 
     // If email changed, update auth user email too
     if (validatedData.email !== user.email) {
-      const { error: emailUpdateError } = await supabase.auth.updateUser({
+      const { error: emailUpdateError } = await supabaseAdmin.auth.admin.updateUserById(user.id, {
         email: validatedData.email
       })
 
@@ -105,20 +124,29 @@ export async function PUT(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    // Get current user session
-    const { data: { session }, error: authError } = await supabase.auth.getSession()
-    
-    if (authError || !session?.user) {
-      return ApiResponseHandler.unauthorized('Authentication required')
+    // Get auth token from request headers or cookies
+    const authHeader = request.headers.get('authorization')
+    const authToken = authHeader?.replace('Bearer ', '') || 
+                     request.cookies.get('sb-vwejbgfiddltdqwhfjmt-auth-token')?.value
+
+    if (!authToken) {
+      return ApiResponseHandler.error('Authentication required', 'AUTH_REQUIRED', 401)
     }
 
-    const user = session.user
+    // Verify the token and get user
+    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(authToken)
+    
+    if (userError || !user) {
+      return ApiResponseHandler.error('Invalid authentication', 'AUTH_INVALID', 401)
+    }
+
+    const userId = user.id
 
     // Get user profile
-    const { data: profile, error: profileError } = await supabase
+    const { data: profile, error: profileError } = await supabaseAdmin
       .from('user_profiles')
       .select('*')
-      .eq('id', user.id)
+      .eq('id', userId)
       .single()
 
     if (profileError || !profile) {
@@ -126,16 +154,14 @@ export async function GET(request: NextRequest) {
     }
 
     return ApiResponseHandler.success({
-      profile: {
-        id: profile.id,
-        firstName: profile.first_name,
-        lastName: profile.last_name,
-        email: profile.email,
-        phone: profile.phone,
-        role: profile.role,
-        createdAt: profile.created_at,
-        updatedAt: profile.updated_at
-      }
+      id: profile.id,
+      first_name: profile.first_name,
+      last_name: profile.last_name,
+      email: profile.email,
+      phone: profile.phone,
+      role: profile.role,
+      created_at: profile.created_at,
+      updated_at: profile.updated_at
     })
 
   } catch (error) {

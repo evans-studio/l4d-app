@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/primitives/Button'
 import { CustomerLayout } from '@/components/layout/templates/CustomerLayout'
 import { Container } from '@/components/layout/templates/PageLayout'
@@ -29,7 +30,8 @@ interface DashboardBooking {
   total_price: number
   services: Array<{
     name: string
-    base_price: number
+    price: number
+    duration: number
   }>
   vehicle: {
     make: string
@@ -99,20 +101,46 @@ export default function DashboardPage() {
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        // Fetch bookings
-        const bookingsResponse = await fetch('/api/customer/bookings')
-        const bookingsData = await bookingsResponse.json()
+        // Get current session for authenticated requests
+        const { data: { session } } = await supabase.auth.getSession()
         
-        if (bookingsData.success) {
-          setBookings(bookingsData.data)
+        if (!session?.access_token) {
+          console.error('No valid session found')
+          router.push('/auth/login')
+          return
+        }
+
+        const authHeaders = {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json'
+        }
+
+        // Fetch bookings
+        const bookingsResponse = await fetch('/api/customer/bookings', {
+          headers: authHeaders
+        })
+        
+        if (bookingsResponse.ok) {
+          const bookingsData = await bookingsResponse.json()
+          if (bookingsData.success) {
+            setBookings(bookingsData.data)
+          }
+        } else {
+          console.error('Failed to fetch bookings:', bookingsResponse.status)
         }
 
         // Fetch profile
-        const profileResponse = await fetch('/api/customer/profile')
-        const profileData = await profileResponse.json()
+        const profileResponse = await fetch('/api/customer/profile', {
+          headers: authHeaders
+        })
         
-        if (profileData.success) {
-          setProfile(profileData.data)
+        if (profileResponse.ok) {
+          const profileData = await profileResponse.json()
+          if (profileData.success) {
+            setProfile(profileData.data)
+          }
+        } else {
+          console.error('Failed to fetch profile:', profileResponse.status)
         }
       } catch (error) {
         console.error('Failed to fetch dashboard data:', error)
