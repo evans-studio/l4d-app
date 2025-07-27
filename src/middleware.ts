@@ -7,12 +7,16 @@ export async function middleware(request: NextRequest) {
   const allCookies = request.cookies.getAll()
   const supabaseCookies = allCookies.filter(c => c.name.includes('sb-vwejbgfiddltdqwhfjmt'))
   
-  // Get Supabase session from cookies
-  const accessToken = request.cookies.get('sb-vwejbgfiddltdqwhfjmt-auth-token')?.value
-  const refreshToken = request.cookies.get('sb-vwejbgfiddltdqwhfjmt-auth-token.0')?.value || 
-                      request.cookies.get('sb-vwejbgfiddltdqwhfjmt-auth-token.1')?.value
+  // Get Supabase session from cookies - try multiple possible cookie names
+  const accessToken = request.cookies.get('sb-vwejbgfiddltdqwhfjmt-auth-token')?.value ||
+                     request.cookies.get('sb-vwejbgfiddltdqwhfjmt-auth-token-code-verifier')?.value
   
-  const isAuthenticated = !!(accessToken && refreshToken)
+  const refreshToken = request.cookies.get('sb-vwejbgfiddltdqwhfjmt-auth-token.0')?.value || 
+                      request.cookies.get('sb-vwejbgfiddltdqwhfjmt-auth-token.1')?.value ||
+                      request.cookies.get('sb-vwejbgfiddltdqwhfjmt-auth-token-code-verifier')?.value
+  
+  // If we have any Supabase auth cookies, consider authenticated
+  const isAuthenticated = supabaseCookies.length > 0 && (accessToken || refreshToken)
   const path = request.nextUrl.pathname
 
   // Only log for auth and dashboard routes to avoid spam
