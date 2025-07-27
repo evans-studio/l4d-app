@@ -5,6 +5,9 @@ import { EmailService } from '@/lib/services/email-service'
 import { z } from 'zod'
 import crypto from 'crypto'
 
+// Force Node.js runtime for Supabase compatibility
+export const runtime = 'nodejs'
+
 const forgotPasswordSchema = z.object({
   email: z.string().email('Invalid email address')
 })

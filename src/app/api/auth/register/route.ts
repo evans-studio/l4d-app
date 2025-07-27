@@ -4,6 +4,9 @@ import { ApiResponseHandler } from '@/lib/api/response'
 import { ApiValidation } from '@/lib/api/validation'
 import { z } from 'zod'
 
+// Force Node.js runtime for Supabase compatibility
+export const runtime = 'nodejs'
+
 const registerSchema = z.object({
   email: z.string().email('Invalid email address'),
   password: z.string().min(8, 'Password must be at least 8 characters'),

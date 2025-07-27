@@ -3,6 +3,9 @@ import { ApiResponseHandler } from '@/lib/api/response'
 import { Resend } from 'resend'
 import { z } from 'zod'
 
+// Force Node.js runtime for email service compatibility
+export const runtime = 'nodejs'
+
 const emailSchema = z.object({
   to: z.string().email('Invalid recipient email'),
   subject: z.string().min(1, 'Subject is required'),
