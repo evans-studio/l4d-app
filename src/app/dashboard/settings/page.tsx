@@ -1,10 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useAuth } from '@/lib/contexts/AuthContext'
 import { Button } from '@/components/ui/primitives/Button'
 import { CustomerLayout } from '@/components/layout/templates/CustomerLayout'
-import { CustomerRoute } from '@/components/auth/ProtectedRoute'
+import { CustomerRoute } from '@/components/TempProtectedRoute'
 import { 
   User, 
   Mail, 
@@ -39,7 +38,10 @@ interface NotificationSettings {
 }
 
 export default function AccountSettingsPage() {
-  const { user, profile, refreshProfile } = useAuth()
+  // TODO: Replace with simple auth
+  const user = null;
+  const profile = null;
+  const refreshProfile = () => {};
   const [activeTab, setActiveTab] = useState<'profile' | 'password' | 'notifications' | 'privacy'>('profile')
   const [isLoading, setIsLoading] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
@@ -76,10 +78,10 @@ export default function AccountSettingsPage() {
   useEffect(() => {
     if (profile) {
       setProfileData({
-        firstName: profile.first_name || '',
-        lastName: profile.last_name || '',
-        email: profile.email || '',
-        phone: profile.phone || ''
+        firstName: (profile as any)?.first_name || '',
+        lastName: (profile as any)?.last_name || '',
+        email: (profile as any)?.email || '',
+        phone: (profile as any)?.phone || ''
       })
     }
   }, [profile])

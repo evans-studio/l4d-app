@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/primitives/Button'
 import { CustomerLayout } from '@/components/layout/templates/CustomerLayout'
 import { Container } from '@/components/layout/templates/PageLayout'
-import { CustomerRoute } from '@/components/auth/ProtectedRoute'
+import { CustomerRoute } from '@/components/TempProtectedRoute'
 import { 
   Calendar, 
   Clock, 

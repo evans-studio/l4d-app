@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/lib/contexts/AuthContext';
 import { Button } from '@/components/ui/primitives/Button';
 import { ResponsiveLogo } from '@/components/ui/primitives/Logo';
 import { Container, Section } from '@/components/layout/templates/PageLayout';
@@ -19,7 +18,10 @@ const TOTAL_STEPS = 5;
 
 export default function BookingPage(): React.JSX.Element {
   const router = useRouter();
-  const { isAuthenticated, profile, isLoading: authLoading } = useAuth();
+  // TODO: Simple auth state
+  const isAuthenticated = false;
+  const profile: { first_name?: string } | null = null;
+  const authLoading = false;
   
   const [bookingData, setBookingData] = useState<BookingFlowData>({
     currentStep: 1,
@@ -137,7 +139,7 @@ export default function BookingPage(): React.JSX.Element {
                   {isAuthenticated && profile ? (
                     <div className="flex items-center gap-2 text-text-secondary">
                       <User className="w-4 h-4 text-brand-400" />
-                      <span className="hidden sm:inline">Welcome, {profile.first_name}</span>
+                      <span className="hidden sm:inline">Welcome, {(profile as any)?.first_name || 'Guest'}</span>
                       <Button
                         variant="ghost"
                         size="sm"

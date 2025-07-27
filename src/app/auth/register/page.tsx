@@ -1,95 +1,111 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useAuth } from '@/lib/contexts/AuthContext'
+import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/primitives/Button'
 import { ResponsiveLogo } from '@/components/ui/primitives/Logo'
 import { Container } from '@/components/layout/templates/PageLayout'
-import { Eye, EyeOff, Loader, Check } from 'lucide-react'
+import { Mail, Lock, User, Phone, AlertCircle, CheckCircle } from 'lucide-react'
 import Link from 'next/link'
 
 export default function RegisterPage() {
   const router = useRouter()
-  const { register, profile, isAuthenticated, isLoading: authLoading } = useAuth()
   const [formData, setFormData] = useState({
+    email: '',
+    password: '',
     firstName: '',
     lastName: '',
-    email: '',
-    phone: '',
-    password: '',
-    confirmPassword: '',
-    acceptTerms: false,
-    subscribeNewsletter: true,
+    phone: ''
   })
-  const [showPassword, setShowPassword] = useState(false)
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
-
-  // Redirect if already authenticated
-  useEffect(() => {
-    if (!authLoading && isAuthenticated && profile) {
-      if (profile.role === 'admin' || profile.role === 'super_admin') {
-        router.push('/admin')
-      } else {
-        router.push('/dashboard')
-      }
-    }
-  }, [authLoading, isAuthenticated, profile, router])
+  const [success, setSuccess] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
     setError('')
 
-    // Validation
-    if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match')
-      setIsLoading(false)
-      return
-    }
-
-    if (!formData.acceptTerms) {
-      setError('Please accept the terms and conditions')
-      setIsLoading(false)
-      return
-    }
-
     try {
-      const result = await register({
-        firstName: formData.firstName,
-        lastName: formData.lastName,
+      // Create user account
+      const { data, error } = await supabase.auth.signUp({
         email: formData.email,
-        phone: formData.phone,
-        password: formData.password,
-        subscribeNewsletter: formData.subscribeNewsletter,
+        password: formData.password
       })
 
-      if (result.success) {
-        // The useEffect will handle the redirect based on profile
-        // No need to manually redirect here
-      } else {
-        setError(result.error || 'Registration failed. Please try again.')
-        setIsLoading(false)
+      if (error) {
+        setError(error.message)
+      } else if (data.user) {
+        // Create user profile
+        const { error: profileError } = await supabase
+          .from('user_profiles')
+          .insert({
+            id: data.user.id,
+            email: formData.email,
+            first_name: formData.firstName,
+            last_name: formData.lastName,
+            phone: formData.phone,
+            role: 'customer'
+          })
+
+        if (profileError) {
+          setError('Account created but profile setup failed. Please contact support.')
+        } else {
+          setSuccess(true)
+        }
       }
     } catch (error) {
-      console.error('Registration error:', error)
-      setError('Something went wrong. Please try again.')
+      setError('Registration failed. Please try again.')
+    } finally {
       setIsLoading(false)
     }
   }
 
-  const handleInputChange = (field: string, value: string | boolean) => {
-    setFormData(prev => ({ ...prev, [field]: value }))
-    if (error) setError('') // Clear error when user starts typing
+  if (success) {
+    return (
+      <div className="min-h-screen bg-surface-primary flex items-center justify-center py-12">
+        <Container>
+          <div className="max-w-md mx-auto space-y-8">
+            <div className="text-center">
+              <div className="flex justify-center mb-6">
+                <ResponsiveLogo />
+              </div>
+              <div className="w-16 h-16 bg-success-600/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <CheckCircle className="w-8 h-8 text-success-400" />
+              </div>
+              <h2 className="text-3xl font-bold text-text-primary">
+                Account Created!
+              </h2>
+              <p className="mt-2 text-text-secondary">
+                Please check your email to verify your account
+              </p>
+            </div>
+
+            <div className="bg-surface-secondary rounded-lg p-8 border border-border-secondary shadow-lg text-center">
+              <p className="text-text-secondary mb-6">
+                We've sent a verification link to your email address. 
+                Click the link to activate your account and start booking services.
+              </p>
+              
+              <Button
+                variant="primary"
+                fullWidth
+                onClick={() => router.push('/auth/login')}
+              >
+                Go to Login
+              </Button>
+            </div>
+          </div>
+        </Container>
+      </div>
+    )
   }
 
   return (
     <div className="min-h-screen bg-surface-primary flex items-center justify-center py-12">
       <Container>
         <div className="max-w-md mx-auto space-y-8">
-          {/* Header */}
           <div className="text-center">
             <div className="flex justify-center mb-6">
               <ResponsiveLogo />
@@ -98,225 +114,139 @@ export default function RegisterPage() {
               Create Account
             </h2>
             <p className="mt-2 text-text-secondary">
-              Join Love 4 Detailing for professional mobile car care
+              Join Love 4 Detailing for premium car care
             </p>
           </div>
 
-          {/* Registration Form */}
           <div className="bg-surface-secondary rounded-lg p-8 border border-border-secondary shadow-lg">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Error Message */}
-            {error && (
-              <div className="bg-error-600/10 border border-error-500/20 rounded-md p-4">
-                <p className="text-error-400 text-sm">{error}</p>
-              </div>
-            )}
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {error && (
+                <div className="bg-error-600/10 border border-error-500/20 rounded-md p-4 flex items-center gap-3">
+                  <AlertCircle className="w-5 h-5 text-error-400 flex-shrink-0" />
+                  <p className="text-error-400 text-sm">{error}</p>
+                </div>
+              )}
 
-            {/* Name Fields */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-text-primary mb-2">
+                    First Name
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      required
+                      value={formData.firstName}
+                      onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                      className="w-full pl-12 pr-4 py-3 bg-surface-primary border border-border-secondary rounded-md text-text-primary placeholder-text-muted focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-600/20 transition-colors"
+                      placeholder="First name"
+                    />
+                    <User className="absolute left-4 top-1/2 transform -translate-y-1/2 w-4 h-4 text-text-muted" />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-text-primary mb-2">
+                    Last Name
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      required
+                      value={formData.lastName}
+                      onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                      className="w-full pl-12 pr-4 py-3 bg-surface-primary border border-border-secondary rounded-md text-text-primary placeholder-text-muted focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-600/20 transition-colors"
+                      placeholder="Last name"
+                    />
+                    <User className="absolute left-4 top-1/2 transform -translate-y-1/2 w-4 h-4 text-text-muted" />
+                  </div>
+                </div>
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-text-primary mb-2">
-                  First Name
+                  Email Address
                 </label>
-                <input
-                  type="text"
-                  required
-                  value={formData.firstName}
-                  onChange={(e) => handleInputChange('firstName', e.target.value)}
-                  className="w-full px-4 py-3 bg-surface-primary border border-border-secondary rounded-md text-text-primary placeholder-text-muted focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-600/20 transition-colors"
-                  placeholder="John"
-                />
+                <div className="relative">
+                  <input
+                    type="email"
+                    required
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    className="w-full pl-12 pr-4 py-3 bg-surface-primary border border-border-secondary rounded-md text-text-primary placeholder-text-muted focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-600/20 transition-colors"
+                    placeholder="Enter your email"
+                  />
+                  <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 w-4 h-4 text-text-muted" />
+                </div>
               </div>
+
               <div>
                 <label className="block text-sm font-medium text-text-primary mb-2">
-                  Last Name
+                  Phone Number
                 </label>
-                <input
-                  type="text"
-                  required
-                  value={formData.lastName}
-                  onChange={(e) => handleInputChange('lastName', e.target.value)}
-                  className="w-full px-4 py-3 bg-surface-primary border border-border-secondary rounded-md text-text-primary placeholder-text-muted focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-600/20 transition-colors"
-                  placeholder="Doe"
-                />
+                <div className="relative">
+                  <input
+                    type="tel"
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    className="w-full pl-12 pr-4 py-3 bg-surface-primary border border-border-secondary rounded-md text-text-primary placeholder-text-muted focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-600/20 transition-colors"
+                    placeholder="Phone number (optional)"
+                  />
+                  <Phone className="absolute left-4 top-1/2 transform -translate-y-1/2 w-4 h-4 text-text-muted" />
+                </div>
               </div>
-            </div>
 
-            {/* Email Field */}
-            <div>
-              <label className="block text-sm font-medium text-text-primary mb-2">
-                Email Address
-              </label>
-              <input
-                type="email"
-                required
-                value={formData.email}
-                onChange={(e) => handleInputChange('email', e.target.value)}
-                className="w-full px-4 py-3 bg-surface-primary border border-border-secondary rounded-md text-text-primary placeholder-text-muted focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-600/20 transition-colors"
-                placeholder="john.doe@example.com"
-              />
-            </div>
-
-            {/* Phone Field */}
-            <div>
-              <label className="block text-sm font-medium text-text-primary mb-2">
-                Phone Number
-              </label>
-              <input
-                type="tel"
-                value={formData.phone}
-                onChange={(e) => handleInputChange('phone', e.target.value)}
-                className="w-full px-4 py-3 bg-surface-primary border border-border-secondary rounded-md text-text-primary placeholder-text-muted focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-600/20 transition-colors"
-                placeholder="01234 567890"
-              />
-            </div>
-
-            {/* Password Fields */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-text-primary mb-2">
                   Password
                 </label>
                 <div className="relative">
                   <input
-                    type={showPassword ? 'text' : 'password'}
+                    type="password"
                     required
                     value={formData.password}
-                    onChange={(e) => handleInputChange('password', e.target.value)}
-                    className="w-full px-4 py-3 pr-12 bg-surface-primary border border-border-secondary rounded-md text-text-primary placeholder-text-muted focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-600/20 transition-colors"
-                    placeholder="••••••••"
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    className="w-full pl-12 pr-4 py-3 bg-surface-primary border border-border-secondary rounded-md text-text-primary placeholder-text-muted focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-600/20 transition-colors"
+                    placeholder="Create a password"
                   />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-text-secondary hover:text-text-primary transition-colors"
-                  >
-                    {showPassword ? (
-                      <EyeOff className="w-5 h-5" />
-                    ) : (
-                      <Eye className="w-5 h-5" />
-                    )}
-                  </button>
+                  <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 w-4 h-4 text-text-muted" />
                 </div>
+                <p className="text-xs text-text-muted mt-1">
+                  Must be at least 8 characters long
+                </p>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-text-primary mb-2">
-                  Confirm Password
-                </label>
-                <div className="relative">
-                  <input
-                    type={showConfirmPassword ? 'text' : 'password'}
-                    required
-                    value={formData.confirmPassword}
-                    onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
-                    className="w-full px-4 py-3 pr-12 bg-surface-primary border border-border-secondary rounded-md text-text-primary placeholder-text-muted focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-600/20 transition-colors"
-                    placeholder="••••••••"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-text-secondary hover:text-text-primary transition-colors"
-                  >
-                    {showConfirmPassword ? (
-                      <EyeOff className="w-5 h-5" />
-                    ) : (
-                      <Eye className="w-5 h-5" />
-                    )}
-                  </button>
-                </div>
-              </div>
-            </div>
 
-            {/* Checkboxes */}
-            <div className="space-y-4">
-              <label className="flex items-start gap-3">
-                <input
-                  type="checkbox"
-                  checked={formData.acceptTerms}
-                  onChange={(e) => handleInputChange('acceptTerms', e.target.checked)}
-                  className="mt-1 w-4 h-4 text-brand-600 border border-border-secondary rounded focus:ring-brand-400 focus:ring-2"
-                />
-                <span className="text-sm text-text-secondary">
-                  I agree to the{' '}
-                  <Link href="/terms" className="text-brand-400 hover:text-brand-300 transition-colors">
-                    Terms of Service
-                  </Link>{' '}
-                  and{' '}
-                  <Link href="/privacy" className="text-brand-400 hover:text-brand-300 transition-colors">
-                    Privacy Policy
-                  </Link>
-                </span>
-              </label>
+              <Button
+                type="submit"
+                variant="primary"
+                disabled={isLoading}
+                className="w-full"
+              >
+                {isLoading ? 'Creating Account...' : 'Create Account'}
+              </Button>
+            </form>
 
-              <label className="flex items-start gap-3">
-                <input
-                  type="checkbox"
-                  checked={formData.subscribeNewsletter}
-                  onChange={(e) => handleInputChange('subscribeNewsletter', e.target.checked)}
-                  className="mt-1 w-4 h-4 text-brand-600 border border-border-secondary rounded focus:ring-brand-400 focus:ring-2"
-                />
-                <span className="text-sm text-text-secondary">
-                  Subscribe to our newsletter for special offers and detailing tips
-                </span>
-              </label>
-            </div>
-
-            {/* Submit Button */}
-            <Button
-              type="submit"
-              variant="primary"
-              disabled={isLoading}
-              className="w-full"
-              leftIcon={isLoading ? <Loader className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-            >
-              {isLoading ? 'Creating account...' : 'Create Account'}
-            </Button>
-          </form>
-
-          {/* Benefits */}
-          <div className="mt-6 pt-6 border-t border-border-secondary">
-            <p className="text-xs text-text-muted text-center mb-4">
-              Create an account to enjoy:
-            </p>
-            <div className="space-y-2 text-xs text-text-secondary">
-              <div className="flex items-center gap-2">
-                <Check className="w-3 h-3 text-success-400" />
-                <span>Quick booking with saved vehicles and addresses</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Check className="w-3 h-3 text-success-400" />
-                <span>Track booking history and manage appointments</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Check className="w-3 h-3 text-success-400" />
-                <span>Exclusive offers and loyalty rewards</span>
-              </div>
+            <div className="mt-6 text-center">
+              <p className="text-text-secondary">
+                Already have an account?{' '}
+                <Link
+                  href="/auth/login"
+                  className="text-brand-400 hover:text-brand-300 font-medium transition-colors"
+                >
+                  Sign In
+                </Link>
+              </p>
             </div>
           </div>
-        </div>
 
-        {/* Sign In Link */}
-        <div className="text-center">
-          <p className="text-text-secondary">
-            Already have an account?{' '}
+          <div className="text-center">
             <Link
-              href="/auth/login"
-              className="text-brand-400 hover:text-brand-300 font-medium transition-colors"
+              href="/"
+              className="text-sm text-text-muted hover:text-text-secondary transition-colors"
             >
-              Sign in here
+              ← Back to Home
             </Link>
-          </p>
-        </div>
-
-        {/* Back to Home */}
-        <div className="text-center">
-          <Link
-            href="/"
-            className="text-sm text-text-muted hover:text-text-secondary transition-colors"
-          >
-            ← Back to Home
-          </Link>
-        </div>
+          </div>
         </div>
       </Container>
     </div>
