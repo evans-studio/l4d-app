@@ -67,8 +67,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Clear all Supabase cookies manually
       const cookies = document.cookie.split(';')
       cookies.forEach(cookie => {
-        const name = cookie.split('=')[0].trim()
-        if (name.includes('sb-vwejbgfiddltdqwhfjmt')) {
+        const cookieParts = cookie.split('=')
+        const name = cookieParts[0]?.trim()
+        if (name && name.includes('sb-vwejbgfiddltdqwhfjmt')) {
           document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`
         }
       })
