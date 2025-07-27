@@ -25,34 +25,8 @@ function ResetPasswordContent() {
   const token = searchParams.get('token')
 
   useEffect(() => {
-    const validateToken = async () => {
-      if (!token) {
-        setIsValidToken(false)
-        setError('Invalid or missing reset token.')
-        return
-      }
-
-      try {
-        const response = await fetch('/api/auth/validate-reset-token', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ token }),
-        })
-
-        const data = await response.json()
-        setIsValidToken(data.success)
-        
-        if (!data.success) {
-          setError(data.error || 'Invalid or expired reset token.')
-        }
-      } catch (error) {
-        console.error('Token validation error:', error)
-        setIsValidToken(false)
-        setError('Failed to validate reset token.')
-      }
-    }
-
-    validateToken()
+    // For Supabase reset, we don't need to validate tokens - they handle it
+    setIsValidToken(true)
   }, [token])
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -74,21 +48,19 @@ function ResetPasswordContent() {
     }
 
     try {
-      const response = await fetch('/api/auth/reset-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          token,
-          password: formData.password,
-        }),
+      // Use Supabase's built-in password update
+      const { createClient } = await import('@/lib/supabase/client')
+      const supabase = createClient()
+      
+      const { error } = await supabase.auth.updateUser({
+        password: formData.password
       })
 
-      const data = await response.json()
-
-      if (data.success) {
-        setIsSuccess(true)
+      if (error) {
+        console.error('Password reset error:', error)
+        setError(error.message || 'Failed to reset password. Please try again.')
       } else {
-        setError(data.error || 'Failed to reset password. Please try again.')
+        setIsSuccess(true)
       }
     } catch (error) {
       console.error('Password reset error:', error)
