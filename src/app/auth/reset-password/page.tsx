@@ -24,13 +24,19 @@ function ResetPasswordPageContent() {
   const searchParams = useSearchParams()
 
   useEffect(() => {
-    // Check if we have the reset token from URL params
+    // Check if we have the reset token from URL params (custom system)
     const token = searchParams.get('token')
-    if (!token) {
+    
+    // Or check if we have Supabase hash parameters (fallback system)
+    const hash = window.location.hash
+    const hasSupabaseToken = hash.includes('access_token') && hash.includes('type=recovery')
+    
+    if (!token && !hasSupabaseToken) {
       setTokenError('Invalid or expired reset link. Please request a new password reset.')
-    } else {
+    } else if (token) {
       setResetToken(token)
     }
+    // If hasSupabaseToken but no custom token, we'll use Supabase's system
   }, [searchParams])
 
   const validatePassword = (pass: string) => {
@@ -69,33 +75,59 @@ function ResetPasswordPageContent() {
     }
 
     try {
-      // Call our custom password reset API
-      const response = await fetch('/api/auth/reset-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          token: resetToken,
-          password: password 
-        }),
-      })
+      // Check if we should use custom token system or Supabase system
+      if (resetToken) {
+        // Use our custom password reset API
+        const response = await fetch('/api/auth/reset-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            token: resetToken,
+            password: password 
+          }),
+        })
 
-      const data = await response.json()
+        const data = await response.json()
 
-      if (data.success) {
-        console.log('Password updated successfully')
-        setIsSuccess(true)
-        
-        // Redirect to login after a delay
-        setTimeout(() => {
-          router.push('/auth/login?message=password-updated')
-        }, 3000)
-      } else {
-        if (data.error?.code === 'TOKEN_EXPIRED') {
-          setError('Your reset link has expired. Please request a new password reset.')
-        } else if (data.error?.code === 'INVALID_TOKEN') {
-          setError('Invalid reset link. Please request a new password reset.')
+        if (data.success) {
+          console.log('Password updated successfully via custom system')
+          setIsSuccess(true)
+          
+          // Redirect to login after a delay
+          setTimeout(() => {
+            router.push('/auth/login?message=password-updated')
+          }, 3000)
         } else {
-          setError(data.error?.message || 'Failed to update password. Please try again.')
+          if (data.error?.code === 'TOKEN_EXPIRED') {
+            setError('Your reset link has expired. Please request a new password reset.')
+          } else if (data.error?.code === 'INVALID_TOKEN') {
+            setError('Invalid reset link. Please request a new password reset.')
+          } else {
+            setError(data.error?.message || 'Failed to update password. Please try again.')
+          }
+        }
+      } else {
+        // Fallback to Supabase's built-in system
+        const { error: updateError } = await supabase.auth.updateUser({
+          password: password
+        })
+
+        if (updateError) {
+          console.error('Supabase password update error:', updateError)
+          
+          if (updateError.message.includes('Invalid token')) {
+            setError('Your reset link has expired. Please request a new password reset.')
+          } else {
+            setError(updateError.message || 'Failed to update password. Please try again.')
+          }
+        } else {
+          console.log('Password updated successfully via Supabase')
+          setIsSuccess(true)
+          
+          // Redirect to login after a delay
+          setTimeout(() => {
+            router.push('/auth/login?message=password-updated')
+          }, 3000)
         }
       }
     } catch (error) {

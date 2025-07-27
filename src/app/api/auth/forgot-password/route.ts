@@ -41,7 +41,27 @@ export async function POST(request: NextRequest) {
 
     // Only send email if user exists
     if (existingUser) {
+      // First try our custom Resend approach
       try {
+        console.log('Attempting custom email with Resend...')
+        
+        // Check if we have required environment variables
+        if (!process.env.RESEND_API_KEY) {
+          console.error('RESEND_API_KEY not configured, falling back to Supabase')
+          throw new Error('Resend not configured')
+        }
+
+        // Check if password_reset_tokens table exists
+        const { error: tableCheckError } = await supabase
+          .from('password_reset_tokens')
+          .select('count')
+          .limit(1)
+
+        if (tableCheckError) {
+          console.error('password_reset_tokens table not found, falling back to Supabase:', tableCheckError)
+          throw new Error('Database table not ready')
+        }
+
         // Generate a secure reset token using crypto
         const resetToken = randomBytes(32).toString('hex')
         const hashedToken = createHash('sha256').update(resetToken).digest('hex')
@@ -62,11 +82,7 @@ export async function POST(request: NextRequest) {
 
         if (tokenError) {
           console.error('Error storing reset token:', tokenError)
-          return ApiResponseHandler.error(
-            'Failed to create reset token', 
-            'TOKEN_CREATE_FAILED',
-            500
-          )
+          throw new Error('Failed to store reset token')
         }
 
         const resetUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://l4d-app.vercel.app'}/auth/reset-password?token=${resetToken}`
@@ -158,13 +174,35 @@ export async function POST(request: NextRequest) {
         console.log('Password reset email sent successfully via Resend to:', email)
         console.log('Email ID:', data?.id)
         
-      } catch (emailSendError) {
-        console.error('Email send error:', emailSendError)
-        return ApiResponseHandler.error(
-          'Failed to send reset email', 
-          'EMAIL_SEND_FAILED',
-          500
-        )
+      } catch (customEmailError) {
+        console.error('Custom email system failed:', customEmailError)
+        console.log('Falling back to Supabase built-in password reset...')
+        
+        // Fallback to Supabase's built-in password reset
+        try {
+          const { error: supabaseResetError } = await supabase.auth.resetPasswordForEmail(email.toLowerCase(), {
+            redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || 'https://l4d-app.vercel.app'}/auth/reset-password`
+          })
+
+          if (supabaseResetError) {
+            console.error('Supabase reset also failed:', supabaseResetError)
+            return ApiResponseHandler.error(
+              'Failed to send reset email', 
+              'EMAIL_SEND_FAILED',
+              500
+            )
+          }
+
+          console.log('Password reset email sent via Supabase fallback to:', email)
+          
+        } catch (fallbackError) {
+          console.error('Both email systems failed:', fallbackError)
+          return ApiResponseHandler.error(
+            'Failed to send reset email', 
+            'EMAIL_SEND_FAILED',
+            500
+          )
+        }
       }
     }
 
