@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
     try {
       // Send email using Resend
       const { data, error } = await resend.emails.send({
-        from: 'Love 4 Detailing <zell@love4detailing.com>',
+        from: `Love 4 Detailing <${process.env.NEXT_PUBLIC_FROM_EMAIL || 'zell@love4detailing.co.uk'}>`,
         to: [to],
         subject,
         html,
