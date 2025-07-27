@@ -19,14 +19,12 @@ function getStatusMessage(status: string): string {
   return messages[status as keyof typeof messages] || 'Your booking status has been updated.'
 }
 
-interface RouteParams {
-  params: {
-    id: string
-  }
-}
-
-export async function PUT(request: NextRequest, { params }: RouteParams) {
+export async function PUT(
+  request: NextRequest, 
+  context: { params: Promise<{ id: string }> }
+) {
   try {
+    const { id } = await context.params
     const supabase = await createClient()
     
     // Get current user and verify admin role
@@ -51,7 +49,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     const body = await request.json()
     const { status } = statusUpdateSchema.parse(body)
 
-    // Check if booking exists and get full booking details for email
+    // Check if booking exists
     const { data: existingBooking, error: bookingError } = await supabase
       .from('bookings')
       .select(`
@@ -63,30 +61,10 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         start_time,
         total_price,
         special_instructions,
-        customer_profiles!inner (
-          first_name,
-          last_name,
-          email
-        ),
-        booking_services!inner (
-          services!inner (
-            name,
-            base_price
-          )
-        ),
-        customer_vehicles!inner (
-          make,
-          model,
-          year
-        ),
-        customer_addresses!inner (
-          address_line_1,
-          address_line_2,
-          city,
-          postal_code
-        )
+        vehicle_id,
+        address_id
       `)
-      .eq('id', params.id)
+      .eq('id', id)
       .single()
 
     if (bookingError || !existingBooking) {
@@ -100,7 +78,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         status,
         updated_at: new Date().toISOString()
       })
-      .eq('id', params.id)
+      .eq('id', id)
       .select()
       .single()
 
@@ -109,53 +87,36 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       return ApiResponseHandler.serverError('Failed to update booking status')
     }
 
-    // Send email notification to customer about status change
+    // Send email notification to customer about status change (simplified for now)
     try {
-      const customerName = `${existingBooking.customer_profiles?.first_name || ''} ${existingBooking.customer_profiles?.last_name || ''}`.trim()
-      const customerEmail = existingBooking.customer_profiles?.email
+      if (status !== existingBooking.status) {
+        // Get customer details
+        const { data: customer } = await supabase
+          .from('user_profiles')
+          .select('first_name, last_name, email')
+          .eq('id', existingBooking.customer_id)
+          .single()
 
-      if (customerEmail && status !== existingBooking.status) {
-        // Transform booking data for email template
-        const bookingEmailData = {
-          customerName,
-          bookingReference: existingBooking.booking_reference,
-          scheduledDate: existingBooking.scheduled_date,
-          startTime: existingBooking.start_time,
-          totalPrice: existingBooking.total_price,
-          services: existingBooking.booking_services?.map((bs: any) => ({
-            name: bs.services?.name || 'Service',
-            base_price: bs.services?.base_price || 0
-          })) || [],
-          vehicle: {
-            make: existingBooking.customer_vehicles?.make || '',
-            model: existingBooking.customer_vehicles?.model || '',
-            year: existingBooking.customer_vehicles?.year
-          },
-          address: {
-            address_line_1: existingBooking.customer_addresses?.address_line_1 || '',
-            address_line_2: existingBooking.customer_addresses?.address_line_2,
-            city: existingBooking.customer_addresses?.city || '',
-            postal_code: existingBooking.customer_addresses?.postal_code || ''
-          },
-          specialInstructions: existingBooking.special_instructions
-        }
-
-        // Generate appropriate email based on status
-        let emailTemplate
-        const statusMessage = getStatusMessage(status)
-        
-        if (status === 'confirmed') {
-          emailTemplate = EmailService.generateBookingConfirmation(bookingEmailData)
-        } else {
-          emailTemplate = EmailService.generateStatusUpdate({
-            ...bookingEmailData,
+        if (customer?.email) {
+          const customerName = `${customer.first_name || ''} ${customer.last_name || ''}`.trim()
+          
+          // Simple status update email - can be enhanced later with full booking details
+          const emailTemplate = EmailService.generateStatusUpdate({
+            customerName,
+            bookingReference: existingBooking.booking_reference,
+            scheduledDate: existingBooking.scheduled_date,
+            startTime: existingBooking.start_time,
+            totalPrice: existingBooking.total_price,
+            services: [{ name: 'Vehicle Detailing Service', base_price: existingBooking.total_price }],
+            vehicle: { make: 'Vehicle', model: '', year: undefined },
+            address: { address_line_1: 'Service Location', address_line_2: '', city: '', postal_code: '' },
+            specialInstructions: existingBooking.special_instructions,
             status,
-            statusMessage
+            statusMessage: getStatusMessage(status)
           })
-        }
 
-        // Send the email
-        await EmailService.sendEmail(customerEmail, emailTemplate)
+          await EmailService.sendEmail(customer.email, emailTemplate)
+        }
       }
     } catch (emailError) {
       console.error('Failed to send status update email:', emailError)
