@@ -96,10 +96,8 @@ export async function POST(request: NextRequest) {
         id: authData.user.id,
         email: authData.user.email,
       },
-      requiresEmailConfirmation: !authData.session,
-      message: authData.session 
-        ? 'Registration successful' 
-        : 'Registration successful. Please check your email to confirm your account.',
+      requiresEmailConfirmation: false, // Admin created users don't need confirmation
+      message: 'Registration successful. You can now log in to your account.',
     })
 
   } catch (error) {
