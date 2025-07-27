@@ -1,11 +1,23 @@
 import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { ApiResponseHandler } from '@/lib/api/response'
+import { EmailService } from '@/lib/services/email-service'
 import { z } from 'zod'
 
 const statusUpdateSchema = z.object({
   status: z.enum(['pending', 'confirmed', 'in_progress', 'completed', 'cancelled'])
 })
+
+function getStatusMessage(status: string): string {
+  const messages = {
+    pending: 'Your booking is pending confirmation.',
+    confirmed: 'Your booking has been confirmed! We look forward to servicing your vehicle.',
+    in_progress: 'Our team has started working on your vehicle.',
+    completed: 'Your vehicle detailing service has been completed!',
+    cancelled: 'Your booking has been cancelled. If you have any questions, please contact us.'
+  }
+  return messages[status as keyof typeof messages] || 'Your booking status has been updated.'
+}
 
 interface RouteParams {
   params: {
@@ -39,10 +51,41 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     const body = await request.json()
     const { status } = statusUpdateSchema.parse(body)
 
-    // Check if booking exists
+    // Check if booking exists and get full booking details for email
     const { data: existingBooking, error: bookingError } = await supabase
       .from('bookings')
-      .select('id, status, customer_id')
+      .select(`
+        id,
+        booking_reference,
+        status,
+        customer_id,
+        scheduled_date,
+        start_time,
+        total_price,
+        special_instructions,
+        customer_profiles!inner (
+          first_name,
+          last_name,
+          email
+        ),
+        booking_services!inner (
+          services!inner (
+            name,
+            base_price
+          )
+        ),
+        customer_vehicles!inner (
+          make,
+          model,
+          year
+        ),
+        customer_addresses!inner (
+          address_line_1,
+          address_line_2,
+          city,
+          postal_code
+        )
+      `)
       .eq('id', params.id)
       .single()
 
@@ -66,12 +109,63 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       return ApiResponseHandler.serverError('Failed to update booking status')
     }
 
-    // TODO: Send email notification to customer about status change
-    // This would use the EmailService to notify the customer
+    // Send email notification to customer about status change
+    try {
+      const customerName = `${existingBooking.customer_profiles?.first_name || ''} ${existingBooking.customer_profiles?.last_name || ''}`.trim()
+      const customerEmail = existingBooking.customer_profiles?.email
+
+      if (customerEmail && status !== existingBooking.status) {
+        // Transform booking data for email template
+        const bookingEmailData = {
+          customerName,
+          bookingReference: existingBooking.booking_reference,
+          scheduledDate: existingBooking.scheduled_date,
+          startTime: existingBooking.start_time,
+          totalPrice: existingBooking.total_price,
+          services: existingBooking.booking_services?.map((bs: any) => ({
+            name: bs.services?.name || 'Service',
+            base_price: bs.services?.base_price || 0
+          })) || [],
+          vehicle: {
+            make: existingBooking.customer_vehicles?.make || '',
+            model: existingBooking.customer_vehicles?.model || '',
+            year: existingBooking.customer_vehicles?.year
+          },
+          address: {
+            address_line_1: existingBooking.customer_addresses?.address_line_1 || '',
+            address_line_2: existingBooking.customer_addresses?.address_line_2,
+            city: existingBooking.customer_addresses?.city || '',
+            postal_code: existingBooking.customer_addresses?.postal_code || ''
+          },
+          specialInstructions: existingBooking.special_instructions
+        }
+
+        // Generate appropriate email based on status
+        let emailTemplate
+        const statusMessage = getStatusMessage(status)
+        
+        if (status === 'confirmed') {
+          emailTemplate = EmailService.generateBookingConfirmation(bookingEmailData)
+        } else {
+          emailTemplate = EmailService.generateStatusUpdate({
+            ...bookingEmailData,
+            status,
+            statusMessage
+          })
+        }
+
+        // Send the email
+        await EmailService.sendEmail(customerEmail, emailTemplate)
+      }
+    } catch (emailError) {
+      console.error('Failed to send status update email:', emailError)
+      // Don't fail the request if email fails
+    }
 
     return ApiResponseHandler.success({
       booking: updatedBooking,
-      message: `Booking status updated to ${status}`
+      message: `Booking status updated to ${status}`,
+      emailSent: true
     })
 
   } catch (error) {
