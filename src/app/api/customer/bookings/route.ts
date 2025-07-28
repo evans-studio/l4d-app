@@ -1,55 +1,24 @@
 import { NextRequest } from 'next/server'
 import { ApiResponseHandler } from '@/lib/api/response'
-import { createClient } from '@supabase/supabase-js'
-
-// Force Node.js runtime
-export const runtime = 'nodejs'
-
-// Use service role for server-side operations
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
-  }
-)
+import { createClientFromRequest, createAdminClient } from '@/lib/supabase/server'
 
 export async function GET(request: NextRequest) {
   try {
-    // Get auth token from request headers or cookies
-    const authHeader = request.headers.get('authorization')
-    const authToken = authHeader?.replace('Bearer ', '') || 
-                     request.cookies.get('sb-vwejbgfiddltdqwhfjmt-auth-token')?.value
-
-    if (!authToken) {
-      console.error('No authentication token found')
-      return ApiResponseHandler.error('Authentication required', 'AUTH_REQUIRED', 401)
-    }
-
-    // Verify the token and get user
-    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(authToken)
+    const supabase = createClientFromRequest(request)
     
-    if (userError) {
-      console.error('Auth error:', userError)
-      return ApiResponseHandler.error('Invalid authentication', 'AUTH_INVALID', 401)
-    }
+    // Get current session
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
     
-    if (!user) {
-      console.error('No user found for token')
-      return ApiResponseHandler.error('Invalid authentication', 'AUTH_INVALID', 401)
+    if (sessionError || !session?.user) {
+      return ApiResponseHandler.unauthorized('Authentication required')
     }
 
-    const userId = user.id
+    const userId = session.user.id
     console.log('Fetching bookings for user:', userId)
 
-    // First try to fetch bookings with a simple query
-    let bookings, bookingsError
-    
+    // Fetch bookings for the authenticated user
     try {
-      const simpleQuery = await supabaseAdmin
+      const { data: bookings, error: bookingsError } = await supabase
         .from('bookings')
         .select(`
           id,
@@ -68,53 +37,27 @@ export async function GET(request: NextRequest) {
           confirmed_at,
           completed_at,
           cancelled_at,
-          cancellation_reason
+          cancellation_reason,
+          booking_services(
+            id,
+            service_id,
+            service_details,
+            price,
+            estimated_duration
+          )
         `)
         .eq('customer_id', userId)
         .order('created_at', { ascending: false })
-      
-      bookings = simpleQuery.data
-      bookingsError = simpleQuery.error
-      
-      // If basic query works, try to get services separately
-      if (bookings && !bookingsError) {
-        for (const booking of bookings) {
-          try {
-            const { data: services } = await supabaseAdmin
-              .from('booking_services')
-              .select(`
-                id,
-                service_id,
-                service_details,
-                price,
-                estimated_duration
-              `)
-              .eq('booking_id', booking.id)
-            
-            ;(booking as unknown as { booking_services: unknown[] }).booking_services = services || []
-          } catch (serviceError) {
-            console.warn(`Failed to fetch services for booking ${booking.id}:`, serviceError)
-            ;(booking as unknown as { booking_services: unknown[] }).booking_services = []
-          }
-        }
+
+      if (bookingsError) {
+        console.error('Error fetching bookings:', bookingsError)
+        return ApiResponseHandler.success([])
       }
-    } catch (error) {
-      console.error('Error in booking query:', error)
-      bookingsError = error
-      bookings = null
-    }
 
-    if (bookingsError) {
-      console.error('Error fetching bookings:', bookingsError)
-      // Return empty array instead of error to allow dashboard to load
-      console.log('Returning empty bookings array due to database error')
-      return ApiResponseHandler.success([])
-    }
+      console.log(`Found ${bookings?.length || 0} bookings for user ${userId}`)
 
-    console.log(`Found ${bookings?.length || 0} bookings for user ${userId}`)
-
-    // Transform the data for frontend consumption
-    interface BookingWithServices {
+      // Transform the data for frontend consumption
+      interface BookingWithServices {
       id: string
       booking_reference: string
       scheduled_date: string
@@ -152,7 +95,8 @@ export async function GET(request: NextRequest) {
         postcode?: string
       }
     }
-    const transformedBookings = bookings?.map((booking: BookingWithServices) => ({
+    
+      const transformedBookings = bookings?.map((booking: BookingWithServices) => ({
       id: booking.id,
       booking_reference: booking.booking_reference,
       scheduled_date: booking.scheduled_date,
@@ -188,10 +132,14 @@ export async function GET(request: NextRequest) {
         city: booking.service_address.city || '',
         postal_code: booking.service_address.postcode || ''
       } : null
-    })) || []
+      })) || []
 
-    return ApiResponseHandler.success(transformedBookings)
+      return ApiResponseHandler.success(transformedBookings)
 
+    } catch (error) {
+      console.error('Customer bookings API error:', error)
+      return ApiResponseHandler.serverError('Failed to fetch customer bookings')
+    }
   } catch (error) {
     console.error('Customer bookings API error:', error)
     return ApiResponseHandler.serverError('Failed to fetch customer bookings')
