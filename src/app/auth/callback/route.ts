@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/middleware'
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const code = searchParams.get('code')
-  const next = searchParams.get('next') ?? '/dashboard'
+  let next = searchParams.get('next') ?? '/dashboard'
   const error = searchParams.get('error')
   const errorDescription = searchParams.get('error_description')
 
@@ -45,6 +45,16 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    // Determine role based on email address (for both existing and new profiles)
+    const adminEmails = [
+      'zell@love4detailing.com',
+      'paul@evans-studio.co.uk'
+    ]
+    
+    const userRole = adminEmails.includes(authData.user.email!)
+      ? (authData.user.email === 'paul@evans-studio.co.uk' ? 'super_admin' : 'admin')
+      : 'customer'
+
     // Check if user has a profile, create one if needed
     const { data: profile, error: profileError } = await supabase
       .from('user_profiles')
@@ -54,6 +64,7 @@ export async function GET(request: NextRequest) {
 
     if (profileError && profileError.code === 'PGRST116') {
       // Profile doesn't exist, create one
+      
       const { error: createProfileError } = await supabase
         .from('user_profiles')
         .insert({
@@ -61,7 +72,8 @@ export async function GET(request: NextRequest) {
           email: authData.user.email!,
           first_name: authData.user.user_metadata?.first_name || '',
           last_name: authData.user.user_metadata?.last_name || '',
-          role: 'customer',
+          role: userRole,
+          is_active: true,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         })
@@ -77,8 +89,24 @@ export async function GET(request: NextRequest) {
 
     console.log(`Auth callback successful for user ${authData.user.email}`)
     
-    // Return the response with cookies set
-    return response
+    // If no specific redirect was requested, redirect admin users to admin dashboard
+    if (next === '/dashboard') {
+      // Check if user has admin role (from existing profile or newly created one)
+      const finalProfile = profile || { role: userRole }
+      if (finalProfile?.role === 'admin' || finalProfile?.role === 'super_admin') {
+        next = '/admin'
+      }
+    }
+    
+    // Update response with correct redirect
+    const finalResponse = NextResponse.redirect(new URL(next, request.url))
+    
+    // Copy cookies from original response
+    response.cookies.getAll().forEach(cookie => {
+      finalResponse.cookies.set(cookie.name, cookie.value, cookie)
+    })
+    
+    return finalResponse
 
   } catch (error) {
     console.error('Auth callback unexpected error:', error)
