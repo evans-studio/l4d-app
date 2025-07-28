@@ -34,25 +34,33 @@ export default function LoginPage() {
     setIsLoading(true)
     setError('')
 
-    // Add timeout protection
+    // Add longer timeout protection (30 seconds instead of 10)
     const timeoutId = setTimeout(() => {
-      console.error('Login timeout after 10 seconds')
-      setError('Login is taking too long. Please check your internet connection and try again.')
+      console.error('Login timeout after 30 seconds')
+      setError('Login is taking too long. This may be due to network issues or server maintenance. Please try again.')
       setIsLoading(false)
-    }, 10000)
+    }, 30000)
 
     try {
       console.log('Starting login attempt for:', formData.email)
       
-      const { data, error } = await supabase.auth.signInWithPassword({
+      // Create a promise race between login and timeout
+      const loginPromise = supabase.auth.signInWithPassword({
         email: formData.email,
         password: formData.password
       })
 
+      const { data, error } = await loginPromise
+
       // Clear timeout since we got a response
       clearTimeout(timeoutId)
 
-      console.log('Login response received:', { data: !!data, error: !!error })
+      console.log('Login response received:', { 
+        hasData: !!data, 
+        hasError: !!error,
+        userId: data?.user?.id,
+        session: !!data?.session
+      })
 
       if (error) {
         console.error('Login error:', error)
@@ -62,48 +70,62 @@ export default function LoginPage() {
           setError('Please verify your email address before signing in. Check your inbox for a verification link.')
         } else if (error.message.includes('Too many requests')) {
           setError('Too many login attempts. Please wait a moment before trying again.')
+        } else if (error.message.includes('timeout') || error.message.includes('network')) {
+          setError('Network timeout. Please check your internet connection and try again.')
         } else {
-          setError(error.message)
+          setError(`Login failed: ${error.message}`)
         }
         setIsLoading(false)
-      } else if (data.user) {
-        console.log('Login successful:', {
-          userId: data.user.id,
-          email: data.user.email,
-          redirecting: true
-        })
-        
-        // Check user role and redirect appropriately
-        setTimeout(async () => {
-          try {
-            // Get user profile to determine redirect destination
-            const { data: profile } = await supabase
-              .from('user_profiles')
-              .select('role')
-              .eq('id', data.user.id)
-              .single()
-            
-            const redirectUrl = (profile?.role === 'admin' || profile?.role === 'super_admin') 
-              ? '/admin' 
-              : '/dashboard'
-            
-            console.log(`Redirecting ${data.user.email} (${profile?.role}) to ${redirectUrl}`)
-            window.location.href = redirectUrl
-          } catch (error) {
-            console.error('Error getting profile for redirect:', error)
-            // Fallback to dashboard if profile check fails
-            window.location.href = '/dashboard'
-          }
-        }, 500)
-      } else {
-        console.error('No user data received')
-        setError('Login failed. No user data received.')
+        return
+      } 
+
+      if (!data.user) {
+        console.error('No user data received despite no error')
+        setError('Login failed. No user data received. Please try again.')
         setIsLoading(false)
+        return
       }
-    } catch (error) {
+
+      console.log('Login successful for user:', data.user.email)
+      
+      // Simplified redirect - check profile in background but don't block
+      try {
+        // Quick profile check with timeout
+        const profilePromise = supabase
+          .from('user_profiles')
+          .select('role')
+          .eq('id', data.user.id)
+          .single()
+        
+        const profileTimeout = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Profile check timeout')), 5000)
+        )
+
+        const { data: profile } = await Promise.race([profilePromise, profileTimeout]) as any
+        
+        const redirectUrl = (profile?.role === 'admin' || profile?.role === 'super_admin') 
+          ? '/admin' 
+          : '/dashboard'
+        
+        console.log(`Redirecting to ${redirectUrl} based on role: ${profile?.role}`)
+        window.location.href = redirectUrl
+      } catch (profileError) {
+        console.warn('Profile check failed, defaulting to dashboard:', profileError)
+        // Default to dashboard if profile check fails or times out
+        window.location.href = '/dashboard'
+      }
+
+    } catch (error: any) {
       clearTimeout(timeoutId)
       console.error('Login exception:', error)
-      setError('Login failed. Please try again.')
+      
+      if (error.name === 'AbortError' || error.message.includes('timeout')) {
+        setError('Login request timed out. Please check your internet connection and try again.')
+      } else if (error.message.includes('Failed to fetch')) {
+        setError('Unable to connect to authentication service. Please check your internet connection.')
+      } else {
+        setError(`Login failed: ${error.message || 'Unknown error'}`)
+      }
       setIsLoading(false)
     }
   }

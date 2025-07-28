@@ -30,19 +30,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchProfile = async (userId: string) => {
     try {
-      const { data, error } = await supabase
+      // Add timeout to profile fetch
+      const profilePromise = supabase
         .from('user_profiles')
         .select('*')
         .eq('id', userId)
         .single()
 
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Profile fetch timeout')), 10000)
+      )
+
+      const { data, error } = await Promise.race([profilePromise, timeoutPromise]) as any
+
       if (error) {
         console.error('Error fetching profile:', error)
+        // Create a default profile if fetch fails
+        setProfile({
+          id: userId,
+          email: '',
+          role: 'customer',
+          first_name: 'User'
+        })
       } else {
         setProfile(data)
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Profile fetch error:', error)
+      // Create a default profile on error
+      setProfile({
+        id: userId,
+        email: '',
+        role: 'customer',
+        first_name: 'User'
+      })
     }
   }
 
