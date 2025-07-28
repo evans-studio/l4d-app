@@ -40,7 +40,7 @@ export class PricingService extends BaseService {
 
   async calculateServicePrice(request: PricingCalculationRequest): Promise<ServiceResponse<PricingCalculation>> {
     return this.executeQuery(async () => {
-      const supabase = this.supabase
+      const supabase = await this.supabase
 
       // Get service details
       const { data: service, error: serviceError } = await supabase
@@ -224,7 +224,7 @@ export class PricingService extends BaseService {
     }>
   }>> {
     return this.executeQuery(async () => {
-      const supabase = this.supabase
+      const supabase = await this.supabase
 
       // Get service
       const { data: service, error: serviceError } = await supabase

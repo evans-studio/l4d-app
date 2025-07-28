@@ -37,11 +37,8 @@ export class ServicesService extends BaseService {
         query = query.or(`name.ilike.%${filters.search}%,short_description.ilike.%${filters.search}%`)
       }
 
-      // Default to active services if not specified
       if (filters.isActive !== undefined) {
         query = query.eq('is_active', filters.isActive)
-      } else {
-        query = query.eq('is_active', true)
       }
 
       const { data: services, error } = await query
@@ -55,32 +52,19 @@ export class ServicesService extends BaseService {
         .eq('is_active', true)
         .order('price_multiplier')
 
-      if (sizesError) {
-        console.error('Vehicle sizes error:', sizesError)
-        return { data: null, error: sizesError }
-      }
-
-      if (!vehicleSizes || vehicleSizes.length === 0) {
-        console.error('No vehicle sizes found')
-        return { data: null, error: new Error('No vehicle sizes found') }
-      }
+      if (sizesError) return { data: null, error: sizesError }
 
       // Calculate price ranges for each service
       const servicesWithPricing: ServiceWithPricing[] = services.map(service => {
-        try {
-          const minMultiplier = vehicleSizes[0]?.price_multiplier || 1
-          const maxMultiplier = vehicleSizes[vehicleSizes.length - 1]?.price_multiplier || 1
+        const minMultiplier = vehicleSizes[0]?.price_multiplier || 1
+        const maxMultiplier = vehicleSizes[vehicleSizes.length - 1]?.price_multiplier || 1
 
-          return {
-            ...service,
-            priceRange: {
-              min: Math.round(service.base_price * minMultiplier),
-              max: Math.round(service.base_price * maxMultiplier),
-            },
-          }
-        } catch (error) {
-          console.error('Error processing service:', service.id, error)
-          throw error
+        return {
+          ...service,
+          priceRange: {
+            min: Math.round(service.base_price * minMultiplier),
+            max: Math.round(service.base_price * maxMultiplier),
+          },
         }
       })
 
@@ -129,7 +113,7 @@ export class ServicesService extends BaseService {
 
   async getServiceCategories(): Promise<ServiceResponse<ServiceCategory[]>> {
     return this.executeQuery(async () => {
-      const supabase = this.supabase
+      const supabase = await this.supabase
       return supabase
         .from('service_categories')
         .select('*')
@@ -140,7 +124,7 @@ export class ServicesService extends BaseService {
 
   async getVehicleSizes(): Promise<ServiceResponse<VehicleSize[]>> {
     return this.executeQuery(async () => {
-      const supabase = this.supabase
+      const supabase = await this.supabase
       return supabase
         .from('vehicle_sizes')
         .select('*')
@@ -151,7 +135,7 @@ export class ServicesService extends BaseService {
 
   async createService(serviceData: Partial<Service>): Promise<ServiceResponse<Service>> {
     return this.executeQuery(async () => {
-      const supabase = this.supabase
+      const supabase = await this.supabase
       return supabase
         .from('services')
         .insert(serviceData)
@@ -162,7 +146,7 @@ export class ServicesService extends BaseService {
 
   async updateService(id: string, serviceData: Partial<Service>): Promise<ServiceResponse<Service>> {
     return this.executeQuery(async () => {
-      const supabase = this.supabase
+      const supabase = await this.supabase
       return supabase
         .from('services')
         .update(serviceData)
@@ -174,7 +158,7 @@ export class ServicesService extends BaseService {
 
   async deleteService(id: string): Promise<ServiceResponse<void>> {
     return this.executeQuery(async () => {
-      const supabase = this.supabase
+      const supabase = await this.supabase
       const result = await supabase
         .from('services')
         .update({ is_active: false })
@@ -186,7 +170,7 @@ export class ServicesService extends BaseService {
   // Service Category CRUD Methods
   async getServiceCategoryById(id: string): Promise<ServiceResponse<ServiceCategory>> {
     return this.executeQuery(async () => {
-      const supabase = this.supabase
+      const supabase = await this.supabase
       return supabase
         .from('service_categories')
         .select('*')
@@ -197,7 +181,7 @@ export class ServicesService extends BaseService {
 
   async createServiceCategory(categoryData: Partial<ServiceCategory>): Promise<ServiceResponse<ServiceCategory>> {
     return this.executeQuery(async () => {
-      const supabase = this.supabase
+      const supabase = await this.supabase
       return supabase
         .from('service_categories')
         .insert(categoryData)
@@ -208,7 +192,7 @@ export class ServicesService extends BaseService {
 
   async updateServiceCategory(id: string, categoryData: Partial<ServiceCategory>): Promise<ServiceResponse<ServiceCategory>> {
     return this.executeQuery(async () => {
-      const supabase = this.supabase
+      const supabase = await this.supabase
       return supabase
         .from('service_categories')
         .update(categoryData)
@@ -220,7 +204,7 @@ export class ServicesService extends BaseService {
 
   async deleteServiceCategory(id: string): Promise<ServiceResponse<void>> {
     return this.executeQuery(async () => {
-      const supabase = this.supabase
+      const supabase = await this.supabase
       const result = await supabase
         .from('service_categories')
         .delete()
@@ -232,7 +216,7 @@ export class ServicesService extends BaseService {
   // Vehicle Size CRUD Methods
   async getVehicleSizeById(id: string): Promise<ServiceResponse<VehicleSize>> {
     return this.executeQuery(async () => {
-      const supabase = this.supabase
+      const supabase = await this.supabase
       return supabase
         .from('vehicle_sizes')
         .select('*')
@@ -243,7 +227,7 @@ export class ServicesService extends BaseService {
 
   async createVehicleSize(vehicleSizeData: Partial<VehicleSize>): Promise<ServiceResponse<VehicleSize>> {
     return this.executeQuery(async () => {
-      const supabase = this.supabase
+      const supabase = await this.supabase
       return supabase
         .from('vehicle_sizes')
         .insert(vehicleSizeData)
@@ -254,7 +238,7 @@ export class ServicesService extends BaseService {
 
   async updateVehicleSize(id: string, vehicleSizeData: Partial<VehicleSize>): Promise<ServiceResponse<VehicleSize>> {
     return this.executeQuery(async () => {
-      const supabase = this.supabase
+      const supabase = await this.supabase
       return supabase
         .from('vehicle_sizes')
         .update(vehicleSizeData)
@@ -266,7 +250,7 @@ export class ServicesService extends BaseService {
 
   async deleteVehicleSize(id: string): Promise<ServiceResponse<void>> {
     return this.executeQuery(async () => {
-      const supabase = this.supabase
+      const supabase = await this.supabase
       // Soft delete by setting is_active to false
       const result = await supabase
         .from('vehicle_sizes')

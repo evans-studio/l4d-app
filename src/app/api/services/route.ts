@@ -25,28 +25,74 @@ const createServiceSchema = z.object({
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const queryParams = Object.fromEntries(searchParams.entries())
-    
-    const validation = await ApiValidation.validateQuery(queryParams, servicesQuerySchema)
-    if (!validation.success) {
-      return validation.error
+    const categoryId = searchParams.get('categoryId')
+    const search = searchParams.get('search')
+    const isActive = searchParams.get('isActive')
+
+    // Temporary direct implementation until ServicesService TypeScript issues are resolved
+    const { createAdminClient } = await import('@/lib/supabase/server')
+    const supabase = createAdminClient()
+
+    let query = supabase
+      .from('services')
+      .select(`
+        *,
+        category:service_categories(*)
+      `)
+      .order('display_order')
+
+    // Apply filters
+    if (categoryId) {
+      query = query.eq('category_id', categoryId)
     }
 
-    const servicesService = new ServicesService()
-    const result = await servicesService.getAllServices(validation.data)
-
-    if (!result.success) {
-      return ApiResponseHandler.error(
-        result.error?.message || 'Failed to fetch services',
-        'FETCH_SERVICES_FAILED'
-      )
+    if (search) {
+      query = query.or(`name.ilike.%${search}%,short_description.ilike.%${search}%`)
     }
 
-    return ApiResponseHandler.success(result.data, {
+    // Default to active services
+    if (isActive === 'false') {
+      query = query.eq('is_active', false)
+    } else {
+      query = query.eq('is_active', true)
+    }
+
+    const { data: services, error: servicesError } = await query
+
+    if (servicesError) {
+      console.error('Services query error:', servicesError)
+      return ApiResponseHandler.serverError('Failed to fetch services')
+    }
+
+    // Get vehicle sizes for price calculation
+    const { data: vehicleSizes, error: sizesError } = await supabase
+      .from('vehicle_sizes')
+      .select('*')
+      .eq('is_active', true)
+      .order('price_multiplier')
+
+    if (sizesError) {
+      console.error('Vehicle sizes error:', sizesError)
+      return ApiResponseHandler.serverError('Failed to fetch vehicle sizes')
+    }
+
+    // Calculate price ranges
+    const minMultiplier = vehicleSizes[0]?.price_multiplier || 1
+    const maxMultiplier = vehicleSizes[vehicleSizes.length - 1]?.price_multiplier || 1
+
+    const servicesWithPricing = services.map(service => ({
+      ...service,
+      priceRange: {
+        min: Math.round(service.base_price * minMultiplier),
+        max: Math.round(service.base_price * maxMultiplier),
+      },
+    }))
+
+    return ApiResponseHandler.success(servicesWithPricing, {
       pagination: {
         page: 1,
-        limit: result.data?.length || 0,
-        total: result.data?.length || 0,
+        limit: servicesWithPricing.length,
+        total: servicesWithPricing.length,
         totalPages: 1
       }
     })
