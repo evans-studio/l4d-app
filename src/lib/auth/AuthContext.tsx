@@ -82,31 +82,47 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   useEffect(() => {
-    // Get initial session
-    const getInitialSession = async () => {
+    // Get initial session with retry logic
+    const getInitialSession = async (retryCount = 0) => {
+      let shouldStopLoading = false
+      
       try {
-        console.log('Getting initial session...')
+        console.log('Getting initial session... (attempt', retryCount + 1, ')')
         const { data: { session }, error } = await supabase.auth.getSession()
         
         if (error) {
           console.error('Session error:', error)
+          shouldStopLoading = true
         } else if (session?.user) {
           console.log('Initial session found for user:', session.user.id, 'with access token:', !!session.access_token)
           setUser(session.user)
+          shouldStopLoading = true
         } else {
           console.log('No initial session found - checking cookies manually...')
           // Check if there are auth cookies present
           const cookies = document.cookie
           const hasAuthCookies = cookies.includes('sb-vwejbgfiddltdqwhfjmt')
           console.log('Has auth cookies:', hasAuthCookies)
-          if (hasAuthCookies) {
-            console.log('Auth cookies found but no session - potential session loading issue')
+          
+          if (hasAuthCookies && retryCount < 3) {
+            console.log('Auth cookies found but no session - retrying in 200ms... (attempt', retryCount + 1, 'of 3)')
+            setTimeout(() => getInitialSession(retryCount + 1), 200)
+            return // Don't set loading to false yet
+          } else if (hasAuthCookies && retryCount >= 3) {
+            console.log('Max retries reached - session loading failed despite cookies')
+            shouldStopLoading = true
+          } else {
+            // No cookies, no session - definitely done loading
+            shouldStopLoading = true
           }
         }
       } catch (error) {
         console.error('Initial session error:', error)
+        shouldStopLoading = true
       } finally {
-        setIsLoading(false)
+        if (shouldStopLoading) {
+          setIsLoading(false)
+        }
       }
     }
 
