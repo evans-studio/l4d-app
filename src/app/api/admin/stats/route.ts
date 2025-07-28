@@ -6,10 +6,24 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = createClientFromRequest(request)
     
+    // Debug: Check for auth cookies
+    const cookies = request.cookies.getAll()
+    const authCookies = cookies.filter(c => 
+      c.name.includes('supabase') || c.name.includes('sb-')
+    )
+    console.log('Admin stats - Auth cookies:', authCookies.length, authCookies.map(c => c.name))
+    
     // Get current user and verify admin role
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     
+    console.log('Admin stats - Auth result:', { 
+      hasUser: !!user, 
+      userId: user?.id, 
+      authError: authError?.message 
+    })
+    
     if (authError || !user) {
+      console.log('Admin stats - Authentication failed:', authError?.message)
       return ApiResponseHandler.unauthorized('Authentication required')
     }
 
