@@ -14,10 +14,10 @@ export async function PUT(
     const { id: slotId } = await params
     const { cancellation_reason } = await request.json()
 
-    // Get current user and verify authentication
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    // Get current session and verify authentication
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
     
-    if (authError || !user) {
+    if (sessionError || !session?.user) {
       return ApiResponseHandler.unauthorized('Authentication required')
     }
 
@@ -150,7 +150,7 @@ export async function PUT(
             slot_id: slotId,
             slot_date: slot.date,
             slot_time: slot.start_time,
-            released_by: user.id,
+            released_by: session.user.id,
             cancellation_reason: cancellation_reason
           },
           created_at: new Date().toISOString()

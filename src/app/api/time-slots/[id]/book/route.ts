@@ -18,10 +18,10 @@ export async function PUT(
       return ApiResponseHandler.badRequest('Booking ID is required')
     }
 
-    // Get current user and verify authentication
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    // Get current session and verify authentication
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
     
-    if (authError || !user) {
+    if (sessionError || !session?.user) {
       return ApiResponseHandler.unauthorized('Authentication required')
     }
 
@@ -142,7 +142,7 @@ export async function PUT(
             slot_id: slotId,
             slot_date: slot.date,
             slot_time: slot.start_time,
-            booked_by: user.id
+            booked_by: session.user.id
           },
           created_at: new Date().toISOString()
         })

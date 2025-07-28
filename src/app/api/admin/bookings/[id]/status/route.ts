@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClientFromRequest } from '@/lib/supabase/server'
 import { ApiResponseHandler } from '@/lib/api/response'
 import { BookingService } from '@/lib/services/booking'
 import { z } from 'zod'
@@ -25,12 +25,12 @@ export async function PUT(
 ) {
   try {
     const { id } = await context.params
-    const supabase = await createClient()
+    const supabase = createClientFromRequest(request)
     
-    // Get current user and verify admin role
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    // Get current session and verify admin role
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
     
-    if (authError || !user) {
+    if (sessionError || !session?.user) {
       return ApiResponseHandler.unauthorized('Authentication required')
     }
 
@@ -38,7 +38,7 @@ export async function PUT(
     const { data: profile } = await supabase
       .from('user_profiles')
       .select('role')
-      .eq('id', user.id)
+      .eq('id', session.user.id)
       .single()
 
     if (!profile || (profile.role !== 'admin' && profile.role !== 'super_admin')) {
@@ -55,7 +55,7 @@ export async function PUT(
     const result = await bookingService.updateBookingStatus(
       id,
       status,
-      user.id,
+      session.user.id,
       reason || `Status updated to ${status} by admin`,
       notes
     )
