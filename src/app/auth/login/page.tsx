@@ -57,18 +57,19 @@ function LoginPageContent() {
           setError(error.message)
         }
       } else if (data.user) {
-        console.log('Login successful, checking role for redirect')
+        console.log('Login successful, redirecting to dashboard')
         
-        // Check user role to redirect appropriately
-        const { data: profile } = await supabase
-          .from('user_profiles')
-          .select('role')
-          .eq('id', data.user.id)
-          .single()
-
-        const redirectPath = (profile?.role === 'admin' || profile?.role === 'super_admin') ? '/admin' : '/dashboard'
-        console.log('Redirecting to:', redirectPath)
-        router.push(redirectPath)
+        // Simple redirect - let the middleware and route protection handle role-based redirects
+        console.log('Attempting redirect to /dashboard')
+        router.push('/dashboard')
+        
+        // Also try window.location as backup if router.push fails
+        setTimeout(() => {
+          if (window.location.pathname.includes('/auth/login')) {
+            console.log('Router redirect may have failed, trying window.location')
+            window.location.href = '/dashboard'
+          }
+        }, 1000)
       }
     } catch (error) {
       console.error('Login exception:', error)
