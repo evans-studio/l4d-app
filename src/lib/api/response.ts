@@ -21,13 +21,14 @@ export interface ApiResponse<T = unknown> {
 }
 
 export class ApiResponseHandler {
-  static success<T>(data?: T, metadata?: ApiResponse<T>['metadata']): NextResponse<ApiResponse<T>> {
+  static success<T>(data?: T, messageOrMetadata?: string | ApiResponse<T>['metadata']): NextResponse<ApiResponse<T>> {
+    const isString = typeof messageOrMetadata === 'string'
     return NextResponse.json({
       success: true,
       data,
       metadata: {
         timestamp: new Date().toISOString(),
-        ...metadata,
+        ...(isString ? {} : messageOrMetadata),
       },
     })
   }
@@ -73,6 +74,10 @@ export class ApiResponseHandler {
 
   static serverError(message: string = 'Internal server error'): NextResponse<ApiResponse> {
     return this.error(message, 'INTERNAL_ERROR', 500)
+  }
+
+  static conflict(message: string = 'Conflict'): NextResponse<ApiResponse> {
+    return this.error(message, 'CONFLICT', 409)
   }
 
   static paginated<T>(

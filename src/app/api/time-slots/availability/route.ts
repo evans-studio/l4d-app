@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server'
+import { createClientFromRequest } from '@/lib/supabase/server'
 import { BookingService } from '@/lib/services/booking'
 import { ApiResponseHandler } from '@/lib/api/response'
 import { ApiValidation } from '@/lib/api/validation'
@@ -9,12 +10,20 @@ const availabilityQuerySchema = z.object({
   date_to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format'),
 })
 
+export const runtime = 'nodejs'
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const queryParams = Object.fromEntries(searchParams.entries())
     
-    // Set defaults if no dates provided
+    // Check if this is a single date request (for real-time hook)
+    const singleDate = queryParams.date
+    if (singleDate) {
+      return handleSingleDateRequest(request, singleDate)
+    }
+    
+    // Handle date range requests (existing functionality)
     const today = new Date().toISOString().split('T')[0]
     const endDate = (() => {
       const end = new Date()
@@ -57,6 +66,71 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     console.error('Get availability error:', error)
+    return ApiResponseHandler.serverError('Failed to fetch availability')
+  }
+}
+
+async function handleSingleDateRequest(request: NextRequest, date: string) {
+  try {
+    const supabase = createClientFromRequest(request)
+
+    // Validate date format
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/
+    if (!dateRegex.test(date)) {
+      return ApiResponseHandler.badRequest('Invalid date format. Use YYYY-MM-DD')
+    }
+
+    // Check if date is in the past
+    const requestedDate = new Date(date)
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    if (requestedDate < today) {
+      return ApiResponseHandler.badRequest('Cannot fetch availability for past dates')
+    }
+
+    // Fetch available time slots for the date
+    const { data: timeSlots, error } = await supabase
+      .from('time_slots')
+      .select(`
+        id,
+        date,
+        start_time,
+        end_time,
+        is_available,
+        booking_id,
+        updated_at,
+        bookings(
+          id,
+          booking_reference,
+          status
+        )
+      `)
+      .eq('date', date)
+      .order('start_time', { ascending: true })
+
+    if (error) {
+      console.error('Error fetching time slots:', error)
+      return ApiResponseHandler.serverError('Failed to fetch availability')
+    }
+
+    // Transform data for frontend consumption
+    const transformedSlots = timeSlots?.map(slot => ({
+      id: slot.id,
+      date: slot.date,
+      start_time: slot.start_time,
+      end_time: slot.end_time,
+      is_available: slot.is_available,
+      booking_id: slot.booking_id,
+      last_updated: slot.updated_at,
+      booking_reference: slot.bookings?.[0]?.booking_reference || null,
+      booking_status: slot.bookings?.[0]?.status || null
+    })) || []
+
+    return ApiResponseHandler.success(transformedSlots, `Found ${transformedSlots.length} time slots for ${date}`)
+
+  } catch (error) {
+    console.error('Single date availability error:', error)
     return ApiResponseHandler.serverError('Failed to fetch availability')
   }
 }
