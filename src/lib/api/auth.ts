@@ -1,7 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { ApiResponseHandler } from './response'
 
-// Temporary auth utility for API routes
 export interface UserProfile {
   id: string
   email: string
@@ -19,9 +18,9 @@ export interface AuthenticatedRequest {
   profile: UserProfile
 }
 
-// Simple ApiAuth class to satisfy existing imports
+// Simple auth helper for API routes
 export class ApiAuth {
-  static async authenticateRequest(request: Request): Promise<AuthenticatedRequest | null> {
+  static async authenticate(request: Request) {
     try {
       const supabase = await createClient()
       
@@ -29,7 +28,10 @@ export class ApiAuth {
       const { data: { session }, error: sessionError } = await supabase.auth.getSession()
       
       if (sessionError || !session?.user) {
-        return null
+        return { 
+          auth: null, 
+          error: ApiResponseHandler.unauthorized('Authentication required') 
+        }
       }
 
       // Get the user profile
@@ -40,11 +42,13 @@ export class ApiAuth {
         .single()
 
       if (profileError || !profile) {
-        console.error('Failed to fetch user profile:', profileError)
-        return null
+        return { 
+          auth: null, 
+          error: ApiResponseHandler.unauthorized('User profile not found') 
+        }
       }
 
-      return {
+      const auth: AuthenticatedRequest = {
         user: {
           id: session.user.id,
           email: session.user.email!
@@ -58,33 +62,31 @@ export class ApiAuth {
           role: profile.role
         }
       }
+
+      return { auth, error: null }
     } catch (error) {
-      console.error('Auth authentication error:', error)
-      return null
+      console.error('API auth error:', error)
+      return { 
+        auth: null, 
+        error: ApiResponseHandler.serverError('Authentication failed') 
+      }
     }
-  }
-
-  static async authenticate(request: Request) {
-    const auth = await this.authenticateRequest(request)
-    return { auth, error: null }
-  }
-
-  static async requireAuth(request: Request) {
-    const auth = await this.authenticateRequest(request)
-    if (!auth) {
-      return { auth: null, error: ApiResponseHandler.unauthorized('Authentication required') }
-    }
-    return { auth, error: null }
   }
 
   static async requireRole(request: Request, allowedRoles: string[]) {
-    const auth = await this.authenticateRequest(request)
-    if (!auth) {
-      return { auth: null, error: ApiResponseHandler.unauthorized('Authentication required') }
+    const { auth, error } = await this.authenticate(request)
+    
+    if (error) {
+      return { auth: null, error }
     }
-    if (!allowedRoles.includes(auth.profile.role)) {
-      return { auth: null, error: ApiResponseHandler.forbidden('Insufficient permissions') }
+    
+    if (!allowedRoles.includes(auth!.profile.role)) {
+      return { 
+        auth: null, 
+        error: ApiResponseHandler.forbidden('Insufficient permissions') 
+      }
     }
+    
     return { auth, error: null }
   }
 }

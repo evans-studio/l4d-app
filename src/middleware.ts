@@ -1,55 +1,37 @@
 import { NextResponse, type NextRequest } from 'next/server'
+import { createClient } from '@/lib/supabase/server'
 
 export async function middleware(request: NextRequest) {
   const response = NextResponse.next()
-  
-  // Get all cookies and filter for Supabase auth cookies
-  const allCookies = request.cookies.getAll()
-  const supabaseCookies = allCookies.filter(c => 
-    c.name.startsWith('sb-') && c.name.includes('auth-token')
-  )
-  
-  // Look for the main session cookies that Supabase typically uses
-  const sessionCookies = allCookies.filter(c => 
-    c.name.includes('auth-token') && 
-    !c.name.includes('code-verifier') &&
-    c.value && c.value.length > 10 // Valid tokens should be substantial
-  )
-  
-  // Check for valid session indicators
-  const hasValidSession = sessionCookies.length > 0 || 
-    supabaseCookies.some(c => c.value && c.value.length > 50) // JWT tokens are long
-  
-  const isAuthenticated = hasValidSession
   const path = request.nextUrl.pathname
 
-  // Only log for auth and dashboard routes to avoid spam
-  if (path.startsWith('/auth/') || path.startsWith('/dashboard')) {
-    console.log('Middleware check:', {
-      path,
-      isAuthenticated,
-      hasValidSession,
-      sessionCookieCount: sessionCookies.length,
-      supabaseCookieCount: supabaseCookies.length,
-      cookieNames: supabaseCookies.map(c => c.name)
-    })
+  // Skip middleware for public routes, static files, and API routes
+  if (
+    path.startsWith('/_next') ||
+    path.startsWith('/api') ||
+    path.startsWith('/auth/callback') ||
+    path === '/' ||
+    path === '/book' ||
+    path === '/booking-policies' ||
+    path === '/booking-success' ||
+    path.match(/\.(png|jpg|jpeg|gif|svg|ico|css|js)$/)
+  ) {
+    return response
   }
 
-  // Redirect authenticated users away from auth pages (except callback)
-  if (path.startsWith('/auth/') && !path.startsWith('/auth/callback') && isAuthenticated) {
-    console.log('Redirecting authenticated user from auth page to dashboard')
-    return NextResponse.redirect(new URL('/dashboard', request.url))
-  }
-
-  // Protect admin routes - require authentication
-  if (path.startsWith('/admin') && !isAuthenticated) {
-    return NextResponse.redirect(new URL('/auth/login', request.url))
-  }
-
-  // Protect dashboard routes - require authentication  
-  if (path.startsWith('/dashboard') && !isAuthenticated) {
-    console.log('Redirecting unauthenticated user from dashboard to login')
-    return NextResponse.redirect(new URL('/auth/login', request.url))
+  // Simple auth check for protected routes
+  if (path.startsWith('/dashboard') || path.startsWith('/admin')) {
+    try {
+      const supabase = await createClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      
+      if (!session?.user) {
+        return NextResponse.redirect(new URL('/auth/login', request.url))
+      }
+    } catch (error) {
+      console.error('Auth check error:', error)
+      return NextResponse.redirect(new URL('/auth/login', request.url))
+    }
   }
 
   return response

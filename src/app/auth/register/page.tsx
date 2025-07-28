@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/primitives/Button'
 import { ResponsiveLogo } from '@/components/ui/primitives/Logo'
@@ -10,7 +9,6 @@ import { Mail, Lock, User, Phone, AlertCircle, CheckCircle } from 'lucide-react'
 import Link from 'next/link'
 
 export default function RegisterPage() {
-  const router = useRouter()
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -28,9 +26,6 @@ export default function RegisterPage() {
     setError('')
 
     try {
-      console.log('Starting registration with Supabase direct signup...')
-      
-      // Use Supabase direct signup (should trigger database function)
       const { data, error } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
@@ -45,15 +40,11 @@ export default function RegisterPage() {
       })
 
       if (error) {
-        console.error('Supabase signup error:', error)
+        console.error('Signup error:', error)
         setError(error.message)
       } else if (data.user) {
         console.log('Signup successful:', data.user.id)
-        // Registration successful - redirect to login
         setSuccess(true)
-        setTimeout(() => {
-          router.push('/auth/login?message=Account created successfully')
-        }, 2000)
       }
     } catch (error) {
       console.error('Registration error:', error)
@@ -92,9 +83,9 @@ export default function RegisterPage() {
               <Button
                 variant="primary"
                 fullWidth
-                onClick={() => router.push('/auth/login')}
+                onClick={() => window.location.href = '/auth/login'}
               >
-                Go to Login
+                Go to Sign In
               </Button>
             </div>
           </div>
@@ -115,7 +106,7 @@ export default function RegisterPage() {
               Create Account
             </h2>
             <p className="mt-2 text-text-secondary">
-              Join Love 4 Detailing for premium car care
+              Join Love 4 Detailing and book your first service
             </p>
           </div>
 
@@ -138,7 +129,10 @@ export default function RegisterPage() {
                       type="text"
                       required
                       value={formData.firstName}
-                      onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                      onChange={(e) => {
+                        setFormData({ ...formData, firstName: e.target.value })
+                        if (error) setError('')
+                      }}
                       className="w-full pl-12 pr-4 py-3 bg-surface-primary border border-border-secondary rounded-md text-text-primary placeholder-text-muted focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-600/20 transition-colors"
                       placeholder="First name"
                     />
@@ -155,7 +149,10 @@ export default function RegisterPage() {
                       type="text"
                       required
                       value={formData.lastName}
-                      onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                      onChange={(e) => {
+                        setFormData({ ...formData, lastName: e.target.value })
+                        if (error) setError('')
+                      }}
                       className="w-full pl-12 pr-4 py-3 bg-surface-primary border border-border-secondary rounded-md text-text-primary placeholder-text-muted focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-600/20 transition-colors"
                       placeholder="Last name"
                     />
@@ -173,7 +170,10 @@ export default function RegisterPage() {
                     type="email"
                     required
                     value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    onChange={(e) => {
+                      setFormData({ ...formData, email: e.target.value })
+                      if (error) setError('')
+                    }}
                     className="w-full pl-12 pr-4 py-3 bg-surface-primary border border-border-secondary rounded-md text-text-primary placeholder-text-muted focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-600/20 transition-colors"
                     placeholder="Enter your email"
                   />
@@ -183,15 +183,18 @@ export default function RegisterPage() {
 
               <div>
                 <label className="block text-sm font-medium text-text-primary mb-2">
-                  Phone Number
+                  Phone Number (Optional)
                 </label>
                 <div className="relative">
                   <input
                     type="tel"
                     value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    onChange={(e) => {
+                      setFormData({ ...formData, phone: e.target.value })
+                      if (error) setError('')
+                    }}
                     className="w-full pl-12 pr-4 py-3 bg-surface-primary border border-border-secondary rounded-md text-text-primary placeholder-text-muted focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-600/20 transition-colors"
-                    placeholder="Phone number (optional)"
+                    placeholder="Your phone number"
                   />
                   <Phone className="absolute left-4 top-1/2 transform -translate-y-1/2 w-4 h-4 text-text-muted" />
                 </div>
@@ -206,24 +209,36 @@ export default function RegisterPage() {
                     type="password"
                     required
                     value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    onChange={(e) => {
+                      setFormData({ ...formData, password: e.target.value })
+                      if (error) setError('')
+                    }}
                     className="w-full pl-12 pr-4 py-3 bg-surface-primary border border-border-secondary rounded-md text-text-primary placeholder-text-muted focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-600/20 transition-colors"
                     placeholder="Create a password"
+                    minLength={6}
                   />
                   <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 w-4 h-4 text-text-muted" />
                 </div>
-                <p className="text-xs text-text-muted mt-1">
-                  Must be at least 8 characters long
+                <p className="text-text-muted text-xs mt-1">
+                  Password must be at least 6 characters long
                 </p>
               </div>
 
               <Button
                 type="submit"
                 variant="primary"
-                disabled={isLoading}
+                disabled={isLoading || !formData.email.trim() || !formData.password.trim() || !formData.firstName.trim() || !formData.lastName.trim()}
                 className="w-full"
+                leftIcon={isLoading ? undefined : <User className="w-4 h-4" />}
               >
-                {isLoading ? 'Creating Account...' : 'Create Account'}
+                {isLoading ? (
+                  <div className="flex items-center gap-2">
+                    <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div>
+                    Creating Account...
+                  </div>
+                ) : (
+                  'Create Account'
+                )}
               </Button>
             </form>
 

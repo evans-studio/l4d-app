@@ -17,7 +17,6 @@ interface AuthContextType {
   user: User | null
   profile: UserProfile | null
   isLoading: boolean
-  isAuthenticated: boolean
   signOut: () => Promise<void>
   refreshProfile: () => Promise<void>
 }
@@ -29,28 +28,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
-  const refreshProfile = async () => {
-    if (!user) {
-      console.log('No user available for profile refresh')
-      return
-    }
-
+  const fetchProfile = async (userId: string) => {
     try {
-      console.log('Fetching profile for user:', user.id)
       const { data, error } = await supabase
         .from('user_profiles')
         .select('*')
-        .eq('id', user.id)
+        .eq('id', userId)
         .single()
 
       if (error) {
         console.error('Error fetching profile:', error)
-        // If profile doesn't exist, create it
-        if (error.code === 'PGRST116') {
-          console.log('Profile not found, user may need profile creation')
-        }
       } else {
-        console.log('Profile fetched successfully:', data)
         setProfile(data)
       }
     } catch (error) {
@@ -63,18 +51,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await supabase.auth.signOut()
       setUser(null)
       setProfile(null)
-      
-      // Clear all Supabase cookies manually
-      const cookies = document.cookie.split(';')
-      cookies.forEach(cookie => {
-        const cookieParts = cookie.split('=')
-        const name = cookieParts[0]?.trim()
-        if (name && name.includes('sb-vwejbgfiddltdqwhfjmt')) {
-          document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`
-        }
-      })
-      
-      // Redirect to homepage
       window.location.href = '/'
     } catch (error) {
       console.error('Sign out error:', error)
@@ -86,8 +62,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const getInitialSession = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession()
+        setUser(session?.user ?? null)
         if (session?.user) {
-          setUser(session.user)
+          await fetchProfile(session.user.id)
         }
       } catch (error) {
         console.error('Initial session error:', error)
@@ -102,12 +79,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         setUser(session?.user ?? null)
-        setProfile(null) // Reset profile when user changes
-        setIsLoading(false)
-
-        if (event === 'SIGNED_IN' && session?.user) {
-          refreshProfile()
+        setProfile(null)
+        
+        if (session?.user) {
+          await fetchProfile(session.user.id)
         }
+        
+        setIsLoading(false)
       }
     )
 
@@ -116,18 +94,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
-  // Refresh profile when user changes
-  useEffect(() => {
-    if (user && !profile) {
-      refreshProfile()
+  const refreshProfile = async () => {
+    if (user) {
+      await fetchProfile(user.id)
     }
-  }, [user])
+  }
 
   const value: AuthContextType = {
     user,
     profile,
     isLoading,
-    isAuthenticated: !!user,
     signOut,
     refreshProfile
   }

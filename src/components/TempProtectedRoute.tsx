@@ -1,18 +1,16 @@
 'use client'
 
-import { useAuth } from '@/lib/auth/AuthContext'
-import { useRouter } from 'next/navigation'
+import { useAuth } from '@/lib/auth'
 import { useEffect } from 'react'
 
 export function CustomerRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading, user } = useAuth()
-  const router = useRouter()
+  const { user, isLoading } = useAuth()
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      router.push('/auth/login')
+    if (!isLoading && !user) {
+      window.location.href = '/auth/login'
     }
-  }, [isAuthenticated, isLoading, router])
+  }, [user, isLoading])
 
   if (isLoading) {
     return (
@@ -22,7 +20,7 @@ export function CustomerRoute({ children }: { children: React.ReactNode }) {
     )
   }
 
-  if (!isAuthenticated) {
+  if (!user) {
     return null
   }
 
@@ -30,18 +28,17 @@ export function CustomerRoute({ children }: { children: React.ReactNode }) {
 }
 
 export function AdminRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading, profile } = useAuth()
-  const router = useRouter()
+  const { user, profile, isLoading } = useAuth()
 
   useEffect(() => {
     if (!isLoading) {
-      if (!isAuthenticated) {
-        router.push('/auth/login')
+      if (!user) {
+        window.location.href = '/auth/login'
       } else if (profile && !['admin', 'super_admin'].includes(profile.role)) {
-        router.push('/dashboard')
+        window.location.href = '/dashboard'
       }
     }
-  }, [isAuthenticated, isLoading, profile, router])
+  }, [user, isLoading, profile])
 
   if (isLoading) {
     return (
@@ -51,7 +48,7 @@ export function AdminRoute({ children }: { children: React.ReactNode }) {
     )
   }
 
-  if (!isAuthenticated || !profile || !['admin', 'super_admin'].includes(profile.role)) {
+  if (!user || !profile || !['admin', 'super_admin'].includes(profile.role)) {
     return null
   }
 

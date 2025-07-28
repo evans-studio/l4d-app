@@ -1,19 +1,14 @@
 'use client'
 
-import { useState, useEffect, Suspense } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
-import { useAuth } from '@/lib/auth/AuthContext'
 import { Button } from '@/components/ui/primitives/Button'
 import { ResponsiveLogo } from '@/components/ui/primitives/Logo'
 import { Container } from '@/components/layout/templates/PageLayout'
 import { Mail, Lock, AlertCircle, CheckCircle, Eye, EyeOff } from 'lucide-react'
 import Link from 'next/link'
 
-function LoginPageContent() {
-  const router = useRouter()
-  const searchParams = useSearchParams()
-  const { user, profile, isLoading: authLoading } = useAuth()
+export default function LoginPage() {
   const [formData, setFormData] = useState({
     email: '',
     password: ''
@@ -22,31 +17,17 @@ function LoginPageContent() {
   const [error, setError] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
   const [showPassword, setShowPassword] = useState(false)
-  const [isRedirecting, setIsRedirecting] = useState(false)
-
-  // Handle authenticated user redirects
-  useEffect(() => {
-    console.log('Auth state check:', { authLoading, hasUser: !!user, hasProfile: !!profile })
-    if (!authLoading && user && profile) {
-      console.log('User authenticated, redirecting...', { user: user.id, profile: profile.role })
-      // Force redirect to dashboard after authentication is confirmed
-      const redirectTo = searchParams.get('redirect') || '/dashboard'
-      console.log('Redirecting to:', redirectTo)
-      
-      // Use window.location for more reliable redirect
-      window.location.href = redirectTo
-    }
-  }, [authLoading, user, profile, router, searchParams])
 
   // Handle success messages from URL params
   useEffect(() => {
-    const message = searchParams.get('message')
+    const urlParams = new URLSearchParams(window.location.search)
+    const message = urlParams.get('message')
     if (message === 'password-updated') {
       setSuccessMessage('Password updated successfully! You can now sign in with your new password.')
     } else if (message === 'email-verified') {
       setSuccessMessage('Email verified successfully! You can now sign in to your account.')
     }
-  }, [searchParams])
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -54,16 +35,13 @@ function LoginPageContent() {
     setError('')
 
     try {
-      console.log('Starting login process...')
-      
       const { data, error } = await supabase.auth.signInWithPassword({
         email: formData.email,
         password: formData.password
       })
 
       if (error) {
-        console.error('Auth error:', error)
-        // Handle specific authentication errors
+        console.error('Login error:', error)
         if (error.message.includes('Invalid login credentials')) {
           setError('Invalid email or password. Please check your credentials and try again.')
         } else if (error.message.includes('Email not confirmed')) {
@@ -74,25 +52,9 @@ function LoginPageContent() {
           setError(error.message)
         }
       } else if (data.user) {
-        console.log('Login successful, clearing form and redirecting')
-        
-        // Clear form state immediately
-        setFormData({ email: '', password: '' })
-        setError('')
-        setSuccessMessage('')
-        
-        // Login successful - show redirecting state briefly
-        console.log('Login successful, showing redirect state')
-        setIsRedirecting(true)
-        
-        // Add a fallback redirect in case the useEffect doesn't trigger quickly enough
-        setTimeout(() => {
-          const redirectTo = searchParams.get('redirect') || '/dashboard'
-          console.log('Fallback redirect to:', redirectTo)
-          window.location.href = redirectTo
-        }, 1500)
-        
-        return
+        console.log('Login successful, redirecting to dashboard')
+        // Simple direct navigation
+        window.location.href = '/dashboard'
       }
     } catch (error) {
       console.error('Login exception:', error)
@@ -100,39 +62,6 @@ function LoginPageContent() {
     } finally {
       setIsLoading(false)
     }
-  }
-
-  // Show loading while checking authentication
-  if (authLoading) {
-    return (
-      <div className="min-h-screen bg-surface-primary flex items-center justify-center">
-        <div className="animate-spin w-8 h-8 border-4 border-brand-600 border-t-transparent rounded-full"></div>
-      </div>
-    )
-  }
-
-  // Show redirecting state if user is authenticated (middleware will handle redirect)
-  if (!authLoading && user) {
-    return (
-      <div className="min-h-screen bg-surface-primary flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin w-8 h-8 border-4 border-brand-600 border-t-transparent rounded-full mx-auto mb-4"></div>
-          <p className="text-text-secondary">Redirecting to dashboard...</p>
-        </div>
-      </div>
-    )
-  }
-
-  // Show redirecting state while processing login
-  if (isRedirecting) {
-    return (
-      <div className="min-h-screen bg-surface-primary flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin w-8 h-8 border-4 border-brand-600 border-t-transparent rounded-full mx-auto mb-4"></div>
-          <p className="text-text-secondary">Logging you in...</p>
-        </div>
-      </div>
-    )
   }
 
   return (
@@ -266,20 +195,5 @@ function LoginPageContent() {
         </div>
       </Container>
     </div>
-  )
-}
-
-export default function LoginPage() {
-  return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-surface-primary flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin w-8 h-8 border-4 border-brand-600 border-t-transparent rounded-full mx-auto mb-4"></div>
-          <p className="text-text-secondary">Loading...</p>
-        </div>
-      </div>
-    }>
-      <LoginPageContent />
-    </Suspense>
   )
 }
