@@ -3,13 +3,13 @@ import { persist, createJSONStorage } from 'zustand/middleware'
 import { BookingFlowData, PricingBreakdown, CustomerVehicle, CustomerAddress } from '@/lib/utils/booking-types'
 import { Database } from '@/lib/db/database.types'
 
-// Type aliases for database types
+// Type aliases for database types  
 type ServiceRow = Database['public']['Tables']['services']['Row']
 type VehicleSizeRow = Database['public']['Tables']['vehicle_sizes']['Row']
-type AvailableSlotRow = Database['public']['Tables']['available_slots']['Row']
+type TimeSlotRow = Database['public']['Tables']['time_slots']['Row']
 
 // Booking flow step types
-export type BookingStep = 1 | 2 | 3 | 4 | 5
+export type BookingStep = 1 | 2 | 3 | 4 | 5 | 6
 
 export interface SlotSelection {
   slotId: string
@@ -110,7 +110,7 @@ interface BookingFlowState {
   error: string | null
   
   // Available data for selections
-  availableSlots: AvailableSlotRow[]
+  availableSlots: TimeSlotRow[]
   availableServices: ServiceRow[]
   userVehicles: CustomerVehicle[]
   userAddresses: CustomerAddress[]
@@ -225,7 +225,7 @@ export const useBookingFlowStore = create<BookingFlowStore>()(
       
       nextStep: () => {
         const { currentStep, canProceedToNextStep } = get()
-        if (canProceedToNextStep() && currentStep < 5) {
+        if (canProceedToNextStep() && currentStep < 6) {
           set({ currentStep: (currentStep + 1) as BookingStep, error: null })
         }
       },
@@ -349,44 +349,19 @@ export const useBookingFlowStore = create<BookingFlowStore>()(
         }
       },
       
-      // Load available slots
+      // Load available slots using the real-time availability API
       loadAvailableSlots: async (date: string, serviceId: string, duration: number) => {
         const { setLoading, setError } = get()
         setLoading(true)
         
         try {
-          const params = new URLSearchParams({
-            date,
-            serviceId,
-            duration: duration.toString(),
-          })
-          
-          const response = await apiCall<{
-            slots: Array<{
-              id: string
-              date: string
-              startTime: string
-              endTime: string
-              isAvailable: boolean
-            }>
-          }>(`/api/booking/slots/available?${params}`)
+          // Use the time-slots availability API
+          const response = await apiCall<TimeSlotRow[]>(`/api/time-slots/availability?date=${date}`)
           
           if (response.success && response.data) {
-            // Transform API response to match expected database format
-            const transformedSlots = response.data.slots.map((slot: any) => ({
-              id: slot.id,
-              slot_date: slot.date,
-              start_time: slot.startTime,
-              end_time: slot.endTime,
-              is_available: slot.isAvailable,
-              max_bookings: slot.maxBookings || 1,
-              current_bookings: slot.currentBookings || 0,
-              notes: null,
-              created_by: null,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            }))
-            set({ availableSlots: transformedSlots })
+            // Filter slots that are available
+            const availableSlots = response.data.filter(slot => slot.is_available)
+            set({ availableSlots })
           } else {
             setError(response.error?.message || 'Failed to load available slots')
           }
@@ -485,15 +460,17 @@ export const useBookingFlowStore = create<BookingFlowStore>()(
         
         switch (currentStep) {
           case 1:
-            return !!formData.service
+            return !!formData.slot && !!formData.slot.slotId && !!formData.slot.date
           case 2:
             return !!formData.user && !!formData.user.email && !!formData.user.phone && !!formData.user.name
           case 3:
             return !!formData.vehicle && !!formData.vehicle.make && !!formData.vehicle.model && !!formData.vehicle.size
           case 4:
-            return !!formData.address && !!formData.address.street && !!formData.address.city
+            return !!formData.service
           case 5:
-            return !!formData.slot
+            return !!formData.address && !!formData.address.street && !!formData.address.city
+          case 6:
+            return !!formData.slot && !!formData.address && !!formData.user && !!formData.vehicle && !!formData.service
           default:
             return false
         }

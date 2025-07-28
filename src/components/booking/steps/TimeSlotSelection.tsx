@@ -1,394 +1,402 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { BookingFlowData, TimeSlot, BookingCalendarDay } from '@/lib/utils/booking-types'
+import { useBookingFlowStore, useBookingStep } from '@/lib/store/bookingFlowStore'
+import { useRealTimeAvailability } from '@/hooks/useRealTimeAvailability'
 import { Button } from '@/components/ui/primitives/Button'
-import { ChevronLeftIcon, ChevronRightIcon, CalendarIcon, ClockIcon } from 'lucide-react'
+import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/composites/Card'
+import { RealTimeAvailability } from '@/components/booking/RealTimeAvailability'
+import { ChevronLeftIcon, ChevronRightIcon, CalendarIcon, ClockIcon, CheckCircleIcon, AlertCircleIcon } from 'lucide-react'
+import { addDays, format, startOfWeek, endOfWeek, isSameDay, isAfter, startOfDay } from 'date-fns'
 
-interface TimeSlotSelectionProps {
-  bookingData: BookingFlowData
-  updateBookingData: (updates: Partial<BookingFlowData>) => void
-  onNext: () => void
-  onPrev: () => void
-  isLoading: boolean
-  setIsLoading: (loading: boolean) => void
-}
+export function TimeSlotSelection() {
+  const {
+    formData,
+    calculatedPrice,
+    isLoading,
+    error,
+    setSlotSelection,
+    loadAvailableSlots,
+    previousStep,
+    nextStep,
+    canProceedToNextStep
+  } = useBookingFlowStore()
 
-export function TimeSlotSelection({ 
-  bookingData, 
-  updateBookingData, 
-  onNext, 
-  onPrev,
-  isLoading, 
-  setIsLoading 
-}: TimeSlotSelectionProps) {
-  const [availabilityData, setAvailabilityData] = useState<BookingCalendarDay[]>([])
-  const [selectedDate, setSelectedDate] = useState<string>(bookingData.selectedDate || '')
-  const [selectedSlot, setSelectedSlot] = useState<{ id: string; start_time: string; date: string } | null>(null)
-  const [currentWeekStart, setCurrentWeekStart] = useState<Date>(new Date())
+  const { isCurrentStep } = useBookingStep(1)
+  
+  const [selectedDate, setSelectedDate] = useState<string>(
+    formData.slot?.date || format(addDays(new Date(), 1), 'yyyy-MM-dd')
+  )
+  
+  const [currentWeekStart, setCurrentWeekStart] = useState<Date>(
+    startOfWeek(new Date(), { weekStartsOn: 1 }) // Monday start
+  )
 
-  // Initialize selected slot from booking data
+  const [showRealTimeView, setShowRealTimeView] = useState(false)
+
+  // Real-time availability for selected date
+  const {
+    timeSlots,
+    isLoading: slotsLoading,
+    error: slotsError,
+    refreshAvailability,
+    bookSlot
+  } = useRealTimeAvailability({
+    date: selectedDate,
+    pollInterval: 30000,
+    enableRealTimeUpdates: true
+  })
+
+  // Load available slots when date changes
   useEffect(() => {
-    if (bookingData.selectedTimeSlot && bookingData.selectedDate) {
-      const dayData = availabilityData.find(day => day.date === bookingData.selectedDate)
-      const existingSlot = dayData?.available_slots.find(slot => 
-        slot.start_time === bookingData.selectedTimeSlot?.start_time
-      )
-      if (existingSlot) {
-        setSelectedSlot({
-          id: existingSlot.id,
-          start_time: existingSlot.start_time,
-          date: bookingData.selectedDate
-        })
-        setSelectedDate(bookingData.selectedDate)
-      }
+    if (isCurrentStep && formData.service && selectedDate) {
+      loadAvailableSlots(selectedDate, formData.service.serviceId, formData.service.duration)
     }
-  }, [availabilityData, bookingData.selectedDate, bookingData.selectedTimeSlot])
+  }, [isCurrentStep, selectedDate, formData.service, loadAvailableSlots])
 
-  // Fetch available time slots with real-time updates
-  useEffect(() => {
-    const fetchAvailableSlots = async () => {
-      setIsLoading(true)
-      try {
-        // Get slots for the next 14 days
-        const today = new Date()
-        const endDate = new Date(today)
-        endDate.setDate(today.getDate() + 14)
-
-        const response = await fetch(`/api/time-slots/availability?date_from=${today.toISOString().split('T')[0]}&date_to=${endDate.toISOString().split('T')[0]}&include_booking_count=true`)
-        const data = await response.json()
+  // Generate calendar weeks
+  const generateCalendarWeeks = () => {
+    const weeks = []
+    const today = startOfDay(new Date())
+    
+    for (let week = 0; week < 4; week++) {
+      const weekStart = addDays(currentWeekStart, week * 7)
+      const weekEnd = endOfWeek(weekStart, { weekStartsOn: 1 })
+      const days = []
+      
+      for (let day = 0; day < 7; day++) {
+        const currentDay = addDays(weekStart, day)
+        const dayString = format(currentDay, 'yyyy-MM-dd')
+        const isPast = !isAfter(currentDay, today) && !isSameDay(currentDay, today)
         
-        if (data.success) {
-          // The API response has the data nested under 'availability'
-          setAvailabilityData(data.data.availability || [])
-        } else {
-          console.error('Failed to load availability data:', data.error)
-          setAvailabilityData([])
-        }
-      } catch (error) {
-        console.error('Failed to fetch available slots:', error)
-        setAvailabilityData([])
-      } finally {
-        setIsLoading(false)
+        days.push({
+          date: currentDay,
+          dateString: dayString,
+          isPast,
+          isSelected: dayString === selectedDate,
+          hasSlots: false // We'll update this with real data
+        })
       }
+      
+      weeks.push(days)
     }
-
-    fetchAvailableSlots()
     
-    // Set up polling for real-time updates every 30 seconds
-    const interval = setInterval(fetchAvailableSlots, 30000)
-    
-    return () => clearInterval(interval)
-  }, [setIsLoading])
-
-  // Get current week's dates
-  const getWeekDates = (startDate: Date) => {
-    const dates = []
-    for (let i = 0; i < 7; i++) {
-      const date = new Date(startDate)
-      date.setDate(startDate.getDate() + i)
-      dates.push(date)
-    }
-    return dates
+    return weeks
   }
 
-  // Navigate weeks
-  const nextWeek = () => {
-    const newStart = new Date(currentWeekStart)
-    newStart.setDate(currentWeekStart.getDate() + 7)
-    setCurrentWeekStart(newStart)
+  const handleDateSelect = (dateString: string) => {
+    setSelectedDate(dateString)
+    setShowRealTimeView(false) // Reset to calendar view when date changes
   }
 
-  const prevWeek = () => {
-    const today = new Date()
-    const newStart = new Date(currentWeekStart)
-    newStart.setDate(currentWeekStart.getDate() - 7)
-    
-    // Don't go before today
-    if (newStart >= today) {
-      setCurrentWeekStart(newStart)
+  const handleSlotSelect = async (slotId: string) => {
+    const slot = timeSlots.find(s => s.id === slotId)
+    if (!slot) return
+
+    try {
+      // Book the slot using real-time availability
+      const success = await bookSlot(slotId, `booking-${Date.now()}`)
+      if (success) {
+        setSlotSelection({
+          slotId: slot.id,
+          date: selectedDate,
+          startTime: slot.start_time,
+          endTime: slot.end_time,
+          duration: formData.service?.duration || 60
+        })
+        
+        // Auto-proceed to next step after successful slot selection
+        setTimeout(() => {
+          if (canProceedToNextStep()) {
+            nextStep()
+          }
+        }, 1000)
+      }
+    } catch (error) {
+      console.error('Failed to book slot:', error)
     }
   }
 
-  // Handle slot selection
-  const handleSlotSelect = (slot: { id: string; start_time: string }, date: string) => {
-    const selectedSlotData = {
-      id: slot.id,
-      start_time: slot.start_time,
-      date: date
-    }
-    setSelectedSlot(selectedSlotData)
-    setSelectedDate(date)
-    updateBookingData({
-      selectedDate: date,
-      selectedTimeSlot: {
-        start_time: slot.start_time,
-        end_time: slot.start_time // Will be calculated based on service duration
-      },
-      selectedTimeSlotId: slot.id // Store the actual time slot ID for booking creation
+  const formatTime = (timeString: string) => {
+    return new Date(`2000-01-01T${timeString}`).toLocaleTimeString('en-GB', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
     })
   }
 
-  const handleNext = () => {
-    if (selectedSlot && selectedDate) {
-      onNext()
-    }
-  }
-
-  // Create map for quick lookup of availability data by date
-  const availabilityByDate = availabilityData.reduce((acc, day) => {
-    acc[day.date] = day
-    return acc
-  }, {} as Record<string, BookingCalendarDay>)
-
-  // Get current week dates
-  const weekDates = getWeekDates(currentWeekStart)
-  const today = new Date()
-  const canGoPrevWeek = currentWeekStart > today
-
-  // Format time display
-  const formatTime = (time: string) => {
-    const [hours, minutes] = time.split(':')
-    const hour = parseInt(hours || '0')
-    const ampm = hour >= 12 ? 'PM' : 'AM'
-    const displayHour = hour % 12 || 12
-    return `${displayHour}:${minutes || '00'} ${ampm}`
-  }
-
-  // Format date display
   const formatDate = (date: Date) => {
-    const options: Intl.DateTimeFormatOptions = { 
-      weekday: 'short', 
-      month: 'short', 
-      day: 'numeric' 
-    }
-    return date.toLocaleDateString('en-US', options)
+    return format(date, 'EEEE, MMMM d')
   }
+
+  const navigateWeek = (direction: 'prev' | 'next') => {
+    const change = direction === 'next' ? 7 : -7
+    setCurrentWeekStart(prev => addDays(prev, change))
+  }
+
+  if (!isCurrentStep) {
+    return <div></div>
+  }
+
+  const calendarWeeks = generateCalendarWeeks()
 
   return (
     <div className="space-y-8">
       {/* Header */}
       <div className="text-center">
-        <h2 className="text-3xl font-bold text-[var(--text-primary)] mb-2">
-          Select Date & Time
+        <h2 className="text-3xl font-bold text-text-primary mb-2">
+          Choose Date & Time
         </h2>
-        <p className="text-[var(--text-secondary)] text-lg">
-          Choose when you&apos;d like your vehicle detailed
+        <p className="text-text-secondary text-lg">
+          Select your preferred appointment slot
         </p>
       </div>
 
-      {/* Week Navigation */}
-      <div className="flex items-center justify-between bg-[var(--surface-secondary)] rounded-lg p-4">
+      {/* Service & Pricing Summary */}
+      {formData.service && calculatedPrice && (
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-text-primary">{formData.service.name}</h3>
+                <p className="text-sm text-text-secondary">
+                  Duration: ~{Math.round(formData.service.duration / 60)} hours
+                </p>
+                {formData.vehicle && (
+                  <p className="text-sm text-text-secondary">
+                    {formData.vehicle.year} {formData.vehicle.make} {formData.vehicle.model} ({formData.vehicle.size})
+                  </p>
+                )}
+              </div>
+              <div className="text-right">
+                <p className="text-2xl font-bold text-brand-400">£{calculatedPrice.finalPrice}</p>
+                <p className="text-sm text-text-secondary">{calculatedPrice.currency}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Toggle between Calendar and Real-time view */}
+      <div className="flex justify-center gap-2">
         <Button
-          onClick={prevWeek}
-          disabled={!canGoPrevWeek}
-          variant="outline"
+          variant={!showRealTimeView ? 'primary' : 'outline'}
+          onClick={() => setShowRealTimeView(false)}
           size="sm"
+          leftIcon={<CalendarIcon className="w-4 h-4" />}
         >
-          <ChevronLeftIcon className="w-4 h-4" />
+          Calendar View
         </Button>
-        
-        <div className="flex items-center gap-2">
-          <CalendarIcon className="w-5 h-5 text-[var(--primary)]" />
-          <span className="font-semibold text-[var(--text-primary)]">
-            {formatDate(weekDates[0] as Date)} - {formatDate(weekDates[6] as Date)}
-          </span>
-        </div>
-        
         <Button
-          onClick={nextWeek}
-          variant="outline"
+          variant={showRealTimeView ? 'primary' : 'outline'}
+          onClick={() => setShowRealTimeView(true)}
           size="sm"
+          leftIcon={<ClockIcon className="w-4 h-4" />}
         >
-          <ChevronRightIcon className="w-4 h-4" />
+          Real-Time Slots
         </Button>
       </div>
 
-      {/* Availability Legend */}
-      <div className="bg-[var(--surface-secondary)] rounded-lg p-4">
-        <div className="flex flex-wrap items-center justify-center gap-6 text-sm">
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-[var(--surface-secondary)] border-2 border-[var(--border-secondary)] rounded"></div>
-            <span className="text-[var(--text-secondary)]">Available</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-orange-50 border-2 border-orange-300 rounded"></div>
-            <span className="text-[var(--text-secondary)]">Filling Up</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-gray-100 border-2 border-gray-300 rounded"></div>
-            <span className="text-[var(--text-secondary)]">Full</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-[var(--primary)] border-2 border-[var(--primary)] rounded"></div>
-            <span className="text-[var(--text-secondary)]">Selected</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Calendar Grid */}
-      {isLoading ? (
-        <div className="grid grid-cols-7 gap-4">
-          {[...Array(7)].map((_, i) => (
-            <div key={i} className="space-y-4">
-              <div className="h-6 bg-[var(--surface-tertiary)] rounded animate-pulse"></div>
-              {[...Array(3)].map((_, j) => (
-                <div key={j} className="h-12 bg-[var(--surface-secondary)] rounded animate-pulse"></div>
+      {/* Calendar View */}
+      {!showRealTimeView && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-text-primary">Select Date</h3>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigateWeek('prev')}
+                  leftIcon={<ChevronLeftIcon className="w-4 h-4" />}
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigateWeek('next')}
+                  rightIcon={<ChevronRightIcon className="w-4 h-4" />}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+          
+          <CardContent>
+            {/* Calendar Grid */}
+            <div className="space-y-4">
+              {/* Day headers */}
+              <div className="grid grid-cols-7 gap-2 text-center text-sm font-medium text-text-secondary">
+                <div>Mon</div>
+                <div>Tue</div>
+                <div>Wed</div>
+                <div>Thu</div>
+                <div>Fri</div>
+                <div>Sat</div>
+                <div>Sun</div>
+              </div>
+              
+              {/* Calendar weeks */}
+              {calendarWeeks.map((week, weekIndex) => (
+                <div key={weekIndex} className="grid grid-cols-7 gap-2">
+                  {week.map((day, dayIndex) => (
+                    <button
+                      key={dayIndex}
+                      onClick={() => !day.isPast && handleDateSelect(day.dateString)}
+                      disabled={day.isPast}
+                      className={`
+                        p-3 rounded-lg text-center transition-all duration-200 border
+                        ${day.isPast 
+                          ? 'bg-surface-tertiary text-text-muted border-border-secondary cursor-not-allowed' 
+                          : day.isSelected
+                            ? 'bg-brand-600 text-white border-brand-600 shadow-purple-lg'
+                            : 'bg-surface-secondary border-border-secondary hover:border-brand-400 hover:bg-brand-600/5'
+                        }
+                      `}
+                    >
+                      <div className="text-lg font-semibold">
+                        {format(day.date, 'd')}
+                      </div>
+                      <div className="text-xs">
+                        {format(day.date, 'MMM')}
+                      </div>
+                    </button>
+                  ))}
+                </div>
               ))}
             </div>
-          ))}
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
-          {weekDates.map((date) => {
-            const dateStr = date.toISOString().split('T')[0]
-            const dayData = dateStr ? availabilityByDate[dateStr] : null
-            const daySlots = dayData?.available_slots || []
-            const isToday = dateStr === today.toISOString().split('T')[0]
-            const isPast = date < today
-            
-            return (
-              <div key={dateStr} className="space-y-3">
-                {/* Date Header */}
-                <div className="text-center">
-                  <div className={`text-sm font-medium ${isToday ? 'text-[var(--primary)]' : 'text-[var(--text-primary)]'}`}>
-                    {formatDate(date)}
-                  </div>
-                  {isToday && (
-                    <div className="text-xs text-[var(--primary)] font-medium">Today</div>
-                  )}
-                </div>
 
-                {/* Time Slots */}
-                <div className="space-y-2">
-                  {isPast ? (
-                    <div className="text-center py-4 text-[var(--text-muted)] text-sm">
-                      Past
-                    </div>
-                  ) : daySlots.length === 0 ? (
-                    <div className="text-center py-4 text-[var(--text-muted)] text-sm">
-                      No slots
-                    </div>
-                  ) : (
-                    daySlots
-                      .sort((a, b) => a.start_time.localeCompare(b.start_time))
-                      .map((slot) => {
-                        const isSelected = selectedSlot?.id === slot.id && selectedSlot?.date === dateStr
-                        const isNearlyFull = slot.booking_count && slot.booking_count >= 2
-                        const isFull = !slot.available
-                        
-                        return (
-                          <button
-                            key={slot.id}
-                            onClick={() => !isFull && handleSlotSelect(slot, dateStr!)}
-                            disabled={isFull}
-                            className={`
-                              w-full px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 border-2 relative
-                              ${isFull
-                                ? 'bg-gray-100 border-gray-300 text-gray-400 cursor-not-allowed'
-                                : isSelected 
-                                ? 'bg-[var(--primary)] border-[var(--primary)] text-white' 
-                                : isNearlyFull
-                                ? 'bg-orange-50 border-orange-300 text-orange-700 hover:border-orange-400'
-                                : 'bg-[var(--surface-secondary)] border-[var(--border-secondary)] text-[var(--text-primary)] hover:border-[var(--border-primary)] hover:bg-[var(--surface-hover)]'
-                              }
-                            `}
-                          >
-                            <div className="flex flex-col items-center gap-1">
-                              <div className="flex items-center gap-1">
-                                <ClockIcon className="w-3 h-3" />
-                                {formatTime(slot.start_time)}
-                              </div>
-                              {slot.booking_count !== undefined && (
-                                <div className="text-xs opacity-75">
-                                  {isFull ? 'Full' : isNearlyFull ? 'Filling up' : 'Available'}
-                                </div>
-                              )}
-                            </div>
-                          </button>
-                        )
-                      })
-                  )}
+            {/* Selected Date Display */}
+            {selectedDate && (
+              <div className="mt-6 p-4 bg-brand-600/5 border border-brand-200 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <CalendarIcon className="w-5 h-5 text-brand-600" />
+                  <div>
+                    <p className="font-semibold text-text-primary">
+                      {formatDate(new Date(selectedDate))}
+                    </p>
+                    <p className="text-sm text-text-secondary">
+                      {timeSlots.length} slots available
+                    </p>
+                  </div>
                 </div>
               </div>
-            )
-          })}
-        </div>
+            )}
+
+            {/* Available Slots for Selected Date */}
+            {selectedDate && timeSlots.length > 0 && (
+              <div className="mt-6">
+                <h4 className="font-semibold text-text-primary mb-4">Available Times</h4>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                  {timeSlots.filter(slot => slot.is_available).map((slot) => (
+                    <Button
+                      key={slot.id}
+                      variant={formData.slot?.slotId === slot.id ? 'primary' : 'outline'}
+                      onClick={() => handleSlotSelect(slot.id)}
+                      className="flex flex-col items-center p-4 h-auto"
+                    >
+                      <ClockIcon className="w-4 h-4 mb-1" />
+                      <span className="text-sm font-medium">
+                        {formatTime(slot.start_time)}
+                      </span>
+                      <span className="text-xs opacity-75">
+                        {formatTime(slot.end_time)}
+                      </span>
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* No slots message */}
+            {selectedDate && timeSlots.length === 0 && !slotsLoading && (
+              <div className="mt-6 text-center p-8 bg-surface-tertiary rounded-lg">
+                <AlertCircleIcon className="w-8 h-8 mx-auto mb-2 text-text-muted" />
+                <p className="text-text-secondary">No available slots for this date</p>
+                <p className="text-sm text-text-muted">Try selecting a different date</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Real-Time Availability View */}
+      {showRealTimeView && (
+        <RealTimeAvailability
+          selectedDate={selectedDate}
+          onSlotSelect={handleSlotSelect}
+          showDebugInfo={false}
+        />
+      )}
+
+      {/* Loading State */}
+      {slotsLoading && (
+        <Card>
+          <CardContent className="p-8 text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600 mx-auto mb-4"></div>
+            <p className="text-text-secondary">Loading available slots...</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Error Display */}
+      {(error || slotsError) && (
+        <Card className="border-red-500 bg-red-50">
+          <CardContent>
+            <div className="flex items-center gap-3">
+              <AlertCircleIcon className="w-5 h-5 text-red-600" />
+              <p className="text-red-600">{error || slotsError}</p>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* Selected Slot Summary */}
-      {selectedSlot && (
-        <div className="bg-[var(--surface-secondary)] rounded-lg p-6 border border-[var(--border-primary)]">
-          <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">
-            Selected Appointment
-          </h3>
-          <div className="flex items-center gap-6">
-            <div className="flex items-center gap-2">
-              <CalendarIcon className="w-5 h-5 text-[var(--primary)]" />
-              <span className="text-[var(--text-primary)] font-medium">
-                {new Date(selectedDate).toLocaleDateString('en-US', { 
-                  weekday: 'long', 
-                  year: 'numeric', 
-                  month: 'long', 
-                  day: 'numeric' 
-                })}
-              </span>
+      {formData.slot && (
+        <Card>
+          <CardHeader>
+            <h3 className="text-lg font-semibold text-text-primary">Selected Appointment</h3>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-lg p-4">
+              <div className="flex items-center gap-3">
+                <CheckCircleIcon className="w-6 h-6 text-green-600" />
+                <div>
+                  <p className="font-semibold text-text-primary">
+                    {formatDate(new Date(formData.slot.date))}
+                  </p>
+                  <p className="text-sm text-text-secondary">
+                    {formatTime(formData.slot.startTime)} - {formatTime(formData.slot.endTime)}
+                  </p>
+                  <p className="text-xs text-text-muted">
+                    Duration: {Math.round(formData.slot.duration / 60)} hours
+                  </p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-sm text-green-700 font-medium">Slot Reserved</p>
+                <p className="text-xs text-green-600">Ready to confirm booking</p>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <ClockIcon className="w-5 h-5 text-[var(--primary)]" />
-              <span className="text-[var(--text-primary)] font-medium">
-                {formatTime(selectedSlot.start_time)}
-              </span>
-            </div>
-          </div>
-          
-          <div className="mt-4 p-4 bg-[var(--info-bg)] border border-[var(--info)] rounded-md">
-            <p className="text-[var(--info)] text-sm">
-              💡 Your appointment will be confirmed by our team within 24 hours. 
-              We&apos;ll contact you to confirm the exact timing and any special requirements.
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* No Slots Available Message */}
-      {!isLoading && availabilityData.length === 0 && (
-        <div className="text-center py-12">
-          <div className="bg-[var(--warning-bg)] border border-[var(--warning)] rounded-lg p-6 max-w-md mx-auto">
-            <CalendarIcon className="w-12 h-12 text-[var(--warning)] mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2">
-              No Slots Available
-            </h3>
-            <p className="text-[var(--text-secondary)] text-sm mb-4">
-              We&apos;re currently fully booked for the next 2 weeks. Please contact us directly to discuss alternative arrangements.
-            </p>
-            <Button variant="outline" size="sm">
-              Contact Us
-            </Button>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* Navigation */}
       <div className="flex justify-between items-center pt-6">
-        <Button
-          onClick={onPrev}
-          variant="outline"
-          className="flex items-center gap-2"
-          size="lg"
-        >
-          <ChevronLeftIcon className="w-4 h-4" />
-          Back to Address
-        </Button>
+        <div>
+          {/* No back button for first step */}
+        </div>
         
         <Button
-          onClick={handleNext}
-          disabled={!selectedSlot}
-          className="flex items-center gap-2"
+          onClick={nextStep}
+          disabled={!canProceedToNextStep() || isLoading}
           size="lg"
+          rightIcon={<ChevronRightIcon className="w-4 h-4" />}
         >
-          Continue to Confirmation
-          <ChevronRightIcon className="w-4 h-4" />
+          Continue to Contact Details
         </Button>
       </div>
     </div>

@@ -62,7 +62,14 @@ export async function POST(request: NextRequest) {
     }
 
     const bookingService = new BookingService()
-    const result = await bookingService.createCustomerVehicle(auth!.profile.id as string, validation.data)
+    
+    // Add required fields that are missing from validation data
+    const vehicleData = {
+      ...validation.data,
+      is_default: false // Default to not default
+    }
+    
+    const result = await bookingService.createCustomerVehicle(auth!.profile.id as string, vehicleData)
 
     if (!result.success) {
       return ApiResponseHandler.error(

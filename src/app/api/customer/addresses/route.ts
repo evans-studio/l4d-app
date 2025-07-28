@@ -66,7 +66,8 @@ export async function POST(request: NextRequest) {
     const addressData = {
       ...validation.data,
       country: 'United Kingdom', // Default to UK
-      is_verified: false // Default to unverified
+      is_verified: false, // Default to unverified
+      is_default: false // Default to not default
     }
     
     const result = await bookingService.createCustomerAddress(auth!.profile.id as string, addressData)

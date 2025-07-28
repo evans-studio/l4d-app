@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useBookingFlowStore, useBookingStep } from '@/lib/store/bookingFlowStore';
 import { Button } from '@/components/ui/primitives/Button';
 import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/composites/Card';
-import { CheckIcon, ChevronRightIcon, Sparkles, Palette, Shield } from 'lucide-react';
+import { CheckIcon, ChevronLeftIcon, ChevronRightIcon, Sparkles, Palette, Shield } from 'lucide-react';
 
 export function ServiceSelection(): React.JSX.Element {
   const {
@@ -14,11 +14,12 @@ export function ServiceSelection(): React.JSX.Element {
     error,
     setServiceSelection,
     loadAvailableServices,
+    previousStep,
     nextStep,
     canProceedToNextStep
   } = useBookingFlowStore()
   
-  const { isCurrentStep } = useBookingStep(1)
+  const { isCurrentStep } = useBookingStep(4)
   
   const [categories, setCategories] = useState<any[]>([])
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
@@ -256,7 +257,13 @@ export function ServiceSelection(): React.JSX.Element {
 
       {/* Navigation */}
       <div className="flex justify-between items-center pt-6">
-        <div></div> {/* Empty div for spacing */}
+        <Button
+          variant="outline"
+          onClick={previousStep}
+          leftIcon={<ChevronLeftIcon className="w-4 h-4" />}
+        >
+          Back to Vehicle Details
+        </Button>
         
         <Button
           onClick={handleNext}
@@ -264,7 +271,7 @@ export function ServiceSelection(): React.JSX.Element {
           size="lg"
           rightIcon={<ChevronRightIcon className="w-4 h-4" />}
         >
-          Continue to Vehicle Details
+          Continue to Service Location
         </Button>
       </div>
     </div>

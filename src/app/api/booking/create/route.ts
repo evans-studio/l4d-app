@@ -150,7 +150,7 @@ async function createBookingManually(
     
     // Step 3: Create/get vehicle
     const { data: newVehicle, error: vehicleError } = await supabase
-      .from('vehicles')
+      .from('customer_vehicles')
       .insert({
         user_id: userId,
         vehicle_size_id: vehicleSize.id,
@@ -177,7 +177,7 @@ async function createBookingManually(
       addressId = bookingData.addressId
     } else if (bookingData.newAddress) {
       const { data: newAddress, error: addressError } = await supabase
-        .from('addresses')
+        .from('customer_addresses')
         .insert({
           user_id: userId,
           address_line_1: bookingData.newAddress.street,
@@ -210,7 +210,7 @@ async function createBookingManually(
         .single(),
       
       supabase
-        .from('available_slots')
+        .from('time_slots')
         .select('*')
         .eq('id', bookingData.slotId)
         .eq('is_available', true)
@@ -271,7 +271,7 @@ async function createBookingManually(
         special_instructions: bookingData.specialInstructions,
         scheduled_date: slot.slot_date,
         scheduled_start_time: slot.start_time,
-        scheduled_end_time: slot.end_time,
+        scheduled_end_time: slot.start_time, // Note: time_slots doesn't have end_time, will need to calculate
         payment_status: 'pending'
       })
       .select('id')
@@ -304,12 +304,11 @@ async function createBookingManually(
       // Don't fail the whole transaction for this
     }
     
-    // Step 9: Update slot availability
+    // Step 9: Update slot availability (mark as unavailable)
     const { error: slotUpdateError } = await supabase
-      .from('available_slots')
+      .from('time_slots')
       .update({
-        current_bookings: slot.current_bookings + 1,
-        is_available: slot.current_bookings + 1 < slot.max_bookings
+        is_available: false
       })
       .eq('id', bookingData.slotId)
     

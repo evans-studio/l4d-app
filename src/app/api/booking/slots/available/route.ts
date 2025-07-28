@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
     
     // Get available slots for the date
     const { data: availableSlots, error: slotsError } = await supabase
-      .from('available_slots')
+      .from('time_slots')
       .select('*')
       .eq('slot_date', date)
       .eq('is_available', true)

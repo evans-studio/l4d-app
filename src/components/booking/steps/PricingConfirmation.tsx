@@ -1,468 +1,415 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { BookingFlowData, Service } from '@/lib/utils/booking-types'
-import { Button } from '@/components/ui/primitives/Button'
-import { ChevronLeftIcon, CheckCircleIcon, CreditCardIcon, LoaderIcon } from 'lucide-react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useBookingFlowStore, useBookingStep } from '@/lib/store/bookingFlowStore'
+import { Button } from '@/components/ui/primitives/Button'
+import { Card, CardHeader, CardContent } from '@/components/ui/composites/Card'
+import { 
+  ChevronLeftIcon, 
+  CheckCircleIcon, 
+  CalendarIcon, 
+  ClockIcon, 
+  CarIcon, 
+  UserIcon, 
+  MapPinIcon,
+  CreditCardIcon,
+  LoaderIcon,
+  AlertCircleIcon,
+  PhoneIcon,
+  MailIcon
+} from 'lucide-react'
+import { format } from 'date-fns'
 
-interface PricingConfirmationProps {
-  bookingData: BookingFlowData
-  updateBookingData: (updates: Partial<BookingFlowData>) => void
-  onPrev: () => void
-}
-
-export function PricingConfirmation({ 
-  bookingData, 
-  updateBookingData, 
-  onPrev
-}: PricingConfirmationProps) {
+export function PricingConfirmation() {
   const router = useRouter()
-  const [pricingCalculation, setPricingCalculation] = useState<{
-    summary: {
-      totalPrice: number
-      totalDistanceSurcharge: number
-      calculations: Array<{
-        serviceName: string
-        totalPrice: number
-      }>
-    }
+  const {
+    formData,
+    calculatedPrice,
+    isSubmitting,
+    error,
+    submitBooking,
+    previousStep,
+    resetFlow
+  } = useBookingFlowStore()
+
+  const { isCurrentStep } = useBookingStep(6)
+  
+  const [isProcessing, setIsProcessing] = useState(false)
+  const [bookingResult, setBookingResult] = useState<{
+    success: boolean
+    confirmationNumber?: string
+    bookingId?: string
+    requiresPassword?: boolean
   } | null>(null)
-  const [services, setServices] = useState<Service[]>([])
-  const [customerNotes, setCustomerNotes] = useState(bookingData.customerNotes || '')
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [isCalculatingPricing, setIsCalculatingPricing] = useState(false)
 
-  // Load services and calculate pricing when component mounts
-  useEffect(() => {
-    const loadServicesAndCalculatePricing = async () => {
-      if (!bookingData.selectedServices || 
-          !bookingData.vehicleDetails?.size_id || 
-          !bookingData.addressDetails?.postcode) {
-        return
-      }
-
-      setIsCalculatingPricing(true)
-      try {
-        // Load services to display names
-        const servicesResponse = await fetch('/api/services')
-        if (servicesResponse.ok) {
-          const servicesData = await servicesResponse.json()
-          if (servicesData.success) {
-            setServices(servicesData.data || [])
-          }
-        }
-
-        // Calculate pricing
-        const pricingResponse = await fetch('/api/pricing/calculate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            serviceIds: bookingData.selectedServices,
-            vehicleSizeId: bookingData.vehicleDetails.size_id,
-            customPostcode: bookingData.addressDetails.postcode
-          })
-        })
-
-        const pricingData = await pricingResponse.json()
-        if (pricingData.success) {
-          setPricingCalculation(pricingData.data)
-          updateBookingData({ pricingCalculation: pricingData.data })
-        }
-      } catch (error) {
-        console.error('Failed to load data:', error)
-      } finally {
-        setIsCalculatingPricing(false)
-      }
-    }
-
-    loadServicesAndCalculatePricing()
-  }, [bookingData.selectedServices, bookingData.vehicleDetails?.size_id, bookingData.addressDetails?.postcode, updateBookingData])
-
-  const handleSubmit = async () => {
-    if (!bookingData.selectedServices || 
-        !bookingData.vehicleDetails || 
-        !bookingData.addressDetails ||
-        !bookingData.selectedDate ||
-        !bookingData.selectedTimeSlot) {
-      return
-    }
-
-    // Check authentication before proceeding
-    const authResponse = await fetch('/api/auth/user')
-    const authData = await authResponse.json()
+  const handleConfirmBooking = async () => {
+    setIsProcessing(true)
     
-    if (!authData.success || !authData.data?.authenticated) {
-      // User is not authenticated, redirect to login with return URL
-      const currentUrl = window.location.href
-      router.push(`/auth/login?redirect=${encodeURIComponent(currentUrl)}`)
-      return
-    }
-
-    // We need the actual time slot ID from the booking flow
-    // This should be stored when the user selects a time slot
-    const timeSlotId = bookingData.selectedTimeSlotId
-    if (!timeSlotId) {
-      console.error('No time slot ID available')
-      return
-    }
-
-    setIsSubmitting(true)
     try {
-      const bookingPayload = {
-        services: bookingData.selectedServices,
-        vehicle: {
-          size_id: bookingData.vehicleDetails.size_id,
-          make: bookingData.vehicleDetails.make,
-          model: bookingData.vehicleDetails.model,
-          year: bookingData.vehicleDetails.year,
-          color: bookingData.vehicleDetails.color,
-          registration: bookingData.vehicleDetails.registration,
-          notes: bookingData.vehicleDetails.notes,
-        },
-        address: {
-          name: bookingData.addressDetails.name || 'Service Address',
-          address_line_1: bookingData.addressDetails.address_line_1,
-          address_line_2: bookingData.addressDetails.address_line_2,
-          city: bookingData.addressDetails.city,
-          postcode: bookingData.addressDetails.postcode,
-        },
-        scheduled_date: bookingData.selectedDate,
-        time_slot_id: timeSlotId,
-        customer_notes: customerNotes,
-      }
-
-      const response = await fetch('/api/bookings/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(bookingPayload)
+      const result = await submitBooking()
+      setBookingResult({
+        success: true,
+        confirmationNumber: result.confirmationNumber,
+        bookingId: result.bookingId,
+        requiresPassword: result.requiresPassword
       })
-
-      const data = await response.json()
-      if (data.success) {
-        // Redirect to success page with booking reference
-        router.push(`/booking-success?booking=${data.metadata.booking_reference}`)
-      } else {
-        console.error('Booking failed:', data.error)
-        // TODO: Show error message to user
-        alert(data.error?.message || 'Failed to create booking. Please try again.')
-      }
     } catch (error) {
-      console.error('Failed to create booking:', error)
-      alert('Failed to create booking. Please try again.')
+      setBookingResult({
+        success: false
+      })
     } finally {
-      setIsSubmitting(false)
+      setIsProcessing(false)
     }
   }
 
-  // Format time display
-  const formatTime = (time: string) => {
-    const [hours, minutes] = time.split(':')
-    const hour = parseInt(hours || '0')
-    const ampm = hour >= 12 ? 'PM' : 'AM'
-    const displayHour = hour % 12 || 12
-    return `${displayHour}:${minutes || '00'} ${ampm}`
+  const handleStartNewBooking = () => {
+    resetFlow()
+    router.push('/book')
+  }
+
+  const handleGoToDashboard = () => {
+    router.push('/dashboard')
+  }
+
+  const formatTime = (timeString: string) => {
+    return new Date(`2000-01-01T${timeString}`).toLocaleTimeString('en-GB', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    })
+  }
+
+  const formatDate = (dateString: string) => {
+    return format(new Date(dateString), 'EEEE, MMMM d, yyyy')
+  }
+
+  if (!isCurrentStep) {
+    return <div></div>
+  }
+
+  // Show success screen after booking confirmation
+  if (bookingResult?.success) {
+    return (
+      <div className="space-y-8 text-center">
+        <div className="w-20 h-20 mx-auto bg-green-100 rounded-full flex items-center justify-center">
+          <CheckCircleIcon className="w-12 h-12 text-green-600" />
+        </div>
+        
+        <div>
+          <h2 className="text-3xl font-bold text-text-primary mb-2">
+            Booking Confirmed!
+          </h2>
+          <p className="text-text-secondary text-lg">
+            Your detailing service has been successfully booked
+          </p>
+        </div>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="space-y-4">
+              <div className="text-center border-b border-border-secondary pb-4">
+                <h3 className="text-lg font-semibold text-text-primary mb-1">
+                  Confirmation Number
+                </h3>
+                <p className="text-2xl font-bold text-brand-400 font-mono">
+                  {bookingResult.confirmationNumber}
+                </p>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
+                <div>
+                  <h4 className="font-medium text-text-primary mb-1">Service</h4>
+                  <p className="text-text-secondary">{formData.service?.name}</p>
+                </div>
+                
+                <div>
+                  <h4 className="font-medium text-text-primary mb-1">Date & Time</h4>
+                  <p className="text-text-secondary">
+                    {formData.slot && formatDate(formData.slot.date)}
+                  </p>
+                  <p className="text-text-secondary">
+                    {formData.slot && formatTime(formData.slot.startTime)} - {formData.slot && formatTime(formData.slot.endTime)}
+                  </p>
+                </div>
+                
+                <div>
+                  <h4 className="font-medium text-text-primary mb-1">Vehicle</h4>
+                  <p className="text-text-secondary">
+                    {formData.vehicle?.year} {formData.vehicle?.make} {formData.vehicle?.model}
+                  </p>
+                </div>
+                
+                <div>
+                  <h4 className="font-medium text-text-primary mb-1">Total Price</h4>
+                  <p className="text-text-secondary font-semibold">
+                    £{calculatedPrice?.finalPrice}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <h4 className="font-medium text-blue-900 mb-2">What happens next?</h4>
+          <ul className="text-blue-800 text-sm space-y-1 text-left">
+            <li>• You&apos;ll receive a confirmation email shortly</li>
+            <li>• We&apos;ll send you a reminder 24 hours before your appointment</li>
+            <li>• Our team will arrive at your location at the scheduled time</li>
+            {bookingResult.requiresPassword && (
+              <li>• Check your email for your temporary dashboard password</li>
+            )}
+          </ul>
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <Button
+            onClick={handleGoToDashboard}
+            size="lg"
+            rightIcon={<UserIcon className="w-4 h-4" />}
+          >
+            View Dashboard
+          </Button>
+          <Button
+            onClick={handleStartNewBooking}
+            variant="outline"
+            size="lg"
+          >
+            Book Another Service
+          </Button>
+        </div>
+
+        <div className="text-center pt-6">
+          <p className="text-text-secondary text-sm mb-2">Need to make changes?</p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center text-sm">
+            <a href="tel:+447123456789" className="flex items-center gap-2 text-brand-400 hover:text-brand-300">
+              <PhoneIcon className="w-4 h-4" />
+              07123 456789
+            </a>
+            <a href="mailto:info@love4detailing.co.uk" className="flex items-center gap-2 text-brand-400 hover:text-brand-300">
+              <MailIcon className="w-4 h-4" />
+              info@love4detailing.co.uk
+            </a>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
     <div className="space-y-8">
       {/* Header */}
       <div className="text-center">
-        <h2 className="text-3xl font-bold text-[var(--text-primary)] mb-2">
+        <h2 className="text-3xl font-bold text-text-primary mb-2">
           Review & Confirm
         </h2>
-        <p className="text-[var(--text-secondary)] text-lg">
+        <p className="text-text-secondary text-lg">
           Please review your booking details before confirming
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Booking Summary */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Services */}
-          <div className="bg-[var(--surface-secondary)] rounded-lg p-6">
-            <h3 className="text-xl font-semibold text-[var(--text-primary)] mb-4">
-              Selected Services
+      {/* Booking Summary */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Service Details */}
+        <Card>
+          <CardHeader>
+            <h3 className="text-lg font-semibold text-text-primary flex items-center gap-2">
+              <CheckCircleIcon className="w-5 h-5 text-brand-400" />
+              Service
             </h3>
-            <div className="space-y-3">
-              {bookingData.selectedServices?.map((serviceId) => {
-                const service = services.find(s => s.id === serviceId)
-                const calculation = pricingCalculation?.summary?.calculations?.find(c => 
-                  c.serviceName === service?.name
-                )
-                
-                return (
-                  <div key={serviceId} className="flex items-center justify-between p-3 bg-[var(--surface-tertiary)] rounded-lg">
-                    <div className="flex flex-col">
-                      <span className="text-[var(--text-primary)] font-medium">
-                        {service?.name || `Service ${serviceId}`}
-                      </span>
-                      {service?.short_description && (
-                        <span className="text-[var(--text-secondary)] text-sm">
-                          {service.short_description}
-                        </span>
-                      )}
-                    </div>
-                    <span className="text-[var(--primary)] font-semibold">
-                      £{calculation?.totalPrice || service?.base_price || '--'}
-                    </span>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-
-          {/* Vehicle Details */}
-          <div className="bg-[var(--surface-secondary)] rounded-lg p-6">
-            <h3 className="text-xl font-semibold text-[var(--text-primary)] mb-4">
-              Vehicle Details
-            </h3>
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <span className="text-[var(--text-secondary)]">Make & Model:</span>
-                <p className="text-[var(--text-primary)] font-medium">
-                  {bookingData.vehicleDetails?.make} {bookingData.vehicleDetails?.model}
-                </p>
-              </div>
-              {bookingData.vehicleDetails?.year && (
+          </CardHeader>
+          <CardContent>
+            {formData.service && (
+              <div className="space-y-3">
                 <div>
-                  <span className="text-[var(--text-secondary)]">Year:</span>
-                  <p className="text-[var(--text-primary)] font-medium">{bookingData.vehicleDetails.year}</p>
-                </div>
-              )}
-              {bookingData.vehicleDetails?.color && (
-                <div>
-                  <span className="text-[var(--text-secondary)]">Color:</span>
-                  <p className="text-[var(--text-primary)] font-medium">{bookingData.vehicleDetails.color}</p>
-                </div>
-              )}
-              {bookingData.vehicleDetails?.registration && (
-                <div>
-                  <span className="text-[var(--text-secondary)]">License Plate:</span>
-                  <p className="text-[var(--text-primary)] font-medium">
-                    {bookingData.vehicleDetails.registration}
+                  <h4 className="font-medium text-text-primary">{formData.service.name}</h4>
+                  <p className="text-sm text-text-secondary">
+                    Duration: ~{Math.round(formData.service.duration / 60)} hours
+                  </p>
+                  <p className="text-sm text-text-secondary">
+                    Base Price: £{formData.service.basePrice}
                   </p>
                 </div>
-              )}
-            </div>
-          </div>
-
-          {/* Service Address */}
-          <div className="bg-[var(--surface-secondary)] rounded-lg p-6">
-            <h3 className="text-xl font-semibold text-[var(--text-primary)] mb-4">
-              Service Address
-            </h3>
-            <div className="text-[var(--text-primary)]">
-              <p>{bookingData.addressDetails?.address_line_1}</p>
-              {bookingData.addressDetails?.address_line_2 && (
-                <p>{bookingData.addressDetails.address_line_2}</p>
-              )}
-              <p>{bookingData.addressDetails?.city}, {bookingData.addressDetails?.postcode}</p>
-            </div>
-          </div>
-
-          {/* Date & Time */}
-          <div className="bg-[var(--surface-secondary)] rounded-lg p-6">
-            <h3 className="text-xl font-semibold text-[var(--text-primary)] mb-4">
-              Appointment Details
-            </h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <span className="text-[var(--text-secondary)]">Date:</span>
-                <p className="text-[var(--text-primary)] font-medium">
-                  {bookingData.selectedDate && new Date(bookingData.selectedDate).toLocaleDateString('en-US', {
-                    weekday: 'long',
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric'
-                  })}
-                </p>
-              </div>
-              <div>
-                <span className="text-[var(--text-secondary)]">Time:</span>
-                <p className="text-[var(--text-primary)] font-medium">
-                  {bookingData.selectedTimeSlot?.start_time && formatTime(bookingData.selectedTimeSlot.start_time)}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Special Instructions */}
-          <div className="bg-[var(--surface-secondary)] rounded-lg p-6">
-            <h3 className="text-xl font-semibold text-[var(--text-primary)] mb-4">
-              Special Instructions
-            </h3>
-            <textarea
-              value={customerNotes}
-              onChange={(e) => {
-                setCustomerNotes(e.target.value)
-                updateBookingData({ customerNotes: e.target.value })
-              }}
-              placeholder="Any special requirements, access instructions, or notes for our team..."
-              rows={4}
-              className="w-full px-4 py-3 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-md text-[var(--input-text)] placeholder-[var(--input-placeholder)] focus:border-[var(--input-border-focus)] focus:outline-none transition-colors resize-none"
-            />
-          </div>
-        </div>
-
-        {/* Pricing Summary */}
-        <div className="space-y-6">
-          <div className="bg-[var(--surface-secondary)] rounded-lg p-6 border-2 border-[var(--border-accent)]">
-            <h3 className="text-xl font-semibold text-[var(--text-primary)] mb-6">
-              Pricing Summary
-            </h3>
-
-            {isCalculatingPricing ? (
-              <div className="flex items-center justify-center py-8">
-                <LoaderIcon className="w-6 h-6 animate-spin text-[var(--primary)]" />
-                <span className="ml-2 text-[var(--text-secondary)]">Calculating pricing...</span>
-              </div>
-            ) : pricingCalculation ? (
-              <div className="space-y-4">
-                {/* Services Breakdown */}
-                <div className="space-y-3">
-                  <h4 className="font-medium text-[var(--text-primary)]">Services</h4>
-                  {pricingCalculation.summary?.calculations?.map((calc, index: number) => (
-                    <div key={index} className="bg-[var(--surface-tertiary)] rounded-lg p-3">
-                      <div className="flex justify-between items-center">
-                        <span className="text-[var(--text-primary)] font-medium">{calc.serviceName}</span>
-                        <span className="font-semibold text-[var(--primary)]">£{calc.totalPrice}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Vehicle Size Multiplier Info */}
-                {bookingData.vehicleDetails?.size_id && (
-                  <div className="bg-[var(--info-bg)] border border-[var(--info)] rounded-md p-3">
-                    <p className="text-[var(--info)] text-sm">
-                      <strong>Vehicle Size:</strong> Pricing adjusted for your vehicle size category
-                    </p>
-                  </div>
-                )}
-
-                <div className="border-t border-[var(--border-secondary)] pt-4">
-                  <div className="flex justify-between items-center">
-                    <span className="text-[var(--text-secondary)]">Services Subtotal</span>
-                    <span className="font-medium text-[var(--text-primary)]">
-                      £{(pricingCalculation.summary?.totalPrice || 0) - (pricingCalculation.summary?.totalDistanceSurcharge || 0)}
-                    </span>
-                  </div>
-                  
-                  {pricingCalculation.summary?.totalDistanceSurcharge > 0 ? (
-                    <div className="flex justify-between items-center mt-2">
-                      <div className="flex flex-col">
-                        <span className="text-[var(--text-secondary)]">Travel Surcharge</span>
-                        <span className="text-xs text-[var(--text-muted)]">Distance-based</span>
-                      </div>
-                      <span className="font-medium text-[var(--text-primary)]">
-                        £{pricingCalculation.summary.totalDistanceSurcharge}
-                      </span>
-                    </div>
-                  ) : (
-                    <div className="flex justify-between items-center mt-2">
-                      <div className="flex flex-col">
-                        <span className="text-[var(--text-secondary)]">Travel Surcharge</span>
-                        <span className="text-xs text-green-600">Within free radius</span>
-                      </div>
-                      <span className="font-medium text-green-600">FREE</span>
-                    </div>
-                  )}
-                </div>
-
-                <div className="border-t-2 border-[var(--border-primary)] pt-4">
-                  <div className="flex justify-between items-center">
-                    <span className="text-lg font-semibold text-[var(--text-primary)]">Total Price</span>
-                    <span className="text-3xl font-bold text-[var(--primary)]">
-                      £{pricingCalculation.summary?.totalPrice || 0}
-                    </span>
-                  </div>
-                  <p className="text-xs text-[var(--text-muted)] mt-1 text-right">
-                    Includes all services and travel costs
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <div className="text-[var(--text-muted)] mb-4">Unable to calculate pricing</div>
-                <p className="text-sm text-[var(--text-secondary)]">
-                  Please ensure all required information is provided
-                </p>
               </div>
             )}
+          </CardContent>
+        </Card>
 
-            {/* Payment Info */}
-            <div className="mt-6 p-4 bg-[var(--info-bg)] border border-[var(--info)] rounded-md">
-              <div className="flex items-start gap-3">
-                <CreditCardIcon className="w-5 h-5 text-[var(--info)] mt-0.5" />
+        {/* Contact & Vehicle */}
+        <Card>
+          <CardHeader>
+            <h3 className="text-lg font-semibold text-text-primary flex items-center gap-2">
+              <UserIcon className="w-5 h-5 text-brand-400" />
+              Details
+            </h3>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {formData.user && (
                 <div>
-                  <p className="text-[var(--info)] text-sm font-medium mb-1">
-                    Payment on Completion
+                  <h4 className="font-medium text-text-primary">{formData.user.name}</h4>
+                  <p className="text-sm text-text-secondary">{formData.user.email}</p>
+                  <p className="text-sm text-text-secondary">{formData.user.phone}</p>
+                </div>
+              )}
+              
+              {formData.vehicle && (
+                <div className="pt-2 border-t border-border-secondary">
+                  <div className="flex items-center gap-2 mb-1">
+                    <CarIcon className="w-4 h-4 text-brand-400" />
+                    <h4 className="font-medium text-text-primary">
+                      {formData.vehicle.year} {formData.vehicle.make} {formData.vehicle.model}
+                    </h4>
+                  </div>
+                  <p className="text-sm text-text-secondary">
+                    Size: {formData.vehicle.size} • Color: {formData.vehicle.color}
                   </p>
-                  <p className="text-[var(--info)] text-xs">
-                    Payment is due after service completion. We accept cash, card, and bank transfer.
+                  {formData.vehicle.registration && (
+                    <p className="text-sm text-text-secondary">
+                      Reg: {formData.vehicle.registration}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Schedule & Location */}
+        <Card>
+          <CardHeader>
+            <h3 className="text-lg font-semibold text-text-primary flex items-center gap-2">
+              <CalendarIcon className="w-5 h-5 text-brand-400" />
+              Schedule
+            </h3>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {formData.slot && (
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <CalendarIcon className="w-4 h-4 text-brand-400" />
+                    <h4 className="font-medium text-text-primary">
+                      {formatDate(formData.slot.date)}
+                    </h4>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <ClockIcon className="w-4 h-4 text-brand-400" />
+                    <p className="text-sm text-text-secondary">
+                      {formatTime(formData.slot.startTime)} - {formatTime(formData.slot.endTime)}
+                    </p>
+                  </div>
+                </div>
+              )}
+              
+              {formData.address && (
+                <div className="pt-2 border-t border-border-secondary">
+                  <div className="flex items-center gap-2 mb-1">
+                    <MapPinIcon className="w-4 h-4 text-brand-400" />
+                    <h4 className="font-medium text-text-primary">Service Location</h4>
+                  </div>
+                  <p className="text-sm text-text-secondary">
+                    {formData.address.street}<br />
+                    {formData.address.city}, {formData.address.state} {formData.address.zipCode}
                   </p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Pricing Breakdown */}
+      {calculatedPrice && (
+        <Card>
+          <CardHeader>
+            <h3 className="text-lg font-semibold text-text-primary flex items-center gap-2">
+              <CreditCardIcon className="w-5 h-5 text-brand-400" />
+              Pricing Breakdown
+            </h3>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-text-secondary">{formData.service?.name} (Base Price)</span>
+                <span className="text-text-primary">£{calculatedPrice.basePrice}</span>
+              </div>
+              
+              <div className="flex justify-between items-center">
+                <span className="text-text-secondary">
+                  Vehicle Size Multiplier ({calculatedPrice.sizeMultiplier}x)
+                </span>
+                <span className="text-text-primary">
+                  {calculatedPrice.sizeMultiplier > 1 ? '+' : ''}
+                  £{(calculatedPrice.finalPrice - calculatedPrice.basePrice).toFixed(2)}
+                </span>
+              </div>
+              
+              <div className="border-t border-border-secondary pt-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-lg font-semibold text-text-primary">Total</span>
+                  <span className="text-2xl font-bold text-brand-400">£{calculatedPrice.finalPrice}</span>
                 </div>
               </div>
             </div>
-          </div>
+          </CardContent>
+        </Card>
+      )}
 
-          {/* Terms & Conditions */}
-          <div className="bg-[var(--surface-secondary)] rounded-lg p-6">
-            <h4 className="font-semibold text-[var(--text-primary)] mb-3">
-              Terms & Conditions
-            </h4>
-            <div className="space-y-2 text-sm text-[var(--text-secondary)]">
-              <p>• 24-hour cancellation policy applies</p>
-              <p>• Access to water and power required</p>
-              <p>• Weather-dependent service</p>
-              <p>• Final pricing confirmed on-site</p>
-            </div>
-            <div className="mt-4">
-              <label className="flex items-start gap-3">
-                <input 
-                  type="checkbox" 
-                  className="mt-1 w-4 h-4 text-[var(--primary)] border border-[var(--border-primary)] rounded focus:ring-[var(--primary)]"
-                  required
-                />
-                <span className="text-sm text-[var(--text-secondary)]">
-                  I agree to the <a href="/terms" className="text-[var(--text-link)] hover:text-[var(--text-link-hover)]">terms and conditions</a>
-                </span>
-              </label>
+      {/* Terms and Payment Info */}
+      <Card>
+        <CardContent className="p-6">
+          <div className="space-y-4">
+            <h4 className="font-medium text-text-primary">Payment & Terms</h4>
+            <div className="text-sm text-text-secondary space-y-2">
+              <p>• Payment is due on completion of service</p>
+              <p>• We accept cash, card, and bank transfer</p>
+              <p>• Free cancellation up to 24 hours before your appointment</p>
+              <p>• Our team will arrive within a 30-minute window of your scheduled time</p>
+              <p>• All services include a 7-day satisfaction guarantee</p>
             </div>
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
+
+      {/* Error Display */}
+      {(error || bookingResult?.success === false) && (
+        <Card className="border-red-500 bg-red-50">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <AlertCircleIcon className="w-5 h-5 text-red-600" />
+              <p className="text-red-600">
+                {error || 'Failed to confirm booking. Please try again or contact us for assistance.'}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Navigation */}
       <div className="flex justify-between items-center pt-6">
         <Button
-          onClick={onPrev}
           variant="outline"
-          className="flex items-center gap-2"
-          size="lg"
+          onClick={previousStep}
+          disabled={isProcessing || isSubmitting}
+          leftIcon={<ChevronLeftIcon className="w-4 h-4" />}
         >
-          <ChevronLeftIcon className="w-4 h-4" />
-          Back to Time Selection
+          Back to Service Location
         </Button>
         
         <Button
-          onClick={handleSubmit}
-          disabled={isSubmitting || !pricingCalculation}
-          className="flex items-center gap-2"
+          onClick={handleConfirmBooking}
+          disabled={isProcessing || isSubmitting}
           size="lg"
-        >
-          {isSubmitting ? (
-            <>
-              <LoaderIcon className="w-4 h-4 animate-spin" />
-              Creating Booking...
-            </>
-          ) : (
-            <>
+          className="min-w-[200px]"
+          rightIcon={
+            (isProcessing || isSubmitting) ? 
+              <LoaderIcon className="w-4 h-4 animate-spin" /> : 
               <CheckCircleIcon className="w-4 h-4" />
-              Confirm Booking
-            </>
-          )}
+          }
+        >
+          {isProcessing || isSubmitting ? 'Confirming...' : 'Confirm Booking'}
         </Button>
       </div>
     </div>

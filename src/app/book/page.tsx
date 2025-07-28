@@ -8,6 +8,7 @@ import { Container, Section } from '@/components/layout/templates/PageLayout';
 import { useBookingFlowStore } from '@/lib/store/bookingFlowStore';
 import { BookingStepIndicator } from '@/components/booking/BookingStepIndicator';
 import { ServiceSelection } from '@/components/booking/steps/ServiceSelection';
+import { UserDetails } from '@/components/booking/steps/UserDetails';
 import { VehicleDetails } from '@/components/booking/steps/VehicleDetails';
 import { AddressCollection } from '@/components/booking/steps/AddressCollection';
 import { TimeSlotSelection } from '@/components/booking/steps/TimeSlotSelection';
@@ -52,21 +53,17 @@ export default function BookingPage(): React.JSX.Element {
   const renderCurrentStep = (): React.JSX.Element | null => {
     switch (currentStep) {
       case 1:
-        return <ServiceSelection />;
+        return <TimeSlotSelection />;
       case 2:
+        return <UserDetails />;
       case 3:
+        return <VehicleDetails />;
       case 4:
+        return <ServiceSelection />;
       case 5:
-        return (
-          <div className="text-center p-8">
-            <h2 className="text-2xl font-bold mb-4">Step {currentStep} - Coming Soon</h2>
-            <p className="text-text-secondary mb-6">This step is being updated to use the new store architecture.</p>
-            <Button onClick={previousStep}>
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Go Back
-            </Button>
-          </div>
-        );
+        return <AddressCollection />;
+      case 6:
+        return <PricingConfirmation />;
       default:
         return null;
     }
@@ -147,12 +144,13 @@ export default function BookingPage(): React.JSX.Element {
         <Container>
           <BookingStepIndicator
             currentStep={currentStep}
-            totalSteps={5}
+            totalSteps={6}
             steps={[
-              { label: 'Services', description: 'Choose your services' },
+              { label: 'Schedule', description: 'Date & time' },
+              { label: 'Contact', description: 'Your information' },
               { label: 'Vehicle', description: 'Vehicle details' },
-              { label: 'Address', description: 'Service location' },
-              { label: 'Time', description: 'Select date & time' },
+              { label: 'Services', description: 'Choose your services' },
+              { label: 'Location', description: 'Service address' },
               { label: 'Confirm', description: 'Review & book' },
             ]}
           />

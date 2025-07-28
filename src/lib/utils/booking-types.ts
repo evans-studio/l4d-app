@@ -12,20 +12,21 @@ export type BookingStatus =
 
 export interface CustomerAddress {
   id: string
-  user_id: string
-  name?: string
+  user_id: string | null
+  name?: string | null
   address_line_1: string
-  address_line_2?: string
+  address_line_2?: string | null
   city: string
   postal_code: string
-  county?: string
+  county?: string | null
   country: string
-  latitude?: number
-  longitude?: number
-  distance_from_base?: number
-  distance_from_business?: number
+  latitude?: number | null
+  longitude?: number | null
+  distance_from_base?: number | null
+  distance_from_business?: number | null
   is_primary: boolean
   is_verified: boolean
+  is_default: boolean
   created_at: string
   updated_at: string
 }
@@ -40,17 +41,18 @@ export interface VehicleSize {
 
 export interface CustomerVehicle {
   id: string
-  user_id: string
-  vehicle_size_id: string
-  name?: string
-  make?: string
-  model?: string
-  year?: number
-  color?: string
-  license_plate?: string
-  registration?: string
-  notes?: string
+  user_id: string | null
+  vehicle_size_id: string | null
+  name?: string | null
+  make?: string | null
+  model?: string | null
+  year?: number | null
+  color?: string | null
+  license_plate?: string | null
+  registration?: string | null
+  notes?: string | null
   is_primary: boolean
+  is_default: boolean
   created_at: string
   updated_at: string
   vehicle_size?: VehicleSize

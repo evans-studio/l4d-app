@@ -51,19 +51,17 @@ export async function POST(request: NextRequest) {
     // Existing user - fetch their vehicles and addresses
     const [vehiclesResult, addressesResult] = await Promise.all([
       supabase
-        .from('vehicles')
+        .from('customer_vehicles')
         .select(`
           *,
           vehicle_sizes(*)
         `)
-        .eq('user_id', existingUser.id)
-        .eq('is_active', true),
+        .eq('user_id', existingUser.id),
       
       supabase
-        .from('addresses')
+        .from('customer_addresses')
         .select('*')
         .eq('user_id', existingUser.id)
-        .eq('is_active', true)
     ])
     
     if (vehiclesResult.error) {
@@ -88,6 +86,7 @@ export async function POST(request: NextRequest) {
       registration: vehicle.registration,
       notes: vehicle.notes,
       is_primary: vehicle.is_primary,
+      is_default: vehicle.is_default,
       created_at: vehicle.created_at,
       updated_at: vehicle.updated_at,
       vehicle_size: vehicle.vehicle_sizes ? {
@@ -116,6 +115,7 @@ export async function POST(request: NextRequest) {
       distance_from_business: address.distance_from_business,
       is_primary: address.is_primary,
       is_verified: address.is_verified,
+      is_default: address.is_default,
       created_at: address.created_at,
       updated_at: address.updated_at,
     })) || []

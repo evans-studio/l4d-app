@@ -121,10 +121,10 @@ export default function RescheduleBookingPage({ params }: { params: Promise<{ id
         const response = await fetch(`/api/time-slots/availability?date=${date}`)
         const data = await response.json()
         
-        if (data.success && data.data.available_slots.length > 0) {
+        if (data.success && data.data && data.data.length > 0) {
           return {
             date,
-            slots: data.data.available_slots.map((slot: any) => ({
+            slots: data.data.map((slot: any) => ({
               id: slot.id,
               start_time: slot.start_time,
               end_time: slot.end_time,
