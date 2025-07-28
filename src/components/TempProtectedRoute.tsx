@@ -7,11 +7,18 @@ export function CustomerRoute({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth()
 
   useEffect(() => {
-    if (!isLoading && !user) {
-      window.location.href = '/auth/login'
-    }
+    // Add a delay to prevent race conditions with login redirects
+    const redirectTimer = setTimeout(() => {
+      if (!isLoading && !user) {
+        console.log('CustomerRoute: No user found, redirecting to login')
+        window.location.href = '/auth/login'
+      }
+    }, 1000) // Wait 1 second to allow auth state to update
+
+    return () => clearTimeout(redirectTimer)
   }, [user, isLoading])
 
+  // Show loading for longer to allow auth state to stabilize
   if (isLoading) {
     return (
       <div className="min-h-screen bg-surface-primary flex items-center justify-center">
@@ -20,8 +27,13 @@ export function CustomerRoute({ children }: { children: React.ReactNode }) {
     )
   }
 
+  // Don't immediately redirect - let the useEffect handle it with delay
   if (!user) {
-    return null
+    return (
+      <div className="min-h-screen bg-surface-primary flex items-center justify-center">
+        <div className="animate-spin w-8 h-8 border-4 border-brand-600 border-t-transparent rounded-full"></div>
+      </div>
+    )
   }
 
   return <>{children}</>

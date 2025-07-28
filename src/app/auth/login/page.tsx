@@ -90,10 +90,11 @@ export default function LoginPage() {
 
       console.log('Login successful for user:', data.user.email)
       
-      // Give the auth context time to update, then redirect
+      // Direct window.location redirect - more reliable than router
       console.log('Starting redirect process...')
       setIsLoading(false) // Stop loading immediately since login was successful
       
+      // Give a moment for auth state to update, then redirect
       setTimeout(async () => {
         try {
           console.log('Checking user profile for redirect...')
@@ -115,38 +116,18 @@ export default function LoginPage() {
             ? '/admin' 
             : '/dashboard'
           
-          console.log(`Attempting redirect to ${redirectUrl} based on role: ${profile?.role}`)
-          console.log('Current pathname:', window.location.pathname)
+          console.log(`Redirecting to ${redirectUrl} based on role: ${profile?.role}`)
+          console.log('Using window.location.href for reliable redirect')
           
-          // Try router first
-          console.log('Using router.push...')
-          router.push(redirectUrl)
-          
-          // Immediate fallback check
-          setTimeout(() => {
-            console.log('Checking if redirect worked, current path:', window.location.pathname)
-            if (window.location.pathname === '/auth/login') {
-              console.log('Router redirect failed, using window.location fallback')
-              window.location.href = redirectUrl
-            } else {
-              console.log('Redirect appears successful!')
-            }
-          }, 1000)
+          // Use window.location directly for most reliable redirect
+          window.location.href = redirectUrl
           
         } catch (profileError) {
           console.warn('Profile check failed, defaulting to dashboard:', profileError)
-          console.log('Using router.push for dashboard fallback...')
-          router.push('/dashboard')
-          
-          // Fallback
-          setTimeout(() => {
-            if (window.location.pathname === '/auth/login') {
-              console.log('Dashboard router redirect failed, using window.location')
-              window.location.href = '/dashboard'
-            }
-          }, 1000)
+          console.log('Using window.location.href for dashboard fallback')
+          window.location.href = '/dashboard'
         }
-      }, 200) // Reduced delay for faster redirect
+      }, 500) // Give auth state time to update
 
     } catch (error: unknown) {
       clearTimeout(timeoutId)
