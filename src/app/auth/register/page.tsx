@@ -50,9 +50,11 @@ export default function RegisterPage() {
 
       // Handle different registration outcomes
       if (data.data.emailConfirmationRequired) {
+        // Email confirmation required - show success message
+        console.log('Email confirmation required:', data.data.message)
         setSuccess(true)
       } else {
-        // Registration complete, redirect based on role
+        // Registration complete with auto-login, redirect based on role
         console.log('Registration successful, redirecting to:', data.data.redirectTo)
         window.location.href = data.data.redirectTo
       }

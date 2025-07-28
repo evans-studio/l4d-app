@@ -76,9 +76,31 @@ export async function POST(request: NextRequest) {
           last_name: lastName,
           phone: phone,
           role: role
-        }
+        },
+        emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`
       }
     })
+
+    // If user was created but needs confirmation, auto-confirm them using admin client
+    if (authData.user && !authData.user.email_confirmed_at && authData.user.confirmation_sent_at) {
+      try {
+        const { supabaseAdmin } = await import('@/lib/supabase/direct')
+        const { error: confirmError } = await supabaseAdmin.auth.admin.updateUserById(
+          authData.user.id,
+          { email_confirm: true }
+        )
+        
+        if (confirmError) {
+          console.error('Auto-confirm error:', confirmError)
+        } else {
+          console.log('User auto-confirmed:', authData.user.id)
+          // Update the user object to reflect confirmation
+          authData.user.email_confirmed_at = new Date().toISOString()
+        }
+      } catch (autoConfirmError) {
+        console.error('Auto-confirm failed:', autoConfirmError)
+      }
+    }
 
     if (authError || !authData.user) {
       return NextResponse.json(
@@ -113,8 +135,15 @@ export async function POST(request: NextRequest) {
       // Continue anyway - profile will be created on first login if needed
     }
 
-    // If email confirmation is not required, create session immediately
-    if (authData.user.email_confirmed_at || !authData.user.confirmation_sent_at) {
+    // Check if user is confirmed or if email confirmation was sent
+    console.log('User confirmation status:', {
+      email_confirmed_at: authData.user.email_confirmed_at,
+      confirmation_sent_at: authData.user.confirmation_sent_at,
+      confirmed_at: authData.user.confirmed_at
+    })
+
+    // If email is confirmed, create session immediately
+    if (authData.user.email_confirmed_at) {
       // Create enterprise session
       const deviceInfo = {
         fingerprint: TokenManager.generateDeviceFingerprint(request),
@@ -168,6 +197,8 @@ export async function POST(request: NextRequest) {
       return response
     } else {
       // Email confirmation required
+      console.log('Email confirmation required for user:', authData.user.id)
+      
       return NextResponse.json({
         success: true,
         data: {
@@ -179,8 +210,9 @@ export async function POST(request: NextRequest) {
             role: role
           },
           emailConfirmationRequired: true,
-          message: 'Please check your email to confirm your account before signing in.',
-          redirectTo: '/auth/verify-email'
+          message: 'Registration successful! Please check your email to confirm your account.',
+          redirectTo: '/auth/verify-email',
+          confirmationSent: !!authData.user.confirmation_sent_at
         }
       })
     }
