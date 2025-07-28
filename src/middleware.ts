@@ -32,6 +32,7 @@ export async function middleware(request: NextRequest) {
     '/api/debug/auth-status',
     '/api/debug/test-session-creation',
     '/api/debug/test-login',
+    '/api/debug/env-check',
     '/api/admin/cleanup-users',
     '/api/admin/simple-cleanup',
     '/api/admin/direct-cleanup',
