@@ -52,9 +52,17 @@ export default function LoginPage() {
           setError(error.message)
         }
       } else if (data.user) {
-        console.log('Login successful, redirecting to dashboard')
-        // Simple direct navigation
-        window.location.href = '/dashboard'
+        console.log('Login successful:', {
+          userId: data.user.id,
+          email: data.user.email,
+          redirecting: true
+        })
+        
+        // Add a small delay to ensure session is set
+        setTimeout(() => {
+          console.log('Executing redirect to dashboard')
+          window.location.href = '/dashboard'
+        }, 500)
       }
     } catch (error) {
       console.error('Login exception:', error)

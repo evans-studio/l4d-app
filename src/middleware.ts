@@ -25,9 +25,19 @@ export async function middleware(request: NextRequest) {
       const supabase = await createClient()
       const { data: { session } } = await supabase.auth.getSession()
       
+      console.log('Middleware auth check:', {
+        path,
+        hasSession: !!session,
+        hasUser: !!session?.user,
+        userId: session?.user?.id
+      })
+      
       if (!session?.user) {
+        console.log('No session, redirecting to login')
         return NextResponse.redirect(new URL('/auth/login', request.url))
       }
+      
+      console.log('Auth check passed, allowing access to:', path)
     } catch (error) {
       console.error('Auth check error:', error)
       return NextResponse.redirect(new URL('/auth/login', request.url))
