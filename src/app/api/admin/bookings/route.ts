@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
     const dateFilter = searchParams.get('date')
     const sortBy = searchParams.get('sort') || 'created_at'
 
-    // Build query
+    // Build query with customer data included
     let query = supabase
       .from('bookings')
       .select(`
@@ -46,6 +46,12 @@ export async function GET(request: NextRequest) {
         created_at,
         updated_at,
         customer_id,
+        user_profiles(
+          email,
+          first_name,
+          last_name,
+          phone
+        ),
         booking_services(
           id,
           service_details,
@@ -77,25 +83,14 @@ export async function GET(request: NextRequest) {
       return ApiResponseHandler.success([])
     }
 
-    // Get customer details for each booking
-    const customerIds = [...new Set(bookings.map(b => b.customer_id))]
-    const { data: customers, error: customerError } = await supabase.auth.admin.listUsers()
-
-    const customerMap = customers?.users?.reduce((acc, user) => {
-      acc[user.id] = {
-        name: user.user_metadata?.full_name || 
-              (user.user_metadata?.first_name && user.user_metadata?.last_name 
-                ? `${user.user_metadata.first_name} ${user.user_metadata.last_name}` 
-                : user.user_metadata?.first_name || 'Customer'),
-        email: user.email || '',
-        phone: user.user_metadata?.phone || user.phone || ''
-      }
-      return acc
-    }, {} as Record<string, { name: string; email: string; phone: string }>) || {}
+    // Customer data is now included via database join
 
     // Transform the data for frontend consumption
     const adminBookings = bookings.map(booking => {
-      const customer = customerMap[booking.customer_id] || { name: 'Customer', email: '', phone: '' }
+      const customer = booking.user_profiles?.[0] || { first_name: null, last_name: null, email: null, phone: null }
+      const customerName = [customer.first_name, customer.last_name]
+        .filter(Boolean)
+        .join(' ') || 'Customer'
       
       // Define booking service interface for transformation
       interface BookingServiceData {
@@ -114,9 +109,9 @@ export async function GET(request: NextRequest) {
         id: booking.id,
         booking_reference: booking.booking_reference,
         customer_id: booking.customer_id,
-        customer_name: customer.name,
-        customer_email: customer.email,
-        customer_phone: customer.phone,
+        customer_name: customerName,
+        customer_email: customer.email || '',
+        customer_phone: customer.phone || '',
         scheduled_date: booking.scheduled_date,
         start_time: booking.scheduled_start_time,
         scheduled_start_time: booking.scheduled_start_time,

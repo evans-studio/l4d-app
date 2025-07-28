@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
       return ApiResponseHandler.forbidden('Admin access required')
     }
 
-    // Get recent bookings with complete data
+    // Get recent bookings with complete data including customer info
     const { data: bookings, error: bookingsError } = await supabase
       .from('bookings')
       .select(`
@@ -38,6 +38,11 @@ export async function GET(request: NextRequest) {
         service_address,
         created_at,
         customer_id,
+        user_profiles(
+          email,
+          first_name,
+          last_name
+        ),
         booking_services(
           id,
           service_details
@@ -51,27 +56,20 @@ export async function GET(request: NextRequest) {
       return ApiResponseHandler.serverError('Failed to fetch recent bookings')
     }
 
-    // Get customer information for each booking
-    const customerIds = [...new Set(bookings?.map(b => b.customer_id) || [])]
-    const { data: customers, error: customerError } = await supabase.auth.admin.listUsers()
-
-    const customerMap = customers?.users?.reduce((acc, user) => {
-      acc[user.id] = {
-        name: user.user_metadata?.full_name || user.user_metadata?.first_name || 'Customer',
-        email: user.email || ''
-      }
-      return acc
-    }, {} as Record<string, { name: string; email: string }>) || {}
+    // Customer data is now included in the booking query via join
 
     // Transform the data for the frontend
     const recentBookings = bookings?.map(booking => {
-      const customer = customerMap[booking.customer_id] || { name: 'Customer', email: '' }
+      const customer = booking.user_profiles?.[0] || { first_name: null, last_name: null, email: null }
+      const customerName = [customer.first_name, customer.last_name]
+        .filter(Boolean)
+        .join(' ') || 'Customer'
       
       return {
         id: booking.id,
         booking_reference: booking.booking_reference,
-        customer_name: customer.name,
-        customer_email: customer.email,
+        customer_name: customerName,
+        customer_email: customer.email || '',
         scheduled_date: booking.scheduled_date,
         start_time: booking.scheduled_start_time,
         status: booking.status,
