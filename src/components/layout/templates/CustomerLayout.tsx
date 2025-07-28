@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useAuth } from '@/lib/auth';
+import { useAuth } from '@/lib/auth/auth-enterprise';
 import { 
   LayoutDashboard, 
   Calendar, 
@@ -62,16 +62,14 @@ export const CustomerLayout: React.FC<CustomerLayoutProps> = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
   const pathname = usePathname();
   const router = useRouter();
-  const { signOut } = useAuth();
+  const { logout } = useAuth();
 
   const handleLogout = async () => {
     try {
-      await signOut();
-      router.push('/');
+      await logout();
+      // Router push handled by logout method
     } catch (error) {
       console.error('Logout error:', error);
-      // Still redirect even if signOut fails
-      router.push('/');
     }
   };
 

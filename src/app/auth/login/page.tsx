@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase/client'
+import { useAuth } from '@/lib/auth/auth-enterprise'
 import { Button } from '@/components/ui/primitives/Button'
 import { ResponsiveLogo } from '@/components/ui/primitives/Logo'
 import { Container } from '@/components/layout/templates/PageLayout'
@@ -11,9 +11,11 @@ import Link from 'next/link'
 
 export default function LoginPage() {
   const router = useRouter()
+  const { login, isAuthenticated } = useAuth()
   const [formData, setFormData] = useState({
     email: '',
-    password: ''
+    password: '',
+    rememberMe: false
   })
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
@@ -31,44 +33,33 @@ export default function LoginPage() {
     }
   }, [])
 
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.replace('/dashboard')
+    }
+  }, [isAuthenticated, router])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
     setError('')
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: formData.email,
-        password: formData.password
-      })
+      const result = await login(formData.email, formData.password, formData.rememberMe)
 
-      if (error) {
-        if (error.message.includes('Invalid login credentials')) {
-          setError('Invalid email or password. Please check your credentials and try again.')
-        } else if (error.message.includes('Email not confirmed')) {
-          setError('Please verify your email address before signing in. Check your inbox for a verification link.')
-        } else if (error.message.includes('Too many requests')) {
-          setError('Too many login attempts. Please wait a moment before trying again.')
-        } else {
-          setError(`Login failed: ${error.message}`)
-        }
-        setIsLoading(false)
-        return
-      } 
-
-      if (!data.user) {
-        setError('Login failed. Please try again.')
-        setIsLoading(false)
+      if (!result.success) {
+        setError(result.error || 'Login failed. Please try again.')
         return
       }
 
-      // Simple redirect to dashboard
+      // Login successful, redirect will happen via useEffect
       router.push('/dashboard')
 
     } catch (error: unknown) {
       console.error('Login exception:', error)
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-      setError(`Login failed: ${errorMessage}`)
+      setError('Network error. Please try again.')
+    } finally {
       setIsLoading(false)
     }
   }
@@ -160,6 +151,19 @@ export default function LoginPage() {
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
+              </div>
+
+              <div className="flex items-center">
+                <input
+                  id="rememberMe"
+                  type="checkbox"
+                  checked={formData.rememberMe}
+                  onChange={(e) => setFormData({ ...formData, rememberMe: e.target.checked })}
+                  className="w-4 h-4 text-brand-600 bg-surface-primary border-border-secondary rounded focus:ring-brand-500 focus:ring-2"
+                />
+                <label htmlFor="rememberMe" className="ml-2 text-sm text-text-secondary">
+                  Keep me signed in for 30 days
+                </label>
               </div>
 
               <Button

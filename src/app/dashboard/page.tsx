@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
-import { useAuth } from '@/lib/auth'
+import { useAuth } from '@/lib/auth/auth-enterprise'
 import { Button } from '@/components/ui/primitives/Button'
 import { CustomerLayout } from '@/components/layout/templates/CustomerLayout'
 import { Container } from '@/components/layout/templates/PageLayout'
@@ -88,7 +88,7 @@ const statusConfig = {
 
 export default function DashboardPage() {
   const router = useRouter()
-  const { user, profile: authProfile, isLoading: authLoading } = useAuth()
+  const { user, isLoading: authLoading } = useAuth()
   const [bookings, setBookings] = useState<DashboardBooking[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<'upcoming' | 'completed'>('upcoming')
@@ -195,9 +195,9 @@ export default function DashboardPage() {
             <h1 className="text-3xl font-bold text-text-primary">
               My Dashboard
             </h1>
-            {authProfile && (
+            {user && (
               <p className="text-text-secondary">
-                Welcome back, {authProfile.first_name || 'Customer'}
+                Welcome back, {user.firstName || 'Customer'}
               </p>
             )}
           </div>

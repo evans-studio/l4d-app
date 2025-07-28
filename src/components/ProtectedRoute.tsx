@@ -1,6 +1,6 @@
 'use client'
 
-import { useAuth } from '@/lib/auth'
+import { useAuth } from '@/lib/auth/auth-enterprise'
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 
@@ -15,22 +15,22 @@ export function ProtectedRoute({
   allowedRoles = ['customer', 'admin', 'super_admin'],
   redirectTo = '/auth/login'
 }: ProtectedRouteProps) {
-  const { user, profile, isLoading } = useAuth()
+  const { user, isLoading, isAuthenticated } = useAuth()
   const router = useRouter()
 
   useEffect(() => {
     if (!isLoading) {
-      if (!user) {
+      if (!isAuthenticated) {
         router.push(redirectTo)
         return
       }
 
-      if (profile && !allowedRoles.includes(profile.role)) {
+      if (user && !allowedRoles.includes(user.role)) {
         router.push('/dashboard')
         return
       }
     }
-  }, [user, profile, isLoading, router, allowedRoles, redirectTo])
+  }, [user, isAuthenticated, isLoading, router, allowedRoles, redirectTo])
 
   if (isLoading) {
     return (
@@ -40,7 +40,7 @@ export function ProtectedRoute({
     )
   }
 
-  if (!user || (profile && !allowedRoles.includes(profile.role))) {
+  if (!isAuthenticated || (user && !allowedRoles.includes(user.role))) {
     return null
   }
 

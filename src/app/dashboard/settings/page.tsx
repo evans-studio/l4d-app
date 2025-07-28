@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/primitives/Button'
 import { CustomerLayout } from '@/components/layout/templates/CustomerLayout'
 import { CustomerRoute } from '@/components/ProtectedRoute'
-import { useAuth } from '@/lib/auth'
+import { useAuth } from '@/lib/auth/auth-enterprise'
 import { 
   User, 
   Mail, 
@@ -39,7 +39,7 @@ interface NotificationSettings {
 }
 
 export default function AccountSettingsPage() {
-  const { user, profile, refreshProfile } = useAuth()
+  const { user, refreshProfile } = useAuth()
   const [activeTab, setActiveTab] = useState<'profile' | 'password' | 'notifications' | 'privacy'>('profile')
   const [isLoading, setIsLoading] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
@@ -74,15 +74,15 @@ export default function AccountSettingsPage() {
 
   // Load profile data on mount
   useEffect(() => {
-    if (profile) {
+    if (user) {
       setProfileData({
-        firstName: (profile as any)?.first_name || '',
-        lastName: (profile as any)?.last_name || '',
-        email: (profile as any)?.email || '',
-        phone: (profile as any)?.phone || ''
+        firstName: user.firstName || '',
+        lastName: user.lastName || '',
+        email: user.email || '',
+        phone: user.phone || ''
       })
     }
-  }, [profile])
+  }, [user])
 
   const clearMessage = () => {
     setTimeout(() => setMessage(null), 5000)
