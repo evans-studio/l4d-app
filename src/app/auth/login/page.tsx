@@ -80,9 +80,13 @@ function LoginPageContent() {
           const redirectPath = (profile?.role === 'admin' || profile?.role === 'super_admin') ? '/admin' : '/dashboard'
           console.log('Redirecting to:', redirectPath)
           
-          // Force page reload to ensure cookies are set properly
-          console.log('Using window.location.replace for reliable redirect')
-          window.location.replace(redirectPath)
+          // Small delay to ensure session is fully established
+          console.log('Waiting for session to be fully established...')
+          await new Promise(resolve => setTimeout(resolve, 500))
+          
+          // Try router.push first to maintain session state
+          console.log('Using router.push for redirect')
+          router.push(redirectPath)
         } catch (profileError) {
           console.error('Profile fetch exception:', profileError)
           setError('Unable to load user profile. Please try again.')

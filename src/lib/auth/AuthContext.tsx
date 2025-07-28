@@ -91,10 +91,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (error) {
           console.error('Session error:', error)
         } else if (session?.user) {
-          console.log('Initial session found for user:', session.user.id)
+          console.log('Initial session found for user:', session.user.id, 'with access token:', !!session.access_token)
           setUser(session.user)
         } else {
-          console.log('No initial session found')
+          console.log('No initial session found - checking cookies manually...')
+          // Check if there are auth cookies present
+          const cookies = document.cookie
+          const hasAuthCookies = cookies.includes('sb-vwejbgfiddltdqwhfjmt')
+          console.log('Has auth cookies:', hasAuthCookies)
+          if (hasAuthCookies) {
+            console.log('Auth cookies found but no session - potential session loading issue')
+          }
         }
       } catch (error) {
         console.error('Initial session error:', error)
