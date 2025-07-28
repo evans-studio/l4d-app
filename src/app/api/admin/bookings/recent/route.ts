@@ -1,10 +1,10 @@
 import { NextRequest } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClientFromRequest } from '@/lib/supabase/server'
 import { ApiResponseHandler } from '@/lib/api/response'
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient()
+    const supabase = createClientFromRequest(request)
     
     // Get current user and verify admin role
     const { data: { user }, error: authError } = await supabase.auth.getUser()
