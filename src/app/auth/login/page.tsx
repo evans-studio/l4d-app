@@ -26,12 +26,13 @@ function LoginPageContent() {
   // Redirect if already authenticated
   useEffect(() => {
     if (!authLoading && user) {
-      console.log('User already authenticated, redirecting...')
+      console.log('User already authenticated, forcing redirect with window.location')
       const redirectPath = (profile?.role === 'admin' || profile?.role === 'super_admin') ? '/admin' : '/dashboard'
       console.log('Redirecting authenticated user to:', redirectPath)
-      router.push(redirectPath)
+      // Use window.location for reliable redirect
+      window.location.href = redirectPath
     }
-  }, [user, profile, authLoading, router])
+  }, [user, profile, authLoading])
 
   // Handle success messages from URL params
   useEffect(() => {
@@ -76,11 +77,11 @@ function LoginPageContent() {
         setError('')
         setSuccessMessage('')
         
-        // Simple redirect to dashboard
-        console.log('Attempting redirect to /dashboard')
-        router.push('/dashboard')
+        // Force redirect to dashboard
+        console.log('Login successful, forcing redirect with window.location')
+        window.location.href = '/dashboard'
         
-        // Don't set loading to false - let the auth redirect handle it
+        // Don't set loading to false - let the redirect happen
         return
       }
     } catch (error) {
