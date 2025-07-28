@@ -33,6 +33,7 @@ export async function middleware(request: NextRequest) {
     '/api/debug/test-session-creation',
     '/api/debug/test-login',
     '/api/admin/cleanup-users',
+    '/api/admin/simple-cleanup',
     '/api/auth/enterprise/register'
   ]
 
