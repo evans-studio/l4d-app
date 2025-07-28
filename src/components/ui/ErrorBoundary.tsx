@@ -40,7 +40,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
               Something went wrong
             </h1>
             <p className="text-text-secondary mb-4">
-              We're experiencing technical difficulties. Please try refreshing the page.
+              We&apos;re experiencing technical difficulties. Please try refreshing the page.
             </p>
             <button
               onClick={() => window.location.reload()}

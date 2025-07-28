@@ -85,14 +85,6 @@ export default function EnhancedAdminDashboard() {
   const [refreshing, setRefreshing] = useState(false)
   const [selectedPeriod, setSelectedPeriod] = useState<'week' | 'month' | 'quarter' | 'year'>('month')
 
-  useEffect(() => {
-    loadDashboardData()
-    
-    // Auto-refresh every 5 minutes
-    const interval = setInterval(loadDashboardData, 5 * 60 * 1000)
-    return () => clearInterval(interval)
-  }, [selectedPeriod, loadDashboardData])
-
   const loadDashboardData = useCallback(async () => {
     try {
       const isInitialLoad = !dashboardData
@@ -172,6 +164,14 @@ export default function EnhancedAdminDashboard() {
       setRefreshing(false)
     }
   }, [selectedPeriod, dashboardData])
+
+  useEffect(() => {
+    loadDashboardData()
+    
+    // Auto-refresh every 5 minutes
+    const interval = setInterval(loadDashboardData, 5 * 60 * 1000)
+    return () => clearInterval(interval)
+  }, [loadDashboardData])
 
   const handleMetricClick = (metric: string) => {
     // Navigate to detailed view based on metric

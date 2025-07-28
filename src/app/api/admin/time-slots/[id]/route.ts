@@ -91,7 +91,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     }
 
     // Prepare update data
-    const updateData: any = {}
+    const updateData: Record<string, unknown> = {}
     
     if (slot_date !== undefined) {
       if (!/^\d{4}-\d{2}-\d{2}$/.test(slot_date)) {

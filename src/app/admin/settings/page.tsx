@@ -86,10 +86,6 @@ export default function SettingsPage() {
   const [success, setSuccess] = useState('')
   const [activeTab, setActiveTab] = useState('business')
 
-  useEffect(() => {
-    loadSettings()
-  }, [loadSettings])
-
   const loadSettings = useCallback(async () => {
     try {
       setIsLoading(true)
@@ -106,6 +102,10 @@ export default function SettingsPage() {
       setIsLoading(false)
     }
   }, [settings])
+
+  useEffect(() => {
+    loadSettings()
+  }, [loadSettings])
 
   const handleSave = async () => {
     try {

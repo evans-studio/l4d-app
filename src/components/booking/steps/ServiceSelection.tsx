@@ -125,7 +125,7 @@ export function ServiceSelection({
           Choose Your Services
         </h2>
         <p className="text-text-secondary text-lg">
-          Select the detailing services you'd like to book
+          Select the detailing services you&apos;d like to book
         </p>
       </div>
 

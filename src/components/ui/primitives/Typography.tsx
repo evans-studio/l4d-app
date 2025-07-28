@@ -166,9 +166,9 @@ const Text = React.forwardRef<TextElement, TextProps>(
       case 'span':
         return <span {...elementProps}>{children}</span>
       case 'div':
-        return <div {...elementProps}>{children}</div>
+        return <div {...(elementProps as any)}>{children}</div>
       case 'label':
-        return <label {...elementProps}>{children}</label>
+        return <label {...(elementProps as any)}>{children}</label>
       case 'small':
         return <small {...elementProps}>{children}</small>
       case 'strong':
@@ -176,7 +176,7 @@ const Text = React.forwardRef<TextElement, TextProps>(
       case 'em':
         return <em {...elementProps}>{children}</em>
       default:
-        return <p {...elementProps}>{children}</p>
+        return <p {...(elementProps as any)}>{children}</p>
     }
   }
 )
@@ -364,7 +364,7 @@ const Code = React.forwardRef<CodeElement, CodeProps>(
     }
     
     if (as === 'pre') {
-      return <pre {...elementProps}>{children}</pre>
+      return <pre {...(elementProps as any)}>{children}</pre>
     }
     
     return <code {...elementProps}>{children}</code>

@@ -42,10 +42,6 @@ export default function AdminSchedulePage() {
   const [showBulkModal, setShowBulkModal] = useState(false)
   const [selectedDate, setSelectedDate] = useState<string>('')
 
-  useEffect(() => {
-    loadScheduleData()
-  }, [currentDate, loadScheduleData])
-
   const loadScheduleData = useCallback(async () => {
     try {
       setIsLoading(true)
@@ -78,6 +74,10 @@ export default function AdminSchedulePage() {
       setIsLoading(false)
     }
   }, [currentDate])
+
+  useEffect(() => {
+    loadScheduleData()
+  }, [currentDate, loadScheduleData])
 
   const getWeekStart = (date: Date) => {
     const start = new Date(date)

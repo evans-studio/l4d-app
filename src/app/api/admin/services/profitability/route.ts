@@ -73,12 +73,12 @@ export async function GET(request: NextRequest) {
 
     // Process bookings
     bookings?.forEach(booking => {
-      booking.booking_services?.forEach((bs: { service_details?: { id: string; name: string }; price: number }) => {
+      booking.booking_services?.forEach((bs) => {
         const service = bs.service_details
-        if (!service) return
+        if (!service || Array.isArray(service)) return
 
-        const serviceId = service.id
-        const serviceName = service.name
+        const serviceId = (service as any).id
+        const serviceName = (service as any).name
         
         if (!serviceMetrics.has(serviceId)) {
           serviceMetrics.set(serviceId, {

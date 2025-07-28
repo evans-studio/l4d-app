@@ -324,7 +324,7 @@ export default function MyVehiclesPage() {
                   <strong className="text-text-primary">
                     {deleteModal.vehicle.make} {deleteModal.vehicle.model}
                   </strong>
-                  ? This will not affect your existing bookings, but you'll need to re-enter vehicle details for future bookings.
+                  ? This will not affect your existing bookings, but you&apos;ll need to re-enter vehicle details for future bookings.
                 </p>
 
                 <div className="flex gap-3">

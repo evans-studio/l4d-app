@@ -279,7 +279,7 @@ function BookingSuccessContent(): React.JSX.Element {
                 </p>
                 <p className="flex items-start gap-2">
                   <span className="font-bold text-brand-400">2.</span>
-                  <span>We'll arrive at your location at the scheduled time</span>
+                  <span>We&apos;ll arrive at your location at the scheduled time</span>
                 </p>
                 <p className="flex items-start gap-2">
                   <span className="font-bold text-brand-400">3.</span>

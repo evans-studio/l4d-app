@@ -47,10 +47,6 @@ export default function ReportsPage() {
   const [dateRange, setDateRange] = useState('month') // week, month, quarter, year
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
 
-  useEffect(() => {
-    loadReportData()
-  }, [dateRange, loadReportData])
-
   const loadReportData = useCallback(async () => {
     try {
       setIsLoading(true)
@@ -72,6 +68,10 @@ export default function ReportsPage() {
       setIsLoading(false)
     }
   }, [dateRange])
+
+  useEffect(() => {
+    loadReportData()
+  }, [dateRange, loadReportData])
 
   const exportReport = async (format: 'csv' | 'pdf') => {
     try {

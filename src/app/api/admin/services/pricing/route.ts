@@ -113,15 +113,14 @@ export async function PUT(request: NextRequest) {
       created_by: string
     }
     const pricingRecords: PricingRecord[] = []
-    Object.entries(pricingMatrix).forEach(([serviceId, vehicleSizes]: [string, Record<string, { price: number }>]) => {
-      Object.entries(vehicleSizes).forEach(([vehicleSizeId, pricing]: [string, { price: number }]) => {
+    Object.entries(pricingMatrix).forEach(([serviceId, vehicleSizes]) => {
+      Object.entries(vehicleSizes as Record<string, { price: number }>).forEach(([vehicleSizeId, pricing]) => {
         pricingRecords.push({
           service_id: serviceId,
           vehicle_size_id: vehicleSizeId,
           price: pricing.price,
-          profit_margin: pricing.profit_margin || 0,
-          cost_basis: pricing.cost_basis || 0,
-          updated_at: new Date().toISOString()
+          effective_date: new Date().toISOString(),
+          created_by: 'admin'
         })
       })
     })

@@ -290,7 +290,7 @@ export default function BookingDetailsPage({ params }: { params: Promise<{ id: s
               <div className="flex items-center gap-2">
                 <CheckCircle className="w-5 h-5 text-green-600" />
                 <p className="text-green-800 font-medium">
-                  Booking rescheduled successfully! We'll send you a confirmation email shortly.
+                  Booking rescheduled successfully! We&apos;ll send you a confirmation email shortly.
                 </p>
                 <button
                   onClick={() => setShowSuccessMessage(false)}

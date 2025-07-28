@@ -137,11 +137,13 @@ export const Table = <T extends Record<string, unknown>>({
         const aValue = a[sortConfig.key];
         const bValue = b[sortConfig.key];
 
-        if (aValue < bValue) {
-          return sortConfig.direction === 'asc' ? -1 : 1;
-        }
-        if (aValue > bValue) {
-          return sortConfig.direction === 'asc' ? 1 : -1;
+        // Handle comparison with type safety
+        if (typeof aValue === 'string' && typeof bValue === 'string') {
+          if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+          if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+        } else if (typeof aValue === 'number' && typeof bValue === 'number') {
+          if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+          if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
         }
         return 0;
       });
@@ -162,7 +164,7 @@ export const Table = <T extends Record<string, unknown>>({
   };
 
   if (loading) {
-    return <TableSkeleton columns={columns} rows={5} />;
+    return <TableSkeleton columns={columns as any} rows={5} />;
   }
 
   return (

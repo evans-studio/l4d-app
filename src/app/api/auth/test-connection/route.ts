@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
       const { data, error } = await Promise.race([
         supabaseService.from('user_profiles').select('id').limit(1),
         new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 10000))
-      ]) as any
+      ]) as { data: unknown; error: unknown }
       
       const duration = Date.now() - start
       
@@ -49,8 +49,8 @@ export async function GET(request: NextRequest) {
         serviceRole: {
           success: !error,
           duration: `${duration}ms`,
-          error: error?.message,
-          recordCount: data?.length || 0
+          error: error ? (error as Error).message : null,
+          recordCount: Array.isArray(data) ? data.length : 0
         }
       }
     } catch (error: any) {
@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
       const { data, error } = await Promise.race([
         supabaseAnon.from('services').select('id').limit(1),
         new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 10000))
-      ]) as any
+      ]) as { data: unknown; error: unknown }
       
       const duration = Date.now() - start
       
@@ -79,8 +79,8 @@ export async function GET(request: NextRequest) {
         anonKey: {
           success: !error,
           duration: `${duration}ms`,
-          error: error?.message,
-          recordCount: data?.length || 0
+          error: error ? (error as Error).message : null,
+          recordCount: Array.isArray(data) ? data.length : 0
         }
       }
     } catch (error: any) {
