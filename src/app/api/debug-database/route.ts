@@ -45,7 +45,7 @@ export async function GET() {
         profilesTableError: tableError?.message || null,
         existingUsers: existingUsers || [],
         usersError: usersError?.message || null,
-        authUsersCount: authUsers.data?.users?.length || 0,
+        authUsersCount: authUsers?.users?.length || 0,
         authError: authError?.message || null
       },
       environment: {
