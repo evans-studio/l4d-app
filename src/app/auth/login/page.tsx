@@ -73,10 +73,27 @@ export default function LoginPage() {
           redirecting: true
         })
         
-        // Keep loading state during redirect
-        setTimeout(() => {
-          console.log('Executing redirect to dashboard')
-          window.location.href = '/dashboard'
+        // Check user role and redirect appropriately
+        setTimeout(async () => {
+          try {
+            // Get user profile to determine redirect destination
+            const { data: profile } = await supabase
+              .from('user_profiles')
+              .select('role')
+              .eq('id', data.user.id)
+              .single()
+            
+            const redirectUrl = (profile?.role === 'admin' || profile?.role === 'super_admin') 
+              ? '/admin' 
+              : '/dashboard'
+            
+            console.log(`Redirecting ${data.user.email} (${profile?.role}) to ${redirectUrl}`)
+            window.location.href = redirectUrl
+          } catch (error) {
+            console.error('Error getting profile for redirect:', error)
+            // Fallback to dashboard if profile check fails
+            window.location.href = '/dashboard'
+          }
         }, 500)
       } else {
         console.error('No user data received')
