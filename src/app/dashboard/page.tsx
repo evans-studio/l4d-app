@@ -103,6 +103,7 @@ export default function DashboardPage() {
         const { data: { session } } = await supabase.auth.getSession()
         
         if (!session?.access_token) {
+          console.error('No access token available')
           setIsLoading(false)
           return
         }
@@ -117,15 +118,25 @@ export default function DashboardPage() {
           headers: authHeaders
         })
         
-        if (bookingsResponse.ok) {
-          const bookingsData = await bookingsResponse.json()
-          if (bookingsData.success) {
-            setBookings(bookingsData.data)
-          }
+        if (!bookingsResponse.ok) {
+          const errorText = await bookingsResponse.text()
+          console.error('Bookings API error:', bookingsResponse.status, errorText)
+          throw new Error(`Failed to load dashboard data: ${bookingsResponse.status}`)
+        }
+
+        const bookingsData = await bookingsResponse.json()
+        if (bookingsData.success) {
+          setBookings(bookingsData.data || [])
+        } else {
+          console.error('Bookings data error:', bookingsData.error)
+          throw new Error(bookingsData.error?.message || 'Failed to load bookings')
         }
 
       } catch (error) {
-        console.error('Failed to fetch dashboard data:', error)
+        console.error('Dashboard data error:', error)
+        // You can show a user-friendly error message here if needed
+        // For now, we'll just leave bookings as empty array
+        setBookings([])
       } finally {
         setIsLoading(false)
       }
