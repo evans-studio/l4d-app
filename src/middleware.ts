@@ -35,8 +35,8 @@ export async function middleware(request: NextRequest) {
     })
   }
 
-  // Redirect authenticated users away from auth pages
-  if (path.startsWith('/auth/') && isAuthenticated) {
+  // Redirect authenticated users away from auth pages (except callback)
+  if (path.startsWith('/auth/') && !path.startsWith('/auth/callback') && isAuthenticated) {
     console.log('Redirecting authenticated user from auth page to dashboard')
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }

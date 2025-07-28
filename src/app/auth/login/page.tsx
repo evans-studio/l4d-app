@@ -24,8 +24,15 @@ function LoginPageContent() {
   const [showPassword, setShowPassword] = useState(false)
   const [isRedirecting, setIsRedirecting] = useState(false)
 
-  // Let middleware handle authenticated user redirects
-  // Removed client-side redirect logic to avoid conflicts
+  // Handle authenticated user redirects
+  useEffect(() => {
+    if (!authLoading && user && profile) {
+      console.log('User authenticated, redirecting...', { user: user.id, profile: profile.role })
+      // Force redirect to dashboard after authentication is confirmed
+      const redirectTo = searchParams.get('redirect') || '/dashboard'
+      router.push(redirectTo)
+    }
+  }, [authLoading, user, profile, router, searchParams])
 
   // Handle success messages from URL params
   useEffect(() => {
@@ -70,11 +77,17 @@ function LoginPageContent() {
         setError('')
         setSuccessMessage('')
         
-        // Login successful - show redirecting state and let auth state change trigger middleware redirect
+        // Login successful - show redirecting state briefly
         console.log('Login successful, showing redirect state')
         setIsRedirecting(true)
         
-        // Don't manually redirect - let middleware handle it when auth state updates
+        // Add a fallback redirect in case the useEffect doesn't trigger quickly enough
+        setTimeout(() => {
+          const redirectTo = searchParams.get('redirect') || '/dashboard'
+          console.log('Fallback redirect to:', redirectTo)
+          router.push(redirectTo)
+        }, 2000)
+        
         return
       }
     } catch (error) {
