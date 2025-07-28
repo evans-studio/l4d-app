@@ -13,6 +13,7 @@ import {
   ChevronRightIcon
 } from 'lucide-react'
 import { TimeSlotModal } from '@/components/admin/TimeSlotModal'
+import { BulkScheduleModal } from '@/components/admin/BulkScheduleModal'
 
 interface TimeSlot {
   id: string
@@ -38,6 +39,7 @@ export default function AdminSchedulePage() {
   const [stats, setStats] = useState<ScheduleStats | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [showCreateModal, setShowCreateModal] = useState(false)
+  const [showBulkModal, setShowBulkModal] = useState(false)
   const [selectedDate, setSelectedDate] = useState<string>('')
 
   useEffect(() => {
@@ -178,6 +180,15 @@ export default function AdminSchedulePage() {
             <p className="text-text-secondary mt-2">
               Manage your availability and time slots for bookings
             </p>
+          </div>
+          <div className="flex gap-3">
+            <Button
+              variant="outline"
+              onClick={() => setShowBulkModal(true)}
+              leftIcon={<CalendarIcon className="w-4 h-4" />}
+            >
+              Bulk Create
+            </Button>
           </div>
         </div>
 
@@ -351,6 +362,13 @@ export default function AdminSchedulePage() {
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
         selectedDate={selectedDate}
+        onSuccess={loadScheduleData}
+      />
+
+      {/* Bulk Schedule Creation Modal */}
+      <BulkScheduleModal
+        isOpen={showBulkModal}
+        onClose={() => setShowBulkModal(false)}
         onSuccess={loadScheduleData}
       />
     </AdminLayout>

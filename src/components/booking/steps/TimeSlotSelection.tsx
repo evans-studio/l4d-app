@@ -45,7 +45,7 @@ export function TimeSlotSelection({
     }
   }, [availabilityData, bookingData.selectedDate, bookingData.selectedTimeSlot])
 
-  // Fetch available time slots
+  // Fetch available time slots with real-time updates
   useEffect(() => {
     const fetchAvailableSlots = async () => {
       setIsLoading(true)
@@ -55,21 +55,30 @@ export function TimeSlotSelection({
         const endDate = new Date(today)
         endDate.setDate(today.getDate() + 14)
 
-        const response = await fetch(`/api/time-slots/availability?date_from=${today.toISOString().split('T')[0]}&date_to=${endDate.toISOString().split('T')[0]}`)
+        const response = await fetch(`/api/time-slots/availability?date_from=${today.toISOString().split('T')[0]}&date_to=${endDate.toISOString().split('T')[0]}&include_booking_count=true`)
         const data = await response.json()
         
         if (data.success) {
           // The API response has the data nested under 'availability'
-          setAvailabilityData(data.data.availability)
+          setAvailabilityData(data.data.availability || [])
+        } else {
+          console.error('Failed to load availability data:', data.error)
+          setAvailabilityData([])
         }
       } catch (error) {
         console.error('Failed to fetch available slots:', error)
+        setAvailabilityData([])
       } finally {
         setIsLoading(false)
       }
     }
 
     fetchAvailableSlots()
+    
+    // Set up polling for real-time updates every 30 seconds
+    const interval = setInterval(fetchAvailableSlots, 30000)
+    
+    return () => clearInterval(interval)
   }, [setIsLoading])
 
   // Get current week's dates
@@ -195,6 +204,28 @@ export function TimeSlotSelection({
         </Button>
       </div>
 
+      {/* Availability Legend */}
+      <div className="bg-[var(--surface-secondary)] rounded-lg p-4">
+        <div className="flex flex-wrap items-center justify-center gap-6 text-sm">
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 bg-[var(--surface-secondary)] border-2 border-[var(--border-secondary)] rounded"></div>
+            <span className="text-[var(--text-secondary)]">Available</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 bg-orange-50 border-2 border-orange-300 rounded"></div>
+            <span className="text-[var(--text-secondary)]">Filling Up</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 bg-gray-100 border-2 border-gray-300 rounded"></div>
+            <span className="text-[var(--text-secondary)]">Full</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 bg-[var(--primary)] border-2 border-[var(--primary)] rounded"></div>
+            <span className="text-[var(--text-secondary)]">Selected</span>
+          </div>
+        </div>
+      </div>
+
       {/* Calendar Grid */}
       {isLoading ? (
         <div className="grid grid-cols-7 gap-4">
@@ -243,22 +274,36 @@ export function TimeSlotSelection({
                       .sort((a, b) => a.start_time.localeCompare(b.start_time))
                       .map((slot) => {
                         const isSelected = selectedSlot?.id === slot.id && selectedSlot?.date === dateStr
+                        const isNearlyFull = slot.booking_count && slot.booking_count >= 2
+                        const isFull = !slot.available
                         
                         return (
                           <button
                             key={slot.id}
-                            onClick={() => handleSlotSelect(slot, dateStr!)}
+                            onClick={() => !isFull && handleSlotSelect(slot, dateStr!)}
+                            disabled={isFull}
                             className={`
-                              w-full px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 border-2
-                              ${isSelected 
+                              w-full px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 border-2 relative
+                              ${isFull
+                                ? 'bg-gray-100 border-gray-300 text-gray-400 cursor-not-allowed'
+                                : isSelected 
                                 ? 'bg-[var(--primary)] border-[var(--primary)] text-white' 
+                                : isNearlyFull
+                                ? 'bg-orange-50 border-orange-300 text-orange-700 hover:border-orange-400'
                                 : 'bg-[var(--surface-secondary)] border-[var(--border-secondary)] text-[var(--text-primary)] hover:border-[var(--border-primary)] hover:bg-[var(--surface-hover)]'
                               }
                             `}
                           >
-                            <div className="flex items-center justify-center gap-1">
-                              <ClockIcon className="w-3 h-3" />
-                              {formatTime(slot.start_time)}
+                            <div className="flex flex-col items-center gap-1">
+                              <div className="flex items-center gap-1">
+                                <ClockIcon className="w-3 h-3" />
+                                {formatTime(slot.start_time)}
+                              </div>
+                              {slot.booking_count !== undefined && (
+                                <div className="text-xs opacity-75">
+                                  {isFull ? 'Full' : isNearlyFull ? 'Filling up' : 'Available'}
+                                </div>
+                              )}
                             </div>
                           </button>
                         )

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { BookingFlowData } from '@/lib/utils/booking-types'
+import { BookingFlowData, Service } from '@/lib/utils/booking-types'
 import { Button } from '@/components/ui/primitives/Button'
 import { ChevronLeftIcon, CheckCircleIcon, CreditCardIcon, LoaderIcon } from 'lucide-react'
 import { useRouter } from 'next/navigation'
@@ -28,13 +28,14 @@ export function PricingConfirmation({
       }>
     }
   } | null>(null)
+  const [services, setServices] = useState<Service[]>([])
   const [customerNotes, setCustomerNotes] = useState(bookingData.customerNotes || '')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isCalculatingPricing, setIsCalculatingPricing] = useState(false)
 
-  // Calculate pricing when component mounts
+  // Load services and calculate pricing when component mounts
   useEffect(() => {
-    const calculatePricing = async () => {
+    const loadServicesAndCalculatePricing = async () => {
       if (!bookingData.selectedServices || 
           !bookingData.vehicleDetails?.size_id || 
           !bookingData.addressDetails?.postcode) {
@@ -43,7 +44,17 @@ export function PricingConfirmation({
 
       setIsCalculatingPricing(true)
       try {
-        const response = await fetch('/api/pricing/calculate', {
+        // Load services to display names
+        const servicesResponse = await fetch('/api/services')
+        if (servicesResponse.ok) {
+          const servicesData = await servicesResponse.json()
+          if (servicesData.success) {
+            setServices(servicesData.data || [])
+          }
+        }
+
+        // Calculate pricing
+        const pricingResponse = await fetch('/api/pricing/calculate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -53,19 +64,19 @@ export function PricingConfirmation({
           })
         })
 
-        const data = await response.json()
-        if (data.success) {
-          setPricingCalculation(data.data)
-          updateBookingData({ pricingCalculation: data.data })
+        const pricingData = await pricingResponse.json()
+        if (pricingData.success) {
+          setPricingCalculation(pricingData.data)
+          updateBookingData({ pricingCalculation: pricingData.data })
         }
       } catch (error) {
-        console.error('Failed to calculate pricing:', error)
+        console.error('Failed to load data:', error)
       } finally {
         setIsCalculatingPricing(false)
       }
     }
 
-    calculatePricing()
+    loadServicesAndCalculatePricing()
   }, [bookingData.selectedServices, bookingData.vehicleDetails?.size_id, bookingData.addressDetails?.postcode, updateBookingData])
 
   const handleSubmit = async () => {
@@ -163,12 +174,30 @@ export function PricingConfirmation({
               Selected Services
             </h3>
             <div className="space-y-3">
-              {bookingData.selectedServices?.map((serviceId, index) => (
-                <div key={serviceId} className="flex items-center justify-between p-3 bg-[var(--surface-tertiary)] rounded-lg">
-                  <span className="text-[var(--text-primary)]">Service {index + 1}</span>
-                  <span className="text-[var(--primary)] font-semibold">£--</span>
-                </div>
-              ))}
+              {bookingData.selectedServices?.map((serviceId) => {
+                const service = services.find(s => s.id === serviceId)
+                const calculation = pricingCalculation?.summary?.calculations?.find(c => 
+                  c.serviceName === service?.name
+                )
+                
+                return (
+                  <div key={serviceId} className="flex items-center justify-between p-3 bg-[var(--surface-tertiary)] rounded-lg">
+                    <div className="flex flex-col">
+                      <span className="text-[var(--text-primary)] font-medium">
+                        {service?.name || `Service ${serviceId}`}
+                      </span>
+                      {service?.short_description && (
+                        <span className="text-[var(--text-secondary)] text-sm">
+                          {service.short_description}
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-[var(--primary)] font-semibold">
+                      £{calculation?.totalPrice || service?.base_price || '--'}
+                    </span>
+                  </div>
+                )
+              })}
             </div>
           </div>
 
@@ -275,48 +304,79 @@ export function PricingConfirmation({
             {isCalculatingPricing ? (
               <div className="flex items-center justify-center py-8">
                 <LoaderIcon className="w-6 h-6 animate-spin text-[var(--primary)]" />
-                <span className="ml-2 text-[var(--text-secondary)]">Calculating...</span>
+                <span className="ml-2 text-[var(--text-secondary)]">Calculating pricing...</span>
               </div>
             ) : pricingCalculation ? (
               <div className="space-y-4">
                 {/* Services Breakdown */}
-                {pricingCalculation.summary?.calculations?.map((calc, index: number) => (
-                  <div key={index} className="flex justify-between items-center">
-                    <span className="text-[var(--text-secondary)]">{calc.serviceName}</span>
-                    <span className="font-medium text-[var(--text-primary)]">£{calc.totalPrice}</span>
+                <div className="space-y-3">
+                  <h4 className="font-medium text-[var(--text-primary)]">Services</h4>
+                  {pricingCalculation.summary?.calculations?.map((calc, index: number) => (
+                    <div key={index} className="bg-[var(--surface-tertiary)] rounded-lg p-3">
+                      <div className="flex justify-between items-center">
+                        <span className="text-[var(--text-primary)] font-medium">{calc.serviceName}</span>
+                        <span className="font-semibold text-[var(--primary)]">£{calc.totalPrice}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Vehicle Size Multiplier Info */}
+                {bookingData.vehicleDetails?.size_id && (
+                  <div className="bg-[var(--info-bg)] border border-[var(--info)] rounded-md p-3">
+                    <p className="text-[var(--info)] text-sm">
+                      <strong>Vehicle Size:</strong> Pricing adjusted for your vehicle size category
+                    </p>
                   </div>
-                ))}
+                )}
 
                 <div className="border-t border-[var(--border-secondary)] pt-4">
                   <div className="flex justify-between items-center">
-                    <span className="text-[var(--text-secondary)]">Subtotal</span>
+                    <span className="text-[var(--text-secondary)]">Services Subtotal</span>
                     <span className="font-medium text-[var(--text-primary)]">
-                      £{pricingCalculation.summary?.totalPrice - pricingCalculation.summary?.totalDistanceSurcharge || 0}
+                      £{(pricingCalculation.summary?.totalPrice || 0) - (pricingCalculation.summary?.totalDistanceSurcharge || 0)}
                     </span>
                   </div>
                   
-                  {pricingCalculation.summary?.totalDistanceSurcharge > 0 && (
-                    <div className="flex justify-between items-center">
-                      <span className="text-[var(--text-secondary)]">Travel Surcharge</span>
+                  {pricingCalculation.summary?.totalDistanceSurcharge > 0 ? (
+                    <div className="flex justify-between items-center mt-2">
+                      <div className="flex flex-col">
+                        <span className="text-[var(--text-secondary)]">Travel Surcharge</span>
+                        <span className="text-xs text-[var(--text-muted)]">Distance-based</span>
+                      </div>
                       <span className="font-medium text-[var(--text-primary)]">
                         £{pricingCalculation.summary.totalDistanceSurcharge}
                       </span>
                     </div>
+                  ) : (
+                    <div className="flex justify-between items-center mt-2">
+                      <div className="flex flex-col">
+                        <span className="text-[var(--text-secondary)]">Travel Surcharge</span>
+                        <span className="text-xs text-green-600">Within free radius</span>
+                      </div>
+                      <span className="font-medium text-green-600">FREE</span>
+                    </div>
                   )}
                 </div>
 
-                <div className="border-t border-[var(--border-primary)] pt-4">
+                <div className="border-t-2 border-[var(--border-primary)] pt-4">
                   <div className="flex justify-between items-center">
-                    <span className="text-lg font-semibold text-[var(--text-primary)]">Total</span>
-                    <span className="text-2xl font-bold text-[var(--primary)]">
+                    <span className="text-lg font-semibold text-[var(--text-primary)]">Total Price</span>
+                    <span className="text-3xl font-bold text-[var(--primary)]">
                       £{pricingCalculation.summary?.totalPrice || 0}
                     </span>
                   </div>
+                  <p className="text-xs text-[var(--text-muted)] mt-1 text-right">
+                    Includes all services and travel costs
+                  </p>
                 </div>
               </div>
             ) : (
-              <div className="text-center py-4 text-[var(--text-muted)]">
-                Unable to calculate pricing
+              <div className="text-center py-8">
+                <div className="text-[var(--text-muted)] mb-4">Unable to calculate pricing</div>
+                <p className="text-sm text-[var(--text-secondary)]">
+                  Please ensure all required information is provided
+                </p>
               </div>
             )}
 

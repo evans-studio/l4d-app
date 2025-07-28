@@ -365,14 +365,14 @@ export default function MyBookingsPage() {
                           View Details
                         </Button>
                         
-                        {booking.status === 'pending' && (
+                        {['pending', 'confirmed'].includes(booking.status) && (
                           <Button
-                            onClick={() => router.push(`/booking/${booking.id}/edit`)}
+                            onClick={() => router.push(`/dashboard/bookings/${booking.id}/reschedule`)}
                             variant="outline"
                             size="sm"
                             leftIcon={<Edit className="w-4 h-4" />}
                           >
-                            Edit
+                            Reschedule
                           </Button>
                         )}
                       </div>

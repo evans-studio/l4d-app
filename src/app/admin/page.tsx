@@ -16,7 +16,8 @@ import {
   XCircleIcon,
   EyeIcon,
   EditIcon,
-  MoreHorizontalIcon
+  MoreHorizontalIcon,
+  BarChart3Icon
 } from 'lucide-react'
 
 interface AdminStats {
@@ -436,7 +437,15 @@ export default function AdminDashboard() {
                 onClick={() => router.push('/admin/customers')}
               >
                 <UsersIcon className="w-4 h-4 mr-2" />
-                View Customers
+                Customer Database
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full justify-start"
+                onClick={() => router.push('/admin/analytics')}
+              >
+                <BarChart3Icon className="w-4 h-4 mr-2" />
+                Business Analytics
               </Button>
               <Button
                 variant="outline"

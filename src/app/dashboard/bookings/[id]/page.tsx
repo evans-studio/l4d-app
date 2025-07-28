@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
 import { useAuth } from '@/lib/auth'
 import { Button } from '@/components/ui/primitives/Button'
@@ -21,7 +21,8 @@ import {
   X,
   Clock as PendingIcon,
   Mail,
-  Phone
+  Phone,
+  Edit2
 } from 'lucide-react'
 
 interface BookingDetails {
@@ -102,12 +103,14 @@ const statusConfig = {
 
 export default function BookingDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { user, isLoading: authLoading } = useAuth()
   const [booking, setBooking] = useState<BookingDetails | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [showCancelModal, setShowCancelModal] = useState(false)
   const [isCancelling, setIsCancelling] = useState(false)
   const [bookingId, setBookingId] = useState<string | null>(null)
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false)
 
   useEffect(() => {
     const resolveParams = async () => {
@@ -116,6 +119,21 @@ export default function BookingDetailsPage({ params }: { params: Promise<{ id: s
     }
     resolveParams()
   }, [params])
+
+  // Check for success message from reschedule
+  useEffect(() => {
+    if (searchParams.get('rescheduled') === 'true') {
+      setShowSuccessMessage(true)
+      // Remove the query parameter from URL
+      const newUrl = window.location.pathname
+      window.history.replaceState({}, '', newUrl)
+      
+      // Auto-hide success message after 5 seconds
+      setTimeout(() => {
+        setShowSuccessMessage(false)
+      }, 5000)
+    }
+  }, [searchParams])
 
   useEffect(() => {
     const fetchBookingDetails = async () => {
@@ -260,11 +278,30 @@ export default function BookingDetailsPage({ params }: { params: Promise<{ id: s
   const status = statusConfig[booking.status]
   const StatusIcon = status.icon
   const canCancel = booking.status === 'pending'
+  const canReschedule = ['pending', 'confirmed'].includes(booking.status)
 
   return (
     <CustomerRoute>
       <CustomerLayout>
         <Container>
+          {/* Success Message */}
+          {showSuccessMessage && (
+            <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+              <div className="flex items-center gap-2">
+                <CheckCircle className="w-5 h-5 text-green-600" />
+                <p className="text-green-800 font-medium">
+                  Booking rescheduled successfully! We'll send you a confirmation email shortly.
+                </p>
+                <button
+                  onClick={() => setShowSuccessMessage(false)}
+                  className="ml-auto text-green-600 hover:text-green-700"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Header */}
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center gap-4">
@@ -287,15 +324,27 @@ export default function BookingDetailsPage({ params }: { params: Promise<{ id: s
               </div>
             </div>
 
-            {canCancel && (
-              <Button
-                onClick={() => setShowCancelModal(true)}
-                variant="outline"
-                className="text-error-400 border-error-400 hover:bg-error-600/10"
-              >
-                Cancel Booking
-              </Button>
-            )}
+            <div className="flex items-center gap-3">
+              {canReschedule && (
+                <Button
+                  onClick={() => router.push(`/dashboard/bookings/${booking.id}/reschedule`)}
+                  variant="outline"
+                  className="flex items-center gap-2"
+                >
+                  <Edit2 className="w-4 h-4" />
+                  Reschedule
+                </Button>
+              )}
+              {canCancel && (
+                <Button
+                  onClick={() => setShowCancelModal(true)}
+                  variant="outline"
+                  className="text-error-400 border-error-400 hover:bg-error-600/10"
+                >
+                  Cancel Booking
+                </Button>
+              )}
+            </div>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

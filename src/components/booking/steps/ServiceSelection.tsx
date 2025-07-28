@@ -28,64 +28,61 @@ export function ServiceSelection({
     bookingData.selectedServices || []
   );
 
-  // Mock services data for TypeScript compliance and working booking flow
+  // Load real services and categories from the database
   useEffect(() => {
-    const initializeServices = (): void => {
+    const loadServicesAndCategories = async (): Promise<void> => {
       setIsLoading(true);
       
-      // Mock service data that matches our homepage
-      const mockServices: Service[] = [
-        {
-          id: 'exterior',
-          name: 'Exterior Detail',
-          short_description: 'Complete wash, wax & protection for your vehicle exterior',
-          base_price: 89,
-          duration_minutes: 180,
-          category_id: 'detailing'
-        },
-        {
-          id: 'interior', 
-          name: 'Interior Detail',
-          short_description: 'Deep clean & protection for your vehicle interior',
-          base_price: 79,
-          duration_minutes: 180,
-          category_id: 'detailing'
-        },
-        {
-          id: 'full',
-          name: 'Full Service',
-          short_description: 'Complete interior & exterior transformation',
-          base_price: 149, 
-          duration_minutes: 300,
-          category_id: 'premium'
-        }
-      ];
+      try {
+        // Load services and categories in parallel
+        const [servicesResponse, categoriesResponse] = await Promise.all([
+          fetch('/api/services'),
+          fetch('/api/services/categories')
+        ]);
 
-      const mockCategories: ServiceCategory[] = [
-        { 
-          id: 'detailing', 
-          name: 'Detailing Services',
-          description: 'Standard detailing services',
-          display_order: 1,
-          is_active: true,
-          created_at: new Date().toISOString()
-        },
-        { 
-          id: 'premium', 
-          name: 'Premium Services',
-          description: 'Premium detailing services',
-          display_order: 2,
-          is_active: true,
-          created_at: new Date().toISOString()
-        }
-      ];
+        if (servicesResponse.ok && categoriesResponse.ok) {
+          const servicesData = await servicesResponse.json();
+          const categoriesData = await categoriesResponse.json();
 
-      setServices(mockServices);
-      setCategories(mockCategories);
-      setIsLoading(false);
+          if (servicesData.success && categoriesData.success) {
+            setServices(servicesData.data || []);
+            setCategories(categoriesData.data || []);
+          } else {
+            console.error('Failed to load services or categories');
+            // Fallback to basic services if API fails
+            setServices([
+              {
+                id: 'exterior',
+                name: 'Exterior Detail',
+                short_description: 'Complete wash, wax & protection',
+                base_price: 89,
+                duration_minutes: 180,
+                category_id: 'detailing'
+              }
+            ]);
+            setCategories([
+              {
+                id: 'detailing',
+                name: 'Detailing Services',
+                description: 'Standard services',
+                display_order: 1,
+                is_active: true,
+                created_at: new Date().toISOString()
+              }
+            ]);
+          }
+        }
+      } catch (error) {
+        console.error('Error loading services:', error);
+        // Fallback to basic services on error
+        setServices([]);
+        setCategories([]);
+      } finally {
+        setIsLoading(false);
+      }
     };
 
-    initializeServices();
+    loadServicesAndCategories();
   }, [setIsLoading]);
 
   const handleServiceToggle = (serviceId: string): void => {
@@ -103,17 +100,16 @@ export function ServiceSelection({
     }
   };
 
-  const getServiceIcon = (serviceId: string): React.JSX.Element => {
-    switch (serviceId) {
-      case 'exterior':
-        return <Sparkles className="w-8 h-8" />;
-      case 'interior':
-        return <Palette className="w-8 h-8" />;
-      case 'full':
-        return <Shield className="w-8 h-8" />;
-      default:
-        return <Sparkles className="w-8 h-8" />;
+  const getServiceIcon = (serviceName: string): React.JSX.Element => {
+    const name = serviceName.toLowerCase();
+    if (name.includes('exterior') || name.includes('wash') || name.includes('wax')) {
+      return <Sparkles className="w-8 h-8" />;
+    } else if (name.includes('interior') || name.includes('vacuum') || name.includes('clean')) {
+      return <Palette className="w-8 h-8" />;
+    } else if (name.includes('full') || name.includes('complete') || name.includes('premium')) {
+      return <Shield className="w-8 h-8" />;
     }
+    return <Sparkles className="w-8 h-8" />;
   };
 
   // Filter services by category
@@ -179,7 +175,8 @@ export function ServiceSelection({
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {filteredServices.map((service) => {
             const isSelected = selectedServices.includes(service.id as string);
-            const isPremium = service.id === 'full';
+            const serviceName = (service.name as string).toLowerCase();
+            const isPremium = serviceName.includes('full') || serviceName.includes('complete') || serviceName.includes('premium');
             
             return (
               <Card
@@ -215,7 +212,7 @@ export function ServiceSelection({
                       ? 'bg-brand-600 text-white' 
                       : 'bg-brand-600/10 text-brand-400'
                   }`}>
-                    {getServiceIcon(service.id as string)}
+                    {getServiceIcon(service.name as string)}
                   </div>
                   <h3 className="text-xl font-bold text-brand-300">{service.name as string}</h3>
                   <p className="text-text-secondary">{service.short_description as string}</p>

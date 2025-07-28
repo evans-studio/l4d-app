@@ -5,6 +5,7 @@ import { ApiResponseHandler } from '@/lib/api/response'
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient()
+    const { searchParams } = new URL(request.url)
     
     // Get current user and verify admin role
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -24,14 +25,19 @@ export async function GET(request: NextRequest) {
       return ApiResponseHandler.forbidden('Admin access required')
     }
 
-    // Get all bookings with full details
-    const { data: bookings, error: bookingsError } = await supabase
+    // Parse query parameters
+    const dateFilter = searchParams.get('date')
+    const sortBy = searchParams.get('sort') || 'created_at'
+
+    // Build query
+    let query = supabase
       .from('bookings')
       .select(`
         id,
         booking_reference,
         scheduled_date,
         scheduled_start_time,
+        scheduled_end_time,
         status,
         total_price,
         special_instructions,
@@ -46,7 +52,21 @@ export async function GET(request: NextRequest) {
           price
         )
       `)
-      .order('created_at', { ascending: false })
+
+    // Apply date filter if provided
+    if (dateFilter) {
+      query = query.eq('scheduled_date', dateFilter)
+    }
+
+    // Apply sorting
+    if (sortBy === 'time') {
+      query = query.order('scheduled_date', { ascending: true })
+                   .order('scheduled_start_time', { ascending: true })
+    } else {
+      query = query.order('created_at', { ascending: false })
+    }
+
+    const { data: bookings, error: bookingsError } = await query
 
     if (bookingsError) {
       console.error('Admin bookings error:', bookingsError)
@@ -91,6 +111,8 @@ export async function GET(request: NextRequest) {
         customer_phone: customer.phone,
         scheduled_date: booking.scheduled_date,
         start_time: booking.scheduled_start_time,
+        scheduled_start_time: booking.scheduled_start_time,
+        scheduled_end_time: booking.scheduled_end_time,
         status: booking.status,
         total_price: booking.total_price || 0,
         special_instructions: booking.special_instructions,

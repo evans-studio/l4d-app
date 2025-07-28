@@ -162,6 +162,13 @@ export default function AdminServicesPage() {
               Manage Categories
             </Button>
             <Button
+              onClick={() => router.push('/admin/services/pricing')}
+              variant="outline"
+            >
+              <DollarSignIcon className="w-4 h-4 mr-2" />
+              Pricing Management
+            </Button>
+            <Button
               onClick={() => router.push('/admin/services/vehicle-sizes')}
               variant="outline"
             >

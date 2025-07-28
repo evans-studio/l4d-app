@@ -55,6 +55,10 @@ export class ApiResponseHandler {
     return this.error(message, 'VALIDATION_ERROR', 400, details)
   }
 
+  static badRequest(message: string, details?: unknown): NextResponse<ApiResponse> {
+    return this.error(message, 'BAD_REQUEST', 400, details)
+  }
+
   static unauthorized(message: string = 'Unauthorized'): NextResponse<ApiResponse> {
     return this.error(message, 'UNAUTHORIZED', 401)
   }

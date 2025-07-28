@@ -202,6 +202,50 @@ export class BookingService extends BaseService {
     }, 'Failed to fetch time slots')
   }
 
+  async createTimeSlotsBulk(slots: Array<{
+    slot_date: string
+    start_time: string
+    duration_minutes: number
+    is_available: boolean
+    created_by: string
+  }>): Promise<ServiceResponse<any[]>> {
+    return this.executeQuery(async () => {
+      const supabase = await this.supabase
+      
+      // Check for duplicate slots (same date and time)
+      const duplicateCheck = await supabase
+        .from('time_slots')
+        .select('slot_date, start_time')
+        .in('slot_date', [...new Set(slots.map(s => s.slot_date))])
+      
+      if (duplicateCheck.error) {
+        return { data: null, error: duplicateCheck.error }
+      }
+      
+      // Filter out duplicates
+      const existingSlots = new Set(
+        duplicateCheck.data?.map(slot => `${slot.slot_date}-${slot.start_time}`) || []
+      )
+      
+      const uniqueSlots = slots.filter(slot => 
+        !existingSlots.has(`${slot.slot_date}-${slot.start_time}`)
+      )
+      
+      if (uniqueSlots.length === 0) {
+        return { 
+          data: [], 
+          error: { message: 'All specified time slots already exist' } 
+        }
+      }
+      
+      // Insert unique slots
+      return supabase
+        .from('time_slots')
+        .insert(uniqueSlots)
+        .select()
+    }, 'Failed to create time slots in bulk')
+  }
+
   async getAvailabilityForDateRange(startDate: string, endDate: string): Promise<ServiceResponse<BookingCalendarDay[]>> {
     return this.executeQuery(async () => {
       const supabase = await this.supabase
