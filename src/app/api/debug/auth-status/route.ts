@@ -8,8 +8,8 @@ export async function GET(request: NextRequest) {
     const supabase = await createClient()
     
     // Extract tokens from cookies
-    const accessToken = request.cookies.get('access_token')?.value
-    const refreshToken = request.cookies.get('refresh_token')?.value
+    const accessToken = request.cookies.get('auth_access')?.value
+    const refreshToken = request.cookies.get('auth_refresh')?.value
     
     const debug = {
       cookies: {
