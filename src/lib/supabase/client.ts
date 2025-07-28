@@ -3,27 +3,19 @@ import { createBrowserClient } from '@supabase/ssr'
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
-// Browser client for client-side code with improved configuration
+// Browser client for client-side code with standard configuration
 export const supabase = createBrowserClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    // Improve session handling
+    // Use standard session handling to match server
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: true,
-    flowType: 'pkce',
-    // Set storage key for session persistence
-    storageKey: 'love4detailing-auth-token'
+    flowType: 'pkce'
+    // Remove custom storageKey to use defaults
   },
   global: {
-    // Add timeout and retry configuration
     headers: {
       'X-Client-Info': 'love4detailing-web'
-    }
-  },
-  // Configure realtime if needed
-  realtime: {
-    params: {
-      eventsPerSecond: 10
     }
   }
 })

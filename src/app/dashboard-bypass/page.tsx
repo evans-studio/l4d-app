@@ -47,16 +47,24 @@ export default function DashboardBypassPage() {
           profileActive: profile?.is_active
         })
         
-        // Test 4: Try API call
+        // Test 4: Try API calls
         if (user) {
           try {
+            // Test cookie debug API first
+            const cookieResponse = await fetch('/api/debug/cookies')
+            const cookieResult = await cookieResponse.json()
+            console.log('Cookie debug:', cookieResult)
+            
+            // Test customer API
             const response = await fetch('/api/customer/bookings')
             const result = await response.json()
             console.log('API test:', { status: response.status, success: result.success })
+            
             setDashboardData({ 
               apiWorking: response.ok,
               apiError: response.ok ? null : result.error?.message,
-              bookings: result.data?.length || 0
+              bookings: result.data?.length || 0,
+              cookieDebug: cookieResult.data
             })
           } catch (error) {
             console.log('API test failed:', error)

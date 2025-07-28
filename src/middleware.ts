@@ -33,7 +33,8 @@ export async function middleware(request: NextRequest) {
     '/api/booking/validate-user',
     '/api/booking/create',
     '/api/auth/reset-password',
-    '/api/auth/verify-email'
+    '/api/auth/verify-email',
+    '/api/debug/cookies'
   ]
 
   // Skip auth check for public routes
