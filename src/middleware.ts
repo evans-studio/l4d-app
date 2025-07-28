@@ -5,46 +5,74 @@ export async function middleware(request: NextRequest) {
   const response = NextResponse.next()
   const path = request.nextUrl.pathname
 
-  // Skip middleware for public routes, static files, and API routes
-  if (
-    path.startsWith('/_next') ||
-    path.startsWith('/api') ||
-    path.startsWith('/auth/callback') ||
-    path === '/' ||
-    path === '/book' ||
-    path === '/booking-policies' ||
-    path === '/booking-success' ||
-    path.match(/\.(png|jpg|jpeg|gif|svg|ico|css|js)$/)
-  ) {
+  // Public routes that don't require authentication
+  const publicRoutes = [
+    '/',
+    '/auth/login',
+    '/auth/register',
+    '/auth/forgot-password',
+    '/auth/reset-password',
+    '/auth/verify-email',
+    '/auth/callback',
+    '/book',
+    '/booking-policies',
+    '/brand-showcase',
+    '/component-library',
+    '/component-showcase',
+    '/tailwind-test',
+    '/tailwind-verify',
+    '/simple-test',
+    '/simple-tailwind-test',
+    '/debug-tailwind',
+    '/component-test',
+    '/test-api'
+  ]
+
+  // Skip auth check for public routes and API routes
+  if (publicRoutes.includes(path) || path.startsWith('/api/')) {
     return response
   }
 
-  // Simple auth check for protected routes
-  if (path.startsWith('/dashboard') || path.startsWith('/admin')) {
-    try {
-      const supabase = createClient(request, response)
-      const { data: { session } } = await supabase.auth.getSession()
-      
-      console.log('Middleware auth check:', {
-        path,
-        hasSession: !!session,
-        hasUser: !!session?.user,
-        userId: session?.user?.id
-      })
-      
-      if (!session?.user) {
-        console.log('No session, redirecting to login')
-        return NextResponse.redirect(new URL('/auth/login', request.url))
-      }
-      
-      console.log('Auth check passed, allowing access to:', path)
-    } catch (error) {
-      console.error('Auth check error:', error)
+  try {
+    // Create SSR client to properly handle session cookies
+    const supabase = createClient(request, response)
+    
+    // Get session from cookies
+    const { data: { session }, error } = await supabase.auth.getSession()
+    
+    if (error) {
+      console.error('Middleware auth error:', error)
       return NextResponse.redirect(new URL('/auth/login', request.url))
     }
-  }
 
-  return response
+    // No session found - redirect to login
+    if (!session) {
+      console.log('Middleware: No session found, redirecting to login')
+      return NextResponse.redirect(new URL('/auth/login', request.url))
+    }
+
+    // Admin routes require admin role
+    if (path.startsWith('/admin')) {
+      // Get user profile to check role
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('role')
+        .eq('id', session.user.id)
+        .single()
+
+      if (!profile || !['admin', 'super_admin'].includes(profile.role)) {
+        console.log('Middleware: Non-admin trying to access admin route')
+        return NextResponse.redirect(new URL('/dashboard', request.url))
+      }
+    }
+
+    console.log('Middleware: Valid session, allowing access to:', path)
+    return response
+
+  } catch (error) {
+    console.error('Middleware error:', error)
+    return NextResponse.redirect(new URL('/auth/login', request.url))
+  }
 }
 
 export const config = {
