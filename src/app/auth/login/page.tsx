@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/primitives/Button'
 import { ResponsiveLogo } from '@/components/ui/primitives/Logo'
@@ -9,6 +10,7 @@ import { Mail, Lock, AlertCircle, CheckCircle, Eye, EyeOff } from 'lucide-react'
 import Link from 'next/link'
 
 export default function LoginPage() {
+  const router = useRouter()
   const [formData, setFormData] = useState({
     email: '',
     password: ''
@@ -88,32 +90,63 @@ export default function LoginPage() {
 
       console.log('Login successful for user:', data.user.email)
       
-      // Simplified redirect - check profile in background but don&apos;t block
-      try {
-        // Quick profile check with timeout
-        const profilePromise = supabase
-          .from('user_profiles')
-          .select('role')
-          .eq('id', data.user.id)
-          .single()
-        
-        const profileTimeout = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Profile check timeout')), 5000)
-        )
+      // Give the auth context time to update, then redirect
+      console.log('Starting redirect process...')
+      setIsLoading(false) // Stop loading immediately since login was successful
+      
+      setTimeout(async () => {
+        try {
+          console.log('Checking user profile for redirect...')
+          
+          // Quick profile check with timeout
+          const profilePromise = supabase
+            .from('user_profiles')
+            .select('role')
+            .eq('id', data.user.id)
+            .single()
+          
+          const profileTimeout = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Profile check timeout')), 3000)
+          )
 
-        const { data: profile } = await Promise.race([profilePromise, profileTimeout]) as any
-        
-        const redirectUrl = (profile?.role === 'admin' || profile?.role === 'super_admin') 
-          ? '/admin' 
-          : '/dashboard'
-        
-        console.log(`Redirecting to ${redirectUrl} based on role: ${profile?.role}`)
-        window.location.href = redirectUrl
-      } catch (profileError) {
-        console.warn('Profile check failed, defaulting to dashboard:', profileError)
-        // Default to dashboard if profile check fails or times out
-        window.location.href = '/dashboard'
-      }
+          const { data: profile } = await Promise.race([profilePromise, profileTimeout]) as any
+          
+          const redirectUrl = (profile?.role === 'admin' || profile?.role === 'super_admin') 
+            ? '/admin' 
+            : '/dashboard'
+          
+          console.log(`Attempting redirect to ${redirectUrl} based on role: ${profile?.role}`)
+          console.log('Current pathname:', window.location.pathname)
+          
+          // Try router first
+          console.log('Using router.push...')
+          router.push(redirectUrl)
+          
+          // Immediate fallback check
+          setTimeout(() => {
+            console.log('Checking if redirect worked, current path:', window.location.pathname)
+            if (window.location.pathname === '/auth/login') {
+              console.log('Router redirect failed, using window.location fallback')
+              window.location.href = redirectUrl
+            } else {
+              console.log('Redirect appears successful!')
+            }
+          }, 1000)
+          
+        } catch (profileError) {
+          console.warn('Profile check failed, defaulting to dashboard:', profileError)
+          console.log('Using router.push for dashboard fallback...')
+          router.push('/dashboard')
+          
+          // Fallback
+          setTimeout(() => {
+            if (window.location.pathname === '/auth/login') {
+              console.log('Dashboard router redirect failed, using window.location')
+              window.location.href = '/dashboard'
+            }
+          }, 1000)
+        }
+      }, 200) // Reduced delay for faster redirect
 
     } catch (error: unknown) {
       clearTimeout(timeoutId)
