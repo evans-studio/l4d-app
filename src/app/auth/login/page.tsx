@@ -26,11 +26,15 @@ function LoginPageContent() {
 
   // Handle authenticated user redirects
   useEffect(() => {
+    console.log('Auth state check:', { authLoading, hasUser: !!user, hasProfile: !!profile })
     if (!authLoading && user && profile) {
       console.log('User authenticated, redirecting...', { user: user.id, profile: profile.role })
       // Force redirect to dashboard after authentication is confirmed
       const redirectTo = searchParams.get('redirect') || '/dashboard'
-      router.push(redirectTo)
+      console.log('Redirecting to:', redirectTo)
+      
+      // Use window.location for more reliable redirect
+      window.location.href = redirectTo
     }
   }, [authLoading, user, profile, router, searchParams])
 
@@ -85,8 +89,8 @@ function LoginPageContent() {
         setTimeout(() => {
           const redirectTo = searchParams.get('redirect') || '/dashboard'
           console.log('Fallback redirect to:', redirectTo)
-          router.push(redirectTo)
-        }, 2000)
+          window.location.href = redirectTo
+        }, 1500)
         
         return
       }
