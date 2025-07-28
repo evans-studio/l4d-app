@@ -22,17 +22,22 @@ function LoginPageContent() {
   const [error, setError] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const [isRedirecting, setIsRedirecting] = useState(false)
 
   // Redirect if already authenticated
   useEffect(() => {
-    if (!authLoading && user) {
-      console.log('User already authenticated, forcing redirect with window.location')
+    if (!authLoading && user && !isRedirecting) {
+      console.log('User already authenticated, setting redirect flag and redirecting')
+      setIsRedirecting(true)
       const redirectPath = (profile?.role === 'admin' || profile?.role === 'super_admin') ? '/admin' : '/dashboard'
       console.log('Redirecting authenticated user to:', redirectPath)
-      // Use window.location for reliable redirect
-      window.location.href = redirectPath
+      
+      // Use setTimeout to ensure state is set before redirect
+      setTimeout(() => {
+        router.replace(redirectPath)
+      }, 100)
     }
-  }, [user, profile, authLoading])
+  }, [user, profile, authLoading, router, isRedirecting])
 
   // Handle success messages from URL params
   useEffect(() => {
@@ -77,9 +82,14 @@ function LoginPageContent() {
         setError('')
         setSuccessMessage('')
         
-        // Force redirect to dashboard
-        console.log('Login successful, forcing redirect with window.location')
-        window.location.href = '/dashboard'
+        // Redirect to dashboard after successful login
+        console.log('Login successful, setting redirect flag and redirecting')
+        setIsRedirecting(true)
+        
+        // Small delay to ensure auth state is updated
+        setTimeout(() => {
+          router.replace('/dashboard')
+        }, 200)
         
         // Don't set loading to false - let the redirect happen
         return
@@ -101,8 +111,8 @@ function LoginPageContent() {
     )
   }
 
-  // Don't show login form if already authenticated (redirect is happening)
-  if (user) {
+  // Don't show login form if already authenticated or redirecting
+  if (user || isRedirecting) {
     return (
       <div className="min-h-screen bg-surface-primary flex items-center justify-center">
         <div className="text-center">
