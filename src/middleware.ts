@@ -18,7 +18,11 @@ export async function middleware(request: NextRequest) {
     '/booking-policies',
     '/brand-showcase',
     '/component-library',
-    '/component-showcase'
+    '/component-showcase',
+    '/dashboard-bypass',
+    '/dashboard-test',
+    '/dashboard-simple',
+    '/auth/login-redirect-test'
   ]
 
   // Public API routes that don't require authentication
