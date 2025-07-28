@@ -95,30 +95,14 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const fetchDashboardData = async () => {
-      if (authLoading) {
-        console.log('Auth still loading, waiting...')
-        return
-      }
-      
-      if (!user) {
-        console.log('No user found, skipping data fetch')
-        setIsLoading(false)
+      if (authLoading || !user) {
         return
       }
 
       try {
-        // Get current session for authenticated requests
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-        
-        console.log('Dashboard session check:', { 
-          hasSession: !!session, 
-          hasAccessToken: !!session?.access_token,
-          userId: session?.user?.id,
-          sessionError 
-        })
+        const { data: { session } } = await supabase.auth.getSession()
         
         if (!session?.access_token) {
-          console.error('No valid session found for dashboard')
           setIsLoading(false)
           return
         }
@@ -138,8 +122,6 @@ export default function DashboardPage() {
           if (bookingsData.success) {
             setBookings(bookingsData.data)
           }
-        } else {
-          console.error('Failed to fetch bookings:', bookingsResponse.status)
         }
 
       } catch (error) {

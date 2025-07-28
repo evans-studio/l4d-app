@@ -74,55 +74,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       })
       
-      // Force redirect to login
-      window.location.href = '/auth/login'
+      // Redirect to homepage
+      window.location.href = '/'
     } catch (error) {
       console.error('Sign out error:', error)
     }
   }
 
   useEffect(() => {
-    // Get initial session with retry logic
-    const getInitialSession = async (retryCount = 0) => {
-      let shouldStopLoading = false
-      
+    // Get initial session
+    const getInitialSession = async () => {
       try {
-        console.log('Getting initial session... (attempt', retryCount + 1, ')')
-        const { data: { session }, error } = await supabase.auth.getSession()
-        
-        if (error) {
-          console.error('Session error:', error)
-          shouldStopLoading = true
-        } else if (session?.user) {
-          console.log('Initial session found for user:', session.user.id, 'with access token:', !!session.access_token)
+        const { data: { session } } = await supabase.auth.getSession()
+        if (session?.user) {
           setUser(session.user)
-          shouldStopLoading = true
-        } else {
-          console.log('No initial session found - checking cookies manually...')
-          // Check if there are auth cookies present
-          const cookies = document.cookie
-          const hasAuthCookies = cookies.includes('sb-vwejbgfiddltdqwhfjmt')
-          console.log('Has auth cookies:', hasAuthCookies)
-          
-          if (hasAuthCookies && retryCount < 3) {
-            console.log('Auth cookies found but no session - retrying in 200ms... (attempt', retryCount + 1, 'of 3)')
-            setTimeout(() => getInitialSession(retryCount + 1), 200)
-            return // Don't set loading to false yet
-          } else if (hasAuthCookies && retryCount >= 3) {
-            console.log('Max retries reached - session loading failed despite cookies')
-            shouldStopLoading = true
-          } else {
-            // No cookies, no session - definitely done loading
-            shouldStopLoading = true
-          }
         }
       } catch (error) {
         console.error('Initial session error:', error)
-        shouldStopLoading = true
       } finally {
-        if (shouldStopLoading) {
-          setIsLoading(false)
-        }
+        setIsLoading(false)
       }
     }
 
@@ -135,14 +105,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setProfile(null) // Reset profile when user changes
         setIsLoading(false)
 
-        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-          // Refresh profile when signed in
-          if (session?.user) {
-            // Small delay to ensure user is set
-            setTimeout(() => {
-              refreshProfile()
-            }, 100)
-          }
+        if (event === 'SIGNED_IN' && session?.user) {
+          refreshProfile()
         }
       }
     )

@@ -57,40 +57,18 @@ function LoginPageContent() {
           setError(error.message)
         }
       } else if (data.user) {
-        console.log('Auth successful, user ID:', data.user.id)
+        console.log('Login successful, checking role for redirect')
         
         // Check user role to redirect appropriately
-        try {
-          const { data: profile, error: profileError } = await supabase
-            .from('user_profiles')
-            .select('role')
-            .eq('id', data.user.id)
-            .single()
+        const { data: profile } = await supabase
+          .from('user_profiles')
+          .select('role')
+          .eq('id', data.user.id)
+          .single()
 
-          if (profileError) {
-            console.error('Profile lookup error:', profileError)
-            setError('Unable to load user profile. Please try again.')
-            return
-          }
-
-          console.log('Profile found:', profile)
-          
-          console.log('Login successful, redirecting based on role...')
-          
-          const redirectPath = (profile?.role === 'admin' || profile?.role === 'super_admin') ? '/admin' : '/dashboard'
-          console.log('Redirecting to:', redirectPath)
-          
-          // Small delay to ensure session is fully established
-          console.log('Waiting for session to be fully established...')
-          await new Promise(resolve => setTimeout(resolve, 500))
-          
-          // Try router.push first to maintain session state
-          console.log('Using router.push for redirect')
-          router.push(redirectPath)
-        } catch (profileError) {
-          console.error('Profile fetch exception:', profileError)
-          setError('Unable to load user profile. Please try again.')
-        }
+        const redirectPath = (profile?.role === 'admin' || profile?.role === 'super_admin') ? '/admin' : '/dashboard'
+        console.log('Redirecting to:', redirectPath)
+        router.push(redirectPath)
       }
     } catch (error) {
       console.error('Login exception:', error)
