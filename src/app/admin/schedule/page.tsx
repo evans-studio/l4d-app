@@ -44,7 +44,7 @@ export default function AdminSchedulePage() {
 
   useEffect(() => {
     loadScheduleData()
-  }, [currentDate])
+  }, [currentDate, loadScheduleData])
 
   const loadScheduleData = useCallback(async () => {
     try {

@@ -78,7 +78,7 @@ interface TableProps<T = Record<string, unknown>> extends VariantProps<typeof ta
   onRowClick?: (row: T, index: number) => void;
 }
 
-export const Table = <T extends Record<string, any>>({
+export const Table = <T extends Record<string, unknown>>({
   columns,
   data,
   className,
@@ -310,7 +310,7 @@ export const Table = <T extends Record<string, any>>({
   );
 };
 
-const TableSkeleton: React.FC<{ columns: TableColumn<any>[]; rows: number }> = ({ 
+const TableSkeleton: React.FC<{ columns: TableColumn<unknown>[]; rows: number }> = ({ 
   columns, 
   rows 
 }) => (

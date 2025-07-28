@@ -4,6 +4,17 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import type { User } from '@supabase/supabase-js'
 
+interface UserProfile {
+  id: string
+  role: 'customer' | 'admin' | 'super_admin'
+  first_name?: string
+  last_name?: string
+  email: string
+  phone?: string
+  created_at: string
+  updated_at: string
+}
+
 interface ProtectedRouteProps {
   children: React.ReactNode
   requireRole?: string[]
@@ -11,7 +22,7 @@ interface ProtectedRouteProps {
 
 export function ProtectedRoute({ children, requireRole }: ProtectedRouteProps) {
   const [user, setUser] = useState<User | null>(null)
-  const [profile, setProfile] = useState<any>(null)
+  const [profile, setProfile] = useState<UserProfile | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {

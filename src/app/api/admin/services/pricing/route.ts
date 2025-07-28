@@ -105,9 +105,16 @@ export async function PUT(request: NextRequest) {
     }
 
     // Convert matrix back to records
-    const pricingRecords: any[] = []
-    Object.entries(pricingMatrix).forEach(([serviceId, vehicleSizes]: [string, any]) => {
-      Object.entries(vehicleSizes).forEach(([vehicleSizeId, pricing]: [string, any]) => {
+    interface PricingRecord {
+      service_id: string
+      vehicle_size_id: string
+      price: number
+      effective_date: string
+      created_by: string
+    }
+    const pricingRecords: PricingRecord[] = []
+    Object.entries(pricingMatrix).forEach(([serviceId, vehicleSizes]: [string, Record<string, { price: number }>]) => {
+      Object.entries(vehicleSizes).forEach(([vehicleSizeId, pricing]: [string, { price: number }]) => {
         pricingRecords.push({
           service_id: serviceId,
           vehicle_size_id: vehicleSizeId,

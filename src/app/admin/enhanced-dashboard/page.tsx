@@ -91,7 +91,7 @@ export default function EnhancedAdminDashboard() {
     // Auto-refresh every 5 minutes
     const interval = setInterval(loadDashboardData, 5 * 60 * 1000)
     return () => clearInterval(interval)
-  }, [selectedPeriod])
+  }, [selectedPeriod, loadDashboardData])
 
   const loadDashboardData = useCallback(async () => {
     try {

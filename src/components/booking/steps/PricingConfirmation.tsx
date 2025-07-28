@@ -90,7 +90,7 @@ export function PricingConfirmation({
 
     // We need the actual time slot ID from the booking flow
     // This should be stored when the user selects a time slot
-    const timeSlotId = (bookingData as any).selectedTimeSlotId
+    const timeSlotId = bookingData.selectedTimeSlotId
     if (!timeSlotId) {
       console.error('No time slot ID available')
       return

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/primitives/Button'
 import { AdminLayout } from '@/components/layouts/AdminLayout'
-import { BookingStatus } from '@/lib/utils/booking-types'
+// BookingStatus imported but not used - removed
 import { 
   CalendarIcon, 
   ClockIcon,

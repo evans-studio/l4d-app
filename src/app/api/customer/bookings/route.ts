@@ -91,10 +91,10 @@ export async function GET(request: NextRequest) {
               `)
               .eq('booking_id', booking.id)
             
-            ;(booking as any).booking_services = services || []
+            ;(booking as unknown as { booking_services: unknown[] }).booking_services = services || []
           } catch (serviceError) {
             console.warn(`Failed to fetch services for booking ${booking.id}:`, serviceError)
-            ;(booking as any).booking_services = []
+            ;(booking as unknown as { booking_services: unknown[] }).booking_services = []
           }
         }
       }
@@ -114,7 +114,45 @@ export async function GET(request: NextRequest) {
     console.log(`Found ${bookings?.length || 0} bookings for user ${userId}`)
 
     // Transform the data for frontend consumption
-    const transformedBookings = bookings?.map((booking: any) => ({
+    interface BookingWithServices {
+      id: string
+      booking_reference: string
+      scheduled_date: string
+      scheduled_start_time: string
+      scheduled_end_time: string
+      status: string
+      total_price: number
+      special_instructions?: string
+      distance_km?: number
+      estimated_duration?: number
+      created_at: string
+      confirmed_at?: string
+      completed_at?: string
+      cancelled_at?: string
+      cancellation_reason?: string
+      booking_services?: Array<{
+        service_id: string
+        service_details?: { name?: string }
+        price: number
+        estimated_duration: number
+      }>
+      vehicle_details?: {
+        make?: string
+        model?: string
+        year?: number
+        color?: string
+        registration?: string
+        size_name?: string
+      }
+      service_address?: {
+        name?: string
+        address_line_1?: string
+        address_line_2?: string
+        city?: string
+        postcode?: string
+      }
+    }
+    const transformedBookings = bookings?.map((booking: BookingWithServices) => ({
       id: booking.id,
       booking_reference: booking.booking_reference,
       scheduled_date: booking.scheduled_date,
@@ -130,7 +168,7 @@ export async function GET(request: NextRequest) {
       completed_at: booking.completed_at,
       cancelled_at: booking.cancelled_at,
       cancellation_reason: booking.cancellation_reason,
-      services: booking.booking_services?.map((service: any) => ({
+      services: booking.booking_services?.map((service) => ({
         id: service.service_id,
         name: service.service_details?.name || 'Service',
         price: service.price,

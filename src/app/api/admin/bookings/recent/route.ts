@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
         start_time: booking.scheduled_start_time,
         status: booking.status,
         total_price: booking.total_price,
-        services: booking.booking_services?.map((service: any) => ({
+        services: booking.booking_services?.map((service: { service_details?: { name?: string } }) => ({
           name: service.service_details?.name || 'Service'
         })) || [{ name: 'Vehicle Detailing Service' }],
         vehicle: {

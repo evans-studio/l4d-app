@@ -413,7 +413,7 @@ export default function ServicePricingPage() {
                       </label>
                       <select
                         value={bulkAdjustment.type}
-                        onChange={(e) => setBulkAdjustment(prev => ({ ...prev, type: e.target.value as any }))}
+                        onChange={(e) => setBulkAdjustment(prev => ({ ...prev, type: e.target.value as 'percentage' | 'fixed' }))}
                         className="w-full px-3 py-2 bg-surface-secondary border border-border-secondary rounded text-text-primary focus:border-brand-400 focus:outline-none"
                       >
                         <option value="percentage">Percentage (%)</option>
@@ -450,7 +450,7 @@ export default function ServicePricingPage() {
                       </label>
                       <select
                         value={bulkAdjustment.applyTo}
-                        onChange={(e) => setBulkAdjustment(prev => ({ ...prev, applyTo: e.target.value as any }))}
+                        onChange={(e) => setBulkAdjustment(prev => ({ ...prev, applyTo: e.target.value as 'all' | 'category' | 'service' }))}
                         className="w-full px-3 py-2 bg-surface-secondary border border-border-secondary rounded text-text-primary focus:border-brand-400 focus:outline-none"
                       >
                         <option value="all">All Services</option>

@@ -385,7 +385,7 @@ export default function MyAddressesPage() {
                   <strong className="text-text-primary">
                     {deleteModal.address.label}
                   </strong>
-                  ? This will not affect your existing bookings, but you'll need to re-enter address details for future bookings.
+                  ? This will not affect your existing bookings, but you&apos;ll need to re-enter address details for future bookings.
                   {deleteModal.address.is_primary && (
                     <span className="block mt-2 text-warning-400 text-sm">
                       <strong>Note:</strong> This is your default address. You may want to set another address as default first.

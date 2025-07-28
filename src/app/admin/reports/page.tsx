@@ -49,7 +49,7 @@ export default function ReportsPage() {
 
   useEffect(() => {
     loadReportData()
-  }, [dateRange])
+  }, [dateRange, loadReportData])
 
   const loadReportData = useCallback(async () => {
     try {

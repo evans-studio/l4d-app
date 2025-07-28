@@ -12,8 +12,6 @@ import {
   CarIcon,
   DollarSignIcon,
   AlertCircleIcon,
-  CheckCircleIcon,
-  XCircleIcon,
   XIcon
 } from 'lucide-react'
 

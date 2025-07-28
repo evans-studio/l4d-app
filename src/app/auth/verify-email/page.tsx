@@ -199,7 +199,7 @@ function VerifyEmailPageContent() {
                 )}
                 
                 <div className="text-left space-y-3 text-sm text-text-secondary">
-                  <p><strong className="text-text-primary">What's next?</strong></p>
+                  <p><strong className="text-text-primary">What&apos;s next?</strong></p>
                   <ul className="space-y-2 pl-4">
                     <li className="flex items-start gap-2">
                       <span className="text-brand-400 mt-1">1.</span>
@@ -207,11 +207,11 @@ function VerifyEmailPageContent() {
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="text-brand-400 mt-1">2.</span>
-                      Click the "Verify Email" link in the email
+                      Click the &quot;Verify Email&quot; link in the email
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="text-brand-400 mt-1">3.</span>
-                      You'll be automatically signed in
+                      You&apos;ll be automatically signed in
                     </li>
                   </ul>
                 </div>

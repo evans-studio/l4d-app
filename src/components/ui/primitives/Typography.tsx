@@ -136,7 +136,7 @@ export interface TextProps
 // Polymorphic ref type for Text component
 type TextElement = HTMLElement
 
-const Text = React.forwardRef<any, TextProps>(
+const Text = React.forwardRef<TextElement, TextProps>(
   ({ 
     className, 
     size, 
@@ -355,7 +355,7 @@ export interface CodeProps
 // Polymorphic ref type for Code component
 type CodeElement = HTMLElement
 
-const Code = React.forwardRef<any, CodeProps>(
+const Code = React.forwardRef<CodeElement, CodeProps>(
   ({ className, variant, size, as = 'code', children, ...props }, ref) => {
     const elementProps = {
       className: cn(codeVariants({ variant, size, className })),

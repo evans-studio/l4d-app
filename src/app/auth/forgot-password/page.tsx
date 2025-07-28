@@ -56,7 +56,7 @@ export default function ForgotPasswordPage() {
                 Check Your Email
               </h2>
               <p className="mt-2 text-text-secondary">
-                We've sent a password reset link to your email address
+                We&apos;ve sent a password reset link to your email address
               </p>
             </div>
 
@@ -69,7 +69,7 @@ export default function ForgotPasswordPage() {
                 </div>
                 
                 <div className="text-left space-y-3 text-sm text-text-secondary">
-                  <p><strong className="text-text-primary">What's next?</strong></p>
+                  <p><strong className="text-text-primary">What&apos;s next?</strong></p>
                   <ul className="space-y-2 pl-4">
                     <li className="flex items-start gap-2">
                       <span className="text-brand-400 mt-1">1.</span>
@@ -77,7 +77,7 @@ export default function ForgotPasswordPage() {
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="text-brand-400 mt-1">2.</span>
-                      Click the "Reset Password" link in the email
+                      Click the &quot;Reset Password&quot; link in the email
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="text-brand-400 mt-1">3.</span>
@@ -145,7 +145,7 @@ export default function ForgotPasswordPage() {
               Reset Password
             </h2>
             <p className="mt-2 text-text-secondary">
-              Enter your email address and we'll send you a link to reset your password
+              Enter your email address and we&apos;ll send you a link to reset your password
             </p>
           </div>
 

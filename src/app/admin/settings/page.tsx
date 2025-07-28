@@ -88,7 +88,7 @@ export default function SettingsPage() {
 
   useEffect(() => {
     loadSettings()
-  }, [])
+  }, [loadSettings])
 
   const loadSettings = useCallback(async () => {
     try {

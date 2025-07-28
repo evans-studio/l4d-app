@@ -205,7 +205,7 @@ export class BookingService extends BaseService {
     duration_minutes: number
     is_available: boolean
     created_by: string
-  }>): Promise<ServiceResponse<any[]>> {
+  }>): Promise<ServiceResponse<TimeSlot[]>> {
     return this.executeQuery(async () => {
       const supabase = await this.supabase
       

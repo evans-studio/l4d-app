@@ -639,7 +639,7 @@ export const CardDemo: React.FC = () => {
               </CardHeader>
               <CardContent>
                 <p className="text-text-secondary leading-relaxed">
-                  "Absolutely fantastic service! My BMW looks brand new. The team's attention to detail is incredible and the purple branding really stands out. Will definitely be back!"
+                  &quot;Absolutely fantastic service! My BMW looks brand new. The team&apos;s attention to detail is incredible and the purple branding really stands out. Will definitely be back!&quot;
                 </p>
               </CardContent>
               <CardFooter className="text-sm text-text-muted">

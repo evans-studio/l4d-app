@@ -122,7 +122,7 @@ export async function GET(request: NextRequest) {
     const serviceStats = new Map<string, { bookings: number; revenue: number }>()
     
     currentBookings?.forEach(booking => {
-      booking.booking_services?.forEach((bs: any) => {
+      booking.booking_services?.forEach((bs: { service_details?: { name?: string } }) => {
         const serviceName = bs.service_details?.name || 'Unknown Service'
         const current = serviceStats.get(serviceName) || { bookings: 0, revenue: 0 }
         serviceStats.set(serviceName, {

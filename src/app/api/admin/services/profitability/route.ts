@@ -73,7 +73,7 @@ export async function GET(request: NextRequest) {
 
     // Process bookings
     bookings?.forEach(booking => {
-      booking.booking_services?.forEach((bs: any) => {
+      booking.booking_services?.forEach((bs: { service_details?: { id: string; name: string }; price: number }) => {
         const service = bs.service_details
         if (!service) return
 

@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
 
     // Filter to available only if requested
     if (validation.data.available_only) {
-      timeSlots = timeSlots.filter((slot: any) => slot.is_available)
+      timeSlots = timeSlots.filter((slot: { is_available: boolean }) => slot.is_available)
     }
 
     return ApiResponseHandler.success(timeSlots, {

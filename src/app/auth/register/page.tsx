@@ -76,7 +76,7 @@ export default function RegisterPage() {
 
             <div className="bg-surface-secondary rounded-lg p-8 border border-border-secondary shadow-lg text-center">
               <p className="text-text-secondary mb-6">
-                We've sent a verification link to your email address. 
+                We&apos;ve sent a verification link to your email address. 
                 Click the link to activate your account and start booking services.
               </p>
               
