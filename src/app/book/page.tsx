@@ -18,10 +18,37 @@ const TOTAL_STEPS = 5;
 
 export default function BookingPage(): React.JSX.Element {
   const router = useRouter();
-  // TODO: Simple auth state
-  const isAuthenticated = false;
-  const profile: { first_name?: string } | null = null;
-  const authLoading = false;
+  
+  // Auth state
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [profile, setProfile] = useState<{ first_name?: string } | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+
+  // Check authentication status
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const response = await fetch('/api/auth/user');
+        const data = await response.json();
+        
+        if (data.success && data.data?.authenticated) {
+          setIsAuthenticated(true);
+          setProfile(data.data.user);
+        } else {
+          setIsAuthenticated(false);
+          setProfile(null);
+        }
+      } catch (error) {
+        console.error('Auth check failed:', error);
+        setIsAuthenticated(false);
+        setProfile(null);
+      } finally {
+        setAuthLoading(false);
+      }
+    };
+
+    checkAuth();
+  }, []);
   
   const [bookingData, setBookingData] = useState<BookingFlowData>({
     currentStep: 1,

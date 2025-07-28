@@ -88,6 +88,17 @@ export function PricingConfirmation({
       return
     }
 
+    // Check authentication before proceeding
+    const authResponse = await fetch('/api/auth/user')
+    const authData = await authResponse.json()
+    
+    if (!authData.success || !authData.data?.authenticated) {
+      // User is not authenticated, redirect to login with return URL
+      const currentUrl = window.location.href
+      router.push(`/auth/login?redirect=${encodeURIComponent(currentUrl)}`)
+      return
+    }
+
     // We need the actual time slot ID from the booking flow
     // This should be stored when the user selects a time slot
     const timeSlotId = bookingData.selectedTimeSlotId
