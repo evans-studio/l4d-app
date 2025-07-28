@@ -31,7 +31,9 @@ export async function middleware(request: NextRequest) {
     '/api/auth/verify-email',
     '/api/debug/auth-status',
     '/api/debug/test-session-creation',
-    '/api/debug/test-login'
+    '/api/debug/test-login',
+    '/api/admin/cleanup-users',
+    '/api/auth/enterprise/register'
   ]
 
   // Skip auth check for public routes

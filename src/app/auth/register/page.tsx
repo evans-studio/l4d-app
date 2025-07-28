@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { supabase } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/primitives/Button'
 import { ResponsiveLogo } from '@/components/ui/primitives/Logo'
 import { Container } from '@/components/layout/templates/PageLayout'
@@ -26,29 +25,41 @@ export default function RegisterPage() {
     setError('')
 
     try {
-      const { data, error } = await supabase.auth.signUp({
-        email: formData.email,
-        password: formData.password,
-        options: {
-          data: {
-            first_name: formData.firstName,
-            last_name: formData.lastName,
-            phone: formData.phone,
-            role: 'customer'
-          }
-        }
+      const response = await fetch('/api/auth/enterprise/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          phone: formData.phone,
+          rememberMe: false
+        }),
+        credentials: 'include'
       })
 
-      if (error) {
-        console.error('Signup error:', error)
-        setError(error.message)
-      } else if (data.user) {
-        console.log('Signup successful:', data.user.id)
-        setSuccess(true)
+      const data = await response.json()
+
+      if (!response.ok || !data.success) {
+        setError(data.error?.message || 'Registration failed')
+        return
       }
+
+      // Handle different registration outcomes
+      if (data.data.emailConfirmationRequired) {
+        setSuccess(true)
+      } else {
+        // Registration complete, redirect based on role
+        console.log('Registration successful, redirecting to:', data.data.redirectTo)
+        window.location.href = data.data.redirectTo
+      }
+
     } catch (error) {
       console.error('Registration error:', error)
-      setError('Registration failed. Please try again.')
+      setError('Network error. Please try again.')
     } finally {
       setIsLoading(false)
     }
