@@ -44,7 +44,7 @@ export class DatabaseAdmin {
           const { error } = await supabaseAdmin
             .from(table)
             .delete()
-            .neq('id', 'impossible-id') // Delete all rows
+            .gt('created_at', '1900-01-01') // Delete all rows with a date filter
           
           if (error) {
             results.errors.push(`${table}: ${error.message}`)
@@ -61,7 +61,7 @@ export class DatabaseAdmin {
         const { error: profileError } = await supabaseAdmin
           .from('user_profiles')
           .delete()
-          .neq('id', 'impossible-id')
+          .gt('created_at', '1900-01-01')
 
         if (profileError) {
           results.errors.push(`user_profiles: ${profileError.message}`)
