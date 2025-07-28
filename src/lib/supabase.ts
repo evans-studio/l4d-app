@@ -1,6 +1,7 @@
-import { createBrowserClient } from '@supabase/ssr'
+import { createClient } from '@supabase/supabase-js'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
-export const supabase = createBrowserClient(supabaseUrl, supabaseAnonKey)
+// Universal client that works in both browser and server environments
+export const supabase = createClient(supabaseUrl, supabaseAnonKey)
