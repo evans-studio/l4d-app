@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { useAuth } from '@/lib/auth/AuthContext'
 import { Button } from '@/components/ui/primitives/Button'
 import { ResponsiveLogo } from '@/components/ui/primitives/Logo'
 import { Container } from '@/components/layout/templates/PageLayout'
@@ -12,6 +13,7 @@ import Link from 'next/link'
 function LoginPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const { user, profile, isLoading: authLoading } = useAuth()
   const [formData, setFormData] = useState({
     email: '',
     password: ''
@@ -20,6 +22,16 @@ function LoginPageContent() {
   const [error, setError] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (!authLoading && user) {
+      console.log('User already authenticated, redirecting...')
+      const redirectPath = (profile?.role === 'admin' || profile?.role === 'super_admin') ? '/admin' : '/dashboard'
+      console.log('Redirecting authenticated user to:', redirectPath)
+      router.push(redirectPath)
+    }
+  }, [user, profile, authLoading, router])
 
   // Handle success messages from URL params
   useEffect(() => {
@@ -57,19 +69,19 @@ function LoginPageContent() {
           setError(error.message)
         }
       } else if (data.user) {
-        console.log('Login successful, redirecting to dashboard')
+        console.log('Login successful, clearing form and redirecting')
         
-        // Simple redirect - let the middleware and route protection handle role-based redirects
+        // Clear form state immediately
+        setFormData({ email: '', password: '' })
+        setError('')
+        setSuccessMessage('')
+        
+        // Simple redirect to dashboard
         console.log('Attempting redirect to /dashboard')
         router.push('/dashboard')
         
-        // Also try window.location as backup if router.push fails
-        setTimeout(() => {
-          if (window.location.pathname.includes('/auth/login')) {
-            console.log('Router redirect may have failed, trying window.location')
-            window.location.href = '/dashboard'
-          }
-        }, 1000)
+        // Don't set loading to false - let the auth redirect handle it
+        return
       }
     } catch (error) {
       console.error('Login exception:', error)
@@ -77,6 +89,27 @@ function LoginPageContent() {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  // Show loading while checking authentication
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-surface-primary flex items-center justify-center">
+        <div className="animate-spin w-8 h-8 border-4 border-brand-600 border-t-transparent rounded-full"></div>
+      </div>
+    )
+  }
+
+  // Don't show login form if already authenticated (redirect is happening)
+  if (user) {
+    return (
+      <div className="min-h-screen bg-surface-primary flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin w-8 h-8 border-4 border-brand-600 border-t-transparent rounded-full mx-auto mb-4"></div>
+          <p className="text-text-secondary">Redirecting to dashboard...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
