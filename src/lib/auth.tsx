@@ -82,23 +82,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   useEffect(() => {
-    // Get initial session
+    // Get initial session with faster timeout
     const getInitialSession = async () => {
       try {
         console.log('Getting initial session...')
-        const { data: { session } } = await supabase.auth.getSession()
+        
+        // Set a timeout for the entire operation
+        const sessionTimeout = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Initial session timeout')), 3000)
+        )
+        
+        const sessionPromise = supabase.auth.getSession()
+        
+        const { data: { session } } = await Promise.race([sessionPromise, sessionTimeout]) as any
         console.log('Initial session result:', { hasSession: !!session, hasUser: !!session?.user, userEmail: session?.user?.email })
         
         setUser(session?.user ?? null)
         if (session?.user) {
           console.log('Initial session: Fetching profile for user:', session.user.email)
-          await fetchProfile(session.user.id)
-          console.log('Initial session: Profile fetch completed')
+          // Don't await profile - let it load in background
+          fetchProfile(session.user.id).then(() => {
+            console.log('Initial session: Profile fetch completed')
+          }).catch(error => {
+            console.warn('Initial session: Profile fetch failed:', error)
+          })
         } else {
           console.log('Initial session: No user found')
         }
       } catch (error) {
         console.error('Initial session error:', error)
+        // Set a default state if session check fails
+        setUser(null)
       } finally {
         console.log('Initial session: Setting isLoading to false')
         setIsLoading(false)

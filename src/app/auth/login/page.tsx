@@ -94,40 +94,12 @@ export default function LoginPage() {
       console.log('Starting redirect process...')
       setIsLoading(false) // Stop loading immediately since login was successful
       
-      // Give a moment for auth state to update, then redirect
-      setTimeout(async () => {
-        try {
-          console.log('Checking user profile for redirect...')
-          
-          // Quick profile check with timeout
-          const profilePromise = supabase
-            .from('user_profiles')
-            .select('role')
-            .eq('id', data.user.id)
-            .single()
-          
-          const profileTimeout = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Profile check timeout')), 3000)
-          )
-
-          const { data: profile } = await Promise.race([profilePromise, profileTimeout]) as any
-          
-          const redirectUrl = (profile?.role === 'admin' || profile?.role === 'super_admin') 
-            ? '/admin' 
-            : '/dashboard'
-          
-          console.log(`Redirecting to ${redirectUrl} based on role: ${profile?.role}`)
-          console.log('Using window.location.href for reliable redirect')
-          
-          // Use window.location directly for most reliable redirect
-          window.location.href = redirectUrl
-          
-        } catch (profileError) {
-          console.warn('Profile check failed, defaulting to dashboard:', profileError)
-          console.log('Using window.location.href for dashboard fallback')
-          window.location.href = '/dashboard'
-        }
-      }, 500) // Give auth state time to update
+      // Immediate redirect without waiting for profile check
+      console.log('Login successful, redirecting immediately...')
+      
+      // Redirect to dashboard immediately (skip profile check for speed)
+      console.log('Using window.location.href for immediate redirect')
+      window.location.href = '/dashboard'
 
     } catch (error: unknown) {
       clearTimeout(timeoutId)

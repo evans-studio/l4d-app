@@ -19,7 +19,7 @@ export function CustomerRoute({ children }: { children: React.ReactNode }) {
       } else {
         console.log('CustomerRoute: User found or still loading, staying put')
       }
-    }, 3000) // Wait 3 seconds to allow auth state to update
+    }, 1000) // Wait 1 second to allow auth state to update
 
     return () => {
       console.log('CustomerRoute: Cleaning up timer')
