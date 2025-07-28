@@ -30,43 +30,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchProfile = async (userId: string) => {
     try {
-      // Add timeout to profile fetch
-      const profilePromise = supabase
+      const { data, error } = await supabase
         .from('user_profiles')
-        .select('*')
+        .select('id, email, first_name, last_name, phone, role')
         .eq('id', userId)
         .single()
 
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Profile fetch timeout')), 10000)
-      )
-
-      const { data, error } = await Promise.race([
-        profilePromise,
-        timeoutPromise
-      ]) as { data: UserProfile | null; error: unknown }
-
       if (error) {
         console.error('Error fetching profile:', error)
-        // Create a default profile if fetch fails
-        setProfile({
-          id: userId,
-          email: '',
-          role: 'customer',
-          first_name: 'User'
-        })
-      } else {
-        setProfile(data)
+        return
       }
-    } catch (error: unknown) {
+
+      setProfile(data)
+    } catch (error) {
       console.error('Profile fetch error:', error)
-      // Create a default profile on error
-      setProfile({
-        id: userId,
-        email: '',
-        role: 'customer',
-        first_name: 'User'
-      })
     }
   }
 
@@ -82,39 +59,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   useEffect(() => {
-    // Get initial session with faster timeout
+    // Get initial session
     const getInitialSession = async () => {
       try {
-        console.log('Getting initial session...')
-        
-        // Set a timeout for the entire operation
-        const sessionTimeout = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Initial session timeout')), 3000)
-        )
-        
-        const sessionPromise = supabase.auth.getSession()
-        
-        const { data: { session } } = await Promise.race([sessionPromise, sessionTimeout]) as any
-        console.log('Initial session result:', { hasSession: !!session, hasUser: !!session?.user, userEmail: session?.user?.email })
-        
+        const { data: { session } } = await supabase.auth.getSession()
         setUser(session?.user ?? null)
+        
         if (session?.user) {
-          console.log('Initial session: Fetching profile for user:', session.user.email)
-          // Don't await profile - let it load in background
-          fetchProfile(session.user.id).then(() => {
-            console.log('Initial session: Profile fetch completed')
-          }).catch(error => {
-            console.warn('Initial session: Profile fetch failed:', error)
-          })
-        } else {
-          console.log('Initial session: No user found')
+          await fetchProfile(session.user.id)
         }
       } catch (error) {
         console.error('Initial session error:', error)
-        // Set a default state if session check fails
         setUser(null)
       } finally {
-        console.log('Initial session: Setting isLoading to false')
         setIsLoading(false)
       }
     }
@@ -124,20 +81,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('Auth state change:', { event, hasSession: !!session, hasUser: !!session?.user, userEmail: session?.user?.email })
-        
         setUser(session?.user ?? null)
         setProfile(null)
         
         if (session?.user) {
-          console.log('Fetching profile for user:', session.user.email)
           await fetchProfile(session.user.id)
-          console.log('Profile fetch completed')
-        } else {
-          console.log('No user in session, skipping profile fetch')
         }
         
-        console.log('Setting isLoading to false')
         setIsLoading(false)
       }
     )

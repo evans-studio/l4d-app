@@ -35,10 +35,10 @@ export class ApiAuth {
         }
       }
 
-      // Get the user profile and ensure it's active
+      // Get the user profile
       const { data: profile, error: profileError } = await supabase
         .from('user_profiles')
-        .select('id, email, first_name, last_name, phone, role, is_active')
+        .select('id, email, first_name, last_name, phone, role')
         .eq('id', user.id)
         .single()
 
@@ -47,15 +47,6 @@ export class ApiAuth {
         return { 
           auth: null, 
           error: ApiResponseHandler.unauthorized('User profile not found') 
-        }
-      }
-
-      // Check if user account is active
-      if (!profile.is_active) {
-        console.log('ApiAuth.authenticate() user account inactive:', { userId: user.id })
-        return { 
-          auth: null, 
-          error: ApiResponseHandler.unauthorized('User account is inactive') 
         }
       }
 

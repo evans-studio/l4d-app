@@ -36,19 +36,44 @@ export default function LoginPage() {
     setIsLoading(true)
     setError('')
 
+    // Add longer timeout protection (30 seconds instead of 10)
+    const timeoutId = setTimeout(() => {
+      console.error('Login timeout after 30 seconds')
+      setError('Login is taking too long. This may be due to network issues or server maintenance. Please try again.')
+      setIsLoading(false)
+    }, 30000)
+
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
+      console.log('Starting login attempt for:', formData.email)
+      
+      // Create a promise race between login and timeout
+      const loginPromise = supabase.auth.signInWithPassword({
         email: formData.email,
         password: formData.password
       })
 
+      const { data, error } = await loginPromise
+
+      // Clear timeout since we got a response
+      clearTimeout(timeoutId)
+
+      console.log('Login response received:', { 
+        hasData: !!data, 
+        hasError: !!error,
+        userId: data?.user?.id,
+        session: !!data?.session
+      })
+
       if (error) {
+        console.error('Login error:', error)
         if (error.message.includes('Invalid login credentials')) {
           setError('Invalid email or password. Please check your credentials and try again.')
         } else if (error.message.includes('Email not confirmed')) {
           setError('Please verify your email address before signing in. Check your inbox for a verification link.')
         } else if (error.message.includes('Too many requests')) {
           setError('Too many login attempts. Please wait a moment before trying again.')
+        } else if (error.message.includes('timeout') || error.message.includes('network')) {
+          setError('Network timeout. Please check your internet connection and try again.')
         } else {
           setError(`Login failed: ${error.message}`)
         }
@@ -57,18 +82,39 @@ export default function LoginPage() {
       } 
 
       if (!data.user) {
-        setError('Login failed. Please try again.')
+        console.error('No user data received despite no error')
+        setError('Login failed. No user data received. Please try again.')
         setIsLoading(false)
         return
       }
 
-      // Simple redirect to dashboard
-      router.push('/dashboard')
+      console.log('Login successful for user:', data.user.email)
+      
+      // Direct window.location redirect - more reliable than router
+      console.log('Starting redirect process...')
+      setIsLoading(false) // Stop loading immediately since login was successful
+      
+      // Immediate redirect without waiting for profile check
+      console.log('Login successful, redirecting immediately...')
+      
+      // Redirect to dashboard immediately (skip profile check for speed)
+      console.log('Using window.location.href for immediate redirect')
+      window.location.href = '/dashboard'
 
     } catch (error: unknown) {
+      clearTimeout(timeoutId)
       console.error('Login exception:', error)
+      
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-      setError(`Login failed: ${errorMessage}`)
+      const errorName = error instanceof Error ? error.name : ''
+      
+      if (errorName === 'AbortError' || errorMessage.includes('timeout')) {
+        setError('Login request timed out. Please check your internet connection and try again.')
+      } else if (errorMessage.includes('Failed to fetch')) {
+        setError('Unable to connect to authentication service. Please check your internet connection.')
+      } else {
+        setError(`Login failed: ${errorMessage}`)
+      }
       setIsLoading(false)
     }
   }

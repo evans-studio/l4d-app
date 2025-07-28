@@ -46,11 +46,13 @@ export async function middleware(request: NextRequest) {
   const supabase = createClient(request, response)
 
   try {
-    const { data: { session } } = await supabase.auth.getSession()
+    // Get the session and refresh if needed
+    const { data: { session }, error } = await supabase.auth.getSession()
 
     // If it's an API route and no valid session, return 401
     if (path.startsWith('/api/')) {
-      if (!session?.user) {
+      if (error || !session?.user) {
+        console.log('API route authentication failed:', { path, error: error?.message })
         return NextResponse.json(
           { 
             success: false, 
@@ -64,14 +66,17 @@ export async function middleware(request: NextRequest) {
         )
       }
       
+      // Valid session, allow API access
       return response
     }
 
     // For protected pages, redirect to login if no session
-    if (!session?.user) {
+    if (error || !session?.user) {
+      console.log('Page authentication failed, redirecting to login:', { path, error: error?.message })
       return NextResponse.redirect(new URL('/auth/login', request.url))
     }
 
+    // Valid session, allow page access
     return response
 
   } catch (error) {
