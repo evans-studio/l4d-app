@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { ApiAuth } from '@/lib/api/auth'
 import { ApiResponseHandler } from '@/lib/api/response'
 import { BookingService } from '@/lib/services/booking'
+import { createClientFromRequest } from '@/lib/supabase/server'
 import { z } from 'zod'
 
 const bulkTimeSlotSchema = z.object({
@@ -17,11 +17,28 @@ const bulkTimeSlotSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    const { auth, error: authError } = await ApiAuth.authenticate()
-    if (authError) return authError
+    const supabase = createClientFromRequest(request)
+    
+    // Get the current session
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    
+    if (sessionError || !session?.user) {
+      return ApiResponseHandler.unauthorized('Authentication required')
+    }
+
+    // Get the user profile
+    const { data: profile, error: profileError } = await supabase
+      .from('user_profiles')
+      .select('*')
+      .eq('id', session.user.id)
+      .single()
+
+    if (profileError || !profile) {
+      return ApiResponseHandler.unauthorized('User profile not found')
+    }
 
     // Check admin permissions
-    if (auth!.profile.role !== 'admin' && auth!.profile.role !== 'super_admin') {
+    if (profile.role !== 'admin' && profile.role !== 'super_admin') {
       return ApiResponseHandler.forbidden('Admin access required')
     }
 
@@ -47,7 +64,7 @@ export async function POST(request: NextRequest) {
           start_time: timeSlot.start_time,
           duration_minutes: timeSlot.duration_minutes,
           is_available: true,
-          created_by: auth!.user.id
+          created_by: session.user.id
         })
       }
     }
