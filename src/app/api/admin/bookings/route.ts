@@ -1,29 +1,19 @@
 import { NextRequest } from 'next/server'
 import { createClientFromRequest } from '@/lib/supabase/server'
 import { ApiResponseHandler } from '@/lib/api/response'
+import { authenticateAdmin } from '@/lib/api/auth-handler'
 
 export async function GET(request: NextRequest) {
   try {
+    // Use the new authentication handler with session refresh
+    const authResult = await authenticateAdmin(request)
+    
+    if (!authResult.success) {
+      return authResult.error
+    }
+    
     const supabase = createClientFromRequest(request)
     const { searchParams } = new URL(request.url)
-    
-    // Get current user and verify admin role
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-    
-    if (sessionError || !session?.user) {
-      return ApiResponseHandler.unauthorized('Authentication required')
-    }
-
-    // Check user role
-    const { data: profile } = await supabase
-      .from('user_profiles')
-      .select('role')
-      .eq('id', session.user.id)
-      .single()
-
-    if (!profile || (profile.role !== 'admin' && profile.role !== 'super_admin')) {
-      return ApiResponseHandler.forbidden('Admin access required')
-    }
 
     // Parse query parameters
     const dateFilter = searchParams.get('date')

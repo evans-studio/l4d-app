@@ -1,42 +1,18 @@
 import { NextRequest } from 'next/server'
 import { createClientFromRequest } from '@/lib/supabase/server'
 import { ApiResponseHandler } from '@/lib/api/response'
+import { authenticateAdmin } from '@/lib/api/auth-handler'
 
 export async function GET(request: NextRequest) {
   try {
+    // Use the new authentication handler with session refresh
+    const authResult = await authenticateAdmin(request)
+    
+    if (!authResult.success) {
+      return authResult.error
+    }
+    
     const supabase = createClientFromRequest(request)
-    
-    // Debug: Check for auth cookies
-    const cookies = request.cookies.getAll()
-    const authCookies = cookies.filter(c => 
-      c.name.includes('supabase') || c.name.includes('sb-')
-    )
-    console.log('Admin stats - Auth cookies:', authCookies.length, authCookies.map(c => c.name))
-    
-    // Get current user and verify admin role
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    
-    console.log('Admin stats - Auth result:', { 
-      hasUser: !!user, 
-      userId: user?.id, 
-      authError: authError?.message 
-    })
-    
-    if (authError || !user) {
-      console.log('Admin stats - Authentication failed:', authError?.message)
-      return ApiResponseHandler.unauthorized('Authentication required')
-    }
-
-    // Check user role
-    const { data: profile } = await supabase
-      .from('user_profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-
-    if (!profile || (profile.role !== 'admin' && profile.role !== 'super_admin')) {
-      return ApiResponseHandler.forbidden('Admin access required')
-    }
 
     // Calculate date ranges
     const now = new Date()

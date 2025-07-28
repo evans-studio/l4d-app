@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useSessionRefresh } from '@/lib/hooks/useSessionRefresh'
 import { Button } from '@/components/ui/primitives/Button'
 import { AdminLayout } from '@/components/layouts/AdminLayout'
 import { 
@@ -85,6 +86,7 @@ const statusConfig = {
 
 export default function AdminDashboard() {
   const router = useRouter()
+  const { refreshSession, isRefreshing } = useSessionRefresh()
   const [stats, setStats] = useState<AdminStats | null>(null)
   const [recentBookings, setRecentBookings] = useState<RecentBooking[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -105,6 +107,40 @@ export default function AdminDashboard() {
         fetch('/api/admin/bookings/recent')
       ])
 
+      // If we get 401 errors, try refreshing the session
+      if (statsResponse.status === 401 || bookingsResponse.status === 401) {
+        console.log('Got 401 error, attempting session refresh...')
+        const refreshSuccess = await refreshSession()
+        
+        if (refreshSuccess) {
+          // Retry the requests after session refresh
+          console.log('Session refreshed, retrying requests...')
+          const [retryStatsResponse, retryBookingsResponse] = await Promise.all([
+            fetch('/api/admin/stats'),
+            fetch('/api/admin/bookings/recent')
+          ])
+          
+          if (retryStatsResponse.ok && retryBookingsResponse.ok) {
+            const [retryStatsData, retryBookingsData] = await Promise.all([
+              retryStatsResponse.json(),
+              retryBookingsResponse.json()
+            ])
+            
+            if (retryStatsData.success) {
+              setStats(retryStatsData.data)
+            }
+            
+            if (retryBookingsData.success) {
+              setRecentBookings(retryBookingsData.data.bookings || [])
+            }
+            
+            return // Success after retry
+          }
+        }
+        
+        throw new Error('Authentication failed - please log in again')
+      }
+      
       if (!statsResponse.ok || !bookingsResponse.ok) {
         throw new Error('Failed to load dashboard data')
       }

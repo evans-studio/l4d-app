@@ -1,28 +1,18 @@
 import { NextRequest } from 'next/server'
 import { createClientFromRequest } from '@/lib/supabase/server'
 import { ApiResponseHandler } from '@/lib/api/response'
+import { authenticateAdmin } from '@/lib/api/auth-handler'
 
 export async function GET(request: NextRequest) {
   try {
+    // Use the new authentication handler with session refresh
+    const authResult = await authenticateAdmin(request)
+    
+    if (!authResult.success) {
+      return authResult.error
+    }
+    
     const supabase = createClientFromRequest(request)
-    
-    // Get current user and verify admin role
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    
-    if (authError || !user) {
-      return ApiResponseHandler.unauthorized('Authentication required')
-    }
-
-    // Check user role
-    const { data: profile } = await supabase
-      .from('user_profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-
-    if (!profile || (profile.role !== 'admin' && profile.role !== 'super_admin')) {
-      return ApiResponseHandler.forbidden('Admin access required')
-    }
 
     // Get recent bookings with complete data including customer info
     const { data: bookings, error: bookingsError } = await supabase
