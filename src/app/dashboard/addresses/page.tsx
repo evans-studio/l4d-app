@@ -28,7 +28,7 @@ interface Address {
   county?: string
   postal_code: string
   country: string
-  is_default: boolean
+  is_primary: boolean
   notes?: string
   created_at: string
   updated_at: string
@@ -98,7 +98,7 @@ export default function MyAddressesPage() {
       const response = await fetch(`/api/customer/addresses/${addressId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ is_default: true })
+        body: JSON.stringify({ is_primary: true })
       })
       
       const data = await response.json()
@@ -107,7 +107,7 @@ export default function MyAddressesPage() {
         // Update all addresses - set the selected one as default, others as not default
         setAddresses(prev => prev.map(addr => ({
           ...addr,
-          is_default: addr.id === addressId
+          is_primary: addr.id === addressId
         })))
       } else {
         alert('Failed to set default address. Please try again.')
@@ -130,7 +130,7 @@ export default function MyAddressesPage() {
   }
 
   const filteredAddresses = getFilteredAddresses()
-  const defaultAddress = addresses.find(addr => addr.is_default)
+  const defaultAddress = addresses.find(addr => addr.is_primary)
 
   if (isLoading) {
     return (
@@ -259,7 +259,7 @@ export default function MyAddressesPage() {
                     <div
                       key={address.id}
                       className={`bg-surface-secondary rounded-lg p-6 border transition-colors ${
-                        address.is_default 
+                        address.is_primary 
                           ? 'border-brand-500/50 bg-brand-600/5' 
                           : 'border-border-secondary hover:border-border-primary'
                       }`}
@@ -271,7 +271,7 @@ export default function MyAddressesPage() {
                           <h3 className="font-semibold text-text-primary">
                             {address.label}
                           </h3>
-                          {address.is_default && (
+                          {address.is_primary && (
                             <div className="inline-flex items-center gap-1 px-2 py-1 bg-brand-600/10 border border-brand-500/20 rounded-full text-xs text-brand-400">
                               <Star className="w-3 h-3" />
                               Default
@@ -336,7 +336,7 @@ export default function MyAddressesPage() {
 
                       {/* Actions */}
                       <div className="flex gap-2">
-                        {!address.is_default && (
+                        {!address.is_primary && (
                           <Button
                             variant="outline"
                             size="sm"
@@ -386,7 +386,7 @@ export default function MyAddressesPage() {
                     {deleteModal.address.label}
                   </strong>
                   ? This will not affect your existing bookings, but you'll need to re-enter address details for future bookings.
-                  {deleteModal.address.is_default && (
+                  {deleteModal.address.is_primary && (
                     <span className="block mt-2 text-warning-400 text-sm">
                       <strong>Note:</strong> This is your default address. You may want to set another address as default first.
                     </span>

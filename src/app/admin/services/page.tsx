@@ -13,7 +13,8 @@ import {
   ArrowLeftIcon,
   DollarSignIcon,
   TagIcon,
-  AlertCircleIcon
+  AlertCircleIcon,
+  CarIcon
 } from 'lucide-react'
 
 interface Service {
@@ -152,6 +153,20 @@ export default function AdminServicesPage() {
             >
               <ArrowLeftIcon className="w-4 h-4 mr-2" />
               Back to Dashboard
+            </Button>
+            <Button
+              onClick={() => router.push('/admin/services/categories')}
+              variant="outline"
+            >
+              <TagIcon className="w-4 h-4 mr-2" />
+              Manage Categories
+            </Button>
+            <Button
+              onClick={() => router.push('/admin/services/vehicle-sizes')}
+              variant="outline"
+            >
+              <CarIcon className="w-4 h-4 mr-2" />
+              Vehicle Sizes
             </Button>
             <Button
               onClick={() => router.push('/admin/services/new')}

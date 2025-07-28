@@ -1,11 +1,7 @@
-import { NextRequest } from 'next/server'
-import { ApiResponseHandler } from '@/lib/api/response'
+import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { ApiResponseHandler } from '@/lib/api/response'
 
-// Force Node.js runtime
-export const runtime = 'nodejs'
-
-// Use service role for server-side operations
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
@@ -17,7 +13,10 @@ const supabaseAdmin = createClient(
   }
 )
 
-export async function GET(request: NextRequest) {
+export async function GET(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
   try {
     // Get auth token from request headers or cookies
     const authHeader = request.headers.get('authorization')
@@ -35,10 +34,12 @@ export async function GET(request: NextRequest) {
       return ApiResponseHandler.error('Invalid authentication', 'AUTH_INVALID', 401)
     }
 
+    const params = await context.params
+    const bookingId = params.id
     const userId = user.id
 
-    // Fetch customer bookings with related data
-    const { data: bookings, error: bookingsError } = await supabaseAdmin
+    // Fetch single booking with all details
+    const { data: booking, error: bookingError } = await supabaseAdmin
       .from('bookings')
       .select(`
         id,
@@ -66,16 +67,20 @@ export async function GET(request: NextRequest) {
           estimated_duration
         )
       `)
+      .eq('id', bookingId)
       .eq('customer_id', userId)
-      .order('created_at', { ascending: false })
+      .single()
 
-    if (bookingsError) {
-      console.error('Error fetching bookings:', bookingsError)
-      return ApiResponseHandler.error('Failed to fetch bookings', 'FETCH_ERROR', 500)
+    if (bookingError) {
+      if (bookingError.code === 'PGRST116') {
+        return ApiResponseHandler.error('Booking not found', 'NOT_FOUND', 404)
+      }
+      console.error('Error fetching booking:', bookingError)
+      return ApiResponseHandler.error('Failed to fetch booking', 'FETCH_ERROR', 500)
     }
 
     // Transform the data for frontend consumption
-    const transformedBookings = bookings?.map((booking: any) => ({
+    const transformedBooking = {
       id: booking.id,
       booking_reference: booking.booking_reference,
       scheduled_date: booking.scheduled_date,
@@ -111,12 +116,12 @@ export async function GET(request: NextRequest) {
         city: booking.service_address.city || '',
         postal_code: booking.service_address.postcode || ''
       } : null
-    })) || []
+    }
 
-    return ApiResponseHandler.success(transformedBookings)
+    return ApiResponseHandler.success(transformedBooking)
 
   } catch (error) {
-    console.error('Customer bookings API error:', error)
-    return ApiResponseHandler.serverError('Failed to fetch customer bookings')
+    console.error('Customer booking details API error:', error)
+    return ApiResponseHandler.serverError('Failed to fetch booking details')
   }
 }

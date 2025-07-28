@@ -24,20 +24,24 @@ export async function GET(request: NextRequest) {
       return ApiResponseHandler.forbidden('Admin access required')
     }
 
-    // Get recent bookings (simplified query)
+    // Get recent bookings with complete data
     const { data: bookings, error: bookingsError } = await supabase
       .from('bookings')
       .select(`
         id,
         booking_reference,
         scheduled_date,
-        start_time,
+        scheduled_start_time,
         status,
         total_price,
+        vehicle_details,
+        service_address,
         created_at,
         customer_id,
-        vehicle_id,
-        address_id
+        booking_services(
+          id,
+          service_details
+        )
       `)
       .order('created_at', { ascending: false })
       .limit(10)
@@ -47,29 +51,47 @@ export async function GET(request: NextRequest) {
       return ApiResponseHandler.serverError('Failed to fetch recent bookings')
     }
 
-    // Transform the data for the frontend (simplified - can be enhanced later)
-    const recentBookings = bookings?.map(booking => ({
-      id: booking.id,
-      booking_reference: booking.booking_reference,
-      customer_name: 'Customer', // Will be populated from separate query if needed
-      customer_email: '',
-      scheduled_date: booking.scheduled_date,
-      start_time: booking.start_time,
-      status: booking.status,
-      total_price: booking.total_price,
-      services: [{ name: 'Vehicle Detailing Service' }], // Simplified
-      vehicle: {
-        make: 'Vehicle',
-        model: 'Details',
-        year: undefined
-      },
-      address: {
-        address_line_1: 'Service Location',
-        city: 'City',
-        postal_code: 'Postcode'
-      },
-      created_at: booking.created_at
-    })) || []
+    // Get customer information for each booking
+    const customerIds = [...new Set(bookings?.map(b => b.customer_id) || [])]
+    const { data: customers, error: customerError } = await supabase.auth.admin.listUsers()
+
+    const customerMap = customers?.users?.reduce((acc, user) => {
+      acc[user.id] = {
+        name: user.user_metadata?.full_name || user.user_metadata?.first_name || 'Customer',
+        email: user.email || ''
+      }
+      return acc
+    }, {} as Record<string, { name: string; email: string }>) || {}
+
+    // Transform the data for the frontend
+    const recentBookings = bookings?.map(booking => {
+      const customer = customerMap[booking.customer_id] || { name: 'Customer', email: '' }
+      
+      return {
+        id: booking.id,
+        booking_reference: booking.booking_reference,
+        customer_name: customer.name,
+        customer_email: customer.email,
+        scheduled_date: booking.scheduled_date,
+        start_time: booking.scheduled_start_time,
+        status: booking.status,
+        total_price: booking.total_price,
+        services: booking.booking_services?.map((service: any) => ({
+          name: service.service_details?.name || 'Service'
+        })) || [{ name: 'Vehicle Detailing Service' }],
+        vehicle: {
+          make: booking.vehicle_details?.make || 'Vehicle',
+          model: booking.vehicle_details?.model || 'Details',
+          year: booking.vehicle_details?.year
+        },
+        address: {
+          address_line_1: booking.service_address?.address_line_1 || 'Service Location',
+          city: booking.service_address?.city || 'City',
+          postal_code: booking.service_address?.postcode || 'Postcode'
+        },
+        created_at: booking.created_at
+      }
+    }) || []
 
     return ApiResponseHandler.success({
       bookings: recentBookings,

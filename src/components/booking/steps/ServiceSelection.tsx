@@ -62,8 +62,22 @@ export function ServiceSelection({
       ];
 
       const mockCategories: ServiceCategory[] = [
-        { id: 'detailing', name: 'Detailing Services' },
-        { id: 'premium', name: 'Premium Services' }
+        { 
+          id: 'detailing', 
+          name: 'Detailing Services',
+          description: 'Standard detailing services',
+          display_order: 1,
+          is_active: true,
+          created_at: new Date().toISOString()
+        },
+        { 
+          id: 'premium', 
+          name: 'Premium Services',
+          description: 'Premium detailing services',
+          display_order: 2,
+          is_active: true,
+          created_at: new Date().toISOString()
+        }
       ];
 
       setServices(mockServices);

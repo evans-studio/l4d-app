@@ -14,16 +14,30 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const queryParams = Object.fromEntries(searchParams.entries())
     
-    const validation = ApiValidation.validateQuery(queryParams, availabilityQuerySchema)
-    if (!validation.success) {
-      return validation.error
+    // Set defaults if no dates provided
+    const today = new Date().toISOString().split('T')[0]
+    const endDate = (() => {
+      const end = new Date()
+      end.setDate(end.getDate() + 14)
+      return end.toISOString().split('T')[0]
+    })()
+
+    const dateFrom = queryParams.date_from || today
+    const dateTo = queryParams.date_to || endDate
+
+    // Validate date format if provided
+    if (queryParams.date_from || queryParams.date_to) {
+      const validation = ApiValidation.validateQuery({ 
+        date_from: dateFrom!, 
+        date_to: dateTo! 
+      }, availabilityQuerySchema)
+      if (!validation.success) {
+        return validation.error
+      }
     }
 
     const bookingService = new BookingService()
-    const result = await bookingService.getAvailabilityForDateRange(
-      validation.data.date_from,
-      validation.data.date_to
-    )
+    const result = await bookingService.getAvailabilityForDateRange(dateFrom!, dateTo!)
 
     if (!result.success) {
       return ApiResponseHandler.error(
@@ -35,8 +49,8 @@ export async function GET(request: NextRequest) {
     return ApiResponseHandler.success({
       availability: result.data,
       query: {
-        date_from: validation.data.date_from,
-        date_to: validation.data.date_to,
+        date_from: dateFrom!,
+        date_to: dateTo!,
         total_days: result.data?.length || 0,
       }
     })

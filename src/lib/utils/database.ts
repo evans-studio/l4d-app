@@ -15,12 +15,18 @@ export interface VehicleSize {
   description?: string
   price_multiplier: number
   examples?: string[]
+  display_order: number
+  is_active: boolean
+  created_at: string
 }
 
 export interface ServiceCategory {
   id: string
   name: string
   description?: string
+  display_order: number
+  is_active: boolean
+  created_at: string
 }
 
 export interface ServiceWithCategory extends Service {

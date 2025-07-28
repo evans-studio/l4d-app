@@ -22,9 +22,46 @@ export interface AuthenticatedRequest {
 // Simple ApiAuth class to satisfy existing imports
 export class ApiAuth {
   static async authenticateRequest(request: Request): Promise<AuthenticatedRequest | null> {
-    // TODO: Implement simple auth check
-    // For now, return null to disable auth temporarily
-    return null
+    try {
+      const supabase = await createClient()
+      
+      // Get the current session
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+      
+      if (sessionError || !session?.user) {
+        return null
+      }
+
+      // Get the user profile
+      const { data: profile, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('id', session.user.id)
+        .single()
+
+      if (profileError || !profile) {
+        console.error('Failed to fetch user profile:', profileError)
+        return null
+      }
+
+      return {
+        user: {
+          id: session.user.id,
+          email: session.user.email!
+        },
+        profile: {
+          id: profile.id,
+          email: profile.email,
+          first_name: profile.first_name,
+          last_name: profile.last_name,
+          phone: profile.phone,
+          role: profile.role
+        }
+      }
+    } catch (error) {
+      console.error('Auth authentication error:', error)
+      return null
+    }
   }
 
   static async authenticate(request: Request) {

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { BookingFlowData, TimeSlot } from '@/lib/utils/booking-types'
+import { BookingFlowData, TimeSlot, BookingCalendarDay } from '@/lib/utils/booking-types'
 import { Button } from '@/components/ui/primitives/Button'
 import { ChevronLeftIcon, ChevronRightIcon, CalendarIcon, ClockIcon } from 'lucide-react'
 
@@ -22,24 +22,28 @@ export function TimeSlotSelection({
   isLoading, 
   setIsLoading 
 }: TimeSlotSelectionProps) {
-  const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([])
+  const [availabilityData, setAvailabilityData] = useState<BookingCalendarDay[]>([])
   const [selectedDate, setSelectedDate] = useState<string>(bookingData.selectedDate || '')
-  const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null)
+  const [selectedSlot, setSelectedSlot] = useState<{ id: string; start_time: string; date: string } | null>(null)
   const [currentWeekStart, setCurrentWeekStart] = useState<Date>(new Date())
 
   // Initialize selected slot from booking data
   useEffect(() => {
     if (bookingData.selectedTimeSlot && bookingData.selectedDate) {
-      const existingSlot = availableSlots.find(slot => 
-        slot.slot_date === bookingData.selectedDate && 
+      const dayData = availabilityData.find(day => day.date === bookingData.selectedDate)
+      const existingSlot = dayData?.available_slots.find(slot => 
         slot.start_time === bookingData.selectedTimeSlot?.start_time
       )
       if (existingSlot) {
-        setSelectedSlot(existingSlot)
+        setSelectedSlot({
+          id: existingSlot.id,
+          start_time: existingSlot.start_time,
+          date: bookingData.selectedDate
+        })
         setSelectedDate(bookingData.selectedDate)
       }
     }
-  }, [availableSlots, bookingData.selectedDate, bookingData.selectedTimeSlot])
+  }, [availabilityData, bookingData.selectedDate, bookingData.selectedTimeSlot])
 
   // Fetch available time slots
   useEffect(() => {
@@ -55,22 +59,8 @@ export function TimeSlotSelection({
         const data = await response.json()
         
         if (data.success) {
-          // Extract all available slots from the calendar data
-          const allSlots: TimeSlot[] = []
-          data.data.forEach((day: { date: string; available_slots: Array<{ id: string; start_time: string; available: boolean }> }) => {
-            day.available_slots.forEach((slot) => {
-              if (slot.available) {
-                allSlots.push({
-                  id: slot.id,
-                  slot_date: day.date,
-                  start_time: slot.start_time,
-                  is_available: true,
-                  created_at: new Date().toISOString()
-                })
-              }
-            })
-          })
-          setAvailableSlots(allSlots)
+          // The API response has the data nested under 'availability'
+          setAvailabilityData(data.data.availability)
         }
       } catch (error) {
         console.error('Failed to fetch available slots:', error)
@@ -112,15 +102,21 @@ export function TimeSlotSelection({
   }
 
   // Handle slot selection
-  const handleSlotSelect = (slot: TimeSlot) => {
-    setSelectedSlot(slot)
-    setSelectedDate(slot.slot_date)
+  const handleSlotSelect = (slot: { id: string; start_time: string }, date: string) => {
+    const selectedSlotData = {
+      id: slot.id,
+      start_time: slot.start_time,
+      date: date
+    }
+    setSelectedSlot(selectedSlotData)
+    setSelectedDate(date)
     updateBookingData({
-      selectedDate: slot.slot_date,
+      selectedDate: date,
       selectedTimeSlot: {
         start_time: slot.start_time,
         end_time: slot.start_time // Will be calculated based on service duration
-      }
+      },
+      selectedTimeSlotId: slot.id // Store the actual time slot ID for booking creation
     })
   }
 
@@ -130,15 +126,11 @@ export function TimeSlotSelection({
     }
   }
 
-  // Group slots by date
-  const slotsByDate = availableSlots.reduce((acc, slot) => {
-    const dateKey = slot.slot_date
-    if (!acc[dateKey]) {
-      acc[dateKey] = []
-    }
-    acc[dateKey]!.push(slot)
+  // Create map for quick lookup of availability data by date
+  const availabilityByDate = availabilityData.reduce((acc, day) => {
+    acc[day.date] = day
     return acc
-  }, {} as Record<string, TimeSlot[]>)
+  }, {} as Record<string, BookingCalendarDay>)
 
   // Get current week dates
   const weekDates = getWeekDates(currentWeekStart)
@@ -219,7 +211,8 @@ export function TimeSlotSelection({
         <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
           {weekDates.map((date) => {
             const dateStr = date.toISOString().split('T')[0]
-            const daySlots = (dateStr && slotsByDate[dateStr]) || []
+            const dayData = dateStr ? availabilityByDate[dateStr] : null
+            const daySlots = dayData?.available_slots || []
             const isToday = dateStr === today.toISOString().split('T')[0]
             const isPast = date < today
             
@@ -247,14 +240,14 @@ export function TimeSlotSelection({
                     </div>
                   ) : (
                     daySlots
-                      .sort((a: TimeSlot, b: TimeSlot) => a.start_time.localeCompare(b.start_time))
-                      .map((slot: TimeSlot) => {
-                        const isSelected = selectedSlot?.id === slot.id
+                      .sort((a, b) => a.start_time.localeCompare(b.start_time))
+                      .map((slot) => {
+                        const isSelected = selectedSlot?.id === slot.id && selectedSlot?.date === dateStr
                         
                         return (
                           <button
                             key={slot.id}
-                            onClick={() => handleSlotSelect(slot)}
+                            onClick={() => handleSlotSelect(slot, dateStr!)}
                             className={`
                               w-full px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 border-2
                               ${isSelected 
@@ -314,7 +307,7 @@ export function TimeSlotSelection({
       )}
 
       {/* No Slots Available Message */}
-      {!isLoading && availableSlots.length === 0 && (
+      {!isLoading && availabilityData.length === 0 && (
         <div className="text-center py-12">
           <div className="bg-[var(--warning-bg)] border border-[var(--warning)] rounded-lg p-6 max-w-md mx-auto">
             <CalendarIcon className="w-12 h-12 text-[var(--warning)] mx-auto mb-4" />

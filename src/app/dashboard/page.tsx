@@ -384,7 +384,7 @@ export default function DashboardPage() {
                     {/* Actions */}
                     <div className="flex flex-row lg:flex-col gap-2">
                       <Button
-                        onClick={() => router.push(`/booking/${booking.id}`)}
+                        onClick={() => router.push(`/dashboard/bookings/${booking.id}`)}
                         variant="outline"
                         size="sm"
                         leftIcon={<Eye className="w-4 h-4" />}
@@ -394,12 +394,12 @@ export default function DashboardPage() {
                       
                       {booking.status === 'pending' && (
                         <Button
-                          onClick={() => router.push(`/booking/${booking.id}/edit`)}
+                          onClick={() => router.push(`/dashboard/bookings/${booking.id}`)}
                           variant="outline"
                           size="sm"
                           leftIcon={<Edit className="w-4 h-4" />}
                         >
-                          Edit
+                          Manage
                         </Button>
                       )}
                     </div>

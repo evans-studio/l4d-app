@@ -7,7 +7,6 @@ import { z } from 'zod'
 
 const updateVehicleSchema = z.object({
   vehicle_size_id: z.string().uuid().optional(),
-  name: z.string().min(1).max(100).optional(),
   make: z.string().min(1).max(50).optional(),
   model: z.string().min(1).max(100).optional(),
   year: z.number().int().min(1900).max(new Date().getFullYear() + 1).optional(),
@@ -16,6 +15,39 @@ const updateVehicleSchema = z.object({
   notes: z.string().optional(),
   is_primary: z.boolean().optional(),
 })
+
+export async function GET(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  const params = await context.params
+  try {
+    const { auth, error: authError } = await ApiAuth.authenticate(request)
+    if (authError) {
+      return authError
+    }
+
+    const bookingService = new BookingService()
+    const result = await bookingService.getCustomerVehicleById(auth!.profile.id as string, params.id)
+
+    if (!result.success) {
+      if (result.error?.message?.includes('not found')) {
+        return ApiResponseHandler.error('Vehicle not found', 'VEHICLE_NOT_FOUND', 404)
+      }
+      
+      return ApiResponseHandler.error(
+        result.error?.message || 'Failed to fetch vehicle',
+        'FETCH_VEHICLE_FAILED'
+      )
+    }
+
+    return ApiResponseHandler.success(result.data)
+
+  } catch (error) {
+    console.error('Get customer vehicle error:', error)
+    return ApiResponseHandler.serverError('Failed to fetch vehicle')
+  }
+}
 
 export async function PUT(
   request: NextRequest,

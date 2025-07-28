@@ -11,8 +11,7 @@ import {
   DollarSignIcon,
   ClockIcon,
   TagIcon,
-  AlertCircleIcon,
-  TrashIcon
+  AlertCircleIcon
 } from 'lucide-react'
 
 interface ServiceCategory {
@@ -33,75 +32,11 @@ interface ServiceFormData {
   display_order: number
 }
 
-interface DeleteConfirmationModalProps {
-  isOpen: boolean
-  onClose: () => void
-  onConfirm: () => void
-  serviceName: string
-  isDeleting: boolean
-}
-
-function DeleteConfirmationModal({ isOpen, onClose, onConfirm, serviceName, isDeleting }: DeleteConfirmationModalProps) {
-  if (!isOpen) return null
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-[var(--surface-primary)] rounded-lg p-6 max-w-md w-full mx-4 border border-[var(--border-secondary)]">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 bg-[var(--error-bg)] rounded-lg flex items-center justify-center">
-            <TrashIcon className="w-5 h-5 text-[var(--error)]" />
-          </div>
-          <div>
-            <h3 className="text-lg font-semibold text-[var(--text-primary)]">Delete Service</h3>
-            <p className="text-sm text-[var(--text-secondary)]">This action cannot be undone</p>
-          </div>
-        </div>
-
-        <p className="text-[var(--text-secondary)] mb-6">
-          Are you sure you want to delete <strong className="text-[var(--text-primary)]">"{serviceName}"</strong>? 
-          This will deactivate the service and it will no longer be available for booking.
-        </p>
-
-        <div className="flex items-center gap-3">
-          <Button
-            onClick={onClose}
-            variant="outline"
-            disabled={isDeleting}
-            className="flex-1"
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={onConfirm}
-            disabled={isDeleting}
-            className="flex-1 bg-[var(--error)] hover:bg-[var(--error)]/90 text-white"
-          >
-            {isDeleting ? (
-              <>
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                Deleting...
-              </>
-            ) : (
-              <>
-                <TrashIcon className="w-4 h-4 mr-2" />
-                Delete Service
-              </>
-            )}
-          </Button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-export default function EditServicePage({ params }: { params: Promise<{ id: string }> }) {
+export default function NewServicePage() {
   const router = useRouter()
-  const [serviceId, setServiceId] = useState<string>('')
   const [categories, setCategories] = useState<ServiceCategory[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
-  const [isDeleting, setIsDeleting] = useState(false)
-  const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
   
   const [formData, setFormData] = useState<ServiceFormData>({
@@ -116,56 +51,27 @@ export default function EditServicePage({ params }: { params: Promise<{ id: stri
   })
 
   useEffect(() => {
-    const resolveParams = async () => {
-      const resolvedParams = await params
-      setServiceId(resolvedParams.id)
-    }
-    resolveParams()
-  }, [params])
-
-  useEffect(() => {
-    if (!serviceId) return
-
-    const fetchData = async () => {
+    const fetchCategories = async () => {
       try {
-        // Fetch service data and categories in parallel
-        const [serviceResponse, categoriesResponse] = await Promise.all([
-          fetch(`/api/services/${serviceId}`),
-          fetch('/api/services/categories')
-        ])
-
-        const serviceData = await serviceResponse.json()
-        const categoriesData = await categoriesResponse.json()
-
-        if (serviceData.success && serviceData.data) {
-          const service = serviceData.data
-          setFormData({
-            name: service.name || '',
-            short_description: service.short_description || '',
-            long_description: service.long_description || '',
-            base_price: service.base_price || 0,
-            category_id: service.category_id || '',
-            estimated_duration: service.estimated_duration || 60,
-            is_active: service.is_active ?? true,
-            display_order: service.display_order || 0
-          })
-        } else {
-          setErrors({ load: 'Failed to load service data' })
-        }
-
-        if (categoriesData.success) {
-          setCategories(categoriesData.data || [])
+        const response = await fetch('/api/services/categories')
+        const data = await response.json()
+        
+        if (data.success) {
+          setCategories(data.data || [])
+          // Set first category as default
+          if (data.data?.length > 0) {
+            setFormData(prev => ({ ...prev, category_id: data.data[0].id }))
+          }
         }
       } catch (error) {
-        console.error('Failed to fetch data:', error)
-        setErrors({ load: 'Failed to load service data' })
+        console.error('Failed to fetch categories:', error)
       } finally {
         setIsLoading(false)
       }
     }
 
-    fetchData()
-  }, [serviceId])
+    fetchCategories()
+  }, [])
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {}
@@ -203,8 +109,8 @@ export default function EditServicePage({ params }: { params: Promise<{ id: stri
 
     setIsSaving(true)
     try {
-      const response = await fetch(`/api/services/${serviceId}`, {
-        method: 'PUT',
+      const response = await fetch('/api/services', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: formData.name,
@@ -223,37 +129,13 @@ export default function EditServicePage({ params }: { params: Promise<{ id: stri
       if (data.success) {
         router.push('/admin/services')
       } else {
-        setErrors({ submit: data.error?.message || 'Failed to update service' })
+        setErrors({ submit: data.error?.message || 'Failed to create service' })
       }
     } catch (error) {
-      console.error('Failed to update service:', error)
-      setErrors({ submit: 'Failed to update service. Please try again.' })
+      console.error('Failed to create service:', error)
+      setErrors({ submit: 'Failed to create service. Please try again.' })
     } finally {
       setIsSaving(false)
-    }
-  }
-
-  const handleDelete = async () => {
-    setIsDeleting(true)
-    try {
-      const response = await fetch(`/api/services/${serviceId}`, {
-        method: 'DELETE'
-      })
-
-      const data = await response.json()
-      
-      if (data.success) {
-        router.push('/admin/services')
-      } else {
-        setErrors({ delete: data.error?.message || 'Failed to delete service' })
-        setShowDeleteModal(false)
-      }
-    } catch (error) {
-      console.error('Failed to delete service:', error)
-      setErrors({ delete: 'Failed to delete service. Please try again.' })
-      setShowDeleteModal(false)
-    } finally {
-      setIsDeleting(false)
     }
   }
 
@@ -282,33 +164,6 @@ export default function EditServicePage({ params }: { params: Promise<{ id: stri
     )
   }
 
-  if (errors.load) {
-    return (
-      <AdminLayout>
-        <div className="max-w-4xl mx-auto">
-          <div className="text-center py-12">
-            <div className="bg-[var(--error-bg)] rounded-lg p-8 max-w-md mx-auto border border-[var(--error)]">
-              <AlertCircleIcon className="w-12 h-12 text-[var(--error)] mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2">
-                Failed to Load Service
-              </h3>
-              <p className="text-[var(--text-secondary)] text-sm mb-4">
-                {errors.load}
-              </p>
-              <Button
-                onClick={() => router.push('/admin/services')}
-                variant="outline"
-              >
-                <ArrowLeftIcon className="w-4 h-4 mr-2" />
-                Back to Services
-              </Button>
-            </div>
-          </div>
-        </div>
-      </AdminLayout>
-    )
-  }
-
   return (
     <AdminLayout>
       <div className="max-w-4xl mx-auto">
@@ -316,30 +171,20 @@ export default function EditServicePage({ params }: { params: Promise<{ id: stri
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold text-[var(--text-primary)] mb-2">
-              Edit Service
+              Create New Service
             </h1>
             <p className="text-[var(--text-secondary)]">
-              Update your detailing service details
+              Add a new detailing service to your offerings
             </p>
           </div>
           
-          <div className="flex items-center gap-3">
-            <Button
-              onClick={() => setShowDeleteModal(true)}
-              variant="outline"
-              className="text-[var(--error)] border-[var(--error)] hover:bg-[var(--error-bg)]"
-            >
-              <TrashIcon className="w-4 h-4 mr-2" />
-              Delete
-            </Button>
-            <Button
-              onClick={() => router.push('/admin/services')}
-              variant="outline"
-            >
-              <ArrowLeftIcon className="w-4 h-4 mr-2" />
-              Back to Services
-            </Button>
-          </div>
+          <Button
+            onClick={() => router.push('/admin/services')}
+            variant="outline"
+          >
+            <ArrowLeftIcon className="w-4 h-4 mr-2" />
+            Back to Services
+          </Button>
         </div>
 
         {/* Form */}
@@ -595,10 +440,10 @@ export default function EditServicePage({ params }: { params: Promise<{ id: stri
 
           {/* Submit */}
           <div className="flex items-center justify-between pt-6 border-t border-[var(--border-secondary)]">
-            {(errors.submit || errors.delete) && (
+            {errors.submit && (
               <p className="text-[var(--error)] text-sm flex items-center gap-1">
                 <AlertCircleIcon className="w-4 h-4" />
-                {errors.submit || errors.delete}
+                {errors.submit}
               </p>
             )}
             
@@ -619,27 +464,18 @@ export default function EditServicePage({ params }: { params: Promise<{ id: stri
                 {isSaving ? (
                   <>
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    Updating...
+                    Creating...
                   </>
                 ) : (
                   <>
                     <SaveIcon className="w-4 h-4" />
-                    Update Service
+                    Create Service
                   </>
                 )}
               </Button>
             </div>
           </div>
         </form>
-
-        {/* Delete Confirmation Modal */}
-        <DeleteConfirmationModal
-          isOpen={showDeleteModal}
-          onClose={() => setShowDeleteModal(false)}
-          onConfirm={handleDelete}
-          serviceName={formData.name}
-          isDeleting={isDeleting}
-        />
       </div>
     </AdminLayout>
   )

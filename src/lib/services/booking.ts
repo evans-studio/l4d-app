@@ -1,5 +1,7 @@
 import { BaseService, ServiceResponse } from './base'
 import { PricingService } from './pricing'
+import { EmailService } from './email'
+import { getUserProfile, getDisplayName } from '@/lib/utils/user-helpers'
 import { 
   Booking, 
   BookingStatus, 
@@ -31,7 +33,7 @@ export class BookingService extends BaseService {
         .from('customer_addresses')
         .select('*')
         .eq('user_id', userId)
-        .order('is_default', { ascending: false })
+        .order('is_primary', { ascending: false })
         .order('created_at', { ascending: false })
     }, 'Failed to fetch customer addresses')
   }
@@ -41,10 +43,10 @@ export class BookingService extends BaseService {
       const supabase = await this.supabase
       
       // If this is set as default, unset others
-      if (addressData.is_default) {
+      if (addressData.is_primary) {
         await supabase
           .from('customer_addresses')
-          .update({ is_default: false })
+          .update({ is_primary: false })
           .eq('user_id', userId)
       }
 
@@ -64,10 +66,10 @@ export class BookingService extends BaseService {
       const supabase = await this.supabase
       
       // If this is set as default, unset others
-      if (addressData.is_default) {
+      if (addressData.is_primary) {
         await supabase
           .from('customer_addresses')
-          .update({ is_default: false })
+          .update({ is_primary: false })
           .eq('user_id', userId)
       }
 
@@ -104,9 +106,24 @@ export class BookingService extends BaseService {
           vehicle_size:vehicle_sizes(*)
         `)
         .eq('user_id', userId)
-        .order('is_default', { ascending: false })
+        .order('is_primary', { ascending: false })
         .order('created_at', { ascending: false })
     }, 'Failed to fetch customer vehicles')
+  }
+
+  async getCustomerVehicleById(userId: string, vehicleId: string): Promise<ServiceResponse<CustomerVehicle>> {
+    return this.executeQuery(async () => {
+      const supabase = await this.supabase
+      return supabase
+        .from('customer_vehicles')
+        .select(`
+          *,
+          vehicle_size:vehicle_sizes(*)
+        `)
+        .eq('id', vehicleId)
+        .eq('user_id', userId)
+        .single()
+    }, 'Failed to fetch customer vehicle')
   }
 
   async createCustomerVehicle(userId: string, vehicleData: Omit<CustomerVehicle, 'id' | 'user_id' | 'created_at' | 'updated_at'>): Promise<ServiceResponse<CustomerVehicle>> {
@@ -114,10 +131,10 @@ export class BookingService extends BaseService {
       const supabase = await this.supabase
       
       // If this is set as default, unset others
-      if (vehicleData.is_default) {
+      if (vehicleData.is_primary) {
         await supabase
           .from('customer_vehicles')
-          .update({ is_default: false })
+          .update({ is_primary: false })
           .eq('user_id', userId)
       }
 
@@ -140,10 +157,10 @@ export class BookingService extends BaseService {
       const supabase = await this.supabase
       
       // If this is set as default, unset others
-      if (vehicleData.is_default) {
+      if (vehicleData.is_primary) {
         await supabase
           .from('customer_vehicles')
-          .update({ is_default: false })
+          .update({ is_primary: false })
           .eq('user_id', userId)
       }
 
@@ -189,26 +206,53 @@ export class BookingService extends BaseService {
     return this.executeQuery(async () => {
       const supabase = await this.supabase
       
-      // Get time slots
+      // Get time slots in date range that are available
       const { data: timeSlots, error: slotsError } = await supabase
         .from('time_slots')
         .select('*')
-        .eq('is_active', true)
-        .order('start_time')
+        .gte('slot_date', startDate)
+        .lte('slot_date', endDate)
+        .eq('is_available', true)
+        .order('slot_date', { ascending: true })
+        .order('start_time', { ascending: true })
 
       if (slotsError) return { data: null, error: slotsError }
 
-      // Get existing bookings in date range
-      const { data: bookings, error: bookingsError } = await supabase
-        .from('bookings')
-        .select('scheduled_date, scheduled_start_time, scheduled_end_time, status')
-        .gte('scheduled_date', startDate)
-        .lte('scheduled_date', endDate)
-        .in('status', ['confirmed', 'in_progress'])
+      // Get existing bookings that are using time slots
+      const slotIds = timeSlots?.map(slot => slot.id) || []
+      let bookedSlotIds: string[] = []
 
-      if (bookingsError) return { data: null, error: bookingsError }
+      if (slotIds.length > 0) {
+        const { data: bookings, error: bookingsError } = await supabase
+          .from('bookings')
+          .select('time_slot_id')
+          .in('time_slot_id', slotIds)
+          .not('status', 'in', '(cancelled)')
 
-      // Build calendar days
+        if (bookingsError) return { data: null, error: bookingsError }
+        bookedSlotIds = bookings?.map(booking => booking.time_slot_id).filter(Boolean) || []
+      }
+
+      // Group slots by date
+      const slotsByDate: Record<string, any[]> = {}
+      
+      timeSlots?.forEach(slot => {
+        const isBooked = bookedSlotIds.includes(slot.id)
+        
+        if (!slotsByDate[slot.slot_date]) {
+          slotsByDate[slot.slot_date] = []
+        }
+        
+        slotsByDate[slot.slot_date]!.push({
+          id: slot.id as string,
+          start_time: slot.start_time as string,
+          end_time: slot.start_time as string, // Will be calculated based on service duration
+          available: !isBooked,
+          booking_count: isBooked ? 1 : 0,
+        })
+      })
+
+      // Build calendar days - include all dates in range even if no slots
       const calendarDays: BookingCalendarDay[] = []
       const start = new Date(startDate)
       const end = new Date(endDate)
@@ -218,32 +262,14 @@ export class BookingService extends BaseService {
         if (!dateStr) continue
         const dayOfWeek = date.getDay()
         
-        // Get slots for this specific date
-        const daySlots = timeSlots.filter(slot => slot.slot_date === dateStr)
-        
-        // Count bookings for this date
-        const dayBookings = bookings.filter(booking => booking.scheduled_date === dateStr)
-        
-        const availableSlots = daySlots.map(slot => {
-          // For simplified slots: if there's any booking for this exact slot, it's unavailable
-          const slotBookings = dayBookings.filter(booking => 
-            booking.scheduled_start_time === slot.start_time
-          )
-
-          return {
-            id: slot.id as string,
-            start_time: slot.start_time as string,
-            end_time: slot.end_time as string,
-            available: (slotBookings.length === 0 && slot.is_available) as boolean,
-            booking_count: slotBookings.length,
-          }
-        })
+        const daySlots = slotsByDate[dateStr] || []
+        const availableSlots = daySlots.filter(slot => slot.available)
 
         calendarDays.push({
           date: dateStr,
           day_of_week: dayOfWeek,
           available_slots: availableSlots,
-          is_available: availableSlots.some(slot => slot.available),
+          is_available: availableSlots.length > 0,
         })
       }
 
@@ -311,6 +337,33 @@ export class BookingService extends BaseService {
     return this.executeQuery(async () => {
       const supabase = await this.supabase
       
+      // Validate and verify time slot availability
+      const { data: timeSlot, error: slotError } = await supabase
+        .from('time_slots')
+        .select('*')
+        .eq('id', bookingData.time_slot_id)
+        .eq('is_available', true)
+        .single()
+
+      if (slotError || !timeSlot) {
+        return { data: null, error: new Error('Selected time slot is not available') }
+      }
+
+      // Check if slot is already booked
+      const { data: existingBooking } = await supabase
+        .from('bookings')
+        .select('id')
+        .eq('time_slot_id', bookingData.time_slot_id)
+        .not('status', 'in', '(cancelled)')
+        .single()
+
+      if (existingBooking) {
+        return { data: null, error: new Error('Selected time slot is already booked') }
+      }
+
+      // Generate unique booking reference
+      const bookingReference = `L4D-${Date.now()}-${Math.random().toString(36).substr(2, 4).toUpperCase()}`
+
       // Calculate pricing
       const pricingService = new PricingService()
       const pricingResult = await pricingService.calculateMultipleServices(
@@ -339,12 +392,18 @@ export class BookingService extends BaseService {
 
       if (sizeError) return { data: null, error: sizeError }
 
-      // Create booking
+      // Calculate end time based on duration
+      const startTime = new Date(`${timeSlot.slot_date}T${timeSlot.start_time}`)
+      const endTime = new Date(startTime.getTime() + totalDuration * 60000)
+      const endTimeStr = endTime.toTimeString().split(' ')[0]?.substring(0, 5) || '00:00' // HH:MM format
+
+      // Create booking with time slot integration
       const { data: booking, error: bookingError } = await supabase
         .from('bookings')
         .insert({
-          user_id: userId,
-          vehicle_size_id: bookingData.vehicle.size_id,
+          booking_reference: bookingReference,
+          customer_id: userId,
+          time_slot_id: bookingData.time_slot_id,
           vehicle_details: {
             ...bookingData.vehicle,
             size_name: vehicleSize.name,
@@ -352,11 +411,16 @@ export class BookingService extends BaseService {
           },
           service_address: bookingData.address,
           distance_km: distanceKm,
-          // Note: Using core booking properties that match the interface
-          estimated_duration: totalDuration,
-          subtotal: totalPrice - distanceSurcharge,
+          // Scheduling from time slot
+          scheduled_date: timeSlot.slot_date,
+          scheduled_start_time: timeSlot.start_time,
+          scheduled_end_time: endTimeStr,
+          // Pricing
+          base_price: totalPrice - distanceSurcharge,
+          vehicle_size_multiplier: vehicleSize.price_multiplier,
           distance_surcharge: distanceSurcharge,
           total_price: totalPrice,
+          estimated_duration: totalDuration,
           pricing_breakdown: {
             services: calculations.map(calc => ({
               service_id: calc.serviceId,
@@ -370,8 +434,9 @@ export class BookingService extends BaseService {
             distance_surcharge: distanceSurcharge,
             total: totalPrice,
           },
-          customer_notes: bookingData.customer_notes,
+          special_instructions: bookingData.customer_notes,
           status: 'pending',
+          payment_status: 'pending'
         })
         .select()
         .single()
@@ -422,15 +487,16 @@ export class BookingService extends BaseService {
     status: BookingStatus, 
     changedBy: string,
     reason?: string,
-    notes?: string
+    notes?: string,
+    sendEmail: boolean = true
   ): Promise<ServiceResponse<Booking>> {
     return this.executeQuery(async () => {
       const supabase = await this.supabase
       
-      // Get current booking
+      // Get current booking with customer info
       const { data: currentBooking, error: fetchError } = await supabase
         .from('bookings')
-        .select('status')
+        .select('status, customer_id')
         .eq('id', bookingId)
         .single()
 
@@ -471,6 +537,29 @@ export class BookingService extends BaseService {
           reason,
           notes,
         })
+
+      // Send email notification if requested and status is significant
+      if (sendEmail && ['confirmed', 'cancelled', 'completed'].includes(status)) {
+        try {
+          const userProfile = await getUserProfile(currentBooking.customer_id)
+          if (userProfile) {
+            const emailService = new EmailService()
+            const customerName = getDisplayName(userProfile)
+            
+            await emailService.sendBookingStatusUpdate(
+              userProfile.email,
+              customerName,
+              booking,
+              currentBooking.status,
+              reason
+            )
+            console.log(`Status update email sent for booking ${booking.booking_reference}`)
+          }
+        } catch (emailError) {
+          console.error('Failed to send status update email:', emailError)
+          // Don't fail the status update for email errors
+        }
+      }
 
       return { data: booking, error: null }
     }, 'Failed to update booking status')

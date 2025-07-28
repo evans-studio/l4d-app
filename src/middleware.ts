@@ -3,20 +3,24 @@ import { NextResponse, type NextRequest } from 'next/server'
 export async function middleware(request: NextRequest) {
   const response = NextResponse.next()
   
-  // Get all cookies to debug
+  // Get all cookies and filter for Supabase auth cookies
   const allCookies = request.cookies.getAll()
-  const supabaseCookies = allCookies.filter(c => c.name.includes('sb-vwejbgfiddltdqwhfjmt'))
+  const supabaseCookies = allCookies.filter(c => 
+    c.name.startsWith('sb-') && c.name.includes('auth-token')
+  )
   
-  // Get Supabase session from cookies - try multiple possible cookie names
-  const accessToken = request.cookies.get('sb-vwejbgfiddltdqwhfjmt-auth-token')?.value ||
-                     request.cookies.get('sb-vwejbgfiddltdqwhfjmt-auth-token-code-verifier')?.value
+  // Look for the main session cookies that Supabase typically uses
+  const sessionCookies = allCookies.filter(c => 
+    c.name.includes('auth-token') && 
+    !c.name.includes('code-verifier') &&
+    c.value && c.value.length > 10 // Valid tokens should be substantial
+  )
   
-  const refreshToken = request.cookies.get('sb-vwejbgfiddltdqwhfjmt-auth-token.0')?.value || 
-                      request.cookies.get('sb-vwejbgfiddltdqwhfjmt-auth-token.1')?.value ||
-                      request.cookies.get('sb-vwejbgfiddltdqwhfjmt-auth-token-code-verifier')?.value
+  // Check for valid session indicators
+  const hasValidSession = sessionCookies.length > 0 || 
+    supabaseCookies.some(c => c.value && c.value.length > 50) // JWT tokens are long
   
-  // If we have any Supabase auth cookies, consider authenticated
-  const isAuthenticated = supabaseCookies.length > 0 && (accessToken || refreshToken)
+  const isAuthenticated = hasValidSession
   const path = request.nextUrl.pathname
 
   // Only log for auth and dashboard routes to avoid spam
@@ -24,8 +28,8 @@ export async function middleware(request: NextRequest) {
     console.log('Middleware check:', {
       path,
       isAuthenticated,
-      hasAccessToken: !!accessToken,
-      hasRefreshToken: !!refreshToken,
+      hasValidSession,
+      sessionCookieCount: sessionCookies.length,
       supabaseCookieCount: supabaseCookies.length,
       cookieNames: supabaseCookies.map(c => c.name)
     })

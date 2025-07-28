@@ -25,7 +25,6 @@ export interface CustomerAddress {
   distance_from_base?: number
   distance_from_business?: number
   is_primary: boolean
-  is_default?: boolean
   is_verified: boolean
   created_at: string
   updated_at: string
@@ -44,7 +43,6 @@ export interface CustomerVehicle {
   registration?: string
   notes?: string
   is_primary: boolean
-  is_default?: boolean
   created_at: string
   updated_at: string
   vehicle_size?: Record<string, unknown>
@@ -199,6 +197,7 @@ export interface BookingFlowData {
     start_time: string
     end_time: string
   }
+  selectedTimeSlotId?: string
   
   // Step 5: Pricing & Confirmation
   pricingCalculation?: PricingBreakdown

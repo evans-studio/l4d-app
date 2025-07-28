@@ -77,6 +77,14 @@ export function PricingConfirmation({
       return
     }
 
+    // We need the actual time slot ID from the booking flow
+    // This should be stored when the user selects a time slot
+    const timeSlotId = (bookingData as any).selectedTimeSlotId
+    if (!timeSlotId) {
+      console.error('No time slot ID available')
+      return
+    }
+
     setIsSubmitting(true)
     try {
       const bookingPayload = {
@@ -87,7 +95,7 @@ export function PricingConfirmation({
           model: bookingData.vehicleDetails.model,
           year: bookingData.vehicleDetails.year,
           color: bookingData.vehicleDetails.color,
-          license_plate: bookingData.vehicleDetails.registration,
+          registration: bookingData.vehicleDetails.registration,
           notes: bookingData.vehicleDetails.notes,
         },
         address: {
@@ -98,11 +106,11 @@ export function PricingConfirmation({
           postcode: bookingData.addressDetails.postcode,
         },
         scheduled_date: bookingData.selectedDate,
-        time_slot_id: 'temp-slot-id', // This would be the actual slot ID
-        special_instructions: customerNotes,
+        time_slot_id: timeSlotId,
+        customer_notes: customerNotes,
       }
 
-      const response = await fetch('/api/bookings', {
+      const response = await fetch('/api/bookings/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(bookingPayload)
@@ -110,14 +118,16 @@ export function PricingConfirmation({
 
       const data = await response.json()
       if (data.success) {
-        // Redirect to success page
-        router.push(`/booking-success?booking=${data.data.booking_reference}`)
+        // Redirect to success page with booking reference
+        router.push(`/booking-success?booking=${data.metadata.booking_reference}`)
       } else {
         console.error('Booking failed:', data.error)
-        // Handle error appropriately
+        // TODO: Show error message to user
+        alert(data.error?.message || 'Failed to create booking. Please try again.')
       }
     } catch (error) {
       console.error('Failed to create booking:', error)
+      alert('Failed to create booking. Please try again.')
     } finally {
       setIsSubmitting(false)
     }

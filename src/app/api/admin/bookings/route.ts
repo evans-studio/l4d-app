@@ -31,15 +31,20 @@ export async function GET(request: NextRequest) {
         id,
         booking_reference,
         scheduled_date,
-        start_time,
+        scheduled_start_time,
         status,
         total_price,
         special_instructions,
+        vehicle_details,
+        service_address,
         created_at,
         updated_at,
         customer_id,
-        vehicle_id,
-        address_id
+        booking_services(
+          id,
+          service_details,
+          price
+        )
       `)
       .order('created_at', { ascending: false })
 
@@ -52,66 +57,56 @@ export async function GET(request: NextRequest) {
       return ApiResponseHandler.success([])
     }
 
-    // Get unique customer IDs, vehicle IDs, and address IDs
+    // Get customer details for each booking
     const customerIds = [...new Set(bookings.map(b => b.customer_id))]
-    const vehicleIds = [...new Set(bookings.map(b => b.vehicle_id))]
-    const addressIds = [...new Set(bookings.map(b => b.address_id))]
+    const { data: customers, error: customerError } = await supabase.auth.admin.listUsers()
 
-    // Fetch customer details
-    const { data: customers } = await supabase
-      .from('user_profiles')
-      .select('id, first_name, last_name, email, phone')
-      .in('id', customerIds)
-
-    // Fetch vehicle details
-    const { data: vehicles } = await supabase
-      .from('vehicles')
-      .select('id, make, model, year, color, license_plate')
-      .in('id', vehicleIds)
-
-    // Fetch address details
-    const { data: addresses } = await supabase
-      .from('addresses')
-      .select('id, address_line_1, address_line_2, city, postal_code')
-      .in('id', addressIds)
-
-    // Create lookup maps
-    const customerMap = new Map(customers?.map(c => [c.id, c]) || [])
-    const vehicleMap = new Map(vehicles?.map(v => [v.id, v]) || [])
-    const addressMap = new Map(addresses?.map(a => [a.id, a]) || [])
+    const customerMap = customers?.users?.reduce((acc, user) => {
+      acc[user.id] = {
+        name: user.user_metadata?.full_name || 
+              (user.user_metadata?.first_name && user.user_metadata?.last_name 
+                ? `${user.user_metadata.first_name} ${user.user_metadata.last_name}` 
+                : user.user_metadata?.first_name || 'Customer'),
+        email: user.email || '',
+        phone: user.user_metadata?.phone || user.phone || ''
+      }
+      return acc
+    }, {} as Record<string, { name: string; email: string; phone: string }>) || {}
 
     // Transform the data for frontend consumption
     const adminBookings = bookings.map(booking => {
-      const customer = customerMap.get(booking.customer_id)
-      const vehicle = vehicleMap.get(booking.vehicle_id)
-      const address = addressMap.get(booking.address_id)
-      const services = [{ name: 'Vehicle Detailing Service', base_price: booking.total_price || 0 }]
+      const customer = customerMap[booking.customer_id] || { name: 'Customer', email: '', phone: '' }
+      
+      const services = booking.booking_services?.map((service: any) => ({
+        name: service.service_details?.name || 'Service',
+        base_price: service.price || 0
+      })) || [{ name: 'Vehicle Detailing Service', base_price: booking.total_price || 0 }]
 
       return {
         id: booking.id,
         booking_reference: booking.booking_reference,
         customer_id: booking.customer_id,
-        customer_name: customer ? `${customer.first_name || ''} ${customer.last_name || ''}`.trim() || 'Customer' : 'Customer',
-        customer_email: customer?.email || '',
-        customer_phone: customer?.phone || '',
+        customer_name: customer.name,
+        customer_email: customer.email,
+        customer_phone: customer.phone,
         scheduled_date: booking.scheduled_date,
-        start_time: booking.start_time,
+        start_time: booking.scheduled_start_time,
         status: booking.status,
         total_price: booking.total_price || 0,
         special_instructions: booking.special_instructions,
         services,
         vehicle: {
-          make: vehicle?.make || 'Vehicle',
-          model: vehicle?.model || 'Details',
-          year: vehicle?.year,
-          color: vehicle?.color,
-          license_plate: vehicle?.license_plate
+          make: booking.vehicle_details?.make || 'Vehicle',
+          model: booking.vehicle_details?.model || 'Details',
+          year: booking.vehicle_details?.year,
+          color: booking.vehicle_details?.color,
+          license_plate: booking.vehicle_details?.registration
         },
         address: {
-          address_line_1: address?.address_line_1 || 'Service Location',
-          address_line_2: address?.address_line_2,
-          city: address?.city || 'City',
-          postal_code: address?.postal_code || 'Postcode'
+          address_line_1: booking.service_address?.address_line_1 || 'Service Location',
+          address_line_2: booking.service_address?.address_line_2,
+          city: booking.service_address?.city || 'City',
+          postal_code: booking.service_address?.postcode || 'Postcode'
         },
         created_at: booking.created_at,
         updated_at: booking.updated_at

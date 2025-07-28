@@ -7,7 +7,6 @@ import { z } from 'zod'
 
 const createVehicleSchema = z.object({
   vehicle_size_id: z.string().uuid('Invalid vehicle size ID'),
-  name: z.string().min(1, 'Vehicle name is required').max(100),
   make: z.string().min(1, 'Make is required').max(50),
   model: z.string().min(1, 'Model is required').max(100),
   year: z.number().int().min(1900).max(new Date().getFullYear() + 1).optional(),

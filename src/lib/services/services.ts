@@ -166,4 +166,97 @@ export class ServicesService extends BaseService {
       return { data: undefined, error: result.error }
     }, 'Failed to delete service')
   }
+
+  // Service Category CRUD Methods
+  async getServiceCategoryById(id: string): Promise<ServiceResponse<ServiceCategory>> {
+    return this.executeQuery(async () => {
+      const supabase = await this.supabase
+      return supabase
+        .from('service_categories')
+        .select('*')
+        .eq('id', id)
+        .single()
+    }, 'Failed to fetch service category')
+  }
+
+  async createServiceCategory(categoryData: Partial<ServiceCategory>): Promise<ServiceResponse<ServiceCategory>> {
+    return this.executeQuery(async () => {
+      const supabase = await this.supabase
+      return supabase
+        .from('service_categories')
+        .insert(categoryData)
+        .select()
+        .single()
+    }, 'Failed to create service category')
+  }
+
+  async updateServiceCategory(id: string, categoryData: Partial<ServiceCategory>): Promise<ServiceResponse<ServiceCategory>> {
+    return this.executeQuery(async () => {
+      const supabase = await this.supabase
+      return supabase
+        .from('service_categories')
+        .update(categoryData)
+        .eq('id', id)
+        .select()
+        .single()
+    }, 'Failed to update service category')
+  }
+
+  async deleteServiceCategory(id: string): Promise<ServiceResponse<void>> {
+    return this.executeQuery(async () => {
+      const supabase = await this.supabase
+      const result = await supabase
+        .from('service_categories')
+        .delete()
+        .eq('id', id)
+      return { data: undefined, error: result.error }
+    }, 'Failed to delete service category')
+  }
+
+  // Vehicle Size CRUD Methods
+  async getVehicleSizeById(id: string): Promise<ServiceResponse<VehicleSize>> {
+    return this.executeQuery(async () => {
+      const supabase = await this.supabase
+      return supabase
+        .from('vehicle_sizes')
+        .select('*')
+        .eq('id', id)
+        .single()
+    }, 'Failed to fetch vehicle size')
+  }
+
+  async createVehicleSize(vehicleSizeData: Partial<VehicleSize>): Promise<ServiceResponse<VehicleSize>> {
+    return this.executeQuery(async () => {
+      const supabase = await this.supabase
+      return supabase
+        .from('vehicle_sizes')
+        .insert(vehicleSizeData)
+        .select()
+        .single()
+    }, 'Failed to create vehicle size')
+  }
+
+  async updateVehicleSize(id: string, vehicleSizeData: Partial<VehicleSize>): Promise<ServiceResponse<VehicleSize>> {
+    return this.executeQuery(async () => {
+      const supabase = await this.supabase
+      return supabase
+        .from('vehicle_sizes')
+        .update(vehicleSizeData)
+        .eq('id', id)
+        .select()
+        .single()
+    }, 'Failed to update vehicle size')
+  }
+
+  async deleteVehicleSize(id: string): Promise<ServiceResponse<void>> {
+    return this.executeQuery(async () => {
+      const supabase = await this.supabase
+      // Soft delete by setting is_active to false
+      const result = await supabase
+        .from('vehicle_sizes')
+        .update({ is_active: false })
+        .eq('id', id)
+      return { data: undefined, error: result.error }
+    }, 'Failed to delete vehicle size')
+  }
 }
