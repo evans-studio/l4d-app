@@ -25,7 +25,8 @@ export async function middleware(request: NextRequest) {
     '/simple-tailwind-test',
     '/debug-tailwind',
     '/component-test',
-    '/test-api'
+    '/test-api',
+    '/debug-login'
   ]
 
   // Skip auth check for public routes and API routes
