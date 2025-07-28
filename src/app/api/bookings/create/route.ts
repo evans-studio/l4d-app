@@ -1,35 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-import { cookies } from 'next/headers'
+import { createClientFromRequest } from '@/lib/supabase/server'
 import { BookingService } from '@/lib/services/booking'
 import { EmailService } from '@/lib/services/email'
 import { CreateBookingRequest } from '@/lib/utils/booking-types'
 import { getUserProfile, getDisplayName } from '@/lib/utils/user-helpers'
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
-
 export async function POST(request: NextRequest) {
   try {
-    const cookieStore = await cookies()
-    const allCookies = cookieStore.getAll()
+    const supabase = createClientFromRequest(request)
     
-    // Check for authentication
-    const accessToken = allCookies.find(c => c.name.includes('access_token'))?.value
-    if (!accessToken) {
+    // Get current user and verify authentication
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    
+    if (sessionError || !session?.user) {
       return NextResponse.json(
         { success: false, error: { message: 'Authentication required' } },
-        { status: 401 }
-      )
-    }
-
-    // Get user from token
-    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(accessToken)
-    if (userError || !user) {
-      return NextResponse.json(
-        { success: false, error: { message: 'Invalid authentication' } },
         { status: 401 }
       )
     }
@@ -106,7 +91,7 @@ export async function POST(request: NextRequest) {
 
     // Create booking using service
     const bookingService = new BookingService()
-    const result = await bookingService.createBooking(user.id, bookingRequest)
+    const result = await bookingService.createBooking(session.user.id, bookingRequest)
 
     if (!result.success) {
       return NextResponse.json(
@@ -120,7 +105,7 @@ export async function POST(request: NextRequest) {
       const emailService = new EmailService()
       
       // Get user profile for personalized emails
-      const userProfile = await getUserProfile(user.id)
+      const userProfile = await getUserProfile(session.user.id)
       if (userProfile) {
         const customerName = getDisplayName(userProfile)
         

@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/server'
 
 export interface ServiceResponse<T = unknown> {
   success: boolean
@@ -11,7 +11,7 @@ export interface ServiceResponse<T = unknown> {
 }
 
 export abstract class BaseService {
-  protected supabase = createClient()
+  protected supabase = createAdminClient()
 
   protected handleSuccess<T>(data?: T): ServiceResponse<T> {
     return {
