@@ -1,17 +1,15 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { AdminLayout } from '@/components/layouts/AdminLayout'
 import { Card, CardHeader, CardContent } from '@/components/ui/composites/Card'
 import { Button } from '@/components/ui/primitives/Button'
 import { 
-  BarChart3Icon, 
   TrendingUpIcon, 
   DollarSignIcon, 
   UsersIcon,
   CalendarIcon,
   DownloadIcon,
-  FilterIcon,
   RefreshCwIcon
 } from 'lucide-react'
 
@@ -53,7 +51,7 @@ export default function ReportsPage() {
     loadReportData()
   }, [dateRange])
 
-  const loadReportData = async () => {
+  const loadReportData = useCallback(async () => {
     try {
       setIsLoading(true)
       setError('')
@@ -73,7 +71,7 @@ export default function ReportsPage() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [dateRange])
 
   const exportReport = async (format: 'csv' | 'pdf') => {
     try {

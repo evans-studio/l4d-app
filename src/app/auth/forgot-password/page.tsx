@@ -201,8 +201,8 @@ export default function ForgotPasswordPage() {
                 <div className="bg-surface-primary p-3 rounded-md">
                   <p className="text-text-primary font-medium mb-2">Having trouble?</p>
                   <ul className="space-y-1 text-xs">
-                    <li>• Make sure you're using the email address associated with your account</li>
-                    <li>• Check your spam/junk folder if you don't see the email</li>
+                    <li>• Make sure you&apos;re using the email address associated with your account</li>
+                    <li>• Check your spam/junk folder if you don&apos;t see the email</li>
                     <li>• The reset link will expire after 1 hour</li>
                   </ul>
                 </div>

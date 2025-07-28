@@ -37,14 +37,14 @@ export function QuickStats({ stats, loading = false }: QuickStatsProps) {
 
   const statItems = [
     {
-      label: "Today's Bookings",
+      label: "Today&apos;s Bookings",
       value: stats.todayBookings,
       icon: CalendarIcon,
       color: 'text-blue-500',
       bgColor: 'bg-blue-50'
     },
     {
-      label: "Today's Revenue",
+      label: "Today&apos;s Revenue",
       value: formatCurrency(stats.todayRevenue),
       icon: DollarSignIcon,
       color: 'text-green-500',

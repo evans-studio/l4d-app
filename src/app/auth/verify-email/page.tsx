@@ -251,7 +251,7 @@ function VerifyEmailPageContent() {
                   <p className="text-text-primary font-medium text-sm mb-2">Having trouble?</p>
                   <ul className="space-y-1 text-xs text-text-secondary">
                     <li>• Check your spam/junk folder</li>
-                    <li>• Make sure you're using the correct email address</li>
+                    <li>• Make sure you&apos;re using the correct email address</li>
                     <li>• The verification link will expire after 24 hours</li>
                     <li>• You can request a new verification email using the button above</li>
                   </ul>

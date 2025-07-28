@@ -247,8 +247,8 @@ export default function MyBookingsPage() {
                 </h3>
                 <p className="text-text-secondary text-sm mb-6">
                   {searchTerm ? 'Try adjusting your search terms.' :
-                   activeFilter === 'all' ? "You haven't made any bookings yet. Book your first detailing service!" :
-                   `You don't have any ${activeFilter} bookings.`}
+                   activeFilter === 'all' ? "You haven&apos;t made any bookings yet. Book your first detailing service!" :
+                   `You don&apos;t have any ${activeFilter} bookings.`}
                 </p>
                 {!searchTerm && activeFilter === 'all' && (
                   <Button

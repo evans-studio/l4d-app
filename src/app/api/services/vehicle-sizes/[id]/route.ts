@@ -49,7 +49,7 @@ export async function PUT(
   const params = await context.params
   try {
     // Require admin role for updating vehicle sizes
-    const { auth, error: authError } = await ApiAuth.requireRole(request, ['admin', 'super_admin'])
+    const { auth, error: authError } = await ApiAuth.requireRole(['admin', 'super_admin'])
     if (authError) {
       return authError
     }
@@ -97,7 +97,7 @@ export async function DELETE(
   const params = await context.params
   try {
     // Require admin role for deleting vehicle sizes
-    const { auth, error: authError } = await ApiAuth.requireRole(request, ['admin', 'super_admin'])
+    const { auth, error: authError } = await ApiAuth.requireRole(['admin', 'super_admin'])
     if (authError) {
       return authError
     }

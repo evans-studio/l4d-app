@@ -58,7 +58,7 @@ function DeleteConfirmationModal({ isOpen, onClose, onConfirm, serviceName, isDe
         </div>
 
         <p className="text-[var(--text-secondary)] mb-6">
-          Are you sure you want to delete <strong className="text-[var(--text-primary)]">"{serviceName}"</strong>? 
+          Are you sure you want to delete <strong className="text-[var(--text-primary)]">&quot;{serviceName}&quot;</strong>? 
           This will deactivate the service and it will no longer be available for booking.
         </p>
 

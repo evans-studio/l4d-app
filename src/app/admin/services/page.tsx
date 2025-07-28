@@ -7,13 +7,11 @@ import { AdminLayout } from '@/components/layouts/AdminLayout'
 import { 
   PlusIcon,
   EditIcon,
-  TrashIcon,
   SearchIcon,
   PackageIcon,
   ArrowLeftIcon,
   DollarSignIcon,
   TagIcon,
-  AlertCircleIcon,
   CarIcon
 } from 'lucide-react'
 

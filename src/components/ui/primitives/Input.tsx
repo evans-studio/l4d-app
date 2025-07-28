@@ -70,7 +70,8 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
     ...props
   }, ref) => {
     const [showPassword, setShowPassword] = React.useState(false)
-    const inputId = id || React.useId()
+    const generatedId = React.useId()
+    const inputId = id || generatedId
     const helperId = `${inputId}-helper`
     const errorId = `${inputId}-error`
     
@@ -226,7 +227,8 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
     id,
     ...props
   }, ref) => {
-    const inputId = id || React.useId()
+    const generatedId = React.useId()
+    const inputId = id || generatedId
     const helperId = `${inputId}-helper`
     const errorId = `${inputId}-error`
     

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { AdminLayout } from '@/components/layouts/AdminLayout'
 import { Button } from '@/components/ui/primitives/Button'
@@ -14,12 +14,8 @@ import {
   CalendarIcon,
   DollarSignIcon,
   TrendingUpIcon,
-  FilterIcon,
   EyeIcon,
-  EditIcon,
-  MoreVerticalIcon,
   UserCheckIcon,
-  UserXIcon,
   DownloadIcon,
   RefreshCwIcon
 } from 'lucide-react'
@@ -100,10 +96,6 @@ export default function AdminCustomersPage() {
     loadCustomerData()
   }, [])
 
-  useEffect(() => {
-    filterAndSortCustomers()
-  }, [customers, searchTerm, statusFilter, sortBy])
-
   const loadCustomerData = async () => {
     try {
       setIsLoading(true)
@@ -132,7 +124,7 @@ export default function AdminCustomersPage() {
     }
   }
 
-  const filterAndSortCustomers = () => {
+  const filterAndSortCustomers = useCallback(() => {
     let filtered = customers
 
     // Search filter
@@ -168,7 +160,11 @@ export default function AdminCustomersPage() {
     })
 
     setFilteredCustomers(filtered)
-  }
+  }, [customers, searchTerm, statusFilter, sortBy])
+
+  useEffect(() => {
+    filterAndSortCustomers()
+  }, [filterAndSortCustomers])
 
   const exportCustomers = async () => {
     try {
@@ -359,7 +355,7 @@ export default function AdminCustomersPage() {
             <div>
               <select
                 value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as any)}
+                onChange={(e) => setSortBy(e.target.value as 'name' | 'date' | 'spent' | 'bookings')}
                 className="px-4 py-2 bg-surface-primary border border-border-secondary rounded-md text-text-primary focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-600/20"
               >
                 <option value="name">Sort by Name</option>

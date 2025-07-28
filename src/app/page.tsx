@@ -534,8 +534,8 @@ export default function HomePage() {
                   answer: "Yes, we carry full public liability and professional indemnity insurance. Your vehicle and property are completely protected during our service."
                 },
                 {
-                  question: "What if I'm not satisfied?",
-                  answer: "Your satisfaction is guaranteed. If you're not 100% happy with our work, we'll return to make it right at no additional cost."
+                  question: "What if I&apos;m not satisfied?",
+                  answer: "Your satisfaction is guaranteed. If you&apos;re not 100% happy with our work, we&apos;ll return to make it right at no additional cost."
                 }
               ].map((faq, index) => (
                 <Card key={index} variant="default" className="overflow-hidden">

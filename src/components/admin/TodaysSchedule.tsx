@@ -195,7 +195,7 @@ export function TodaysSchedule({ onRefresh }: TodaysScheduleProps) {
         <div>
           <h2 className="text-xl font-semibold text-text-primary flex items-center gap-2">
             <CalendarIcon className="w-5 h-5" />
-            Today's Schedule
+            Today&apos;s Schedule
           </h2>
           <p className="text-text-secondary text-sm mt-1">
             {getTodayFormatted()}

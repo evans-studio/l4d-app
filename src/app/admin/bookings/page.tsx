@@ -253,7 +253,7 @@ function AdminBookingsContent() {
                 className="flex items-center gap-2"
               >
                 <LayoutDashboardIcon className="w-4 h-4" />
-                Today's Schedule
+                Today&apos;s Schedule
               </Button>
               <Button
                 onClick={() => setViewMode('all')}

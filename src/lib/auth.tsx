@@ -41,7 +41,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setTimeout(() => reject(new Error('Profile fetch timeout')), 10000)
       )
 
-      const { data, error } = await Promise.race([profilePromise, timeoutPromise]) as any
+      const { data, error } = await Promise.race([
+        profilePromise,
+        timeoutPromise
+      ]) as { data: UserProfile | null; error: unknown }
 
       if (error) {
         console.error('Error fetching profile:', error)
@@ -55,7 +58,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else {
         setProfile(data)
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Profile fetch error:', error)
       // Create a default profile on error
       setProfile({

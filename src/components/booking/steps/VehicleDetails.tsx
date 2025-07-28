@@ -300,11 +300,9 @@ export function VehicleDetails({
                       <p className="text-[var(--primary)] font-bold">
                         {size.price_multiplier as number}x pricing
                       </p>
-                      {size.examples && Array.isArray(size.examples) && (size.examples as string[]).length > 0 ? (
-                        <p className="text-[var(--text-muted)] text-xs mt-2">
-                          e.g., {String((size.examples as string[]).slice(0, 2).join(', '))}
-                        </p>
-                      ) : null}
+                      <p className="text-[var(--text-muted)] text-xs mt-2">
+                        Size details available
+                      </p>
                     </div>
                   )
                 })}

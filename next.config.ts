@@ -1,13 +1,11 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Clean TypeScript configuration for production
+  // Production-ready configuration with full compliance
   eslint: {
-    // Temporarily ignore ESLint errors during build for testing
-    ignoreDuringBuilds: true,
+    ignoreDuringBuilds: false,
   },
   typescript: {
-    // Keep TypeScript checking enabled for Vercel deployment
     ignoreBuildErrors: false,
   },
 };

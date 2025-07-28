@@ -40,7 +40,7 @@ export function createClientFromRequest(request: NextRequest) {
         getAll() {
           return request.cookies.getAll()
         },
-        setAll(cookiesToSet) {
+        setAll() {
           // API routes can't set cookies, but this is needed for the interface
           // Cookie setting will be handled by middleware
         },

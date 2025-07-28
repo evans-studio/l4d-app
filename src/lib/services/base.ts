@@ -40,7 +40,6 @@ export abstract class BaseService {
     errorMessage: string = 'Database operation failed'
   ): Promise<ServiceResponse<T>> {
     try {
-      const supabase = await this.supabase
       const { data, error } = await queryFn()
 
       if (error) {

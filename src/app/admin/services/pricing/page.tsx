@@ -14,11 +14,9 @@ import {
   RefreshCwIcon,
   ArrowLeftIcon,
   AlertCircleIcon,
-  CheckCircleIcon,
   PercentIcon,
   BarChart3Icon,
   EditIcon,
-  PlusIcon,
   Calculator
 } from 'lucide-react'
 
@@ -38,13 +36,6 @@ interface Service {
   category: string
 }
 
-interface ServicePricing {
-  service_id: string
-  vehicle_size_id: string
-  price: number
-  profit_margin: number
-  cost_basis: number
-}
 
 interface PricingMatrix {
   [serviceId: string]: {

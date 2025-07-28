@@ -30,6 +30,14 @@ export interface CustomerAddress {
   updated_at: string
 }
 
+export interface VehicleSize {
+  id: string
+  name: string
+  price_multiplier: number
+  description?: string
+  sort_order?: number
+}
+
 export interface CustomerVehicle {
   id: string
   user_id: string
@@ -45,7 +53,7 @@ export interface CustomerVehicle {
   is_primary: boolean
   created_at: string
   updated_at: string
-  vehicle_size?: Record<string, unknown>
+  vehicle_size?: VehicleSize
 }
 
 export interface TimeSlot {
@@ -56,6 +64,32 @@ export interface TimeSlot {
   notes?: string
   created_by?: string
   created_at: string
+}
+
+// Vehicle details stored in booking
+export interface BookingVehicleDetails {
+  make: string
+  model: string
+  year?: number
+  color?: string
+  registration?: string
+  size_id: string
+  size_name: string
+  size_multiplier: number
+  notes?: string
+}
+
+// Service address stored in booking
+export interface BookingServiceAddress {
+  name: string
+  address_line_1: string
+  address_line_2?: string
+  city: string
+  postcode: string
+  county?: string
+  country?: string
+  latitude?: number
+  longitude?: number
 }
 
 export interface Booking {
@@ -74,8 +108,8 @@ export interface Booking {
   total_price: number
   
   // Additional fields for our booking flow
-  vehicle_details?: any
-  service_address?: any
+  vehicle_details?: BookingVehicleDetails
+  service_address?: BookingServiceAddress
   distance_km?: number
   estimated_duration?: number
   pricing_breakdown?: PricingBreakdown
@@ -286,4 +320,3 @@ export interface AdminBookingOverview {
 
 // Re-export existing types for convenience
 export type { Service, ServiceCategory } from './database'
-export type { VehicleSize } from './database'

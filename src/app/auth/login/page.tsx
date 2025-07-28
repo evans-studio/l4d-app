@@ -88,7 +88,7 @@ export default function LoginPage() {
 
       console.log('Login successful for user:', data.user.email)
       
-      // Simplified redirect - check profile in background but don't block
+      // Simplified redirect - check profile in background but don&apos;t block
       try {
         // Quick profile check with timeout
         const profilePromise = supabase
@@ -115,16 +115,19 @@ export default function LoginPage() {
         window.location.href = '/dashboard'
       }
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       clearTimeout(timeoutId)
       console.error('Login exception:', error)
       
-      if (error.name === 'AbortError' || error.message.includes('timeout')) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      const errorName = error instanceof Error ? error.name : ''
+      
+      if (errorName === 'AbortError' || errorMessage.includes('timeout')) {
         setError('Login request timed out. Please check your internet connection and try again.')
-      } else if (error.message.includes('Failed to fetch')) {
+      } else if (errorMessage.includes('Failed to fetch')) {
         setError('Unable to connect to authentication service. Please check your internet connection.')
       } else {
-        setError(`Login failed: ${error.message || 'Unknown error'}`)
+        setError(`Login failed: ${errorMessage}`)
       }
       setIsLoading(false)
     }

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/primitives/Button'
 import { AdminLayout } from '@/components/layouts/AdminLayout'
+import { BookingStatus } from '@/lib/utils/booking-types'
 import { 
   CalendarIcon, 
   ClockIcon,
@@ -141,7 +142,7 @@ export default function AdminBookingDetailsPage() {
 
       const data = await response.json()
       if (data.success) {
-        setBooking(prev => prev ? { ...prev, status: newStatus as any } : null)
+        setBooking(prev => prev ? { ...prev, status: newStatus as "pending" | "confirmed" | "in_progress" | "completed" | "cancelled" } : null)
       }
     } catch (error) {
       console.error('Failed to update booking status:', error)
@@ -208,7 +209,7 @@ export default function AdminBookingDetailsPage() {
               Booking Not Found
             </h3>
             <p className="text-[var(--text-secondary)] text-sm mb-4">
-              The booking you're looking for doesn't exist or has been removed.
+              The booking you&apos;re looking for doesn&apos;t exist or has been removed.
             </p>
             <Button onClick={() => router.push('/admin/bookings')} variant="outline">
               Back to Bookings

@@ -11,9 +11,4 @@
   "env": {
     "NEXT_PUBLIC_APP_ENV": "production"
   },
-  "build": {
-    "env": {
-      "SKIP_ESLINT": "true"
-    }
-  }
 }

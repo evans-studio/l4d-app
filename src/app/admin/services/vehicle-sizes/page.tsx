@@ -348,7 +348,7 @@ function DeleteConfirmationModal({ isOpen, onClose, onConfirm, vehicleSizeName, 
         </div>
 
         <p className="text-[var(--text-secondary)] mb-6">
-          Are you sure you want to delete <strong className="text-[var(--text-primary)]">"{vehicleSizeName}"</strong>?
+          Are you sure you want to delete <strong className="text-[var(--text-primary)]">&quot;{vehicleSizeName}&quot;</strong>?
           This will deactivate the vehicle size and it will no longer be available for selection.
         </p>
 

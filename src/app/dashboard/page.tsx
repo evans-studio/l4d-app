@@ -284,8 +284,8 @@ export default function DashboardPage() {
               </h3>
               <p className="text-text-secondary text-sm mb-6">
                 {activeTab === 'upcoming' 
-                  ? "You don't have any upcoming appointments. Book your next detailing service today!"
-                  : "Your booking history will appear here once you've completed some services."
+                  ? "You don&apos;t have any upcoming appointments. Book your next detailing service today!"
+                  : "Your booking history will appear here once you&apos;ve completed some services."
                 }
               </p>
               {activeTab === 'upcoming' && (

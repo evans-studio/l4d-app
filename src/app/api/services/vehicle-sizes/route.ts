@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     // Require admin role for creating vehicle sizes
-    const { auth, error: authError } = await ApiAuth.requireRole(request, ['admin', 'super_admin'])
+    const { auth, error: authError } = await ApiAuth.requireRole(['admin', 'super_admin'])
     if (authError) {
       return authError
     }

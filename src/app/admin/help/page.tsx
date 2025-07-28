@@ -15,9 +15,7 @@ import {
   ChevronDownIcon,
   ChevronRightIcon,
   VideoIcon,
-  FileTextIcon,
-  UsersIcon,
-  SettingsIcon
+  FileTextIcon
 } from 'lucide-react'
 
 interface FAQ {

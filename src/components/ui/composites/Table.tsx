@@ -55,17 +55,17 @@ const cellVariants = cva(
   }
 );
 
-interface TableColumn<T = any> {
+interface TableColumn<T = Record<string, unknown>> {
   key: string;
   header: string;
   width?: string;
   align?: 'left' | 'center' | 'right';
   sortable?: boolean;
-  render?: (value: any, row: T) => React.ReactNode;
+  render?: (value: unknown, row: T) => React.ReactNode;
   mobileHidden?: boolean;
 }
 
-interface TableProps<T = any> extends VariantProps<typeof tableVariants> {
+interface TableProps<T = Record<string, unknown>> extends VariantProps<typeof tableVariants> {
   columns: TableColumn<T>[];
   data: T[];
   className?: string;
@@ -310,7 +310,7 @@ export const Table = <T extends Record<string, any>>({
   );
 };
 
-const TableSkeleton: React.FC<{ columns: TableColumn[]; rows: number }> = ({ 
+const TableSkeleton: React.FC<{ columns: TableColumn<any>[]; rows: number }> = ({ 
   columns, 
   rows 
 }) => (
@@ -374,7 +374,7 @@ export const TableDemo: React.FC = () => {
             'bg-red-900 text-red-100': value === 'Inactive'
           }
         )}>
-          {value}
+          {String(value)}
         </span>
       )
     },

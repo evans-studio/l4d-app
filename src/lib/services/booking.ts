@@ -1,5 +1,5 @@
 import { BaseService, ServiceResponse } from './base'
-import { PricingService } from './pricing'
+import { PricingService, PricingCalculation } from './pricing'
 import { EmailService } from './email'
 import { getUserProfile, getDisplayName } from '@/lib/utils/user-helpers'
 import { 
@@ -8,11 +8,8 @@ import {
   CustomerAddress, 
   CustomerVehicle, 
   TimeSlot,
-  BookingService as BookingServiceType,
   CreateBookingRequest,
-  AvailableTimeSlot,
-  BookingCalendarDay,
-  PricingBreakdown
+  BookingCalendarDay
 } from '@/lib/utils/booking-types'
 
 export interface BookingFilters {
@@ -277,8 +274,17 @@ export class BookingService extends BaseService {
         bookedSlotIds = bookings?.map(booking => booking.time_slot_id).filter(Boolean) || []
       }
 
+      // Available slot interface for calendar
+      interface AvailableSlot {
+        id: string
+        start_time: string
+        end_time: string
+        available: boolean
+        booking_count: number
+      }
+      
       // Group slots by date
-      const slotsByDate: Record<string, any[]> = {}
+      const slotsByDate: Record<string, AvailableSlot[]> = {}
       
       timeSlots?.forEach(slot => {
         const isBooked = bookedSlotIds.includes(slot.id)
@@ -423,7 +429,11 @@ export class BookingService extends BaseService {
 
       const calculations = pricingResult.data
       const totalPrice = calculations.reduce((sum, calc) => sum + calc.totalPrice, 0)
-      const totalDuration = calculations.reduce((sum, calc) => sum + (calc as any).estimatedDuration || 60, 0)
+      const totalDuration = calculations.reduce((sum, calc) => {
+        // Add estimatedDuration property if it exists, otherwise default to 60 minutes
+        const calcWithDuration = calc as PricingCalculation & { estimatedDuration?: number }
+        return sum + (calcWithDuration.estimatedDuration || 60)
+      }, 0)
       const distanceSurcharge = calculations[0]?.distanceSurcharge || 0
       const distanceKm = calculations[0]?.distanceKm || 0
 

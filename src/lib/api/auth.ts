@@ -20,7 +20,7 @@ export interface AuthenticatedRequest {
 
 // Simple auth helper for API routes
 export class ApiAuth {
-  static async authenticate(request: Request) {
+  static async authenticate() {
     try {
       const supabase = await createClient()
       
@@ -73,8 +73,8 @@ export class ApiAuth {
     }
   }
 
-  static async requireRole(request: Request, allowedRoles: string[]) {
-    const { auth, error } = await this.authenticate(request)
+  static async requireRole(allowedRoles: string[]) {
+    const { auth, error } = await this.authenticate()
     
     if (error) {
       return { auth: null, error }

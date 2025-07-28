@@ -1,10 +1,9 @@
-import { NextRequest } from 'next/server'
-import { z, ZodSchema } from 'zod'
+import { ZodSchema } from 'zod'
 import { ApiResponseHandler } from './response'
 
 export class ApiValidation {
   static async validateBody<T>(
-    body: any,
+    body: unknown,
     schema: ZodSchema<T>
   ): Promise<{ success: true; data: T; error: null } | { success: false; data: null; error: Response }> {
     try {
@@ -22,7 +21,7 @@ export class ApiValidation {
       }
       
       return { success: true, data: result.data, error: null }
-    } catch (error) {
+    } catch {
       return {
         success: false,
         data: null,
@@ -50,7 +49,7 @@ export class ApiValidation {
       }
       
       return { success: true, data: result.data, error: null }
-    } catch (error) {
+    } catch {
       return {
         success: false,
         data: null,

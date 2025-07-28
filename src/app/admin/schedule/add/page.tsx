@@ -34,10 +34,6 @@ export default function AddSchedulePage() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
 
-  const today = new Date().toISOString().split('T')[0]
-  const maxDate = new Date()
-  maxDate.setMonth(maxDate.getMonth() + 3)
-  const maxDateStr = maxDate.toISOString().split('T')[0]
 
   const addTimeSlot = () => {
     setTimeSlots([...timeSlots, { start_time: '09:00', end_time: '11:00', is_available: true }])

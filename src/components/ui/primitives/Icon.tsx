@@ -1,7 +1,10 @@
 import React from 'react'
 import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '@/lib/utils'
-import { LucideIcon } from 'lucide-react'
+import { LucideIcon, Loader2 } from 'lucide-react'
+
+// Proper icon component type definition
+type IconComponent = LucideIcon | React.ComponentType<React.SVGAttributes<SVGElement>>
 
 const iconVariants = cva(
   'inline-flex items-center justify-center flex-shrink-0',
@@ -37,7 +40,7 @@ const iconVariants = cva(
 export interface IconProps
   extends Omit<React.SVGAttributes<SVGElement>, 'color'>,
     VariantProps<typeof iconVariants> {
-  icon: LucideIcon | React.ComponentType<any>
+  icon: IconComponent
   'aria-label'?: string
   'aria-hidden'?: boolean
   decorative?: boolean
@@ -106,7 +109,7 @@ const iconButtonVariants = cva(
 export interface IconButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof iconButtonVariants> {
-  icon: LucideIcon | React.ComponentType<any>
+  icon: IconComponent
   'aria-label': string
   loading?: boolean
   tooltip?: string
@@ -146,7 +149,7 @@ const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(
       >
         {loading ? (
           <Icon
-            icon={require('lucide-react').Loader2}
+            icon={Loader2}
             size={iconSize}
             className="animate-spin"
             decorative
@@ -167,7 +170,7 @@ IconButton.displayName = 'IconButton'
 // Icon with Badge Component
 export interface IconWithBadgeProps
   extends React.HTMLAttributes<HTMLDivElement> {
-  icon: LucideIcon | React.ComponentType<any>
+  icon: IconComponent
   badge?: string | number
   badgeColor?: 'primary' | 'secondary' | 'success' | 'warning' | 'error'
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl'
@@ -229,7 +232,7 @@ IconWithBadge.displayName = 'IconWithBadge'
 // Avatar Icon Component
 export interface AvatarIconProps
   extends React.HTMLAttributes<HTMLDivElement> {
-  icon: LucideIcon | React.ComponentType<any>
+  icon: IconComponent
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl'
   variant?: 'circle' | 'square' | 'rounded'
   color?: 'default' | 'primary' | 'secondary' | 'muted' | 'success' | 'warning' | 'error'

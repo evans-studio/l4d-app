@@ -133,7 +133,10 @@ export interface TextProps
   lineClamp?: number
 }
 
-const Text = React.forwardRef<HTMLElement, TextProps>(
+// Polymorphic ref type for Text component
+type TextElement = HTMLElement
+
+const Text = React.forwardRef<any, TextProps>(
   ({ 
     className, 
     size, 
@@ -155,7 +158,7 @@ const Text = React.forwardRef<HTMLElement, TextProps>(
         truncateClasses,
         className
       ),
-      ref: ref as any,
+      ref,
       ...props
     }
     
@@ -349,11 +352,14 @@ export interface CodeProps
   as?: 'code' | 'pre'
 }
 
-const Code = React.forwardRef<HTMLElement, CodeProps>(
+// Polymorphic ref type for Code component
+type CodeElement = HTMLElement
+
+const Code = React.forwardRef<any, CodeProps>(
   ({ className, variant, size, as = 'code', children, ...props }, ref) => {
     const elementProps = {
       className: cn(codeVariants({ variant, size, className })),
-      ref: ref as any,
+      ref,
       ...props
     }
     

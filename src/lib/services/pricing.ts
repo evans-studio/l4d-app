@@ -1,5 +1,4 @@
 import { BaseService, ServiceResponse } from './base'
-import { Service, VehicleSize } from '@/lib/utils/database'
 
 export interface PricingCalculationRequest {
   serviceId: string

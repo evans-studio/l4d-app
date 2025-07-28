@@ -311,18 +311,20 @@ export function useRealTimeAvailability({
     // For now, we'll simulate it with the polling mechanism
     
     const listener = handleAvailabilityUpdate
-    updateListenersRef.current.add(listener)
+    const updateListeners = updateListenersRef.current
+    updateListeners.add(listener)
 
     return () => {
-      updateListenersRef.current.delete(listener)
+      updateListeners.delete(listener)
     }
   }, [handleAvailabilityUpdate, enableRealTimeUpdates])
 
   // Cleanup on unmount
   useEffect(() => {
+    const updateListeners = updateListenersRef.current
     return () => {
       stopPolling()
-      updateListenersRef.current.clear()
+      updateListeners.clear()
     }
   }, [stopPolling])
 
@@ -400,7 +402,7 @@ export function useMultiDateAvailability(dates: string[], pollInterval = 60000) 
     if (dates.length > 0) {
       fetchMultiDateAvailability()
     }
-  }, [fetchMultiDateAvailability])
+  }, [fetchMultiDateAvailability, dates.length])
 
   // Set up polling for multi-date updates
   useEffect(() => {

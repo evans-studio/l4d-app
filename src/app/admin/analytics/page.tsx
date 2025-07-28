@@ -1,23 +1,17 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { AdminLayout } from '@/components/layouts/AdminLayout'
 import { Button } from '@/components/ui/primitives/Button'
 import { 
-  BarChart3Icon,
   TrendingUpIcon,
   TrendingDownIcon,
   DollarSignIcon,
   CalendarIcon,
   UsersIcon,
   MapPinIcon,
-  CarIcon,
-  StarIcon,
-  ClockIcon,
   RefreshCwIcon,
-  DownloadIcon,
-  FilterIcon,
-  EyeIcon
+  DownloadIcon
 } from 'lucide-react'
 
 interface AnalyticsData {
@@ -119,11 +113,7 @@ export default function AdminAnalyticsPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [selectedRange, setSelectedRange] = useState<DateRange>(() => dateRanges[1] || dateRanges[0] || { start: '', end: '', label: '' }) // Default to last 30 days
 
-  useEffect(() => {
-    loadAnalyticsData()
-  }, [selectedRange])
-
-  const loadAnalyticsData = async () => {
+  const loadAnalyticsData = useCallback(async () => {
     try {
       setIsLoading(true)
       const response = await fetch(`/api/admin/analytics?start=${selectedRange.start}&end=${selectedRange.end}`)
@@ -137,7 +127,11 @@ export default function AdminAnalyticsPage() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [selectedRange])
+
+  useEffect(() => {
+    loadAnalyticsData()
+  }, [loadAnalyticsData])
 
   const exportAnalytics = async () => {
     try {

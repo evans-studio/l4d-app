@@ -18,7 +18,7 @@ export async function POST(
 ) {
   const params = await context.params
   try {
-    const { auth, error: authError } = await ApiAuth.requireRole(request, ['admin', 'super_admin'])
+    const { auth, error: authError } = await ApiAuth.requireRole(['admin', 'super_admin'])
     if (authError) {
       return authError
     }

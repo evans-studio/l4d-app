@@ -16,7 +16,6 @@ import {
   XCircleIcon,
   EyeIcon,
   EditIcon,
-  MoreHorizontalIcon,
   BarChart3Icon
 } from 'lucide-react'
 

@@ -41,17 +41,32 @@ export async function GET(request: NextRequest) {
     }
 
     // Transform into matrix format
-    const pricingMatrix: any = {}
-    servicePricing?.forEach(pricing => {
-      if (!pricingMatrix[pricing.service_id]) {
-        pricingMatrix[pricing.service_id] = {}
+    interface PricingMatrix {
+      [serviceId: string]: {
+        [vehicleSizeId: string]: {
+          service_id: string
+          vehicle_size_id: string
+          price: number
+          // Add other pricing properties as needed
+        }
       }
-      pricingMatrix[pricing.service_id][pricing.vehicle_size_id] = {
-        price: pricing.price,
-        profit_margin: pricing.profit_margin || 0,
-        cost_basis: pricing.cost_basis || 0
-      }
-    })
+    }
+    
+    const pricingMatrix: PricingMatrix = {}
+    if (servicePricing && servicePricing.length > 0) {
+      servicePricing.forEach(pricing => {
+        if (pricing && pricing.service_id && pricing.vehicle_size_id) {
+          if (!pricingMatrix[pricing.service_id]) {
+            pricingMatrix[pricing.service_id] = {}
+          }
+          pricingMatrix[pricing.service_id]![pricing.vehicle_size_id] = {
+            service_id: pricing.service_id,
+            vehicle_size_id: pricing.vehicle_size_id,
+            price: pricing.price
+          }
+        }
+      })
+    }
 
     return ApiResponseHandler.success(pricingMatrix)
 

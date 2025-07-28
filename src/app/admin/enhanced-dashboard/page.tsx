@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { AdminLayout } from '@/components/layouts/AdminLayout'
 import { Button } from '@/components/ui/primitives/Button'
@@ -93,7 +93,7 @@ export default function EnhancedAdminDashboard() {
     return () => clearInterval(interval)
   }, [selectedPeriod])
 
-  const loadDashboardData = async () => {
+  const loadDashboardData = useCallback(async () => {
     try {
       const isInitialLoad = !dashboardData
       if (isInitialLoad) {
@@ -171,7 +171,7 @@ export default function EnhancedAdminDashboard() {
       setIsLoading(false)
       setRefreshing(false)
     }
-  }
+  }, [selectedPeriod, dashboardData])
 
   const handleMetricClick = (metric: string) => {
     // Navigate to detailed view based on metric
@@ -190,7 +190,7 @@ export default function EnhancedAdminDashboard() {
     }
   }
 
-  const handleEventClick = (event: any) => {
+  const handleEventClick = (event: { id: string }) => {
     router.push(`/admin/bookings/${event.id}`)
   }
 

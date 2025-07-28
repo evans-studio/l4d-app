@@ -10,8 +10,6 @@ import {
   EditIcon,
   TrashIcon,
   TagIcon,
-  MoveUpIcon,
-  MoveDownIcon,
   AlertCircleIcon,
   CheckCircleIcon,
   XCircleIcon
@@ -234,7 +232,7 @@ function DeleteConfirmationModal({ isOpen, onClose, onConfirm, categoryName, isD
         </div>
 
         <p className="text-[var(--text-secondary)] mb-6">
-          Are you sure you want to delete <strong className="text-[var(--text-primary)]">"{categoryName}"</strong>?
+          Are you sure you want to delete <strong className="text-[var(--text-primary)]">&quot;{categoryName}&quot;</strong>?
           This will permanently remove the category from the system.
         </p>
 

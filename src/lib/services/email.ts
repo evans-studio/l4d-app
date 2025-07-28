@@ -31,7 +31,7 @@ export class EmailService {
     booking: Booking
   ): Promise<{ success: boolean; error?: string }> {
     try {
-      const { data, error } = await resend.emails.send({
+      const { error } = await resend.emails.send({
         from: `${this.config.fromName} <${this.config.fromEmail}>`,
         to: [customerEmail],
         replyTo: this.config.replyToEmail,
@@ -62,7 +62,7 @@ export class EmailService {
     customerName: string
   ): Promise<{ success: boolean; error?: string }> {
     try {
-      const { data, error } = await resend.emails.send({
+      const { error } = await resend.emails.send({
         from: `${this.config.fromName} <${this.config.fromEmail}>`,
         to: [this.config.adminEmail],
         replyTo: customerEmail,
@@ -104,7 +104,7 @@ export class EmailService {
 
       const subject = `Booking Update - ${booking.booking_reference}: ${statusMessages[booking.status as keyof typeof statusMessages] || 'Status Updated'}`
 
-      const { data, error } = await resend.emails.send({
+      const { error } = await resend.emails.send({
         from: `${this.config.fromName} <${this.config.fromEmail}>`,
         to: [customerEmail],
         replyTo: this.config.replyToEmail,

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { AdminLayout } from '@/components/layouts/AdminLayout'
 import { Button } from '@/components/ui/primitives/Button'
 import { 
@@ -46,7 +46,7 @@ export default function AdminSchedulePage() {
     loadScheduleData()
   }, [currentDate])
 
-  const loadScheduleData = async () => {
+  const loadScheduleData = useCallback(async () => {
     try {
       setIsLoading(true)
       
@@ -77,7 +77,7 @@ export default function AdminSchedulePage() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [currentDate])
 
   const getWeekStart = (date: Date) => {
     const start = new Date(date)
@@ -272,7 +272,7 @@ export default function AdminSchedulePage() {
 
           {/* Weekly Calendar Grid */}
           <div className="grid grid-cols-7 gap-4">
-            {getWeekDays().map((date, index) => {
+            {getWeekDays().map((date) => {
               if (!date) return null
               
               const daySlots = getSlotsForDate(date)
