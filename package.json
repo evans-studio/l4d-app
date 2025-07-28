@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "create-admins": "tsx src/lib/scripts/create-admin-users.ts"
+    "create-admins": "tsx src/lib/scripts/create-admin-users.ts",
+    "generate-types": "npx supabase gen types typescript --project-id vwejbgfiddltdqwhfjmt > src/lib/db/database.types.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.0",

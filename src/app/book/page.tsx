@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/primitives/Button';
 import { ResponsiveLogo } from '@/components/ui/primitives/Logo';
 import { Container, Section } from '@/components/layout/templates/PageLayout';
-import { BookingFlowData } from '@/lib/utils/booking-types';
+import { useBookingFlowStore } from '@/lib/store/bookingFlowStore';
 import { BookingStepIndicator } from '@/components/booking/BookingStepIndicator';
 import { ServiceSelection } from '@/components/booking/steps/ServiceSelection';
 import { VehicleDetails } from '@/components/booking/steps/VehicleDetails';
@@ -14,12 +14,11 @@ import { TimeSlotSelection } from '@/components/booking/steps/TimeSlotSelection'
 import { PricingConfirmation } from '@/components/booking/steps/PricingConfirmation';
 import { ArrowLeft, Phone, User, LogIn } from 'lucide-react';
 
-const TOTAL_STEPS = 5;
-
 export default function BookingPage(): React.JSX.Element {
   const router = useRouter();
+  const { currentStep, previousStep } = useBookingFlowStore();
   
-  // Auth state
+  // Auth state (still needed for header display)
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [profile, setProfile] = useState<{ first_name?: string } | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
@@ -49,83 +48,24 @@ export default function BookingPage(): React.JSX.Element {
 
     checkAuth();
   }, []);
-  
-  const [bookingData, setBookingData] = useState<BookingFlowData>({
-    currentStep: 1,
-    totalSteps: TOTAL_STEPS,
-  });
-
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-
-  // The auth state will be passed to individual components
-  // which can use the user profile information as needed
-
-  const updateBookingData = (updates: Partial<BookingFlowData>): void => {
-    setBookingData(prev => ({ ...prev, ...updates }));
-  };
-
-  const nextStep = (): void => {
-    if (bookingData.currentStep < TOTAL_STEPS) {
-      updateBookingData({ currentStep: bookingData.currentStep + 1 });
-    }
-  };
-
-  const prevStep = (): void => {
-    if (bookingData.currentStep > 1) {
-      updateBookingData({ currentStep: bookingData.currentStep - 1 });
-    }
-  };
 
   const renderCurrentStep = (): React.JSX.Element | null => {
-    switch (bookingData.currentStep) {
+    switch (currentStep) {
       case 1:
-        return (
-          <ServiceSelection
-            bookingData={bookingData}
-            updateBookingData={updateBookingData}
-            onNext={nextStep}
-            isLoading={isLoading}
-            setIsLoading={setIsLoading}
-          />
-        );
+        return <ServiceSelection />;
       case 2:
-        return (
-          <VehicleDetails
-            bookingData={bookingData}
-            updateBookingData={updateBookingData}
-            onNext={nextStep}
-            onPrev={prevStep}
-            setIsLoading={setIsLoading}
-          />
-        );
       case 3:
-        return (
-          <AddressCollection
-            bookingData={bookingData}
-            updateBookingData={updateBookingData}
-            onNext={nextStep}
-            onPrev={prevStep}
-            setIsLoading={setIsLoading}
-          />
-        );
       case 4:
-        return (
-          <TimeSlotSelection
-            bookingData={bookingData}
-            updateBookingData={updateBookingData}
-            onNext={nextStep}
-            onPrev={prevStep}
-            isLoading={isLoading}
-            setIsLoading={setIsLoading}
-          />
-        );
       case 5:
         return (
-          <PricingConfirmation
-            bookingData={bookingData}
-            updateBookingData={updateBookingData}
-            onPrev={prevStep}
-          />
+          <div className="text-center p-8">
+            <h2 className="text-2xl font-bold mb-4">Step {currentStep} - Coming Soon</h2>
+            <p className="text-text-secondary mb-6">This step is being updated to use the new store architecture.</p>
+            <Button onClick={previousStep}>
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Go Back
+            </Button>
+          </div>
         );
       default:
         return null;
@@ -206,8 +146,8 @@ export default function BookingPage(): React.JSX.Element {
       <Section background="default" padding="sm">
         <Container>
           <BookingStepIndicator
-            currentStep={bookingData.currentStep}
-            totalSteps={bookingData.totalSteps}
+            currentStep={currentStep}
+            totalSteps={5}
             steps={[
               { label: 'Services', description: 'Choose your services' },
               { label: 'Vehicle', description: 'Vehicle details' },
