@@ -7,7 +7,7 @@ import { ResponsiveLogo } from '@/components/ui/primitives/Logo'
 import { Container } from '@/components/layout/templates/PageLayout'
 import { Mail, CheckCircle, AlertCircle, RefreshCw } from 'lucide-react'
 import Link from 'next/link'
-import { supabase } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase/client'
 
 function VerifyEmailPageContent() {
   const [isLoading, setIsLoading] = useState(true)

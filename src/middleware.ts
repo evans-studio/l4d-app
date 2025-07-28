@@ -18,16 +18,7 @@ export async function middleware(request: NextRequest) {
     '/booking-policies',
     '/brand-showcase',
     '/component-library',
-    '/component-showcase',
-    '/tailwind-test',
-    '/tailwind-verify',
-    '/simple-test',
-    '/simple-tailwind-test',
-    '/debug-tailwind',
-    '/component-test',
-    '/test-api',
-    '/debug-login',
-    '/login-test'
+    '/component-showcase'
   ]
 
   // Skip auth check for public routes and API routes
