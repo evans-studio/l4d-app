@@ -49,8 +49,12 @@ export async function GET(request: NextRequest) {
     try {
       const testUser = {
         id: profile.id,
-        email: profile.email
-      }
+        email: profile.email,
+        app_metadata: {},
+        user_metadata: {},
+        aud: 'authenticated',
+        created_at: new Date().toISOString()
+      } as any
 
       const result = await SessionManager.createSession(testUser, {
         rememberMe: false,
