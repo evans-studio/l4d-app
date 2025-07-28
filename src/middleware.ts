@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/middleware'
 
 export async function middleware(request: NextRequest) {
   const response = NextResponse.next()
@@ -22,7 +22,7 @@ export async function middleware(request: NextRequest) {
   // Simple auth check for protected routes
   if (path.startsWith('/dashboard') || path.startsWith('/admin')) {
     try {
-      const supabase = await createClient()
+      const supabase = createClient(request, response)
       const { data: { session } } = await supabase.auth.getSession()
       
       console.log('Middleware auth check:', {
