@@ -41,7 +41,7 @@ export default function DashboardTestPage() {
           profileActive: profile?.is_active
         })
       } catch (error) {
-        setAuthStatus({ error: error.message })
+        setAuthStatus({ error: error instanceof Error ? error.message : 'Unknown error' })
       } finally {
         setLoading(false)
       }
