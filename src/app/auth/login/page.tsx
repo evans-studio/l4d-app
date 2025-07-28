@@ -24,20 +24,8 @@ function LoginPageContent() {
   const [showPassword, setShowPassword] = useState(false)
   const [isRedirecting, setIsRedirecting] = useState(false)
 
-  // Redirect if already authenticated
-  useEffect(() => {
-    if (!authLoading && user && !isRedirecting) {
-      console.log('User already authenticated, setting redirect flag and redirecting')
-      setIsRedirecting(true)
-      const redirectPath = (profile?.role === 'admin' || profile?.role === 'super_admin') ? '/admin' : '/dashboard'
-      console.log('Redirecting authenticated user to:', redirectPath)
-      
-      // Use setTimeout to ensure state is set before redirect
-      setTimeout(() => {
-        router.replace(redirectPath)
-      }, 100)
-    }
-  }, [user, profile, authLoading, router, isRedirecting])
+  // Let middleware handle authenticated user redirects
+  // Removed client-side redirect logic to avoid conflicts
 
   // Handle success messages from URL params
   useEffect(() => {
@@ -82,16 +70,11 @@ function LoginPageContent() {
         setError('')
         setSuccessMessage('')
         
-        // Redirect to dashboard after successful login
-        console.log('Login successful, setting redirect flag and redirecting')
+        // Login successful - show redirecting state and let auth state change trigger middleware redirect
+        console.log('Login successful, showing redirect state')
         setIsRedirecting(true)
         
-        // Small delay to ensure auth state is updated
-        setTimeout(() => {
-          router.replace('/dashboard')
-        }, 200)
-        
-        // Don't set loading to false - let the redirect happen
+        // Don't manually redirect - let middleware handle it when auth state updates
         return
       }
     } catch (error) {
@@ -111,13 +94,25 @@ function LoginPageContent() {
     )
   }
 
-  // Don't show login form if already authenticated or redirecting
-  if (user || isRedirecting) {
+  // Show redirecting state if user is authenticated (middleware will handle redirect)
+  if (!authLoading && user) {
     return (
       <div className="min-h-screen bg-surface-primary flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin w-8 h-8 border-4 border-brand-600 border-t-transparent rounded-full mx-auto mb-4"></div>
           <p className="text-text-secondary">Redirecting to dashboard...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Show redirecting state while processing login
+  if (isRedirecting) {
+    return (
+      <div className="min-h-screen bg-surface-primary flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin w-8 h-8 border-4 border-brand-600 border-t-transparent rounded-full mx-auto mb-4"></div>
+          <p className="text-text-secondary">Logging you in...</p>
         </div>
       </div>
     )
