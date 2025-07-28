@@ -24,34 +24,45 @@ export class ApiAuth {
     try {
       const supabase = await createClient()
       
-      // Get the current session
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+      // Get the current user - this validates the JWT token
+      const { data: { user }, error: userError } = await supabase.auth.getUser()
       
-      if (sessionError || !session?.user) {
+      if (userError || !user) {
+        console.log('ApiAuth.authenticate() failed:', { error: userError?.message, hasUser: !!user })
         return { 
           auth: null, 
           error: ApiResponseHandler.unauthorized('Authentication required') 
         }
       }
 
-      // Get the user profile
+      // Get the user profile and ensure it's active
       const { data: profile, error: profileError } = await supabase
         .from('user_profiles')
-        .select('*')
-        .eq('id', session.user.id)
+        .select('id, email, first_name, last_name, phone, role, is_active')
+        .eq('id', user.id)
         .single()
 
       if (profileError || !profile) {
+        console.log('ApiAuth.authenticate() profile lookup failed:', { error: profileError?.message, hasProfile: !!profile })
         return { 
           auth: null, 
           error: ApiResponseHandler.unauthorized('User profile not found') 
         }
       }
 
+      // Check if user account is active
+      if (!profile.is_active) {
+        console.log('ApiAuth.authenticate() user account inactive:', { userId: user.id })
+        return { 
+          auth: null, 
+          error: ApiResponseHandler.unauthorized('User account is inactive') 
+        }
+      }
+
       const auth: AuthenticatedRequest = {
         user: {
-          id: session.user.id,
-          email: session.user.email!
+          id: user.id,
+          email: user.email!
         },
         profile: {
           id: profile.id,

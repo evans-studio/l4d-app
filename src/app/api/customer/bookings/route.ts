@@ -6,15 +6,28 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = createClientFromRequest(request)
     
-    // Get current session
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    // Get current user (this also validates the session)
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
     
-    if (sessionError || !session?.user) {
+    if (userError || !user) {
+      console.log('Customer bookings auth error:', userError?.message)
       return ApiResponseHandler.unauthorized('Authentication required')
     }
 
-    const userId = session.user.id
+    const userId = user.id
     console.log('Fetching bookings for user:', userId)
+
+    // Double-check that user profile exists and is active
+    const { data: profile, error: profileError } = await supabase
+      .from('user_profiles')
+      .select('id, is_active')
+      .eq('id', userId)
+      .single()
+
+    if (profileError || !profile?.is_active) {
+      console.log('User profile check failed:', { profileError: profileError?.message, active: profile?.is_active })
+      return ApiResponseHandler.unauthorized('User account not found or inactive')
+    }
 
     // Fetch bookings for the authenticated user
     try {
