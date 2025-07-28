@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/middleware'
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
@@ -25,7 +25,8 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const supabase = await createClient()
+    const response = NextResponse.redirect(new URL(next, request.url))
+    const supabase = createClient(request, response)
     
     // Exchange the code for a session
     const { data: authData, error: authError } = await supabase.auth.exchangeCodeForSession(code)
@@ -76,8 +77,8 @@ export async function GET(request: NextRequest) {
 
     console.log(`Auth callback successful for user ${authData.user.email}`)
     
-    // Redirect to the requested page or dashboard
-    return NextResponse.redirect(new URL(next, request.url))
+    // Return the response with cookies set
+    return response
 
   } catch (error) {
     console.error('Auth callback unexpected error:', error)

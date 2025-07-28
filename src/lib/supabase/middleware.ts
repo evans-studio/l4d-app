@@ -12,7 +12,14 @@ export function createClient(request: NextRequest, response: NextResponse) {
         },
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value, options }) => {
-            response.cookies.set(name, value, options)
+            request.cookies.set(name, value)
+            response.cookies.set(name, value, {
+              ...options,
+              httpOnly: false,
+              secure: true,
+              sameSite: 'lax',
+              path: '/'
+            })
           })
         },
       },
