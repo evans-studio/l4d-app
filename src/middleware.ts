@@ -1,8 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
-import { createClient } from '@/lib/supabase/middleware'
+import { AuthMiddleware } from '@/lib/auth/auth-middleware'
 
 export async function middleware(request: NextRequest) {
-  const response = NextResponse.next()
   const path = request.nextUrl.pathname
 
   // Public routes that don't require authentication
@@ -34,67 +33,86 @@ export async function middleware(request: NextRequest) {
 
   // Skip auth check for public routes
   if (publicRoutes.includes(path)) {
-    return response
+    return NextResponse.next()
   }
 
   // Skip auth check for public API routes
   if (publicApiRoutes.some(route => path.startsWith(route))) {
-    return response
+    return NextResponse.next()
   }
 
-  // For protected routes and API routes, validate the session
-  const supabase = createClient(request, response)
-
-  try {
-    const { data: { session } } = await supabase.auth.getSession()
-
-    // If it's an API route and no valid session, return 401
-    if (path.startsWith('/api/')) {
-      if (!session?.user) {
-        return NextResponse.json(
-          { 
-            success: false, 
-            error: { 
-              message: 'Authentication required', 
-              code: 'UNAUTHORIZED' 
-            },
-            metadata: { timestamp: new Date().toISOString() }
-          }, 
-          { status: 401 }
-        )
-      }
-      
-      return response
-    }
-
-    // For protected pages, redirect to login if no session
-    if (!session?.user) {
-      return NextResponse.redirect(new URL('/auth/login', request.url))
-    }
-
-    return response
-
-  } catch (error) {
-    console.error('Middleware authentication error:', error)
+  // Rate limiting for auth endpoints
+  if (path.startsWith('/api/auth/')) {
+    const clientIP = AuthMiddleware.getClientIP(request)
+    const rateLimit = await AuthMiddleware.checkRateLimit(clientIP, 'api')
     
-    // If it's an API route, return 401
-    if (path.startsWith('/api/')) {
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: { 
-            message: 'Authentication error', 
-            code: 'AUTH_ERROR' 
-          },
-          metadata: { timestamp: new Date().toISOString() }
-        }, 
-        { status: 401 }
+    if (!rateLimit.allowed) {
+      return AuthMiddleware.createRateLimitResponse(rateLimit)
+    }
+  }
+
+  // Enterprise authentication for protected routes
+  const authResult = await AuthMiddleware.authenticate(request)
+
+  // Handle API routes
+  if (path.startsWith('/api/')) {
+    if (!authResult.success) {
+      return AuthMiddleware.createErrorResponse(
+        authResult.error || { message: 'Authentication required', code: 'UNAUTHORIZED' },
+        401
       )
     }
+
+    // Create response with user context
+    const response = NextResponse.next()
     
-    // If it's a page, redirect to login
-    return NextResponse.redirect(new URL('/auth/login', request.url))
+    // Add user context to response headers for API routes to access
+    response.headers.set('x-user-id', authResult.user!.id)
+    response.headers.set('x-user-role', authResult.user!.role)
+    response.headers.set('x-session-id', authResult.session!.id)
+
+    // If we have new tokens from refresh, set them in cookies
+    if (authResult.newTokens) {
+      AuthMiddleware.setAuthCookies(response, {
+        accessToken: authResult.newTokens.accessToken,
+        refreshToken: authResult.newTokens.refreshToken,
+        expiresIn: authResult.newTokens.expiresIn,
+        refreshExpiresIn: 7 * 24 * 60 * 60 // 7 days
+      })
+    }
+
+    return response
   }
+
+  // Handle page routes
+  if (!authResult.success) {
+    // Clear any invalid cookies
+    const response = NextResponse.redirect(new URL('/auth/login', request.url))
+    AuthMiddleware.clearAuthCookies(response)
+    return response
+  }
+
+  // Check role-based access for admin routes
+  if (path.startsWith('/admin/')) {
+    if (!AuthMiddleware.isAdmin(authResult.user!.role)) {
+      return NextResponse.redirect(new URL('/dashboard', request.url))
+    }
+  }
+
+  // Create successful response
+  const response = NextResponse.next()
+
+  // If we have new tokens from refresh, set them in cookies
+  if (authResult.newTokens) {
+    AuthMiddleware.setAuthCookies(response, {
+      accessToken: authResult.newTokens.accessToken,
+      refreshToken: authResult.newTokens.refreshToken,
+      expiresIn: authResult.newTokens.expiresIn,
+      refreshExpiresIn: 7 * 24 * 60 * 60 // 7 days
+    })
+  }
+
+  return response
 }
 
 export const config = {

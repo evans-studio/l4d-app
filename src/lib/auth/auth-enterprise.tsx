@@ -112,12 +112,20 @@ export function EnterpriseAuthProvider({ children }: { children: React.ReactNode
         credentials: 'include'
       })
 
+      if (!response.ok) {
+        console.log('Auth validation failed:', response.status)
+        setUser(null)
+        setSession(null)
+        return
+      }
+
       const data = await response.json()
 
-      if (response.ok && data.success) {
+      if (data.success) {
         setUser(data.data.user)
         setSession(data.data.session)
       } else {
+        console.log('Auth validation unsuccessful:', data.error)
         setUser(null)
         setSession(null)
       }
@@ -134,8 +142,21 @@ export function EnterpriseAuthProvider({ children }: { children: React.ReactNode
   useEffect(() => {
     const initAuth = async () => {
       setIsLoading(true)
-      await refreshAuth()
-      setIsLoading(false)
+      
+      // Add timeout to prevent infinite loading
+      const timeoutId = setTimeout(() => {
+        console.log('Auth initialization timeout')
+        setIsLoading(false)
+        setUser(null)
+        setSession(null)
+      }, 10000) // 10 second timeout
+      
+      try {
+        await refreshAuth()
+      } finally {
+        clearTimeout(timeoutId)
+        setIsLoading(false)
+      }
     }
 
     initAuth()

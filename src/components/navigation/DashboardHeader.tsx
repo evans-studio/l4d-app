@@ -22,7 +22,7 @@ interface DashboardHeaderProps {
 export function DashboardHeader({ onMenuClick, userType }: DashboardHeaderProps) {
   const router = useRouter()
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
-  const { logout } = useAuth()
+  const { user, logout } = useAuth()
 
   const handleLogout = async () => {
     try {
@@ -88,7 +88,7 @@ export function DashboardHeader({ onMenuClick, userType }: DashboardHeaderProps)
               </div>
               <div className="hidden md:block text-left">
                 <p className="text-sm font-medium text-[var(--text-primary)]">
-                  John Doe
+                  {user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : user?.email || 'User'}
                 </p>
                 <p className="text-xs text-[var(--text-muted)]">
                   {userType === 'customer' ? 'Customer' : 'Administrator'}
@@ -104,10 +104,10 @@ export function DashboardHeader({ onMenuClick, userType }: DashboardHeaderProps)
                   {/* User Info */}
                   <div className="px-4 py-3 border-b border-[var(--border-secondary)]">
                     <p className="text-sm font-medium text-[var(--text-primary)]">
-                      John Doe
+                      {user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : user?.email || 'User'}
                     </p>
                     <p className="text-xs text-[var(--text-secondary)]">
-                      john.doe@example.com
+                      {user?.email || ''}
                     </p>
                   </div>
 

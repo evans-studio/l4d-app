@@ -7,16 +7,13 @@ import { Container, Section } from '@/components/layout/templates/PageLayout';
 import { Phone, ArrowRight, Star, CheckCircle, Award, Car, Sparkles, Palette, Shield, Heart, Users, ChevronDown, LogIn, LogOut, User } from 'lucide-react';
 import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/composites/Card';
 import { cn } from '@/lib/utils';
-// TODO: Replace with simple auth
+import { useAuth } from '@/lib/auth/auth-enterprise';
 
 export default function HomePage() {
   const [openFaq, setOpenFaq] = React.useState<number | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
-  // TODO: Replace with simple auth
-  const isAuthenticated = false;
-  const isLoading = false;
-  const profile = null;
-  const logout = () => {};
+  // Enterprise authentication
+  const { user, isLoading, isAuthenticated, logout } = useAuth();
 
   // Close mobile menu when clicking outside
   React.useEffect(() => {
@@ -62,7 +59,7 @@ export default function HomePage() {
                           onClick={() => window.location.href = '/dashboard'}
                           leftIcon={<User className="w-4 h-4" />}
                         >
-                          {(profile as any)?.first_name ? `Hi, ${(profile as any).first_name}` : 'Dashboard'}
+                          {user?.firstName ? `Hi, ${user.firstName}` : 'Dashboard'}
                         </Button>
                         <Button 
                           variant="ghost" 
@@ -158,7 +155,7 @@ export default function HomePage() {
                           }}
                           leftIcon={<User className="w-4 h-4" />}
                         >
-                          {(profile as any)?.first_name ? `Hi, ${(profile as any).first_name}` : 'Dashboard'}
+                          {user?.firstName ? `Hi, ${user.firstName}` : 'Dashboard'}
                         </Button>
                         <Button 
                           variant="ghost" 
