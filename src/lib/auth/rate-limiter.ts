@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { supabaseAdmin } from '@/lib/supabase/direct'
 
 export interface RateLimitResult {
   allowed: boolean
@@ -25,7 +26,8 @@ export class RateLimiter {
     action: keyof typeof this.limits
   ): Promise<RateLimitResult> {
     try {
-      const supabase = await createClient()
+      // Use admin client to bypass RLS for system operations
+      const supabase = supabaseAdmin
       const limit = RateLimiter.limits[action]
 
       // Call the database function to check/update rate limit
@@ -102,7 +104,8 @@ export class RateLimiter {
     action: keyof typeof RateLimiter.limits
   ): Promise<void> {
     try {
-      const supabase = await createClient()
+      // Use admin client to bypass RLS for system operations
+      const supabase = supabaseAdmin
 
       await supabase
         .from('rate_limits')
@@ -123,7 +126,8 @@ export class RateLimiter {
     action: keyof typeof RateLimiter.limits
   ): Promise<RateLimitResult | null> {
     try {
-      const supabase = await createClient()
+      // Use admin client to bypass RLS for system operations
+      const supabase = supabaseAdmin
       const limit = RateLimiter.limits[action]
 
       const { data: rateLimitRecord, error } = await supabase
@@ -179,7 +183,8 @@ export class RateLimiter {
    */
   static async cleanup(): Promise<number> {
     try {
-      const supabase = await createClient()
+      // Use admin client to bypass RLS for system operations
+      const supabase = supabaseAdmin
 
       // Remove records older than 24 hours
       const { data } = await supabase
@@ -212,7 +217,8 @@ export class RateLimiter {
     durationMinutes: number = 60
   ): Promise<void> {
     try {
-      const supabase = await createClient()
+      // Use admin client to bypass RLS for system operations
+      const supabase = supabaseAdmin
       const blockedUntil = new Date(Date.now() + (durationMinutes * 60 * 1000))
       const limit = RateLimiter.limits[action]
 
@@ -239,7 +245,8 @@ export class RateLimiter {
     action: keyof typeof RateLimiter.limits
   ): Promise<void> {
     try {
-      const supabase = await createClient()
+      // Use admin client to bypass RLS for system operations
+      const supabase = supabaseAdmin
 
       await supabase
         .from('rate_limits')
@@ -264,7 +271,8 @@ export class RateLimiter {
     attempts: number
   }>> {
     try {
-      const supabase = await createClient()
+      // Use admin client to bypass RLS for system operations
+      const supabase = supabaseAdmin
       
       let query = supabase
         .from('rate_limits')
