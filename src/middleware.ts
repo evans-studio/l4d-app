@@ -34,6 +34,7 @@ export async function middleware(request: NextRequest) {
     '/api/debug/test-login',
     '/api/admin/cleanup-users',
     '/api/admin/simple-cleanup',
+    '/api/admin/direct-cleanup',
     '/api/auth/enterprise/register'
   ]
 
