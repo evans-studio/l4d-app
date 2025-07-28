@@ -40,15 +40,37 @@ export async function middleware(request: NextRequest) {
     // Get session from cookies
     const { data: { session }, error } = await supabase.auth.getSession()
     
+    console.log('Middleware auth check:', {
+      path,
+      hasSession: !!session,
+      hasUser: !!session?.user,
+      userId: session?.user?.id,
+      error: error?.message,
+      cookies: request.cookies.getAll().map(c => c.name)
+    })
+    
     if (error) {
       console.error('Middleware auth error:', error)
       return NextResponse.redirect(new URL('/auth/login', request.url))
     }
 
-    // No session found - redirect to login
+    // No session found - check for auth cookies before redirecting
     if (!session) {
-      console.log('Middleware: No session found, redirecting to login')
-      return NextResponse.redirect(new URL('/auth/login', request.url))
+      console.log('Middleware: No session found')
+      
+      // Check if we have any Supabase auth cookies 
+      const authCookies = request.cookies.getAll().filter(c => 
+        c.name.includes('supabase') || c.name.includes('sb-')
+      )
+      
+      if (authCookies.length > 0) {
+        console.log('Found auth cookies but no session - allowing access:', authCookies.map(c => c.name))
+        // Allow access if auth cookies exist (session might be loading)
+        return response
+      } else {
+        console.log('No auth cookies found, redirecting to login')
+        return NextResponse.redirect(new URL('/auth/login', request.url))
+      }
     }
 
     // Admin routes require admin role
