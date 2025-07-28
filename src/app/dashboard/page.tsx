@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { useAuth } from '@/lib/auth/AuthContext'
 import { Button } from '@/components/ui/primitives/Button'
 import { CustomerLayout } from '@/components/layout/templates/CustomerLayout'
 import { Container } from '@/components/layout/templates/PageLayout'
@@ -46,12 +47,6 @@ interface DashboardBooking {
   }
 }
 
-interface CustomerProfile {
-  first_name?: string
-  last_name?: string
-  email?: string
-  phone?: string
-}
 
 const statusConfig = {
   pending: {
@@ -93,20 +88,38 @@ const statusConfig = {
 
 export default function DashboardPage() {
   const router = useRouter()
+  const { user, profile: authProfile, isLoading: authLoading } = useAuth()
   const [bookings, setBookings] = useState<DashboardBooking[]>([])
-  const [profile, setProfile] = useState<CustomerProfile | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<'upcoming' | 'completed'>('upcoming')
 
   useEffect(() => {
     const fetchDashboardData = async () => {
+      if (authLoading) {
+        console.log('Auth still loading, waiting...')
+        return
+      }
+      
+      if (!user) {
+        console.log('No user found, skipping data fetch')
+        setIsLoading(false)
+        return
+      }
+
       try {
         // Get current session for authenticated requests
-        const { data: { session } } = await supabase.auth.getSession()
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+        
+        console.log('Dashboard session check:', { 
+          hasSession: !!session, 
+          hasAccessToken: !!session?.access_token,
+          userId: session?.user?.id,
+          sessionError 
+        })
         
         if (!session?.access_token) {
-          console.error('No valid session found')
-          router.push('/auth/login')
+          console.error('No valid session found for dashboard')
+          setIsLoading(false)
           return
         }
 
@@ -129,19 +142,6 @@ export default function DashboardPage() {
           console.error('Failed to fetch bookings:', bookingsResponse.status)
         }
 
-        // Fetch profile
-        const profileResponse = await fetch('/api/customer/profile', {
-          headers: authHeaders
-        })
-        
-        if (profileResponse.ok) {
-          const profileData = await profileResponse.json()
-          if (profileData.success) {
-            setProfile(profileData.data)
-          }
-        } else {
-          console.error('Failed to fetch profile:', profileResponse.status)
-        }
       } catch (error) {
         console.error('Failed to fetch dashboard data:', error)
       } finally {
@@ -150,7 +150,7 @@ export default function DashboardPage() {
     }
 
     fetchDashboardData()
-  }, [])
+  }, [user, authLoading])
 
   const formatTime = (time: string) => {
     const [hours, minutes] = time.split(':')
@@ -180,7 +180,7 @@ export default function DashboardPage() {
 
   const displayBookings = activeTab === 'upcoming' ? upcomingBookings : completedBookings
 
-  if (isLoading) {
+  if (authLoading || isLoading) {
     return (
       <CustomerLayout>
         <Container>
@@ -202,9 +202,9 @@ export default function DashboardPage() {
             <h1 className="text-3xl font-bold text-text-primary">
               My Dashboard
             </h1>
-            {profile && (
+            {authProfile && (
               <p className="text-text-secondary">
-                Welcome back, {profile.first_name || 'Customer'}
+                Welcome back, {authProfile.first_name || 'Customer'}
               </p>
             )}
           </div>
