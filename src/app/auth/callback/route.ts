@@ -63,7 +63,9 @@ export async function GET(request: NextRequest) {
       .single()
 
     if (profileError && profileError.code === 'PGRST116') {
-      // Profile doesn't exist, create one
+      // Profile doesn't exist - this shouldn't happen if the trigger is working
+      // But let's try to create one as fallback
+      console.log('Profile not found, creating manually for user:', authData.user.email)
       
       const { error: createProfileError } = await supabase
         .from('user_profiles')
@@ -73,18 +75,32 @@ export async function GET(request: NextRequest) {
           first_name: authData.user.user_metadata?.first_name || '',
           last_name: authData.user.user_metadata?.last_name || '',
           role: userRole,
-          is_active: true,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
+          is_active: true
         })
 
       if (createProfileError) {
-        console.error('Failed to create user profile:', createProfileError)
-        // Continue anyway - user can still access the app
+        console.error('Failed to create user profile manually:', createProfileError)
+        
+        // If it's a duplicate key error, the trigger probably worked
+        if (createProfileError.code === '23505') {
+          console.log('Profile already exists (created by trigger), continuing...')
+        } else {
+          console.error('Profile creation failed with error:', createProfileError)
+          // Continue anyway - user can still access basic features
+        }
       }
     } else if (profileError) {
       console.error('Error checking user profile:', profileError)
       // Continue anyway - user can still access the app
+    }
+
+    // If we have an existing profile but wrong role, update it for admin users
+    if (profile && ['admin', 'super_admin'].includes(userRole) && profile.role !== userRole) {
+      console.log(`Updating role for ${authData.user.email} from ${profile.role} to ${userRole}`)
+      await supabase
+        .from('user_profiles')
+        .update({ role: userRole })
+        .eq('id', authData.user.id)
     }
 
     console.log(`Auth callback successful for user ${authData.user.email}`)
