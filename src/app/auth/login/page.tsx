@@ -34,11 +34,25 @@ export default function LoginPage() {
     setIsLoading(true)
     setError('')
 
+    // Add timeout protection
+    const timeoutId = setTimeout(() => {
+      console.error('Login timeout after 10 seconds')
+      setError('Login is taking too long. Please check your internet connection and try again.')
+      setIsLoading(false)
+    }, 10000)
+
     try {
+      console.log('Starting login attempt for:', formData.email)
+      
       const { data, error } = await supabase.auth.signInWithPassword({
         email: formData.email,
         password: formData.password
       })
+
+      // Clear timeout since we got a response
+      clearTimeout(timeoutId)
+
+      console.log('Login response received:', { data: !!data, error: !!error })
 
       if (error) {
         console.error('Login error:', error)
@@ -51,6 +65,7 @@ export default function LoginPage() {
         } else {
           setError(error.message)
         }
+        setIsLoading(false)
       } else if (data.user) {
         console.log('Login successful:', {
           userId: data.user.id,
@@ -58,16 +73,20 @@ export default function LoginPage() {
           redirecting: true
         })
         
-        // Add a small delay to ensure session is set
+        // Keep loading state during redirect
         setTimeout(() => {
           console.log('Executing redirect to dashboard')
           window.location.href = '/dashboard'
         }, 500)
+      } else {
+        console.error('No user data received')
+        setError('Login failed. No user data received.')
+        setIsLoading(false)
       }
     } catch (error) {
+      clearTimeout(timeoutId)
       console.error('Login exception:', error)
       setError('Login failed. Please try again.')
-    } finally {
       setIsLoading(false)
     }
   }
