@@ -85,14 +85,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Get initial session
     const getInitialSession = async () => {
       try {
+        console.log('Getting initial session...')
         const { data: { session } } = await supabase.auth.getSession()
+        console.log('Initial session result:', { hasSession: !!session, hasUser: !!session?.user, userEmail: session?.user?.email })
+        
         setUser(session?.user ?? null)
         if (session?.user) {
+          console.log('Initial session: Fetching profile for user:', session.user.email)
           await fetchProfile(session.user.id)
+          console.log('Initial session: Profile fetch completed')
+        } else {
+          console.log('Initial session: No user found')
         }
       } catch (error) {
         console.error('Initial session error:', error)
       } finally {
+        console.log('Initial session: Setting isLoading to false')
         setIsLoading(false)
       }
     }
@@ -102,13 +110,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('Auth state change:', { event, hasSession: !!session, hasUser: !!session?.user, userEmail: session?.user?.email })
+        
         setUser(session?.user ?? null)
         setProfile(null)
         
         if (session?.user) {
+          console.log('Fetching profile for user:', session.user.email)
           await fetchProfile(session.user.id)
+          console.log('Profile fetch completed')
+        } else {
+          console.log('No user in session, skipping profile fetch')
         }
         
+        console.log('Setting isLoading to false')
         setIsLoading(false)
       }
     )

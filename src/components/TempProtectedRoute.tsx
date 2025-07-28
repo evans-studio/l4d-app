@@ -6,36 +6,50 @@ import { useEffect } from 'react'
 export function CustomerRoute({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth()
 
-  useEffect(() => {
-    // Add a delay to prevent race conditions with login redirects
-    const redirectTimer = setTimeout(() => {
-      if (!isLoading && !user) {
-        console.log('CustomerRoute: No user found, redirecting to login')
-        window.location.href = '/auth/login'
-      }
-    }, 1000) // Wait 1 second to allow auth state to update
+  // DEBUG: Log the auth state
+  console.log('CustomerRoute render:', { user: !!user, isLoading, userEmail: user?.email })
 
-    return () => clearTimeout(redirectTimer)
+  useEffect(() => {
+    // Much longer delay to prevent race conditions with login redirects
+    const redirectTimer = setTimeout(() => {
+      console.log('CustomerRoute: Timer fired, checking auth state:', { user: !!user, isLoading })
+      if (!isLoading && !user) {
+        console.log('CustomerRoute: No user found after delay, redirecting to login')
+        window.location.href = '/auth/login'
+      } else {
+        console.log('CustomerRoute: User found or still loading, staying put')
+      }
+    }, 3000) // Wait 3 seconds to allow auth state to update
+
+    return () => {
+      console.log('CustomerRoute: Cleaning up timer')
+      clearTimeout(redirectTimer)
+    }
   }, [user, isLoading])
 
-  // Show loading for longer to allow auth state to stabilize
+  // Show loading for much longer to allow auth state to stabilize
   if (isLoading) {
+    console.log('CustomerRoute: Showing loading (isLoading=true)')
     return (
       <div className="min-h-screen bg-surface-primary flex items-center justify-center">
         <div className="animate-spin w-8 h-8 border-4 border-brand-600 border-t-transparent rounded-full"></div>
+        <p className="ml-4 text-text-secondary">Loading authentication...</p>
       </div>
     )
   }
 
-  // Don't immediately redirect - let the useEffect handle it with delay
+  // Show loading even if no user yet - let the timer handle redirects
   if (!user) {
+    console.log('CustomerRoute: No user but not loading, showing temporary loading state')
     return (
       <div className="min-h-screen bg-surface-primary flex items-center justify-center">
         <div className="animate-spin w-8 h-8 border-4 border-brand-600 border-t-transparent rounded-full"></div>
+        <p className="ml-4 text-text-secondary">Checking authentication...</p>
       </div>
     )
   }
 
+  console.log('CustomerRoute: Rendering children for authenticated user')
   return <>{children}</>
 }
 
