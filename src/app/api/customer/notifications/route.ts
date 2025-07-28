@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClientFromRequest } from '@/lib/supabase/server'
 import { ApiResponseHandler } from '@/lib/api/response'
 import { z } from 'zod'
 
@@ -12,12 +12,12 @@ const notificationSettingsSchema = z.object({
 
 export async function PUT(request: NextRequest) {
   try {
-    const supabase = await createClient()
+    const supabase = createClientFromRequest(request)
     
-    // Get current user
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    // Get current session
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
     
-    if (authError || !user) {
+    if (sessionError || !session?.user) {
       return ApiResponseHandler.unauthorized('Authentication required')
     }
 
@@ -29,11 +29,11 @@ export async function PUT(request: NextRequest) {
     const { data: existingSettings } = await supabase
       .from('user_notification_settings')
       .select('*')
-      .eq('user_id', user.id)
+      .eq('user_id', session.user.id)
       .single()
 
     const settingsData = {
-      user_id: user.id,
+      user_id: session.user.id,
       booking_confirmations: validatedData.bookingConfirmations,
       booking_reminders: validatedData.bookingReminders,
       promotional_emails: validatedData.promotionalEmails,
@@ -46,7 +46,7 @@ export async function PUT(request: NextRequest) {
       const { error: updateError } = await supabase
         .from('user_notification_settings')
         .update(settingsData)
-        .eq('user_id', user.id)
+        .eq('user_id', session.user.id)
 
       if (updateError) {
         console.error('Notification settings update error:', updateError)
@@ -91,12 +91,12 @@ export async function PUT(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient()
+    const supabase = createClientFromRequest(request)
     
-    // Get current user
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    // Get current session
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
     
-    if (authError || !user) {
+    if (sessionError || !session?.user) {
       return ApiResponseHandler.unauthorized('Authentication required')
     }
 
@@ -104,7 +104,7 @@ export async function GET(request: NextRequest) {
     const { data: settings } = await supabase
       .from('user_notification_settings')
       .select('*')
-      .eq('user_id', user.id)
+      .eq('user_id', session.user.id)
       .single()
 
     // Return default settings if none exist

@@ -1,22 +1,7 @@
 import { NextRequest } from 'next/server'
 import { ApiResponseHandler } from '@/lib/api/response'
-import { createClient } from '@supabase/supabase-js'
+import { createClientFromRequest } from '@/lib/supabase/server'
 import { z } from 'zod'
-
-// Force Node.js runtime
-export const runtime = 'nodejs'
-
-// Use service role for server-side operations
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
-  }
-)
 
 const profileUpdateSchema = z.object({
   firstName: z.string().min(1, 'First name is required').max(100),
@@ -27,20 +12,13 @@ const profileUpdateSchema = z.object({
 
 export async function PUT(request: NextRequest) {
   try {
-    // Get auth token from request headers or cookies
-    const authHeader = request.headers.get('authorization')
-    const authToken = authHeader?.replace('Bearer ', '') || 
-                     request.cookies.get('sb-vwejbgfiddltdqwhfjmt-auth-token')?.value
-
-    if (!authToken) {
-      return ApiResponseHandler.error('Authentication required', 'AUTH_REQUIRED', 401)
-    }
-
-    // Verify the token and get user
-    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(authToken)
+    const supabase = createClientFromRequest(request)
     
-    if (userError || !user) {
-      return ApiResponseHandler.error('Invalid authentication', 'AUTH_INVALID', 401)
+    // Get current session
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    
+    if (sessionError || !session?.user) {
+      return ApiResponseHandler.unauthorized('Authentication required')
     }
 
     // Validate request body
@@ -48,12 +26,12 @@ export async function PUT(request: NextRequest) {
     const validatedData = profileUpdateSchema.parse(body)
 
     // Check if email is already taken by another user
-    if (validatedData.email !== user.email) {
-      const { data: existingUser } = await supabaseAdmin
+    if (validatedData.email !== session.user.email) {
+      const { data: existingUser } = await supabase
         .from('user_profiles')
         .select('id')
         .eq('email', validatedData.email.toLowerCase())
-        .neq('id', user.id)
+        .neq('id', session.user.id)
         .single()
 
       if (existingUser) {
@@ -66,7 +44,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // Update user profile
-    const { data: updatedProfile, error: updateError } = await supabaseAdmin
+    const { data: updatedProfile, error: updateError } = await supabase
       .from('user_profiles')
       .update({
         first_name: validatedData.firstName,
@@ -75,7 +53,7 @@ export async function PUT(request: NextRequest) {
         phone: validatedData.phone || null,
         updated_at: new Date().toISOString()
       })
-      .eq('id', user.id)
+      .eq('id', session.user.id)
       .select()
       .single()
 
@@ -84,17 +62,8 @@ export async function PUT(request: NextRequest) {
       return ApiResponseHandler.serverError('Failed to update profile')
     }
 
-    // If email changed, update auth user email too
-    if (validatedData.email !== user.email) {
-      const { error: emailUpdateError } = await supabaseAdmin.auth.admin.updateUserById(user.id, {
-        email: validatedData.email
-      })
-
-      if (emailUpdateError) {
-        console.error('Auth email update error:', emailUpdateError)
-        // Don't fail the request, just log the error
-      }
-    }
+    // Note: Email updates in auth should be handled through proper auth flow
+    // For now, we just update the profile table
 
     return ApiResponseHandler.success({
       profile: {
@@ -124,29 +93,20 @@ export async function PUT(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    // Get auth token from request headers or cookies
-    const authHeader = request.headers.get('authorization')
-    const authToken = authHeader?.replace('Bearer ', '') || 
-                     request.cookies.get('sb-vwejbgfiddltdqwhfjmt-auth-token')?.value
-
-    if (!authToken) {
-      return ApiResponseHandler.error('Authentication required', 'AUTH_REQUIRED', 401)
-    }
-
-    // Verify the token and get user
-    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(authToken)
+    const supabase = createClientFromRequest(request)
     
-    if (userError || !user) {
-      return ApiResponseHandler.error('Invalid authentication', 'AUTH_INVALID', 401)
+    // Get current session
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    
+    if (sessionError || !session?.user) {
+      return ApiResponseHandler.unauthorized('Authentication required')
     }
-
-    const userId = user.id
 
     // Get user profile
-    const { data: profile, error: profileError } = await supabaseAdmin
+    const { data: profile, error: profileError } = await supabase
       .from('user_profiles')
       .select('*')
-      .eq('id', userId)
+      .eq('id', session.user.id)
       .single()
 
     if (profileError || !profile) {
