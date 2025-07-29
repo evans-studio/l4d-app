@@ -19,16 +19,22 @@ export function ProtectedRoute({
   const router = useRouter()
 
   useEffect(() => {
+    console.log('ProtectedRoute check:', { isLoading, isAuthenticated, profile: !!profile })
+    
     if (!isLoading) {
       if (!isAuthenticated) {
+        console.log('Not authenticated, redirecting to:', redirectTo)
         router.push(redirectTo)
         return
       }
 
       if (profile && !allowedRoles.includes(profile.role)) {
+        console.log('Role not allowed, redirecting to dashboard')
         router.push('/dashboard')
         return
       }
+      
+      console.log('Access granted to protected route')
     }
   }, [user, profile, isAuthenticated, isLoading, router, allowedRoles, redirectTo])
 

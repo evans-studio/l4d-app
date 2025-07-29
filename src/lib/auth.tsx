@@ -32,6 +32,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
 
   const isAuthenticated = !!user && !!profile
+  
+  // Debug logging
+  console.log('Auth State:', { 
+    user: !!user, 
+    userEmail: user?.email, 
+    profile: !!profile, 
+    profileRole: profile?.role,
+    isAuthenticated,
+    isLoading 
+  })
 
   const fetchProfile = async (userId: string) => {
     try {
@@ -222,10 +232,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('Auth state change:', event, !!session?.user)
         setUser(session?.user ?? null)
-        setProfile(null)
         
         if (session?.user) {
+          // Don't clear profile immediately to avoid auth state flickering
           const profile = await fetchProfile(session.user.id)
           
           // Handle role-based redirects for login events
@@ -238,6 +249,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               window.location.href = redirectTo
             }
           }
+        } else {
+          // Only clear profile if there's no user
+          setProfile(null)
         }
         
         setIsLoading(false)

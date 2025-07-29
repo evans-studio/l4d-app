@@ -53,8 +53,12 @@ export default function LoginPage() {
         return
       }
 
-      // Login successful, redirect will happen via useEffect
-      router.push('/dashboard')
+      // Login successful - wait a moment for auth state to update, then redirect
+      setTimeout(() => {
+        const redirectTo = '/dashboard' // Default redirect
+        console.log('Redirecting to:', redirectTo)
+        router.push(redirectTo)
+      }, 100)
 
     } catch (error: unknown) {
       console.error('Login exception:', error)
