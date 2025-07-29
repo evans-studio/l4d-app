@@ -29,6 +29,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     profile: state.profile,
     isLoading: state.isLoading,
     isAuthenticated: state.isAuthenticated,
+    error: state.error,
     login: state.login,
     register: state.register,
     logout: state.logout,
@@ -39,7 +40,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     ...authState,
     isAdmin: authState.profile?.role === 'admin' || authState.profile?.role === 'super_admin' || false,
     isCustomer: authState.profile?.role === 'customer' || false,
-    error: useAuthStore((state) => state.error),
   }
 
   return (
