@@ -35,6 +35,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchProfile = async (userId: string) => {
     try {
+      console.log('Fetching profile for user:', userId)
+      
       const { data, error } = await supabase
         .from('user_profiles')
         .select('id, email, first_name, last_name, phone, role')
@@ -46,6 +48,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return null
       }
 
+      console.log('Profile fetched successfully:', data)
       setProfile(data)
       return data
     } catch (error) {
@@ -70,11 +73,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (data.user) {
         setUser(data.user)
-        await fetchProfile(data.user.id)
+        const profile = await fetchProfile(data.user.id)
+        
+        // If profile doesn't exist, create it
+        if (!profile) {
+          const role = ['zell@love4detailing.com', 'paul@evans-studio.co.uk'].includes(email.toLowerCase()) ? 'admin' : 'customer'
+          
+          const { error: createError } = await supabase
+            .from('user_profiles')
+            .insert({
+              id: data.user.id,
+              email: email,
+              first_name: data.user.user_metadata?.first_name || '',
+              last_name: data.user.user_metadata?.last_name || '',
+              phone: data.user.user_metadata?.phone || null,
+              role: role,
+              is_active: true
+            })
+          
+          if (!createError) {
+            await fetchProfile(data.user.id)
+          }
+        }
       }
 
       return { success: true }
     } catch (error) {
+      console.error('Login error:', error)
       return {
         success: false,
         error: 'Network error. Please try again.'
@@ -90,44 +115,72 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     phone?: string
   ): Promise<{ success: boolean; error?: string; redirectTo?: string }> => {
     try {
-      // Use the API route for consistent registration flow
-      const response = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email,
-          password,
-          firstName,
-          lastName,
-          phone
-        })
+      // Use client-side registration to establish session immediately
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            first_name: firstName,
+            last_name: lastName,
+            phone: phone || ''
+          }
+        }
       })
 
-      const result = await response.json()
-
-      if (!result.success) {
+      if (authError) {
         return {
           success: false,
-          error: result.error?.message || 'Registration failed'
+          error: authError.message
         }
       }
 
-      // Registration successful with auto-confirmation
-      // The user is now authenticated, fetch their session
-      const { data: { session } } = await supabase.auth.getSession()
-      
-      if (session?.user) {
-        setUser(session.user)
-        await fetchProfile(session.user.id)
+      if (!authData.user) {
+        return {
+          success: false,
+          error: 'Registration failed. Please try again.'
+        }
       }
 
+      // Determine role based on email
+      const role = ['zell@love4detailing.com', 'paul@evans-studio.co.uk'].includes(email.toLowerCase()) ? 'admin' : 'customer'
+
+      // Create user profile
+      const { error: profileError } = await supabase
+        .from('user_profiles')
+        .insert({
+          id: authData.user.id,
+          email: email,
+          first_name: firstName,
+          last_name: lastName,
+          phone: phone || null,
+          role: role,
+          is_active: true
+        })
+
+      if (profileError) {
+        console.error('Profile creation error:', profileError)
+        // Continue anyway - profile might already exist
+      }
+
+      // If user is confirmed immediately (auto-confirm enabled)
+      if (authData.user.email_confirmed_at) {
+        setUser(authData.user)
+        await fetchProfile(authData.user.id)
+        
+        return {
+          success: true,
+          redirectTo: role === 'admin' ? '/admin' : '/dashboard'
+        }
+      }
+
+      // Email confirmation required
       return {
         success: true,
-        redirectTo: result.data?.redirectTo
+        error: 'Registration successful! Please check your email to verify your account.'
       }
     } catch (error) {
+      console.error('Registration error:', error)
       return {
         success: false,
         error: 'Network error. Please try again.'

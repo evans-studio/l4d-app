@@ -45,8 +45,11 @@ export default function RegisterPage() {
         // Registration complete with auto-login, redirect based on role
         console.log('Registration successful, redirecting to:', result.redirectTo)
         window.location.href = result.redirectTo
+      } else if (result.error) {
+        // Registration successful but needs email confirmation
+        setSuccess(true)
       } else {
-        // Email confirmation required - show success message
+        // Registration successful with no redirect
         setSuccess(true)
       }
 
@@ -219,12 +222,12 @@ export default function RegisterPage() {
                     }}
                     className="w-full pl-12 pr-4 py-3 bg-surface-primary border border-border-secondary rounded-md text-text-primary placeholder-text-muted focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-600/20 transition-colors"
                     placeholder="Create a password"
-                    minLength={6}
+                    minLength={8}
                   />
                   <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 w-4 h-4 text-text-muted" />
                 </div>
                 <p className="text-text-muted text-xs mt-1">
-                  Password must be at least 6 characters long
+                  Password must be at least 8 characters long
                 </p>
               </div>
 
