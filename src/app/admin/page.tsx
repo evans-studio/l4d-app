@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSessionRefresh } from '@/lib/hooks/useSessionRefresh'
 import { Button } from '@/components/ui/primitives/Button'
@@ -18,18 +18,41 @@ import {
   XCircleIcon,
   EyeIcon,
   EditIcon,
+  AlertTriangleIcon,
   BarChart3Icon
 } from 'lucide-react'
 
 interface AdminStats {
-  totalBookings: number
-  pendingBookings: number
-  confirmedBookings: number
-  completedBookings: number
-  totalRevenue: number
-  monthlyRevenue: number
-  totalCustomers: number
-  activeCustomers: number
+  today: {
+    booked: number
+    capacity: number
+    remaining: number
+    utilizationPercent: number
+    bookings: any[]
+  }
+  tomorrow: {
+    booked: number
+    capacity: number
+    remaining: number
+    fullyBooked: boolean
+    utilizationPercent: number
+    bookings: any[]
+  }
+  thisWeek: {
+    booked: number
+    capacity: number
+    utilizationPercent: number
+    revenue: number
+    bookings: any[]
+  }
+  requiresAction: {
+    total: number
+    pending: number
+    toConfirm: number
+    bookings: any[]
+  }
+  // Legacy fields for backward compatibility
+  pendingBookings?: number
 }
 
 interface RecentBooking {
@@ -85,6 +108,283 @@ const statusConfig = {
   }
 }
 
+// Mobile Widget Carousel Component
+interface MobileWidgetCarouselProps {
+  stats: AdminStats
+  router: any
+}
+
+function MobileWidgetCarousel({ stats, router }: MobileWidgetCarouselProps) {
+  const [currentIndex, setCurrentIndex] = useState(0)
+  const [isScrolling, setIsScrolling] = useState(false)
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const touchStartX = useRef<number>(0)
+  const touchEndX = useRef<number>(0)
+
+  // Order widgets by priority: Requiring Action (if > 0), Today, Tomorrow, This Week
+  const getWidgetOrder = () => {
+    const widgets = []
+    
+    // Priority 1: Requiring Action (only if there are items requiring action)
+    if (stats.requiresAction.total > 0) {
+      widgets.push('requiresAction')
+    }
+    
+    // Priority 2: Today's Schedule
+    widgets.push('today')
+    
+    // Priority 3: Tomorrow
+    widgets.push('tomorrow')
+    
+    // Priority 4: This Week
+    widgets.push('thisWeek')
+    
+    return widgets
+  }
+
+  const widgetOrder = getWidgetOrder()
+  const totalWidgets = widgetOrder.length
+
+  const goToSlide = (index: number) => {
+    if (isScrolling) return
+    setCurrentIndex(index)
+    if (scrollRef.current) {
+      const container = scrollRef.current
+      const scrollWidth = container.scrollWidth / totalWidgets
+      container.scrollTo({
+        left: scrollWidth * index,
+        behavior: 'smooth'
+      })
+    }
+  }
+
+  const goToNext = () => {
+    const nextIndex = (currentIndex + 1) % totalWidgets
+    goToSlide(nextIndex)
+  }
+
+  const goToPrev = () => {
+    const prevIndex = currentIndex === 0 ? totalWidgets - 1 : currentIndex - 1
+    goToSlide(prevIndex)
+  }
+
+  // Touch handlers for swipe gestures
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setIsScrolling(true)
+    if (e.touches[0]) {
+      touchStartX.current = e.touches[0].clientX
+    }
+  }
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (e.touches[0]) {
+      touchEndX.current = e.touches[0].clientX
+    }
+  }
+
+  const handleTouchEnd = () => {
+    setIsScrolling(false)
+    const difference = touchStartX.current - touchEndX.current
+    const threshold = 50 // minimum swipe distance
+
+    if (Math.abs(difference) > threshold) {
+      if (difference > 0) {
+        goToNext() // Swipe left - go to next
+      } else {
+        goToPrev() // Swipe right - go to previous
+      }
+    }
+  }
+
+  const renderWidget = (widgetType: string) => {
+    const baseClasses = "bg-surface-secondary rounded-lg border border-border-primary p-6 min-w-full flex-shrink-0 h-48 flex flex-col justify-between"
+    
+    switch (widgetType) {
+      case 'requiresAction':
+        return (
+          <div className={baseClasses}>
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <p className="text-text-secondary text-sm font-medium">Requiring Action</p>
+                <p className="text-3xl font-bold text-text-primary">
+                  {stats.requiresAction.total}
+                </p>
+              </div>
+              <AlertTriangleIcon className="w-10 h-10 text-orange-500" />
+            </div>
+            <div className="space-y-3">
+              <div className="text-sm">
+                <span className="text-orange-600 font-medium">{stats.requiresAction.pending} pending</span>
+              </div>
+              {stats.requiresAction.toConfirm > 0 && (
+                <div className="text-sm">
+                  <span className="text-blue-600 font-medium">{stats.requiresAction.toConfirm} to confirm</span>
+                </div>
+              )}
+              <Button 
+                onClick={() => router.push('/admin/bookings')}
+                variant="primary"
+                size="sm" 
+                className="w-full"
+              >
+                Take Action
+              </Button>
+            </div>
+          </div>
+        )
+
+      case 'today':
+        return (
+          <div className={baseClasses}>
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <p className="text-text-secondary text-sm font-medium">Today's Schedule</p>
+                <p className="text-3xl font-bold text-text-primary">
+                  {stats.today.booked} of {stats.today.capacity}
+                </p>
+              </div>
+              <CalendarIcon className="w-10 h-10 text-brand-purple" />
+            </div>
+            <div className="space-y-3">
+              <div className="text-sm">
+                <span className="text-text-primary font-medium">{stats.today.remaining} remaining</span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-3">
+                <div 
+                  className="bg-brand-purple h-3 rounded-full transition-all duration-300" 
+                  style={{ width: `${stats.today.utilizationPercent}%` }}
+                ></div>
+              </div>
+              <Button 
+                onClick={() => router.push('/admin/schedule')}
+                variant="outline" 
+                size="sm" 
+                className="w-full"
+              >
+                View Schedule
+              </Button>
+            </div>
+          </div>
+        )
+
+      case 'tomorrow':
+        return (
+          <div className={baseClasses}>
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <p className="text-text-secondary text-sm font-medium">Tomorrow</p>
+                <p className="text-3xl font-bold text-text-primary">
+                  {stats.tomorrow.booked} of {stats.tomorrow.capacity}
+                </p>
+              </div>
+              <ClockIcon className="w-10 h-10 text-blue-600" />
+            </div>
+            <div className="space-y-3">
+              {stats.tomorrow.fullyBooked ? (
+                <div className="text-sm">
+                  <span className="text-red-600 font-bold">FULLY BOOKED</span>
+                </div>
+              ) : (
+                <div className="text-sm">
+                  <span className="text-text-primary font-medium">{stats.tomorrow.remaining} remaining</span>
+                </div>
+              )}
+              <div className="w-full bg-gray-200 rounded-full h-3">
+                <div 
+                  className={`h-3 rounded-full transition-all duration-300 ${
+                    stats.tomorrow.fullyBooked ? 'bg-red-500' : 'bg-blue-500'
+                  }`}
+                  style={{ width: `${stats.tomorrow.utilizationPercent}%` }}
+                ></div>
+              </div>
+              <Button 
+                onClick={() => router.push('/admin/schedule')}
+                variant="outline" 
+                size="sm" 
+                className="w-full"
+              >
+                View Day
+              </Button>
+            </div>
+          </div>
+        )
+
+      case 'thisWeek':
+        return (
+          <div className={baseClasses}>
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <p className="text-text-secondary text-sm font-medium">This Week</p>
+                <p className="text-3xl font-bold text-text-primary">
+                  {stats.thisWeek.booked} of {stats.thisWeek.capacity}
+                </p>
+              </div>
+              <TrendingUpIcon className="w-10 h-10 text-green-600" />
+            </div>
+            <div className="space-y-3">
+              <div className="text-sm">
+                <span className="text-green-600 font-medium">£{stats.thisWeek.revenue.toLocaleString()} revenue</span>
+              </div>
+              <div className="text-sm">
+                <span className="text-text-secondary">{stats.thisWeek.utilizationPercent}% utilized</span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-3">
+                <div 
+                  className="bg-green-500 h-3 rounded-full transition-all duration-300" 
+                  style={{ width: `${stats.thisWeek.utilizationPercent}%` }}
+                ></div>
+              </div>
+            </div>
+          </div>
+        )
+
+      default:
+        return null
+    }
+  }
+
+  return (
+    <div className="relative">
+      {/* Swipe hint text */}
+      <div className="text-center mb-4">
+        <p className="text-text-secondary text-xs font-medium">← Swipe between widgets →</p>
+      </div>
+
+      {/* Widget carousel container */}
+      <div 
+        className="flex overflow-x-auto scrollbar-hide snap-x snap-mandatory"
+        ref={scrollRef}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+      >
+        {widgetOrder.map((widgetType, index) => (
+          <div key={widgetType} className="snap-center px-2 first:pl-0 last:pr-0">
+            {renderWidget(widgetType)}
+          </div>
+        ))}
+      </div>
+
+      {/* Dot indicators */}
+      <div className="flex justify-center mt-4 space-x-2">
+        {widgetOrder.map((_, index) => (
+          <button
+            key={index}
+            onClick={() => goToSlide(index)}
+            className={`w-2 h-2 rounded-full transition-all duration-200 ${
+              index === currentIndex 
+                ? 'bg-brand-purple w-6' 
+                : 'bg-gray-300 hover:bg-gray-400'
+            }`}
+            aria-label={`Go to widget ${index + 1}`}
+          />
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function AdminDashboard() {
   const router = useRouter()
   const { refreshSession, isRefreshing } = useSessionRefresh()
@@ -92,6 +392,26 @@ function AdminDashboard() {
   const [recentBookings, setRecentBookings] = useState<RecentBooking[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
+
+  // Add scrollbar hiding styles to document head
+  useEffect(() => {
+    const style = document.createElement('style')
+    style.textContent = `
+      .scrollbar-hide {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+      .scrollbar-hide::-webkit-scrollbar {
+        display: none;
+      }
+    `
+    document.head.appendChild(style)
+    return () => {
+      if (document.head.contains(style)) {
+        document.head.removeChild(style)
+      }
+    }
+  }, [])
 
   useEffect(() => {
     loadDashboardData()
@@ -261,64 +581,150 @@ function AdminDashboard() {
           </div>
         )}
 
-        {/* Stats Cards - Mobile First Responsive */}
+        {/* Operational Dashboard Widgets - Mobile-First Swipeable with Desktop Grid */}
         {stats && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-            <div className="bg-surface-secondary rounded-lg border border-border-primary p-4 sm:p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-text-secondary text-xs sm:text-sm font-medium">Total Bookings</p>
-                  <p className="text-xl sm:text-2xl font-bold text-text-primary">{stats.totalBookings}</p>
-                </div>
-                <CalendarIcon className="w-6 h-6 sm:w-8 sm:h-8 text-brand-purple" />
-              </div>
-              <div className="mt-3 sm:mt-4 flex items-center text-xs sm:text-sm">
-                <span className="text-yellow-600 font-medium">{stats.pendingBookings} pending</span>
-              </div>
+          <>
+            {/* Mobile Swipeable Widgets - Only visible on mobile */}
+            <div className="block sm:hidden">
+              <MobileWidgetCarousel stats={stats} router={router} />
             </div>
 
-            <div className="bg-surface-secondary rounded-lg border border-border-primary p-4 sm:p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-text-secondary text-xs sm:text-sm font-medium">Monthly Revenue</p>
-                  <p className="text-xl sm:text-2xl font-bold text-text-primary">£{stats.monthlyRevenue.toLocaleString()}</p>
+            {/* Desktop Grid Layout - Hidden on mobile */}
+            <div className="hidden sm:grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+              {/* Requiring Action Widget - Priority #1 */}
+              <div className="bg-surface-secondary rounded-lg border border-border-primary p-4 lg:p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <p className="text-text-secondary text-sm font-medium">Requiring Action</p>
+                    <p className="text-2xl font-bold text-text-primary">
+                      {stats.requiresAction.total}
+                    </p>
+                  </div>
+                  <AlertTriangleIcon className="w-8 h-8 text-orange-500" />
                 </div>
-                <DollarSignIcon className="w-6 h-6 sm:w-8 sm:h-8 text-green-600" />
+                <div className="space-y-2">
+                  <div className="text-sm">
+                    <span className="text-orange-600 font-medium">{stats.requiresAction.pending} pending</span>
+                  </div>
+                  {stats.requiresAction.toConfirm > 0 && (
+                    <div className="text-sm">
+                      <span className="text-blue-600 font-medium">{stats.requiresAction.toConfirm} to confirm</span>
+                    </div>
+                  )}
+                  <Button 
+                    onClick={() => router.push('/admin/bookings')}
+                    variant={stats.requiresAction.total > 0 ? "primary" : "outline"} 
+                    size="sm" 
+                    className="w-full text-xs"
+                  >
+                    Take Action
+                  </Button>
+                </div>
               </div>
-              <div className="mt-3 sm:mt-4 flex items-center text-xs sm:text-sm">
-                <span className="text-text-secondary">£{stats.totalRevenue.toLocaleString()} total</span>
-              </div>
-            </div>
 
-            <div className="bg-surface-secondary rounded-lg border border-border-primary p-4 sm:p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-text-secondary text-xs sm:text-sm font-medium">Active Customers</p>
-                  <p className="text-xl sm:text-2xl font-bold text-text-primary">{stats.activeCustomers}</p>
+              {/* Today's Schedule Widget - Priority #2 */}
+              <div className="bg-surface-secondary rounded-lg border border-border-primary p-4 lg:p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <p className="text-text-secondary text-sm font-medium">Today's Schedule</p>
+                    <p className="text-2xl font-bold text-text-primary">
+                      {stats.today.booked} of {stats.today.capacity}
+                    </p>
+                  </div>
+                  <CalendarIcon className="w-8 h-8 text-brand-purple" />
                 </div>
-                <UsersIcon className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600" />
+                <div className="space-y-2">
+                  <div className="text-sm">
+                    <span className="text-text-primary font-medium">{stats.today.remaining} remaining</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div 
+                      className="bg-brand-purple h-2 rounded-full transition-all duration-300" 
+                      style={{ width: `${stats.today.utilizationPercent}%` }}
+                    ></div>
+                  </div>
+                  <Button 
+                    onClick={() => router.push('/admin/schedule')}
+                    variant="outline" 
+                    size="sm" 
+                    className="w-full text-xs"
+                  >
+                    View Schedule
+                  </Button>
+                </div>
               </div>
-              <div className="mt-3 sm:mt-4 flex items-center text-xs sm:text-sm">
-                <span className="text-text-secondary">{stats.totalCustomers} total</span>
-              </div>
-            </div>
 
-            <div className="bg-surface-secondary rounded-lg border border-border-primary p-4 sm:p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-text-secondary text-xs sm:text-sm font-medium">Completed</p>
-                  <p className="text-xl sm:text-2xl font-bold text-text-primary">{stats.completedBookings}</p>
+              {/* Tomorrow Widget - Priority #3 */}
+              <div className="bg-surface-secondary rounded-lg border border-border-primary p-4 lg:p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <p className="text-text-secondary text-sm font-medium">Tomorrow</p>
+                    <p className="text-2xl font-bold text-text-primary">
+                      {stats.tomorrow.booked} of {stats.tomorrow.capacity}
+                    </p>
+                  </div>
+                  <ClockIcon className="w-8 h-8 text-blue-600" />
                 </div>
-                <TrendingUpIcon className="w-6 h-6 sm:w-8 sm:h-8 text-brand-purple" />
+                <div className="space-y-2">
+                  {stats.tomorrow.fullyBooked ? (
+                    <div className="text-sm">
+                      <span className="text-red-600 font-bold">FULLY BOOKED</span>
+                    </div>
+                  ) : (
+                    <div className="text-sm">
+                      <span className="text-text-primary font-medium">{stats.tomorrow.remaining} remaining</span>
+                    </div>
+                  )}
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div 
+                      className={`h-2 rounded-full transition-all duration-300 ${
+                        stats.tomorrow.fullyBooked ? 'bg-red-500' : 'bg-blue-500'
+                      }`}
+                      style={{ width: `${stats.tomorrow.utilizationPercent}%` }}
+                    ></div>
+                  </div>
+                  <Button 
+                    onClick={() => router.push('/admin/schedule')}
+                    variant="outline" 
+                    size="sm" 
+                    className="w-full text-xs"
+                  >
+                    View Day
+                  </Button>
+                </div>
               </div>
-              <div className="mt-3 sm:mt-4 flex items-center text-xs sm:text-sm">
-                <span className="text-green-600 font-medium">{stats.confirmedBookings} confirmed</span>
+
+              {/* This Week Widget - Priority #4 */}
+              <div className="bg-surface-secondary rounded-lg border border-border-primary p-4 lg:p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <p className="text-text-secondary text-sm font-medium">This Week</p>
+                    <p className="text-2xl font-bold text-text-primary">
+                      {stats.thisWeek.booked} of {stats.thisWeek.capacity}
+                    </p>
+                  </div>
+                  <TrendingUpIcon className="w-8 h-8 text-green-600" />
+                </div>
+                <div className="space-y-2">
+                  <div className="text-sm">
+                    <span className="text-green-600 font-medium">£{stats.thisWeek.revenue.toLocaleString()} revenue</span>
+                  </div>
+                  <div className="text-sm">
+                    <span className="text-text-secondary">{stats.thisWeek.utilizationPercent}% utilized</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div 
+                      className="bg-green-500 h-2 rounded-full transition-all duration-300" 
+                      style={{ width: `${stats.thisWeek.utilizationPercent}%` }}
+                    ></div>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
+          </>
         )}
 
-        {/* Recent Bookings - Mobile First Responsive */}
+        {/* Recent Bookings - Fully Responsive */}
         <div className="bg-surface-secondary rounded-lg border border-border-primary">
           <div className="px-4 sm:px-6 py-4 border-b border-border-secondary">
             <div className="flex flex-col space-y-3 sm:flex-row sm:justify-between sm:items-center sm:space-y-0">
@@ -589,8 +995,8 @@ function AdminDashboard() {
           </div>
         </div>
 
-        {/* Quick Actions - Mobile First Responsive */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+        {/* Quick Actions - Fully Responsive */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           <div className="bg-surface-secondary rounded-lg border border-border-primary p-4 sm:p-6">
             <h3 className="text-lg font-semibold text-text-primary mb-4">Quick Actions</h3>
             <div className="space-y-3">
@@ -636,12 +1042,12 @@ function AdminDashboard() {
           <div className="bg-surface-secondary rounded-lg border border-border-primary p-4 sm:p-6">
             <h3 className="text-lg font-semibold text-text-primary mb-4">Alerts</h3>
             <div className="space-y-3">
-              {stats && stats.pendingBookings > 0 && (
+              {stats && stats.requiresAction.pending > 0 && (
                 <div className="flex items-start p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
                   <AlertCircleIcon className="w-5 h-5 text-yellow-600 mr-3 flex-shrink-0 mt-0.5" />
                   <div>
                     <p className="text-sm font-medium text-yellow-800">
-                      {stats.pendingBookings} booking{stats.pendingBookings > 1 ? 's' : ''} pending confirmation
+                      {stats.requiresAction.pending} booking{stats.requiresAction.pending > 1 ? 's' : ''} pending confirmation
                     </p>
                   </div>
                 </div>

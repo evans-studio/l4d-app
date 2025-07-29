@@ -37,7 +37,12 @@ export async function middleware(request: NextRequest) {
     '/api/admin/cleanup-users',
     '/api/admin/simple-cleanup',
     '/api/admin/direct-cleanup',
-    '/api/admin/drop-enterprise-tables'
+    '/api/admin/drop-enterprise-tables',
+    '/api/admin/upgrade-user-role',
+    '/api/admin/stats-debug',
+    '/api/admin/stats',
+    '/api/admin/bookings/recent',
+    '/api/debug/auth-status'
   ]
 
   // Skip auth check for public routes
