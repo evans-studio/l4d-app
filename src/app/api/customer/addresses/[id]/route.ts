@@ -1,0 +1,254 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { createClientFromRequest } from '@/lib/supabase/server'
+
+export async function PUT(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  try {
+    const supabase = createClientFromRequest(request)
+    
+    // Get current user
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    
+    if (userError || !user) {
+      return NextResponse.json({
+        success: false,
+        error: { message: 'Authentication required', code: 'UNAUTHORIZED' }
+      }, { status: 401 })
+    }
+
+    // Get user profile
+    const { data: profile, error: profileError } = await supabase
+      .from('user_profiles')
+      .select('id, is_active')
+      .eq('id', user.id)
+      .single()
+
+    if (profileError || !profile || profile.is_active === false) {
+      return NextResponse.json({
+        success: false,
+        error: { message: 'User account not found or inactive', code: 'USER_INACTIVE' }
+      }, { status: 401 })
+    }
+
+    const params = await context.params
+    const addressId = params.id
+    const updateData = await request.json()
+
+    // Verify address ownership
+    const { data: existingAddress, error: addressError } = await supabase
+      .from('customer_addresses')
+      .select('id, is_default, postal_code')
+      .eq('id', addressId)
+      .eq('user_id', profile.id)
+      .single()
+
+    if (addressError || !existingAddress) {
+      return NextResponse.json({
+        success: false,
+        error: { message: 'Address not found', code: 'NOT_FOUND' }
+      }, { status: 404 })
+    }
+
+    // Prepare update object
+    const updateObject: any = {}
+    
+    if (updateData.address_line_1) updateObject.address_line_1 = updateData.address_line_1.trim()
+    if (updateData.address_line_2 !== undefined) updateObject.address_line_2 = updateData.address_line_2?.trim() || null
+    if (updateData.city) updateObject.city = updateData.city.trim()
+    if (updateData.county !== undefined) updateObject.county = updateData.county?.trim() || null
+    if (updateData.postal_code) {
+      updateObject.postal_code = updateData.postal_code.trim().toUpperCase()
+      
+      // Recalculate distance if postcode changed
+      if (updateObject.postal_code !== existingAddress.postal_code) {
+        try {
+          const distanceResponse = await fetch(`${request.nextUrl.origin}/api/pricing/distance`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ postcode: updateObject.postal_code })
+          })
+          
+          if (distanceResponse.ok) {
+            const distanceResult = await distanceResponse.json()
+            if (distanceResult.success && distanceResult.data?.distance !== undefined) {
+              updateObject.distance_from_business = distanceResult.data.distance
+            }
+          }
+        } catch (distanceError) {
+          console.error('Distance calculation failed:', distanceError)
+          // Continue without updating distance
+        }
+      }
+    }
+    if (updateData.country !== undefined) updateObject.country = updateData.country?.trim() || 'United Kingdom'
+
+    // Update the address
+    const { data: updatedAddress, error: updateError } = await supabase
+      .from('customer_addresses')
+      .update(updateObject)
+      .eq('id', addressId)
+      .eq('user_id', profile.id)
+      .select(`
+        id,
+        address_line_1,
+        address_line_2,
+        city,
+        county,
+        postal_code,
+        country,
+        distance_from_business,
+        is_primary,
+        is_default
+      `)
+      .single()
+
+    if (updateError) {
+      console.error('Address update error:', updateError)
+      return NextResponse.json({
+        success: false,
+        error: { message: 'Failed to update address', code: 'DATABASE_ERROR' }
+      }, { status: 500 })
+    }
+
+    // Transform the response
+    const transformedAddress = {
+      id: updatedAddress.id,
+      address_line_1: updatedAddress.address_line_1,
+      address_line_2: updatedAddress.address_line_2,
+      city: updatedAddress.city,
+      county: updatedAddress.county,
+      postal_code: updatedAddress.postal_code,
+      country: updatedAddress.country,
+      distance_from_business: updatedAddress.distance_from_business,
+      is_primary: updatedAddress.is_primary,
+      is_default: updatedAddress.is_default
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: transformedAddress
+    })
+
+  } catch (error) {
+    console.error('Update address API error:', error)
+    return NextResponse.json({
+      success: false,
+      error: { message: 'Internal server error', code: 'SERVER_ERROR' }
+    }, { status: 500 })
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  try {
+    const supabase = createClientFromRequest(request)
+    
+    // Get current user
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    
+    if (userError || !user) {
+      return NextResponse.json({
+        success: false,
+        error: { message: 'Authentication required', code: 'UNAUTHORIZED' }
+      }, { status: 401 })
+    }
+
+    // Get user profile
+    const { data: profile, error: profileError } = await supabase
+      .from('user_profiles')
+      .select('id, is_active')
+      .eq('id', user.id)
+      .single()
+
+    if (profileError || !profile || profile.is_active === false) {
+      return NextResponse.json({
+        success: false,
+        error: { message: 'User account not found or inactive', code: 'USER_INACTIVE' }
+      }, { status: 401 })
+    }
+
+    const params = await context.params
+    const addressId = params.id
+
+    // Verify address ownership and check if it's default
+    const { data: existingAddress, error: addressError } = await supabase
+      .from('customer_addresses')
+      .select('id, is_default, is_primary')
+      .eq('id', addressId)
+      .eq('user_id', profile.id)
+      .single()
+
+    if (addressError || !existingAddress) {
+      return NextResponse.json({
+        success: false,
+        error: { message: 'Address not found', code: 'NOT_FOUND' }
+      }, { status: 404 })
+    }
+
+    // Prevent deletion of default address
+    if (existingAddress.is_default) {
+      return NextResponse.json({
+        success: false,
+        error: { message: 'Cannot delete default address', code: 'CANNOT_DELETE_DEFAULT' }
+      }, { status: 400 })
+    }
+
+    // Check if address is used in any bookings
+    const { data: bookings, error: bookingsError } = await supabase
+      .from('bookings')
+      .select('id')
+      .eq('address_id', addressId)
+      .limit(1)
+
+    if (bookingsError) {
+      console.error('Bookings check error:', bookingsError)
+      return NextResponse.json({
+        success: false,
+        error: { message: 'Failed to check address usage', code: 'DATABASE_ERROR' }
+      }, { status: 500 })
+    }
+
+    // If address has bookings, we cannot delete it (referential integrity)
+    if (bookings && bookings.length > 0) {
+      return NextResponse.json({
+        success: false,
+        error: { 
+          message: 'Cannot delete address that has been used in bookings', 
+          code: 'ADDRESS_IN_USE' 
+        }
+      }, { status: 400 })
+
+    }
+
+    // Delete the address (only if no bookings exist)
+    const { error: deleteError } = await supabase
+      .from('customer_addresses')
+      .delete()
+      .eq('id', addressId)
+      .eq('user_id', profile.id)
+
+    if (deleteError) {
+      console.error('Address delete error:', deleteError)
+      return NextResponse.json({
+        success: false,
+        error: { message: 'Failed to delete address', code: 'DATABASE_ERROR' }
+      }, { status: 500 })
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: { id: addressId, deleted: true }
+    })
+
+  } catch (error) {
+    console.error('Delete address API error:', error)
+    return NextResponse.json({
+      success: false,
+      error: { message: 'Internal server error', code: 'SERVER_ERROR' }
+    }, { status: 500 })
+  }
+}

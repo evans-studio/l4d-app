@@ -31,7 +31,7 @@ export async function PUT(
       .eq('id', user.id)
       .single()
 
-    if (profileError || !profile?.is_active) {
+    if (profileError || !profile || profile.is_active === false) {
       return NextResponse.json({
         success: false,
         error: { message: 'User account not found or inactive', code: 'USER_INACTIVE' }

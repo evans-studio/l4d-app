@@ -417,7 +417,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
         estimated_duration: service.duration_minutes,
         
         // Status
-        status: 'pending',
+        status: 'confirmed',
         payment_status: 'pending',
         
         // Notes
