@@ -1,8 +1,36 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { persist, createJSONStorage } from 'zustand/middleware'
 import { User } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase/client'
 import { UserProfile, parseUserProfile } from '@/schemas/auth.schema'
+
+// Custom storage that only works on client side
+const clientOnlyStorage = {
+  getItem: (name: string): string | null => {
+    if (typeof window === 'undefined') return null
+    try {
+      return localStorage.getItem(name)
+    } catch {
+      return null
+    }
+  },
+  setItem: (name: string, value: string): void => {
+    if (typeof window === 'undefined') return
+    try {
+      localStorage.setItem(name, value)
+    } catch {
+      // Ignore errors
+    }
+  },
+  removeItem: (name: string): void => {
+    if (typeof window === 'undefined') return
+    try {
+      localStorage.removeItem(name)
+    } catch {
+      // Ignore errors
+    }
+  }
+}
 
 interface AuthState {
   // State
@@ -349,38 +377,15 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: 'auth-storage',
+      storage: createJSONStorage(() => clientOnlyStorage),
       partialize: (state) => ({
         // Only persist non-sensitive data
         profile: state.profile
-      })
+      }),
+      // Skip hydration to prevent SSR issues
+      skipHydration: true
     }
   )
 )
 
-// Set up auth state listener
-supabase.auth.onAuthStateChange(async (event, session) => {
-  console.log('Auth state change:', event, !!session?.user)
-  
-  const store = useAuthStore.getState()
-  
-  if (session?.user) {
-    store.setUser(session.user)
-    
-    let profile = await store.fetchProfile(session.user.id)
-    
-    if (!profile && session.user.email) {
-      profile = await store.createProfile(
-        session.user.id,
-        session.user.email,
-        session.user.user_metadata?.first_name,
-        session.user.user_metadata?.last_name,
-        session.user.user_metadata?.phone
-      )
-    }
-  } else {
-    store.setUser(null)
-    store.setProfile(null)
-  }
-  
-  store.setLoading(false)
-})
+// Auth state listener setup (moved to client-side initializer)
