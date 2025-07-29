@@ -55,6 +55,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (error) {
         console.error('Error fetching profile:', error)
+        console.error('Profile fetch error details:', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
+        })
+        return null
+      }
+
+      if (!data) {
+        console.error('No profile data returned for user:', userId)
         return null
       }
 
@@ -62,7 +73,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setProfile(data)
       return data
     } catch (error) {
-      console.error('Profile fetch error:', error)
+      console.error('Profile fetch exception:', error)
       return null
     }
   }
@@ -237,7 +248,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         
         if (session?.user) {
           // Don't clear profile immediately to avoid auth state flickering
-          const profile = await fetchProfile(session.user.id)
+          let profile = await fetchProfile(session.user.id)
+          
+          // If profile doesn't exist, create it
+          if (!profile) {
+            console.log('Profile not found, creating new profile for user:', session.user.id)
+            const role = ['zell@love4detailing.com', 'paul@evans-studio.co.uk'].includes(session.user.email?.toLowerCase() || '') ? 'admin' : 'customer'
+            
+            const { error: createError } = await supabase
+              .from('user_profiles')
+              .insert({
+                id: session.user.id,
+                email: session.user.email || '',
+                first_name: session.user.user_metadata?.first_name || '',
+                last_name: session.user.user_metadata?.last_name || '',
+                phone: session.user.user_metadata?.phone || null,
+                role: role,
+                is_active: true
+              })
+            
+            if (createError) {
+              console.error('Failed to create profile:', createError)
+            } else {
+              console.log('Profile created successfully, fetching again...')
+              profile = await fetchProfile(session.user.id)
+            }
+          }
           
           // Handle role-based redirects for login events
           if (event === 'SIGNED_IN' && profile) {
