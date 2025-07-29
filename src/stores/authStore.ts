@@ -79,7 +79,13 @@ export const useAuthStore = create<AuthState>()(
       // Computed getters
       get isAuthenticated() {
         const state = get()
-        return !!state.user && !!state.profile
+        const result = !!state.user && !!state.profile
+        console.log('Zustand isAuthenticated getter:', { 
+          user: !!state.user, 
+          profile: !!state.profile, 
+          result 
+        })
+        return result
       },
       
       get isAdmin() {

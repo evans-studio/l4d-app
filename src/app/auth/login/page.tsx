@@ -55,14 +55,8 @@ export default function LoginPage() {
         return
       }
 
-      // Success - redirect will happen via useEffect when auth state updates
-      // Small delay to allow state to update
-      setTimeout(() => {
-        const redirectTo = isAdmin ? '/admin' : '/dashboard'
-        router.push(redirectTo)
-        setIsLoading(false)
-      }, 100)
-
+      // Login successful - let the useEffect handle the redirect when auth state updates
+      
     } catch (error: unknown) {
       console.error('Login exception:', error)
       setError('Network error. Please try again.')

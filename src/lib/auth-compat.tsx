@@ -41,19 +41,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   // Memoize the value to prevent unnecessary re-renders
-  const value: LegacyAuthContextType = useMemo(() => ({
-    user,
-    profile,
-    isLoading: isHydrated ? isLoading : false,
-    isAuthenticated,
-    error,
-    isAdmin: profile?.role === 'admin' || profile?.role === 'super_admin' || false,
-    isCustomer: profile?.role === 'customer' || false,
-    login,
-    register,
-    logout,
-    refreshProfile,
-  }), [user, profile, isLoading, isAuthenticated, error, login, register, logout, refreshProfile, isHydrated])
+  const value: LegacyAuthContextType = useMemo(() => {
+    // Debug the authentication state
+    const authState = !!user && !!profile
+    console.log('Auth compatibility check:', { 
+      user: !!user, 
+      profile: !!profile, 
+      isAuthenticated: authState,
+      zustandIsAuthenticated: isAuthenticated 
+    })
+    
+    return {
+      user,
+      profile,
+      isLoading: isHydrated ? isLoading : false,
+      isAuthenticated: !!user && !!profile, // Calculate directly instead of relying on Zustand getter
+      error,
+      isAdmin: profile?.role === 'admin' || profile?.role === 'super_admin' || false,
+      isCustomer: profile?.role === 'customer' || false,
+      login,
+      register,
+      logout,
+      refreshProfile,
+    }
+  }, [user, profile, isLoading, isAuthenticated, error, login, register, logout, refreshProfile, isHydrated])
 
   return (
     <LegacyAuthContext.Provider value={value}>
