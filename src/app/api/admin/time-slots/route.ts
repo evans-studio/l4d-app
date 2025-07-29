@@ -158,7 +158,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { slot_date, start_time, duration_minutes = 60, notes, create_multiple = false, end_time } = body
+    const { slot_date, start_time, notes, is_available = true } = body
 
     // Validate required fields
     if (!slot_date || !start_time) {
@@ -184,41 +184,14 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const slotsToCreate = []
-
-    if (create_multiple && end_time) {
-      // Create multiple slots between start_time and end_time
-      const startHour = parseInt(start_time.split(':')[0])
-      const startMinute = parseInt(start_time.split(':')[1])
-      const endHour = parseInt(end_time.split(':')[0])
-      const endMinute = parseInt(end_time.split(':')[1])
-      
-      const startTotalMinutes = startHour * 60 + startMinute
-      const endTotalMinutes = endHour * 60 + endMinute
-      
-      for (let minutes = startTotalMinutes; minutes < endTotalMinutes; minutes += duration_minutes) {
-        const hour = Math.floor(minutes / 60)
-        const minute = minutes % 60
-        const timeStr = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`
-        
-        slotsToCreate.push({
-          slot_date,
-          start_time: timeStr,
-          is_available: true,
-          created_by: user.id,
-          notes
-        })
-      }
-    } else {
-      // Create single slot
-      slotsToCreate.push({
-        slot_date,
-        start_time,
-        is_available: true,
-        created_by: user.id,
-        notes
-      })
-    }
+    // Create single slot
+    const slotsToCreate = [{
+      slot_date,
+      start_time,
+      is_available,
+      created_by: user.id,
+      notes: notes || null
+    }]
 
     // Check for existing slots to avoid duplicates
     const { data: existingSlots } = await supabaseAdmin

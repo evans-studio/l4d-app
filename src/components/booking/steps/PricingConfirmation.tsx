@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useBookingFlowStore, useBookingStep } from '@/lib/store/bookingFlowStore'
 import { Button } from '@/components/ui/primitives/Button'
 import { Card, CardHeader, CardContent } from '@/components/ui/composites/Card'
+import { PasswordSetupModal } from '@/components/auth/PasswordSetupModal'
 import { 
   ChevronLeftIcon, 
   CheckCircleIcon, 
@@ -41,19 +42,29 @@ export function PricingConfirmation() {
     confirmationNumber?: string
     bookingId?: string
     requiresPassword?: boolean
+    passwordSetupToken?: string
   } | null>(null)
+  
+  const [showPasswordModal, setShowPasswordModal] = useState(false)
 
   const handleConfirmBooking = async () => {
     setIsProcessing(true)
     
     try {
       const result = await submitBooking()
-      setBookingResult({
+      const bookingData = {
         success: true,
         confirmationNumber: result.confirmationNumber,
         bookingId: result.bookingId,
-        requiresPassword: result.requiresPassword
-      })
+        requiresPassword: result.requiresPassword,
+        passwordSetupToken: result.passwordSetupToken
+      }
+      setBookingResult(bookingData)
+      
+      // Show password modal immediately if password setup is required
+      if (result.requiresPassword && result.passwordSetupToken) {
+        setShowPasswordModal(true)
+      }
     } catch (error) {
       setBookingResult({
         success: false
@@ -70,6 +81,11 @@ export function PricingConfirmation() {
 
   const handleGoToDashboard = () => {
     router.push('/dashboard')
+  }
+
+  const handlePasswordSetupSuccess = () => {
+    setShowPasswordModal(false)
+    // The modal will handle the redirect to dashboard
   }
 
   const formatTime = (timeString: string) => {
@@ -157,8 +173,8 @@ export function PricingConfirmation() {
             <li>• You&apos;ll receive a confirmation email shortly</li>
             <li>• We&apos;ll send you a reminder 24 hours before your appointment</li>
             <li>• Our team will arrive at your location at the scheduled time</li>
-            {bookingResult.requiresPassword && (
-              <li>• Check your email for your temporary dashboard password</li>
+            {bookingResult.requiresPassword && !showPasswordModal && (
+              <li>• Your account is ready - access your dashboard anytime</li>
             )}
           </ul>
         </div>
@@ -193,6 +209,17 @@ export function PricingConfirmation() {
             </a>
           </div>
         </div>
+
+        {/* Password Setup Modal */}
+        {showPasswordModal && bookingResult.passwordSetupToken && formData.user && (
+          <PasswordSetupModal
+            isOpen={showPasswordModal}
+            onClose={() => setShowPasswordModal(false)}
+            passwordSetupToken={bookingResult.passwordSetupToken}
+            userEmail={formData.user.email}
+            onSuccess={handlePasswordSetupSuccess}
+          />
+        )}
       </div>
     )
   }

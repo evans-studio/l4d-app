@@ -232,12 +232,12 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
 
       {/* Mobile Sidebar */}
       <div className={`
-        fixed inset-y-0 left-0 z-50 w-64 bg-[var(--bg-secondary)] border-r border-[var(--border-primary)] transform transition-transform duration-300 ease-in-out lg:hidden
+        fixed inset-y-0 left-0 z-50 w-64 bg-[var(--bg-secondary)] border-r border-[var(--border-primary)] shadow-xl transform transition-transform duration-300 ease-in-out lg:hidden
         ${isOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
         <div className="flex flex-col h-full">
           {/* Mobile Header */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border-secondary)]">
+          <div className="flex items-center justify-between px-4 py-4 border-b border-[var(--border-secondary)] bg-[var(--bg-secondary)]">
             <div className="flex items-center gap-3">
               <Image
                 src="/logo.png"
@@ -257,7 +257,8 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
             </div>
             <button
               onClick={onClose}
-              className="p-2 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+              className="p-2 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors rounded-lg hover:bg-[var(--surface-hover)] min-h-[44px] min-w-[44px] flex items-center justify-center"
+              aria-label="Close sidebar"
             >
               <XIcon className="w-5 h-5" />
             </button>
@@ -277,7 +278,7 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
                     key={action.name}
                     href={action.href}
                     onClick={onClose}
-                    className="flex items-center gap-3 px-3 py-2 text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] rounded-lg transition-colors"
+                    className="flex items-center gap-3 px-3 py-2.5 text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] rounded-lg transition-colors min-h-[44px]"
                   >
                     <Icon className={`w-4 h-4 ${action.color}`} />
                     <span className="text-sm">{action.name}</span>
@@ -288,7 +289,7 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
           </div>
 
           {/* Mobile Navigation */}
-          <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
+          <nav className="flex-1 px-4 py-4 space-y-2 overflow-y-auto bg-[var(--bg-secondary)]">
             <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-3">
               Management
             </p>
@@ -303,7 +304,7 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
                   href={item.href}
                   onClick={onClose}
                   className={`
-                    group flex items-center justify-between px-3 py-3 rounded-lg transition-all duration-200
+                    group flex items-center justify-between px-3 py-3 rounded-lg transition-all duration-200 min-h-[44px]
                     ${isActive 
                       ? 'bg-[var(--primary)] text-white shadow-lg' 
                       : 'text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]'
@@ -343,11 +344,11 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
           </nav>
 
           {/* Mobile Help & Logout */}
-          <div className="px-4 py-6 border-t border-[var(--border-secondary)] space-y-2">
+          <div className="px-4 py-4 border-t border-[var(--border-secondary)] space-y-2 bg-[var(--bg-secondary)]">
             <Link
               href="/admin/help"
               onClick={onClose}
-              className="flex items-center gap-3 px-3 py-3 text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] rounded-lg transition-colors"
+              className="flex items-center gap-3 px-3 py-3 text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] rounded-lg transition-colors min-h-[44px]"
             >
               <HelpCircleIcon className="w-5 h-5" />
               <span className="text-sm font-medium">Help & Support</span>
@@ -358,7 +359,7 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
                 handleLogout()
                 onClose()
               }}
-              className="w-full flex items-center gap-3 px-3 py-3 text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] rounded-lg transition-colors"
+              className="w-full flex items-center gap-3 px-3 py-3 text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] rounded-lg transition-colors min-h-[44px]"
             >
               <LogOutIcon className="w-5 h-5" />
               <span className="text-sm font-medium">Sign Out</span>

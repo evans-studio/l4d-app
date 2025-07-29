@@ -86,6 +86,39 @@ export class EmailService {
     }
   }
 
+  // Send password setup email to new customers
+  async sendPasswordSetupEmail(
+    customerEmail: string,
+    customerName: string,
+    setupToken: string
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      const setupUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/auth/setup-password?token=${setupToken}&email=${encodeURIComponent(customerEmail)}`
+      
+      const { error } = await resend.emails.send({
+        from: `${this.config.fromName} <${this.config.fromEmail}>`,
+        to: [customerEmail],
+        replyTo: this.config.replyToEmail,
+        subject: 'Complete Your Account Setup - Love 4 Detailing',
+        html: this.generatePasswordSetupHTML(customerName, setupUrl),
+        text: this.generatePasswordSetupText(customerName, setupUrl)
+      })
+
+      if (error) {
+        console.error('Password setup email error:', error)
+        return { success: false, error: error.message }
+      }
+
+      return { success: true }
+    } catch (error) {
+      console.error('Password setup email service error:', error)
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Unknown email error' 
+      }
+    }
+  }
+
   // Send booking status update email
   async sendBookingStatusUpdate(
     customerEmail: string,
@@ -615,6 +648,135 @@ If you have any questions, please contact us at ${this.config.adminEmail}
 
 ---
 Love 4 Detailing - Professional Vehicle Detailing Services
+    `
+  }
+
+  private generatePasswordSetupHTML(customerName: string, setupUrl: string): string {
+    return `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <title>Complete Your Account Setup</title>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: #059669; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
+            .content { background: #f8fafc; padding: 30px; border-radius: 0 0 8px 8px; }
+            .setup-box { background: white; padding: 25px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #059669; text-align: center; }
+            .setup-button { 
+              display: inline-block; 
+              background: #059669; 
+              color: white; 
+              padding: 15px 30px; 
+              text-decoration: none; 
+              border-radius: 6px; 
+              font-weight: bold; 
+              margin: 20px 0;
+            }
+            .setup-button:hover { background: #047857; }
+            .highlight { background: #ecfdf5; padding: 15px; border-radius: 6px; margin: 15px 0; border-left: 4px solid #059669; }
+            .footer { text-align: center; margin-top: 30px; color: #64748b; font-size: 14px; }
+            .warning { background: #fef3c7; padding: 15px; border-radius: 6px; margin: 15px 0; border-left: 4px solid #f59e0b; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>🎉 Welcome to Love 4 Detailing!</h1>
+            <p>Complete your account setup to manage your bookings</p>
+          </div>
+          
+          <div class="content">
+            <p>Dear ${customerName},</p>
+            
+            <p>Thank you for booking with Love 4 Detailing! We've created an account for you to make it easier to:</p>
+            <ul>
+              <li>View your booking history</li>
+              <li>Track your current bookings</li>
+              <li>Save your vehicle and address details</li>
+              <li>Book future services faster</li>
+              <li>Manage your notification preferences</li>
+            </ul>
+            
+            <div class="setup-box">
+              <h3>🔐 Set Up Your Password</h3>
+              <p>To access your account, please set up a secure password by clicking the button below:</p>
+              
+              <a href="${setupUrl}" class="setup-button">Set Up My Password</a>
+              
+              <p style="font-size: 14px; color: #64748b; margin-top: 20px;">
+                This link will expire in 24 hours for security reasons.
+              </p>
+            </div>
+            
+            <div class="highlight">
+              <h4>Your Account Benefits:</h4>
+              <ul>
+                <li><strong>Quick Rebooking:</strong> Your vehicle and address details are saved</li>
+                <li><strong>Booking History:</strong> View all your past and upcoming services</li>
+                <li><strong>Service Reminders:</strong> Get notified about upcoming appointments</li>
+                <li><strong>Exclusive Offers:</strong> Receive member-only promotions</li>
+              </ul>
+            </div>
+            
+            <div class="warning">
+              <h4>⚠️ Important Security Notice</h4>
+              <p>If you didn't create this account or book a service with us, please ignore this email. The account will be automatically removed if not activated within 7 days.</p>
+            </div>
+            
+            <p>If you have any questions about your account or booking, please don't hesitate to contact us at ${this.config.adminEmail}</p>
+            
+            <p>Welcome to the Love 4 Detailing family!</p>
+          </div>
+          
+          <div class="footer">
+            <p>Love 4 Detailing - Professional Vehicle Detailing Services</p>
+            <p>If you can't click the button above, copy and paste this link into your browser:</p>
+            <p style="word-break: break-all; font-size: 12px; color: #64748b;">${setupUrl}</p>
+          </div>
+        </body>
+      </html>
+    `
+  }
+
+  private generatePasswordSetupText(customerName: string, setupUrl: string): string {
+    return `
+WELCOME TO LOVE 4 DETAILING!
+
+Dear ${customerName},
+
+Thank you for booking with Love 4 Detailing! We've created an account for you to make managing your bookings easier.
+
+ACCOUNT BENEFITS:
+- View your booking history
+- Track current bookings  
+- Save vehicle and address details
+- Book future services faster
+- Manage notification preferences
+
+SET UP YOUR PASSWORD:
+To access your account, please set up a secure password by visiting this link:
+${setupUrl}
+
+This link will expire in 24 hours for security reasons.
+
+YOUR ACCOUNT INCLUDES:
+✓ Quick Rebooking - Your details are saved
+✓ Booking History - View all past and upcoming services  
+✓ Service Reminders - Get notified about appointments
+✓ Exclusive Offers - Receive member-only promotions
+
+SECURITY NOTICE:
+If you didn't create this account or book a service with us, please ignore this email. The account will be automatically removed if not activated within 7 days.
+
+If you have any questions, please contact us at ${this.config.adminEmail}
+
+Welcome to the Love 4 Detailing family!
+
+---
+Love 4 Detailing - Professional Vehicle Detailing Services
+
+If you can't click the link above, copy and paste it into your browser:
+${setupUrl}
     `
   }
 }

@@ -77,7 +77,7 @@ export class AuthHandler {
    * Check if user has admin role
    */
   static isAdmin(user: AuthenticatedUser): boolean {
-    return user.role === 'admin'
+    return user.role === 'admin' || user.role === 'super_admin'
   }
 
   /**

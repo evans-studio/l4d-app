@@ -24,12 +24,16 @@ export async function middleware(request: NextRequest) {
   // Public API routes that don't require authentication
   const publicApiRoutes = [
     '/api/services',
+    '/api/vehicle-sizes',
+    '/api/time-slots/availability',
+    '/api/bookings/create',
     '/api/booking/slots',
     '/api/booking/calculate-price',
     '/api/booking/validate-user',
     '/api/booking/create',
     '/api/auth/register',
     '/api/auth/login',
+    '/api/auth/setup-password',
     '/api/admin/cleanup-users',
     '/api/admin/simple-cleanup',
     '/api/admin/direct-cleanup',

@@ -265,15 +265,15 @@ function CustomerDetailContent({ customerId }: { customerId: string }) {
                   <span className="text-text-secondary">Last Booking:</span>
                   <br />
                   <span className="text-text-primary">
-                    {formatDate(bookings[0]?.scheduled_date)}
+                    {bookings[0]?.scheduled_date ? formatDate(bookings[0].scheduled_date) : 'No date'}
                   </span>
                 </div>
                 <div className="text-sm">
                   <span className="text-text-secondary">Status:</span>
                   <br />
-                  <span className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs ${getStatusColor(bookings[0]?.status)}`}>
-                    {getStatusIcon(bookings[0]?.status)}
-                    {bookings[0]?.status}
+                  <span className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs ${getStatusColor(bookings[0]?.status || 'pending')}`}>
+                    {getStatusIcon(bookings[0]?.status || 'pending')}
+                    {bookings[0]?.status || 'pending'}
                   </span>
                 </div>
               </div>
@@ -397,10 +397,11 @@ function CustomerDetailContent({ customerId }: { customerId: string }) {
   )
 }
 
-export default function CustomerDetailPage({ params }: { params: { id: string } }) {
+export default async function CustomerDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   return (
     <AdminRoute>
-      <CustomerDetailContent customerId={params.id} />
+      <CustomerDetailContent customerId={id} />
     </AdminRoute>
   )
 }

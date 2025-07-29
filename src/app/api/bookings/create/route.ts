@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase/direct'
 import { BookingFormData, ApiResponse } from '@/types/booking'
+import { EmailService } from '@/lib/services/email'
 
 // Admin emails that should get admin role
 const ADMIN_EMAILS = [
@@ -11,6 +12,11 @@ const ADMIN_EMAILS = [
 // Generate random password for new users
 function generateRandomPassword(): string {
   return Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8).toUpperCase()
+}
+
+// Generate secure token for password setup
+function generatePasswordSetupToken(): string {
+  return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15) + Date.now().toString(36)
 }
 
 // Calculate distance surcharge based on distance from business
@@ -64,6 +70,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
     let userId: string
     let vehicleId: string
     let addressId: string
+    let isNewCustomer = false
+    let passwordSetupToken: string | null = null
 
     // Step 1: Create or get user
     const { data: existingProfile } = await supabaseAdmin
@@ -86,7 +94,10 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
         })
         .eq('id', userId)
     } else {
-      // Create new auth user first
+      isNewCustomer = true
+      passwordSetupToken = generatePasswordSetupToken()
+      
+      // Create new auth user first (with temp password)
       const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
         email: bookingData.customer.email,
         password: generateRandomPassword(),
@@ -94,7 +105,10 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
           first_name: bookingData.customer.firstName,
           last_name: bookingData.customer.lastName,
           phone: bookingData.customer.phone,
-          role: userRole
+          role: userRole,
+          password_setup_required: true,
+          password_setup_token: passwordSetupToken,
+          password_setup_expires: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24 hours
         },
         email_confirm: true
       })
@@ -107,32 +121,48 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
         }, { status: 500 })
       }
 
-      // Create user profile (database trigger should handle this, but let's be explicit)
-      const { data: newProfile, error: profileError } = await supabaseAdmin
+      // Check if profile already exists (might be created by triggers)
+      const { data: existingProfile } = await supabaseAdmin
         .from('user_profiles')
-        .insert({
-          id: authUser.user.id, // Same ID as auth.users
-          email: bookingData.customer.email,
-          first_name: bookingData.customer.firstName,
-          last_name: bookingData.customer.lastName,
-          phone: bookingData.customer.phone,
-          role: userRole,
-          is_active: true,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
         .select('id')
+        .eq('id', authUser.user.id)
         .single()
 
-      if (profileError || !newProfile) {
-        console.error('Profile creation error:', profileError)
-        return NextResponse.json({
-          success: false,
-          error: { message: 'Failed to create user profile', code: 'PROFILE_CREATION_FAILED' }
-        }, { status: 500 })
-      }
+      if (existingProfile) {
+        // Profile already exists, just use it
+        userId = existingProfile.id
+      } else {
+        // Create user profile
+        const { data: newProfile, error: profileError } = await supabaseAdmin
+          .from('user_profiles')
+          .insert({
+            id: authUser.user.id, // Same ID as auth.users
+            email: bookingData.customer.email,
+            first_name: bookingData.customer.firstName,
+            last_name: bookingData.customer.lastName,
+            phone: bookingData.customer.phone,
+            role: userRole,
+            is_active: true,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          })
+          .select('id')
+          .single()
 
-      userId = newProfile.id
+        if (profileError || !newProfile) {
+          console.error('Profile creation error:', profileError)
+          return NextResponse.json({
+            success: false,
+            error: { 
+              message: `Failed to create user profile: ${profileError?.message || 'Unknown error'}`, 
+              code: 'PROFILE_CREATION_FAILED',
+              details: profileError
+            }
+          }, { status: 500 })
+        }
+
+        userId = newProfile.id
+      }
 
       // Create default notification settings
       await supabaseAdmin
@@ -144,6 +174,16 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
           sms_bookings: false,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
+        })
+
+      // Store password setup token in database for security
+      await supabaseAdmin
+        .from('password_reset_tokens')
+        .insert({
+          user_id: authUser.user.id,
+          token_hash: passwordSetupToken, // In production, this should be hashed
+          expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+          created_at: new Date().toISOString()
         })
     }
 
@@ -223,6 +263,21 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
     const businessLocation = { lat: 51.5074, lng: -0.1278 } // Replace with actual business coordinates
     const customerLocation = await geocodeAddress(bookingData.address)
     const distanceKm = calculateDistance(businessLocation, customerLocation)
+    
+    // Convert country name to 2-letter code if needed
+    const getCountryCode = (countryName: string): string => {
+      const countryMap: Record<string, string> = {
+        'United Kingdom': 'GB',
+        'United States': 'US',
+        'Ireland': 'IE',
+        'France': 'FR',
+        'Germany': 'DE',
+        'Spain': 'ES',
+        'Italy': 'IT',
+        'Netherlands': 'NL'
+      }
+      return countryMap[countryName] || 'GB' // Default to GB
+    }
 
     const { data: existingAddress } = await supabaseAdmin
       .from('customer_addresses')
@@ -242,7 +297,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
         .update({
           address_line_2: bookingData.address.addressLine2,
           county: bookingData.address.county,
-          country: bookingData.address.country,
+          country: getCountryCode(bookingData.address.country || 'United Kingdom'),
           latitude: customerLocation.latitude,
           longitude: customerLocation.longitude,
           distance_from_business: distanceKm,
@@ -260,7 +315,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
           city: bookingData.address.city,
           postal_code: bookingData.address.postalCode,
           county: bookingData.address.county,
-          country: bookingData.address.country,
+          country: getCountryCode(bookingData.address.country || 'United Kingdom'),
           latitude: customerLocation.latitude,
           longitude: customerLocation.longitude,
           distance_from_business: distanceKm,
@@ -274,9 +329,25 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
 
       if (addressError || !newAddress) {
         console.error('Address creation error:', addressError)
+        console.error('Address data attempted:', {
+          user_id: userId,
+          address_line_1: bookingData.address.addressLine1,
+          address_line_2: bookingData.address.addressLine2,
+          city: bookingData.address.city,
+          postal_code: bookingData.address.postalCode,
+          county: bookingData.address.county,
+          country: bookingData.address.country,
+          latitude: customerLocation.latitude,
+          longitude: customerLocation.longitude,
+          distance_from_business: distanceKm
+        })
         return NextResponse.json({
           success: false,
-          error: { message: 'Failed to create address', code: 'ADDRESS_CREATION_FAILED' }
+          error: { 
+            message: `Failed to create address: ${addressError?.message || 'Unknown error'}`, 
+            code: 'ADDRESS_CREATION_FAILED',
+            details: addressError
+          }
         }, { status: 500 })
       }
 
@@ -388,7 +459,11 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
     if (bookingData.timeSlot.slotId) {
       await supabaseAdmin
         .from('time_slots')
-        .update({ is_available: false })
+        .update({ 
+          is_available: false,
+          booking_reference: bookingReference,
+          booking_status: 'pending'
+        })
         .eq('id', bookingData.timeSlot.slotId)
     }
 
@@ -418,8 +493,85 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
         created_at: new Date().toISOString()
       })
 
-    // Step 11: Handle notifications (simplified for now)
-    // TODO: Check user_notification_settings and send confirmation email
+    // Step 11: Send email notifications
+    const emailService = new EmailService()
+    
+    // Check user notification settings
+    const { data: notificationSettings } = await supabaseAdmin
+      .from('user_notification_settings')
+      .select('email_bookings')
+      .eq('user_id', userId)
+      .single()
+    
+    // Create booking object for email template (used for both customer and admin emails)
+    const bookingForEmail = {
+        booking_reference: bookingReference,
+        scheduled_date: bookingData.timeSlot.date,
+        scheduled_start_time: bookingData.timeSlot.startTime,
+        status: 'pending',
+        total_price: totalPrice,
+        base_price: basePrice,
+        vehicle_size_multiplier: sizeMultiplier,
+        distance_surcharge: distanceSurcharge,
+        distance_km: distanceKm,
+        estimated_duration: service.duration_minutes,
+        special_instructions: bookingData.specialRequests,
+        vehicle_details: {
+          make: bookingData.vehicle.make,
+          model: bookingData.vehicle.model,
+          year: bookingData.vehicle.year,
+          color: bookingData.vehicle.color,
+          registration: bookingData.vehicle.licenseNumber
+        },
+        service_address: {
+          address_line_1: bookingData.address.addressLine1,
+          address_line_2: bookingData.address.addressLine2,
+          city: bookingData.address.city,
+          postcode: bookingData.address.postalCode
+        }
+      }
+    
+    // Send customer confirmation email (if enabled)
+    const shouldSendCustomerEmail = notificationSettings?.email_bookings !== false // Default to true if no settings
+    if (shouldSendCustomerEmail) {
+      const customerName = `${bookingData.customer.firstName} ${bookingData.customer.lastName}`
+      
+      try {
+        const customerEmailResult = await emailService.sendBookingConfirmation(
+          bookingData.customer.email,
+          customerName,
+          bookingForEmail as any
+        )
+        
+        if (!customerEmailResult.success) {
+          console.error('Failed to send customer confirmation email:', customerEmailResult.error)
+        } else {
+          console.log('Customer confirmation email sent successfully')
+        }
+      } catch (emailError) {
+        console.error('Error sending customer confirmation email:', emailError)
+      }
+    }
+    
+    // Send admin notification email
+    try {
+      const adminEmailResult = await emailService.sendAdminBookingNotification(
+        bookingForEmail as any,
+        bookingData.customer.email,
+        `${bookingData.customer.firstName} ${bookingData.customer.lastName}`
+      )
+      
+      if (!adminEmailResult.success) {
+        console.error('Failed to send admin notification email:', adminEmailResult.error)
+      } else {
+        console.log('Admin notification email sent successfully')
+      }
+    } catch (emailError) {
+      console.error('Error sending admin notification email:', emailError)
+    }
+
+    // Note: Password setup will be handled via modal/page flow instead of email
+    // The frontend will detect requiresPasswordSetup: true and show setup modal
 
     return NextResponse.json({
       success: true,
@@ -430,7 +582,10 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
         totalPrice: totalPrice,
         pricingBreakdown: pricingBreakdown,
         message: 'Booking created successfully',
-        redirectTo: userRole === 'admin' ? '/admin' : '/dashboard'
+        redirectTo: userRole === 'admin' ? '/admin' : '/dashboard',
+        isNewCustomer: isNewCustomer,
+        requiresPasswordSetup: isNewCustomer && passwordSetupToken !== null,
+        passwordSetupToken: isNewCustomer ? passwordSetupToken : null
       }
     })
 

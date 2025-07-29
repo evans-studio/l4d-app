@@ -189,14 +189,14 @@ export default function DashboardPage() {
     <CustomerRoute>
       <CustomerLayout>
         <Container>
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-text-primary">
+        {/* Header - Mobile First Responsive */}
+        <div className="flex flex-col space-y-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0 mb-6 sm:mb-8">
+          <div className="flex-1">
+            <h1 className="text-2xl sm:text-3xl font-bold text-text-primary mb-1">
               My Dashboard
             </h1>
             {profile && (
-              <p className="text-text-secondary">
+              <p className="text-text-secondary text-sm sm:text-base">
                 Welcome back, {profile.first_name || 'Customer'}
               </p>
             )}
@@ -206,71 +206,75 @@ export default function DashboardPage() {
             variant="primary"
             onClick={() => router.push('/book')}
             leftIcon={<Plus className="w-4 h-4" />}
+            className="w-full sm:w-auto"
           >
-            New Booking
+            <span className="sm:hidden">Book Service</span>
+            <span className="hidden sm:inline">New Booking</span>
           </Button>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-surface-secondary rounded-lg p-6 border border-border-secondary">
+        {/* Stats Cards - Mobile First Responsive */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
+          <div className="bg-surface-secondary rounded-lg p-4 sm:p-6 border border-border-secondary">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-text-secondary text-sm mb-1">Total Bookings</p>
-                <p className="text-2xl font-bold text-text-primary">{bookings.length}</p>
+                <p className="text-text-secondary text-xs sm:text-sm mb-1">Total Bookings</p>
+                <p className="text-xl sm:text-2xl font-bold text-text-primary">{bookings.length}</p>
               </div>
-              <div className="bg-brand-600/10 rounded-lg p-3">
-                <Calendar className="w-6 h-6 text-brand-400" />
+              <div className="bg-brand-600/10 rounded-lg p-2 sm:p-3">
+                <Calendar className="w-5 h-5 sm:w-6 sm:h-6 text-brand-400" />
               </div>
             </div>
           </div>
 
-          <div className="bg-surface-secondary rounded-lg p-6 border border-border-secondary">
+          <div className="bg-surface-secondary rounded-lg p-4 sm:p-6 border border-border-secondary">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-text-secondary text-sm mb-1">Upcoming</p>
-                <p className="text-2xl font-bold text-text-primary">{upcomingBookings.length}</p>
+                <p className="text-text-secondary text-xs sm:text-sm mb-1">Upcoming</p>
+                <p className="text-xl sm:text-2xl font-bold text-text-primary">{upcomingBookings.length}</p>
               </div>
-              <div className="bg-brand-600/10 rounded-lg p-3">
-                <Clock className="w-6 h-6 text-brand-400" />
+              <div className="bg-brand-600/10 rounded-lg p-2 sm:p-3">
+                <Clock className="w-5 h-5 sm:w-6 sm:h-6 text-brand-400" />
               </div>
             </div>
           </div>
 
-          <div className="bg-surface-secondary rounded-lg p-6 border border-border-secondary">
+          <div className="bg-surface-secondary rounded-lg p-4 sm:p-6 border border-border-secondary">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-text-secondary text-sm mb-1">Completed</p>
-                <p className="text-2xl font-bold text-text-primary">{completedBookings.length}</p>
+                <p className="text-text-secondary text-xs sm:text-sm mb-1">Completed</p>
+                <p className="text-xl sm:text-2xl font-bold text-text-primary">{completedBookings.length}</p>
               </div>
-              <div className="bg-brand-600/10 rounded-lg p-3">
-                <CheckCircle className="w-6 h-6 text-brand-400" />
+              <div className="bg-brand-600/10 rounded-lg p-2 sm:p-3">
+                <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6 text-brand-400" />
               </div>
             </div>
           </div>
         </div>
 
-        {/* Tabs */}
-        <div className="flex space-x-1 bg-surface-secondary rounded-lg p-1 mb-8 w-fit">
+        {/* Tabs - Mobile First Responsive */}
+        <div className="flex space-x-1 bg-surface-secondary rounded-lg p-1 mb-6 sm:mb-8 w-full sm:w-fit">
           <button
             onClick={() => setActiveTab('upcoming')}
-            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+            className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-md text-sm font-medium transition-colors ${
               activeTab === 'upcoming'
                 ? 'bg-brand-600 text-white'
                 : 'text-text-secondary hover:text-text-primary'
             }`}
           >
-            Upcoming ({upcomingBookings.length})
+            <span className="sm:hidden">Upcoming</span>
+            <span className="hidden sm:inline">Upcoming ({upcomingBookings.length})</span>
           </button>
           <button
             onClick={() => setActiveTab('completed')}
-            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+            className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-md text-sm font-medium transition-colors ${
               activeTab === 'completed'
                 ? 'bg-brand-600 text-white'
                 : 'text-text-secondary hover:text-text-primary'
             }`}
           >
-            History ({completedBookings.length})
+            <span className="sm:hidden">History</span>
+            <span className="hidden sm:inline">History ({completedBookings.length})</span>
           </button>
         </div>
 
@@ -308,33 +312,36 @@ export default function DashboardPage() {
               return (
                 <div
                   key={booking.id}
-                  className="bg-surface-secondary rounded-lg p-6 border border-border-secondary hover:border-border-primary transition-colors"
+                  className="bg-surface-secondary rounded-lg p-4 sm:p-6 border border-border-secondary hover:border-border-primary transition-colors"
                 >
-                  <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                  {/* Mobile-First Layout */}
+                  <div className="flex flex-col space-y-4 lg:flex-row lg:items-center lg:justify-between lg:space-y-0 lg:gap-6">
                     {/* Main Info */}
                     <div className="flex-1">
+                      {/* Header - Mobile Optimized */}
                       <div className="flex items-start justify-between mb-4">
-                        <div>
-                          <h3 className="text-lg font-semibold text-text-primary mb-1">
-                            Booking #{booking.booking_reference}
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-lg font-semibold text-text-primary mb-2 truncate">
+                            #{booking.booking_reference}
                           </h3>
                           <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm border ${status.bgColor} ${status.borderColor}`}>
                             <StatusIcon className={`w-4 h-4 ${status.color}`} />
                             <span className={status.color}>{status.label}</span>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <p className="text-2xl font-bold text-brand-400">£{booking.total_price}</p>
+                        <div className="text-right ml-3">
+                          <p className="text-xl sm:text-2xl font-bold text-brand-400">£{booking.total_price}</p>
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                        {/* Date & Time */}
-                        <div className="flex items-center gap-3">
-                          <Calendar className="w-5 h-5 text-brand-400" />
-                          <div>
+                      {/* Mobile-First Info Grid */}
+                      <div className="space-y-3 sm:space-y-0 sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:gap-4">
+                        {/* Date & Time - Priority on mobile */}
+                        <div className="flex items-center gap-3 p-3 sm:p-0 bg-surface-tertiary sm:bg-transparent rounded-lg sm:rounded-none">
+                          <Calendar className="w-5 h-5 text-brand-400 flex-shrink-0" />
+                          <div className="min-w-0">
                             <p className="text-text-secondary text-xs">Date & Time</p>
-                            <p className="text-text-primary font-medium">
+                            <p className="text-text-primary font-medium text-sm sm:text-base truncate">
                               {formatDate(booking.scheduled_date)}
                             </p>
                             <p className="text-text-primary text-sm">
@@ -345,10 +352,10 @@ export default function DashboardPage() {
 
                         {/* Vehicle */}
                         <div className="flex items-center gap-3">
-                          <Car className="w-5 h-5 text-brand-400" />
-                          <div>
+                          <Car className="w-5 h-5 text-brand-400 flex-shrink-0" />
+                          <div className="min-w-0">
                             <p className="text-text-secondary text-xs">Vehicle</p>
-                            <p className="text-text-primary font-medium">
+                            <p className="text-text-primary font-medium text-sm sm:text-base truncate">
                               {booking.vehicle.make} {booking.vehicle.model}
                             </p>
                             {booking.vehicle.year && (
@@ -361,10 +368,10 @@ export default function DashboardPage() {
 
                         {/* Location */}
                         <div className="flex items-center gap-3">
-                          <MapPin className="w-5 h-5 text-brand-400" />
-                          <div>
+                          <MapPin className="w-5 h-5 text-brand-400 flex-shrink-0" />
+                          <div className="min-w-0">
                             <p className="text-text-secondary text-xs">Location</p>
-                            <p className="text-text-primary font-medium">
+                            <p className="text-text-primary font-medium text-sm sm:text-base truncate">
                               {booking.address.city}
                             </p>
                             <p className="text-text-secondary text-sm">
@@ -373,34 +380,36 @@ export default function DashboardPage() {
                           </div>
                         </div>
 
-                        {/* Services */}
-                        <div>
-                          <p className="text-text-secondary text-xs mb-1">Services</p>
-                          <div className="space-y-1">
+                        {/* Services - Compact on mobile */}
+                        <div className="sm:col-span-2 lg:col-span-1">
+                          <p className="text-text-secondary text-xs mb-2">Services</p>
+                          <div className="flex flex-wrap gap-1 sm:block sm:space-y-1">
                             {booking.services.slice(0, 2).map((service, index) => (
-                              <p key={index} className="text-text-primary text-sm">
+                              <span key={index} className="inline-block px-2 py-1 bg-surface-tertiary rounded text-xs sm:bg-transparent sm:p-0 sm:text-sm text-text-primary">
                                 {service.name}
-                              </p>
+                              </span>
                             ))}
                             {booking.services.length > 2 && (
-                              <p className="text-text-muted text-xs">
+                              <span className="inline-block px-2 py-1 bg-surface-tertiary rounded text-xs sm:bg-transparent sm:p-0 text-text-muted">
                                 +{booking.services.length - 2} more
-                              </p>
+                              </span>
                             )}
                           </div>
                         </div>
                       </div>
                     </div>
 
-                    {/* Actions */}
-                    <div className="flex flex-row lg:flex-col gap-2">
+                    {/* Actions - Mobile Responsive */}
+                    <div className="flex flex-col sm:flex-row lg:flex-col gap-2 lg:min-w-[140px]">
                       <Button
                         onClick={() => router.push(`/dashboard/bookings/${booking.id}`)}
                         variant="outline"
                         size="sm"
                         leftIcon={<Eye className="w-4 h-4" />}
+                        className="w-full sm:flex-1 lg:w-full"
                       >
-                        View Details
+                        <span className="sm:hidden lg:inline">View Details</span>
+                        <span className="hidden sm:inline lg:hidden">View</span>
                       </Button>
                       
                       {booking.status === 'pending' && (
@@ -409,8 +418,10 @@ export default function DashboardPage() {
                           variant="outline"
                           size="sm"
                           leftIcon={<Edit className="w-4 h-4" />}
+                          className="w-full sm:flex-1 lg:w-full"
                         >
-                          Manage
+                          <span className="sm:hidden lg:inline">Manage</span>
+                          <span className="hidden sm:inline lg:hidden">Edit</span>
                         </Button>
                       )}
                     </div>

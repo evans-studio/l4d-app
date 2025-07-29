@@ -296,69 +296,72 @@ function AdminBookingsContent() {
           }} />
         ) : (
           <>
-            {/* Filters */}
-            <div className="bg-[var(--surface-secondary)] rounded-lg p-6 mb-8 border border-[var(--border-secondary)]">
-              <div className="flex flex-col lg:flex-row gap-4">
+            {/* Filters - Mobile-First Responsive */}
+            <div className="bg-[var(--surface-secondary)] rounded-lg p-4 sm:p-6 mb-8 border border-[var(--border-secondary)]">
+              <div className="flex flex-col space-y-4 lg:flex-row lg:space-y-0 lg:gap-4">
                 {/* Search */}
                 <div className="flex-1">
                   <div className="relative">
                     <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-[var(--text-muted)]" />
                     <input
                       type="text"
-                      placeholder="Search by reference, customer, or vehicle..."
+                      placeholder="Search bookings..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-md text-[var(--input-text)] placeholder-[var(--input-placeholder)] focus:border-[var(--input-border-focus)] focus:outline-none transition-colors"
+                      className="w-full pl-10 pr-4 py-2.5 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-md text-[var(--input-text)] placeholder-[var(--input-placeholder)] focus:border-[var(--input-border-focus)] focus:outline-none transition-colors text-sm"
                     />
                   </div>
                 </div>
 
-                {/* Status Filter */}
-                <div>
-                  <select
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}
-                    className="px-4 py-2 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-md text-[var(--input-text)] focus:border-[var(--input-border-focus)] focus:outline-none transition-colors"
-                  >
-                    <option value="all">All Status</option>
-                    <option value="pending">Pending</option>
-                    <option value="confirmed">Confirmed</option>
-                    <option value="in_progress">In Progress</option>
-                    <option value="completed">Completed</option>
-                    <option value="cancelled">Cancelled</option>
-                  </select>
-                </div>
+                {/* Filters Row - Mobile Responsive */}
+                <div className="flex flex-col sm:flex-row gap-3">
+                  {/* Status Filter */}
+                  <div className="sm:min-w-[140px]">
+                    <select
+                      value={statusFilter}
+                      onChange={(e) => setStatusFilter(e.target.value)}
+                      className="w-full px-3 py-2.5 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-md text-[var(--input-text)] focus:border-[var(--input-border-focus)] focus:outline-none transition-colors text-sm"
+                    >
+                      <option value="all">All Status</option>
+                      <option value="pending">Pending</option>
+                      <option value="confirmed">Confirmed</option>
+                      <option value="in_progress">In Progress</option>
+                      <option value="completed">Completed</option>
+                      <option value="cancelled">Cancelled</option>
+                    </select>
+                  </div>
 
-                {/* Date Filter */}
-                <div>
-                  <select
-                    value={dateFilter}
-                    onChange={(e) => setDateFilter(e.target.value)}
-                    className="px-4 py-2 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-md text-[var(--input-text)] focus:border-[var(--input-border-focus)] focus:outline-none transition-colors"
-                  >
-                    <option value="all">All Dates</option>
-                    <option value="today">Today</option>
-                    <option value="week">This Week</option>
-                    <option value="month">This Month</option>
-                  </select>
+                  {/* Date Filter */}
+                  <div className="sm:min-w-[140px]">
+                    <select
+                      value={dateFilter}
+                      onChange={(e) => setDateFilter(e.target.value)}
+                      className="w-full px-3 py-2.5 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-md text-[var(--input-text)] focus:border-[var(--input-border-focus)] focus:outline-none transition-colors text-sm"
+                    >
+                      <option value="all">All Dates</option>
+                      <option value="today">Today</option>
+                      <option value="week">This Week</option>
+                      <option value="month">This Month</option>
+                    </select>
+                  </div>
                 </div>
               </div>
 
-              {/* Quick Stats */}
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mt-6 pt-4 border-t border-[var(--border-secondary)]">
+              {/* Quick Stats - Mobile Responsive */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 mt-6 pt-4 border-t border-[var(--border-secondary)]">
                 {Object.entries(statusConfig).map(([status, config]) => {
                   const count = bookings.filter(b => b.status === status).length
                   return (
-                    <div key={status} className="text-center">
-                      <p className="text-sm text-[var(--text-secondary)] mb-1">{config.label}</p>
-                      <p className={`text-lg font-bold ${config.color}`}>{count}</p>
+                    <div key={status} className="text-center p-2 sm:p-0">
+                      <p className="text-xs sm:text-sm text-[var(--text-secondary)] mb-1">{config.label}</p>
+                      <p className={`text-lg sm:text-xl font-bold ${config.color}`}>{count}</p>
                     </div>
                   )
                 })}
               </div>
             </div>
 
-            {/* Bookings List */}
+            {/* Bookings List - Mobile-First Responsive */}
             {filteredBookings.length === 0 ? (
               <div className="text-center py-12">
                 <div className="bg-[var(--surface-secondary)] rounded-lg p-8 max-w-md mx-auto">
@@ -372,22 +375,23 @@ function AdminBookingsContent() {
                 </div>
               </div>
             ) : (
-              <div className="space-y-4">
-                {filteredBookings.map((booking) => {
-                  const status = statusConfig[booking.status]
-                  const StatusIcon = status.icon
-                  
-                  return (
-                    <div
-                      key={booking.id}
-                      className="bg-[var(--surface-secondary)] rounded-lg p-6 border border-[var(--border-secondary)] hover:border-[var(--border-primary)] transition-colors"
-                    >
-                      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-                        {/* Main Info */}
-                        <div className="flex-1">
-                          <div className="flex items-start justify-between mb-4">
-                            <div>
-                              <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-1">
+              <>
+                {/* Mobile View - Card Layout */}
+                <div className="lg:hidden space-y-4">
+                  {filteredBookings.map((booking) => {
+                    const status = statusConfig[booking.status]
+                    const StatusIcon = status.icon
+                    
+                    return (
+                      <div
+                        key={booking.id}
+                        className="bg-[var(--surface-secondary)] rounded-lg border border-[var(--border-secondary)] hover:border-[var(--border-primary)] transition-colors overflow-hidden"
+                      >
+                        {/* Mobile Card Header */}
+                        <div className="p-4 border-b border-[var(--border-secondary)]">
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="flex-1 min-w-0">
+                              <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-1 truncate">
                                 #{booking.booking_reference}
                               </h3>
                               <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm border ${status.bgColor} ${status.borderColor}`}>
@@ -395,81 +399,81 @@ function AdminBookingsContent() {
                                 <span className={status.color}>{status.label}</span>
                               </div>
                             </div>
-                            <div className="text-right">
-                              <p className="text-2xl font-bold text-[var(--primary)]">£{booking.total_price}</p>
-                              <p className="text-[var(--text-muted)] text-sm">
+                            <div className="text-right ml-3">
+                              <p className="text-xl font-bold text-[var(--primary)]">£{booking.total_price}</p>
+                              <p className="text-[var(--text-muted)] text-xs">
                                 {booking.services.length} service{booking.services.length !== 1 ? 's' : ''}
                               </p>
                             </div>
                           </div>
+                          
+                          {/* Date/Time - Prominent on mobile */}
+                          <div className="flex items-center gap-2 text-[var(--text-primary)]">
+                            <CalendarIcon className="w-4 h-4 text-[var(--text-secondary)]" />
+                            <span className="font-medium">{formatDate(booking.scheduled_date)}</span>
+                            <ClockIcon className="w-4 h-4 text-[var(--text-secondary)] ml-2" />
+                            <span className="font-medium">{formatTime(booking.start_time)}</span>
+                          </div>
+                        </div>
 
-                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-                            {/* Customer */}
-                            <div>
-                              <p className="text-[var(--text-secondary)] text-xs mb-1">Customer</p>
-                              <p className="text-[var(--text-primary)] font-medium">{booking.customer_name}</p>
-                              <div className="flex items-center gap-2 mt-1">
-                                <a 
-                                  href={`tel:${booking.customer_phone}`}
-                                  className="text-[var(--text-link)] hover:text-[var(--text-link-hover)]"
-                                >
-                                  <PhoneIcon className="w-3 h-3" />
-                                </a>
-                                <a 
-                                  href={`mailto:${booking.customer_email}`}
-                                  className="text-[var(--text-link)] hover:text-[var(--text-link-hover)]"
-                                >
-                                  <MailIcon className="w-3 h-3" />
-                                </a>
-                              </div>
+                        {/* Mobile Card Content */}
+                        <div className="p-4 space-y-4">
+                          {/* Customer Info */}
+                          <div>
+                            <p className="text-[var(--text-secondary)] text-xs mb-1">Customer</p>
+                            <p className="text-[var(--text-primary)] font-medium mb-1">{booking.customer_name}</p>
+                            <div className="flex items-center gap-3">
+                              <a 
+                                href={`tel:${booking.customer_phone}`}
+                                className="flex items-center gap-1 text-[var(--text-link)] hover:text-[var(--text-link-hover)] text-sm"
+                              >
+                                <PhoneIcon className="w-4 h-4" />
+                                <span className="hidden sm:inline">Call</span>
+                              </a>
+                              <a 
+                                href={`mailto:${booking.customer_email}`}
+                                className="flex items-center gap-1 text-[var(--text-link)] hover:text-[var(--text-link-hover)] text-sm"
+                              >
+                                <MailIcon className="w-4 h-4" />
+                                <span className="hidden sm:inline">Email</span>
+                              </a>
                             </div>
+                          </div>
 
-                            {/* Date & Time */}
-                            <div>
-                              <p className="text-[var(--text-secondary)] text-xs mb-1">Date & Time</p>
-                              <p className="text-[var(--text-primary)] font-medium">
-                                {formatDate(booking.scheduled_date)}
-                              </p>
-                              <p className="text-[var(--text-primary)] text-sm">
-                                {formatTime(booking.start_time)}
-                              </p>
-                            </div>
-
-                            {/* Vehicle */}
+                          {/* Vehicle & Location */}
+                          <div className="grid grid-cols-2 gap-4">
                             <div>
                               <p className="text-[var(--text-secondary)] text-xs mb-1">Vehicle</p>
-                              <p className="text-[var(--text-primary)] font-medium">
+                              <p className="text-[var(--text-primary)] font-medium text-sm">
                                 {booking.vehicle.make} {booking.vehicle.model}
                               </p>
                               {booking.vehicle.year && (
-                                <p className="text-[var(--text-secondary)] text-sm">
+                                <p className="text-[var(--text-secondary)] text-xs">
                                   {booking.vehicle.year} • {booking.vehicle.color}
                                 </p>
                               )}
                             </div>
-
-                            {/* Location */}
                             <div>
                               <p className="text-[var(--text-secondary)] text-xs mb-1">Location</p>
-                              <p className="text-[var(--text-primary)] font-medium">
+                              <p className="text-[var(--text-primary)] font-medium text-sm">
                                 {booking.address.city}
                               </p>
-                              <p className="text-[var(--text-secondary)] text-sm">
+                              <p className="text-[var(--text-secondary)] text-xs">
                                 {booking.address.postal_code}
                               </p>
                             </div>
                           </div>
 
-                          {/* Services */}
-                          <div className="mb-4">
+                          {/* Services - Compact on mobile */}
+                          <div>
                             <p className="text-[var(--text-secondary)] text-xs mb-2">Services</p>
-                            <div className="flex flex-wrap gap-2">
+                            <div className="flex flex-wrap gap-1">
                               {booking.services.map((service, index) => (
                                 <span
                                   key={index}
                                   className="px-2 py-1 bg-[var(--surface-tertiary)] rounded text-xs text-[var(--text-primary)]"
                                 >
-                                  {service.name} (£{service.base_price})
+                                  {service.name}
                                 </span>
                               ))}
                             </div>
@@ -484,24 +488,24 @@ function AdminBookingsContent() {
                           )}
                         </div>
 
-                        {/* Actions */}
-                        <div className="flex flex-col gap-2 min-w-[160px]">
+                        {/* Mobile Actions Footer */}
+                        <div className="p-4 border-t border-[var(--border-secondary)] space-y-2">
                           <Button
                             onClick={() => router.push(`/admin/bookings/${booking.id}`)}
                             variant="outline"
                             size="sm"
-                            className="flex items-center gap-2"
+                            className="w-full flex items-center justify-center gap-2"
                           >
                             <EyeIcon className="w-4 h-4" />
                             View Details
                           </Button>
 
                           {booking.status === 'pending' && (
-                            <div className="flex gap-2">
+                            <div className="grid grid-cols-2 gap-2">
                               <Button
                                 onClick={() => updateBookingStatus(booking.id, 'confirmed')}
                                 size="sm"
-                                className="flex-1 flex items-center gap-1"
+                                className="flex items-center justify-center gap-1"
                               >
                                 <CheckIcon className="w-3 h-3" />
                                 Confirm
@@ -510,7 +514,7 @@ function AdminBookingsContent() {
                                 onClick={() => updateBookingStatus(booking.id, 'cancelled')}
                                 variant="outline"
                                 size="sm"
-                                className="flex-1 flex items-center gap-1"
+                                className="flex items-center justify-center gap-1"
                               >
                                 <XIcon className="w-3 h-3" />
                                 Cancel
@@ -522,7 +526,7 @@ function AdminBookingsContent() {
                             <Button
                               onClick={() => updateBookingStatus(booking.id, 'in_progress')}
                               size="sm"
-                              className="flex items-center gap-2"
+                              className="w-full flex items-center justify-center gap-2"
                             >
                               <ClockIcon className="w-4 h-4" />
                               Start Service
@@ -533,7 +537,7 @@ function AdminBookingsContent() {
                             <Button
                               onClick={() => updateBookingStatus(booking.id, 'completed')}
                               size="sm"
-                              className="flex items-center gap-2"
+                              className="w-full flex items-center justify-center gap-2"
                             >
                               <CheckCircleIcon className="w-4 h-4" />
                               Complete
@@ -541,10 +545,185 @@ function AdminBookingsContent() {
                           )}
                         </div>
                       </div>
-                    </div>
-                  )
-                })}
-              </div>
+                    )
+                  })}
+                </div>
+
+                {/* Desktop View - Table Layout */}
+                <div className="hidden lg:block space-y-4">
+                  {filteredBookings.map((booking) => {
+                    const status = statusConfig[booking.status]
+                    const StatusIcon = status.icon
+                    
+                    return (
+                      <div
+                        key={booking.id}
+                        className="bg-[var(--surface-secondary)] rounded-lg p-6 border border-[var(--border-secondary)] hover:border-[var(--border-primary)] transition-colors"
+                      >
+                        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                          {/* Main Info */}
+                          <div className="flex-1">
+                            <div className="flex items-start justify-between mb-4">
+                              <div>
+                                <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-1">
+                                  #{booking.booking_reference}
+                                </h3>
+                                <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm border ${status.bgColor} ${status.borderColor}`}>
+                                  <StatusIcon className={`w-4 h-4 ${status.color}`} />
+                                  <span className={status.color}>{status.label}</span>
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-2xl font-bold text-[var(--primary)]">£{booking.total_price}</p>
+                                <p className="text-[var(--text-muted)] text-sm">
+                                  {booking.services.length} service{booking.services.length !== 1 ? 's' : ''}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                              {/* Customer */}
+                              <div>
+                                <p className="text-[var(--text-secondary)] text-xs mb-1">Customer</p>
+                                <p className="text-[var(--text-primary)] font-medium">{booking.customer_name}</p>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <a 
+                                    href={`tel:${booking.customer_phone}`}
+                                    className="text-[var(--text-link)] hover:text-[var(--text-link-hover)]"
+                                  >
+                                    <PhoneIcon className="w-3 h-3" />
+                                  </a>
+                                  <a 
+                                    href={`mailto:${booking.customer_email}`}
+                                    className="text-[var(--text-link)] hover:text-[var(--text-link-hover)]"
+                                  >
+                                    <MailIcon className="w-3 h-3" />
+                                  </a>
+                                </div>
+                              </div>
+
+                              {/* Date & Time */}
+                              <div>
+                                <p className="text-[var(--text-secondary)] text-xs mb-1">Date & Time</p>
+                                <p className="text-[var(--text-primary)] font-medium">
+                                  {formatDate(booking.scheduled_date)}
+                                </p>
+                                <p className="text-[var(--text-primary)] text-sm">
+                                  {formatTime(booking.start_time)}
+                                </p>
+                              </div>
+
+                              {/* Vehicle */}
+                              <div>
+                                <p className="text-[var(--text-secondary)] text-xs mb-1">Vehicle</p>
+                                <p className="text-[var(--text-primary)] font-medium">
+                                  {booking.vehicle.make} {booking.vehicle.model}
+                                </p>
+                                {booking.vehicle.year && (
+                                  <p className="text-[var(--text-secondary)] text-sm">
+                                    {booking.vehicle.year} • {booking.vehicle.color}
+                                  </p>
+                                )}
+                              </div>
+
+                              {/* Location */}
+                              <div>
+                                <p className="text-[var(--text-secondary)] text-xs mb-1">Location</p>
+                                <p className="text-[var(--text-primary)] font-medium">
+                                  {booking.address.city}
+                                </p>
+                                <p className="text-[var(--text-secondary)] text-sm">
+                                  {booking.address.postal_code}
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Services */}
+                            <div className="mb-4">
+                              <p className="text-[var(--text-secondary)] text-xs mb-2">Services</p>
+                              <div className="flex flex-wrap gap-2">
+                                {booking.services.map((service, index) => (
+                                  <span
+                                    key={index}
+                                    className="px-2 py-1 bg-[var(--surface-tertiary)] rounded text-xs text-[var(--text-primary)]"
+                                  >
+                                    {service.name} (£{service.base_price})
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Special Instructions */}
+                            {booking.special_instructions && (
+                              <div className="bg-[var(--surface-tertiary)] rounded-md p-3">
+                                <p className="text-[var(--text-secondary)] text-xs mb-1">Special Instructions</p>
+                                <p className="text-[var(--text-primary)] text-sm">{booking.special_instructions}</p>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Actions */}
+                          <div className="flex flex-col gap-2 min-w-[160px]">
+                            <Button
+                              onClick={() => router.push(`/admin/bookings/${booking.id}`)}
+                              variant="outline"
+                              size="sm"
+                              className="flex items-center gap-2"
+                            >
+                              <EyeIcon className="w-4 h-4" />
+                              View Details
+                            </Button>
+
+                            {booking.status === 'pending' && (
+                              <div className="flex gap-2">
+                                <Button
+                                  onClick={() => updateBookingStatus(booking.id, 'confirmed')}
+                                  size="sm"
+                                  className="flex-1 flex items-center gap-1"
+                                >
+                                  <CheckIcon className="w-3 h-3" />
+                                  Confirm
+                                </Button>
+                                <Button
+                                  onClick={() => updateBookingStatus(booking.id, 'cancelled')}
+                                  variant="outline"
+                                  size="sm"
+                                  className="flex-1 flex items-center gap-1"
+                                >
+                                  <XIcon className="w-3 h-3" />
+                                  Cancel
+                                </Button>
+                              </div>
+                            )}
+
+                            {booking.status === 'confirmed' && (
+                              <Button
+                                onClick={() => updateBookingStatus(booking.id, 'in_progress')}
+                                size="sm"
+                                className="flex items-center gap-2"
+                              >
+                                <ClockIcon className="w-4 h-4" />
+                                Start Service
+                              </Button>
+                            )}
+
+                            {booking.status === 'in_progress' && (
+                              <Button
+                                onClick={() => updateBookingStatus(booking.id, 'completed')}
+                                size="sm"
+                                className="flex items-center gap-2"
+                              >
+                                <CheckCircleIcon className="w-4 h-4" />
+                                Complete
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </>
             )}
           </>
         )}

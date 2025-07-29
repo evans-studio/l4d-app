@@ -682,6 +682,8 @@ export type Database = {
           created_by: string | null
           notes: string | null
           created_at: string
+          booking_reference: string | null
+          booking_status: Database["public"]["Enums"]["booking_status"] | null
         }
         Insert: {
           id?: string
@@ -691,6 +693,8 @@ export type Database = {
           created_by?: string | null
           notes?: string | null
           created_at?: string
+          booking_reference?: string | null
+          booking_status?: Database["public"]["Enums"]["booking_status"] | null
         }
         Update: {
           id?: string
@@ -700,6 +704,8 @@ export type Database = {
           created_by?: string | null
           notes?: string | null
           created_at?: string
+          booking_reference?: string | null
+          booking_status?: Database["public"]["Enums"]["booking_status"] | null
         }
         Relationships: []
       }

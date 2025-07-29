@@ -11,7 +11,7 @@ interface RouteParams {
   params: Promise<{ id: string }>
 }
 
-export async function PUT(request: NextRequest, { params }: RouteParams) {
+export async function PATCH(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params
     const cookieStore = await cookies()

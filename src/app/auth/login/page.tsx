@@ -4,9 +4,11 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth-compat'
 import { Button } from '@/components/ui/primitives/Button'
+import { Input } from '@/components/ui/primitives/Input'
+import { Checkbox } from '@/components/ui/primitives/Checkbox'
 import { ResponsiveLogo } from '@/components/ui/primitives/Logo'
 import { Container } from '@/components/layout/templates/PageLayout'
-import { Mail, Lock, AlertCircle, CheckCircle, Eye, EyeOff } from 'lucide-react'
+import { Mail, Lock, AlertCircle, CheckCircle } from 'lucide-react'
 import Link from 'next/link'
 
 export default function LoginPage() {
@@ -20,7 +22,6 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
-  const [showPassword, setShowPassword] = useState(false)
 
   // Handle success messages from URL params
   useEffect(() => {
@@ -96,32 +97,26 @@ export default function LoginPage() {
                 </div>
               )}
 
-              <div>
-                <label className="block text-sm font-medium text-text-primary mb-2">
-                  Email Address
-                </label>
-                <div className="relative">
-                  <input
-                    type="email"
-                    required
-                    value={formData.email}
-                    onChange={(e) => {
-                      setFormData({ ...formData, email: e.target.value })
-                      if (error) setError('')
-                      if (successMessage) setSuccessMessage('')
-                    }}
-                    className="w-full pl-12 pr-4 py-3 bg-surface-primary border border-border-secondary rounded-md text-text-primary placeholder-text-muted focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-600/20 transition-colors"
-                    placeholder="Enter your email"
-                  />
-                  <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 w-4 h-4 text-text-muted" />
-                </div>
-              </div>
+              <Input
+                label="Email Address"
+                type="email"
+                required
+                value={formData.email}
+                onChange={(e) => {
+                  setFormData({ ...formData, email: e.target.value })
+                  if (error) setError('')
+                  if (successMessage) setSuccessMessage('')
+                }}
+                placeholder="Enter your email"
+                leftIcon={<Mail className="w-4 h-4" />}
+                size="lg"
+              />
 
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <label className="block text-sm font-medium text-text-primary">
+                  <span className="text-sm font-medium text-text-primary">
                     Password
-                  </label>
+                  </span>
                   <Link
                     href="/auth/forgot-password"
                     className="text-sm text-brand-400 hover:text-brand-300 transition-colors"
@@ -129,42 +124,26 @@ export default function LoginPage() {
                     Forgot password?
                   </Link>
                 </div>
-                <div className="relative">
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    required
-                    value={formData.password}
-                    onChange={(e) => {
-                      setFormData({ ...formData, password: e.target.value })
-                      if (error) setError('')
-                      if (successMessage) setSuccessMessage('')
-                    }}
-                    className="w-full pl-12 pr-12 py-3 bg-surface-primary border border-border-secondary rounded-md text-text-primary placeholder-text-muted focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-600/20 transition-colors"
-                    placeholder="Enter your password"
-                  />
-                  <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 w-4 h-4 text-text-muted" />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-4 top-1/2 transform -translate-y-1/2 text-text-muted hover:text-text-secondary transition-colors"
-                  >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
+                <Input
+                  type="password"
+                  required
+                  value={formData.password}
+                  onChange={(e) => {
+                    setFormData({ ...formData, password: e.target.value })
+                    if (error) setError('')
+                    if (successMessage) setSuccessMessage('')
+                  }}
+                  placeholder="Enter your password"
+                  leftIcon={<Lock className="w-4 h-4" />}
+                  size="lg"
+                />
               </div>
 
-              <div className="flex items-center">
-                <input
-                  id="rememberMe"
-                  type="checkbox"
-                  checked={formData.rememberMe}
-                  onChange={(e) => setFormData({ ...formData, rememberMe: e.target.checked })}
-                  className="w-4 h-4 text-brand-600 bg-surface-primary border-border-secondary rounded focus:ring-brand-500 focus:ring-2"
-                />
-                <label htmlFor="rememberMe" className="ml-2 text-sm text-text-secondary">
-                  Keep me signed in for 30 days
-                </label>
-              </div>
+              <Checkbox
+                label="Keep me signed in for 30 days"
+                checked={formData.rememberMe}
+                onCheckedChange={(checked) => setFormData({ ...formData, rememberMe: checked })}
+              />
 
               <Button
                 type="submit"

@@ -71,39 +71,83 @@ export default function BookingPage(): React.JSX.Element {
 
   return (
     <div className="min-h-screen bg-surface-primary">
-      {/* Header */}
-      <Section background="muted" padding="md">
+      {/* Header - Mobile First Responsive */}
+      <Section background="muted" padding="sm">
         <Container>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => window.location.href = '/'}
-                leftIcon={<ArrowLeft className="w-4 h-4" />}
-              >
-                Back to Home
-              </Button>
-              <div className="flex items-center gap-3">
-                <ResponsiveLogo />
-                <div>
-                  <h1 className="text-2xl font-bold text-text-primary">
-                    Book Your Service
-                  </h1>
-                  <p className="text-text-secondary">
-                    Professional mobile car detailing
-                  </p>
+          {/* Mobile Header Layout */}
+          <div className="flex flex-col space-y-3 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
+            {/* Top Row - Logo and Title */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => window.location.href = '/'}
+                  className="p-2 sm:px-3"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  <span className="hidden sm:inline ml-2">Back to Home</span>
+                </Button>
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <ResponsiveLogo />
+                  <div className="hidden sm:block">
+                    <h1 className="text-xl sm:text-2xl font-bold text-text-primary">
+                      Book Your Service
+                    </h1>
+                    <p className="text-sm text-text-secondary">
+                      Professional mobile car detailing
+                    </p>
+                  </div>
                 </div>
               </div>
+              
+              {/* Mobile Auth Quick Access */}
+              <div className="sm:hidden">
+                {!authLoading && (
+                  <>
+                    {isAuthenticated && profile ? (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => router.push('/dashboard')}
+                        className="text-brand-400 hover:text-brand-300 p-2"
+                      >
+                        <User className="w-4 h-4" />
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => router.push('/auth/login')}
+                        className="text-brand-400 hover:text-brand-300 p-2"
+                      >
+                        <LogIn className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </>
+                )}
+              </div>
             </div>
-            <div className="flex items-center gap-4">
+
+            {/* Mobile Title (visible only on mobile) */}
+            <div className="sm:hidden">
+              <h1 className="text-lg font-bold text-text-primary">
+                Book Your Service
+              </h1>
+              <p className="text-sm text-text-secondary">
+                Professional mobile car detailing
+              </p>
+            </div>
+
+            {/* Desktop Right Side */}
+            <div className="hidden sm:flex items-center gap-3 lg:gap-4">
               {/* Authentication Status */}
               {!authLoading && (
                 <div className="flex items-center gap-2">
                   {isAuthenticated && profile ? (
                     <div className="flex items-center gap-2 text-text-secondary">
                       <User className="w-4 h-4 text-brand-400" />
-                      <span className="hidden sm:inline">Welcome, {(profile as any)?.first_name || 'Guest'}</span>
+                      <span className="text-sm lg:text-base">Hi, {(profile as any)?.first_name || 'Guest'}</span>
                       <Button
                         variant="ghost"
                         size="sm"
@@ -114,27 +158,48 @@ export default function BookingPage(): React.JSX.Element {
                       </Button>
                     </div>
                   ) : (
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => router.push('/auth/login')}
-                        leftIcon={<LogIn className="w-4 h-4" />}
-                        className="text-brand-400 hover:text-brand-300"
-                      >
-                        <span className="hidden sm:inline">Sign In</span>
-                      </Button>
-                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => router.push('/auth/login')}
+                      leftIcon={<LogIn className="w-4 h-4" />}
+                      className="text-brand-400 hover:text-brand-300"
+                    >
+                      Sign In
+                    </Button>
                   )}
                 </div>
               )}
               
               {/* Help Contact */}
-              <div className="hidden md:flex items-center gap-2 text-text-secondary">
+              <div className="hidden lg:flex items-center gap-2 text-text-secondary">
                 <Phone className="w-4 h-4 text-brand-400" />
-                <span>Need help? Call 07123 456789</span>
+                <span className="text-sm">Need help? Call 07123 456789</span>
               </div>
+              
+              {/* Mobile Help Button (for tablet) */}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="lg:hidden text-brand-400 hover:text-brand-300"
+                onClick={() => window.location.href = 'tel:07123456789'}
+              >
+                <Phone className="w-4 h-4" />
+              </Button>
             </div>
+          </div>
+
+          {/* Mobile Help Contact Bar */}
+          <div className="sm:hidden mt-3 pt-3 border-t border-border-secondary">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full justify-center text-brand-400 hover:text-brand-300"
+              onClick={() => window.location.href = 'tel:07123456789'}
+            >
+              <Phone className="w-4 h-4 mr-2" />
+              Need help? Tap to call
+            </Button>
           </div>
         </Container>
       </Section>

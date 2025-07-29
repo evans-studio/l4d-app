@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-compat';
@@ -64,6 +64,31 @@ export const CustomerLayout: React.FC<CustomerLayoutProps> = ({ children }) => {
   const router = useRouter();
   const { logout } = useAuth();
 
+  // Prevent body scroll when mobile sidebar is open
+  useEffect(() => {
+    if (sidebarOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [sidebarOpen]);
+
+  // Handle escape key to close sidebar
+  useEffect(() => {
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && sidebarOpen) {
+        setSidebarOpen(false);
+      }
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [sidebarOpen]);
+
   const handleLogout = async () => {
     try {
       await logout();
@@ -75,35 +100,40 @@ export const CustomerLayout: React.FC<CustomerLayoutProps> = ({ children }) => {
 
   return (
     <div className="min-h-screen bg-surface-primary">
-      {/* Mobile sidebar overlay */}
+      {/* Mobile sidebar backdrop */}
       {sidebarOpen && (
         <div 
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden transition-opacity duration-300 backdrop-blur-sm"
           onClick={() => setSidebarOpen(false)}
+          onTouchStart={() => setSidebarOpen(false)}
+          aria-hidden="true"
+          role="button"
+          tabIndex={-1}
         />
       )}
 
       {/* Sidebar */}
       <div className={cn(
-        "fixed inset-y-0 left-0 z-50 w-64 bg-surface-secondary border-r border-border-secondary transform transition-transform duration-300 ease-in-out lg:translate-x-0",
+        "fixed inset-y-0 left-0 z-50 w-64 bg-surface-secondary border-r border-border-secondary shadow-xl transform transition-transform duration-300 ease-in-out lg:translate-x-0",
         sidebarOpen ? "translate-x-0" : "-translate-x-full"
       )}>
         <div className="flex flex-col h-full">
           {/* Sidebar header */}
-          <div className="flex items-center justify-between p-4 border-b border-border-secondary">
+          <div className="flex items-center justify-between p-4 border-b border-border-secondary bg-surface-secondary">
             <ResponsiveLogo href="/dashboard" className="text-brand-400" />
             <Button
               variant="ghost"
               size="icon"
-              className="lg:hidden"
+              className="lg:hidden min-h-[44px] min-w-[44px]"
               onClick={() => setSidebarOpen(false)}
+              aria-label="Close sidebar"
             >
               <X className="w-5 h-5" />
             </Button>
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 p-4 space-y-2">
+          <nav className="flex-1 p-4 space-y-2 bg-surface-secondary overflow-y-auto">
             {navigationItems.map((item) => {
               const Icon = item.icon;
               const isActive = pathname === item.href || 
@@ -114,7 +144,7 @@ export const CustomerLayout: React.FC<CustomerLayoutProps> = ({ children }) => {
                   key={item.href}
                   href={item.href}
                   className={cn(
-                    "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                    "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors min-h-[44px]",
                     isActive
                       ? "bg-brand-600 text-white"
                       : "text-text-secondary hover:text-text-primary hover:bg-surface-primary"
@@ -129,12 +159,15 @@ export const CustomerLayout: React.FC<CustomerLayoutProps> = ({ children }) => {
           </nav>
 
           {/* Sidebar footer */}
-          <div className="p-4 border-t border-border-secondary">
+          <div className="p-4 border-t border-border-secondary bg-surface-secondary">
             <Button
               variant="ghost"
-              className="w-full justify-start text-text-secondary hover:text-error-400"
+              className="w-full justify-start text-text-secondary hover:text-error-400 min-h-[44px]"
               leftIcon={<LogOut className="w-5 h-5" />}
-              onClick={handleLogout}
+              onClick={() => {
+                handleLogout();
+                setSidebarOpen(false);
+              }}
             >
               Logout
             </Button>
@@ -151,8 +184,9 @@ export const CustomerLayout: React.FC<CustomerLayoutProps> = ({ children }) => {
               <Button
                 variant="ghost"
                 size="icon"
-                className="lg:hidden"
+                className="lg:hidden min-h-[44px] min-w-[44px]"
                 onClick={() => setSidebarOpen(true)}
+                aria-label="Open sidebar"
               >
                 <Menu className="w-5 h-5" />
               </Button>

@@ -1,0 +1,36 @@
+
+> love-4-detailing@0.1.0 dev
+> next dev
+
+   ▲ Next.js 15.4.4
+   - Local:        http://localhost:3000
+   - Network:      http://192.168.1.78:3000
+   - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 1060ms
+ ✓ Compiled /middleware in 126ms (179 modules)
+ ✓ Compiled /api/auth/setup-password in 344ms (379 modules)
+(node:2392) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+<w> [webpack.cache.PackFileCacheStrategy] Serializing big strings (108kiB) impacts deserialization performance (consider using Buffer instead and decode when needed)
+ POST /api/auth/setup-password 200 in 1159ms
+ POST /api/auth/setup-password 400 in 92ms
+ ✓ Compiled /api/bookings/create in 168ms (431 modules)
+Email send error: {
+  statusCode: 403,
+  error: 'The love4detailing.co.uk domain is not verified. Please, add and verify your domain on https://resend.com/domains',
+  name: 'validation_error'
+}
+Failed to send customer confirmation email: undefined
+Admin notification email error: {
+  statusCode: 403,
+  error: 'The love4detailing.co.uk domain is not verified. Please, add and verify your domain on https://resend.com/domains',
+  name: 'validation_error'
+}
+Failed to send admin notification email: undefined
+ POST /api/bookings/create 200 in 1819ms
+ POST /api/auth/setup-password 200 in 452ms
+ POST /api/auth/setup-password 400 in 6ms
+ POST /api/auth/setup-password 400 in 5ms
+[?25h

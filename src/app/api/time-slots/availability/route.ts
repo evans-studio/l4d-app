@@ -94,19 +94,19 @@ async function handleSingleDateRequest(request: NextRequest, date: string) {
       .from('time_slots')
       .select(`
         id,
-        date,
+        slot_date,
         start_time,
-        end_time,
         is_available,
-        booking_id,
-        updated_at,
-        bookings(
+        created_by,
+        notes,
+        created_at,
+        bookings!time_slot_id(
           id,
           booking_reference,
           status
         )
       `)
-      .eq('date', date)
+      .eq('slot_date', date)
       .order('start_time', { ascending: true })
 
     if (error) {
@@ -117,12 +117,11 @@ async function handleSingleDateRequest(request: NextRequest, date: string) {
     // Transform data for frontend consumption
     const transformedSlots = timeSlots?.map(slot => ({
       id: slot.id,
-      date: slot.date,
+      date: slot.slot_date,
       start_time: slot.start_time,
-      end_time: slot.end_time,
       is_available: slot.is_available,
-      booking_id: slot.booking_id,
-      last_updated: slot.updated_at,
+      last_updated: slot.created_at,
+      notes: slot.notes,
       booking_reference: slot.bookings?.[0]?.booking_reference || null,
       booking_status: slot.bookings?.[0]?.status || null
     })) || []

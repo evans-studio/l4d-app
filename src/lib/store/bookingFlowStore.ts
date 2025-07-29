@@ -80,6 +80,7 @@ export interface BookingResponse {
   confirmationNumber: string
   userId: string
   requiresPassword: boolean
+  passwordSetupToken?: string
 }
 
 // Store state interface
@@ -376,12 +377,13 @@ export const useBookingFlowStore = create<BookingFlowStore>()(
       // Load vehicle sizes
       loadVehicleSizes: async () => {
         try {
-          const response = await apiCall<VehicleSizeRow[]>('/api/services/vehicle-sizes')
+          const response = await apiCall<VehicleSizeRow[]>('/api/vehicle-sizes')
           
           if (response.success && response.data) {
             set({ vehicleSizes: response.data })
           }
         } catch (error) {
+          console.error('Failed to load vehicle sizes:', error)
           // Silent fail for vehicle sizes as they might be cached
         }
       },
@@ -457,7 +459,15 @@ export const useBookingFlowStore = create<BookingFlowStore>()(
           })
           
           if (response.success && response.data) {
-            return response.data
+            // Map API response to expected format
+            const apiData = response.data as any // API response has different structure
+            return {
+              bookingId: apiData.bookingId,
+              confirmationNumber: apiData.bookingReference,
+              userId: apiData.customerId,
+              requiresPassword: apiData.requiresPasswordSetup || false,
+              passwordSetupToken: apiData.passwordSetupToken || undefined
+            }
           } else {
             const errorMessage = response.error?.message || 'Failed to create booking'
             setError(errorMessage)

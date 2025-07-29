@@ -65,12 +65,13 @@ export async function GET(request: NextRequest) {
       .from('bookings')
       .select('customer_id')
       .gte('created_at', sixMonthsAgo.toISOString())
+      .not('customer_id', 'is', null)
 
     if (activeCustomerError) {
       console.error('Active customer stats error:', activeCustomerError)
     }
 
-    const uniqueActiveCustomers = new Set(activeCustomerData?.map(b => b.customer_id) || [])
+    const uniqueActiveCustomers = new Set(activeCustomerData?.map(b => b.customer_id).filter(Boolean) || [])
     const activeCustomers = uniqueActiveCustomers.size
 
     const stats = {

@@ -9,10 +9,10 @@ const supabaseService = createClient(supabaseUrl, supabaseServiceKey)
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const customerId = params.id
+    const { id: customerId } = await params
     console.log('Customer detail API: Fetching data for customer:', customerId)
 
     // Get customer profile
@@ -52,12 +52,13 @@ export async function GET(
         status,
         total_price,
         booking_services (
+          service_id,
           services (
             name,
             base_price
           )
         ),
-        vehicles (
+        customer_vehicles (
           make,
           model,
           year
@@ -73,7 +74,7 @@ export async function GET(
 
     // Get customer's vehicles
     const { data: vehicles, error: vehiclesError } = await supabaseService
-      .from('vehicles')
+      .from('customer_vehicles')
       .select(`
         id,
         make,
@@ -83,7 +84,7 @@ export async function GET(
         license_plate,
         is_primary
       `)
-      .eq('customer_id', customerId)
+      .eq('user_id', customerId)
       .order('is_primary', { ascending: false })
 
     // Get customer's addresses
@@ -97,7 +98,7 @@ export async function GET(
         postal_code,
         is_primary
       `)
-      .eq('customer_id', customerId)
+      .eq('user_id', customerId)
       .order('is_primary', { ascending: false })
 
     // Transform bookings data to match frontend interface
@@ -108,20 +109,37 @@ export async function GET(
       start_time: booking.scheduled_start_time,
       status: booking.status,
       total_price: booking.total_price,
-      services: booking.booking_services?.map(bs => ({
-        name: bs.services?.name || 'Unknown Service',
-        price: bs.services?.base_price || 0
-      })) || [],
-      vehicle: booking.vehicles ? {
-        make: booking.vehicles.make,
-        model: booking.vehicles.model,
-        year: booking.vehicles.year
-      } : undefined,
-      address: booking.customer_addresses ? {
-        address_line_1: booking.customer_addresses.address_line_1,
-        city: booking.customer_addresses.city,
-        postal_code: booking.customer_addresses.postal_code
-      } : undefined
+      services: booking.booking_services?.map(bs => {
+        const service = Array.isArray(bs.services) ? bs.services[0] : bs.services
+        return {
+          name: service?.name || 'Unknown Service',
+          price: service?.base_price || 0
+        }
+      }) || [],
+      vehicle: (() => {
+        const vehicleData = booking.customer_vehicles
+        if (vehicleData && Array.isArray(vehicleData) && vehicleData.length > 0) {
+          const vehicle = vehicleData[0]
+          return {
+            make: vehicle?.make,
+            model: vehicle?.model,
+            year: vehicle?.year
+          }
+        }
+        return undefined
+      })(),
+      address: (() => {
+        const addressData = booking.customer_addresses
+        if (addressData && Array.isArray(addressData) && addressData.length > 0) {
+          const address = addressData[0]
+          return {
+            address_line_1: address?.address_line_1,
+            city: address?.city,
+            postal_code: address?.postal_code
+          }
+        }
+        return undefined
+      })()
     }))
 
     console.log('Customer detail API results:', {
