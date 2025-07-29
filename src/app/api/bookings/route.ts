@@ -1,135 +1,174 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { BookingService } from '@/lib/services/booking'
-import { ApiResponseHandler } from '@/lib/api/response'
-import { ApiValidation } from '@/lib/api/validation'
-import { ApiAuth } from '@/lib/api/auth'
-import { z } from 'zod'
+import { createClientFromRequest } from '@/lib/supabase/server'
+import { ApiResponse } from '@/types/booking'
 
-const bookingsQuerySchema = z.object({
-  status: z.string().optional(),
-  dateFrom: z.string().optional(),
-  dateTo: z.string().optional(),
-  search: z.string().optional(),
-})
+const ADMIN_EMAILS = [
+  'zell@love4detailing.com',
+  'paul@evans-studio.co.uk'
+]
 
-const createBookingSchema = z.object({
-  services: z.array(z.string().uuid()).min(1, 'At least one service is required'),
-  vehicle: z.object({
-    size_id: z.string().uuid('Invalid vehicle size ID'),
-    make: z.string().min(1, 'Vehicle make is required'),
-    model: z.string().min(1, 'Vehicle model is required'),
-    year: z.number().optional(),
-    color: z.string().optional(),
-    license_plate: z.string().optional(),
-    notes: z.string().optional(),
-  }),
-  address: z.object({
-    name: z.string().min(1, 'Address name is required'),
-    address_line_1: z.string().min(1, 'Address line 1 is required'),
-    address_line_2: z.string().optional(),
-    city: z.string().min(1, 'City is required'),
-    postal_code: z.string().min(1, 'Postal code is required'),
-  }),
-  scheduled_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format'),
-  time_slot_id: z.string().uuid('Invalid time slot ID'),
-  special_instructions: z.string().optional(),
-})
-
-export async function GET(request: NextRequest) {
+export async function GET(request: NextRequest): Promise<NextResponse<ApiResponse>> {
   try {
-    const { auth, error: authError } = await ApiAuth.authenticate()
-    if (authError) {
-      return authError
+    const supabase = createClientFromRequest(request)
+    
+    // Get current user (this also validates the session)
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    
+    if (userError || !user) {
+      return NextResponse.json({
+        success: false,
+        error: { message: 'Authentication required', code: 'UNAUTHORIZED' }
+      }, { status: 401 })
     }
 
+    // Get user profile to check role
+    const { data: profile, error: profileError } = await supabase
+      .from('user_profiles')
+      .select('id, email, role, is_active')
+      .eq('id', user.id)
+      .single()
+
+    if (profileError || !profile?.is_active) {
+      return NextResponse.json({
+        success: false,
+        error: { message: 'User account not found or inactive', code: 'USER_INACTIVE' }
+      }, { status: 401 })
+    }
+
+    // Determine if user is admin
+    const isAdmin = profile.role === 'admin' || ADMIN_EMAILS.includes(profile.email.toLowerCase())
+
+    // Parse query parameters
     const { searchParams } = new URL(request.url)
-    const queryParams = Object.fromEntries(searchParams.entries())
-    
-    const validation = ApiValidation.validateQuery(queryParams, bookingsQuerySchema)
-    if (!validation.success) {
-      return validation.error
-    }
+    const status = searchParams.get('status')
+    const dateFrom = searchParams.get('dateFrom')
+    const dateTo = searchParams.get('dateTo')
 
-    const bookingService = new BookingService()
-    
-    // Parse status filter
-    const filters: Record<string, unknown> = { ...validation.data }
-    if (filters.status && typeof filters.status === 'string') {
-      filters.status = filters.status.split(',')
-    }
-    
+    // Build query
+    let query = supabase
+      .from('bookings')
+      .select(`
+        id,
+        booking_reference,
+        customer_id,
+        scheduled_date,
+        scheduled_start_time,
+        scheduled_end_time,
+        status,
+        total_price,
+        special_requests,
+        created_at,
+        customer_vehicles (
+          make,
+          model,
+          year,
+          color,
+          license_number,
+          vehicle_size
+        ),
+        customer_addresses (
+          label,
+          address_line_1,
+          address_line_2,
+          city,
+          county,
+          postal_code,
+          country
+        ),
+        booking_services (
+          service_id,
+          service_name,
+          price,
+          duration
+        )
+      `)
+
     // If not admin, only show user's own bookings
-    if (!['admin', 'super_admin'].includes(auth!.profile.role as string)) {
-      filters.userId = auth!.profile.id as string
+    if (!isAdmin) {
+      query = query.eq('customer_id', profile.id)
     }
 
-    const result = await bookingService.getBookings(filters)
-
-    if (!result.success) {
-      return ApiResponseHandler.error(
-        result.error?.message || 'Failed to fetch bookings',
-        'FETCH_BOOKINGS_FAILED'
-      )
+    // Apply filters
+    if (status) {
+      const statusArray = status.split(',')
+      query = query.in('status', statusArray)
     }
 
-    return ApiResponseHandler.success(result.data, {
-      pagination: {
-        page: 1,
-        limit: result.data?.length || 0,
-        total: result.data?.length || 0,
-        totalPages: 1
+    if (dateFrom) {
+      query = query.gte('scheduled_date', dateFrom)
+    }
+
+    if (dateTo) {
+      query = query.lte('scheduled_date', dateTo)
+    }
+
+    // Order by creation date
+    query = query.order('created_at', { ascending: false })
+
+    const { data: bookings, error: bookingsError } = await query
+
+    if (bookingsError) {
+      console.error('Error fetching bookings:', bookingsError)
+      return NextResponse.json({
+        success: false,
+        error: { message: 'Failed to fetch bookings', code: 'DATABASE_ERROR' }
+      }, { status: 500 })
+    }
+
+    // Transform the data for frontend consumption
+    const transformedBookings = bookings?.map((booking: any) => ({
+      id: booking.id,
+      booking_reference: booking.booking_reference,
+      customer_id: booking.customer_id,
+      scheduled_date: booking.scheduled_date,
+      start_time: booking.scheduled_start_time,
+      end_time: booking.scheduled_end_time,
+      status: booking.status,
+      total_price: booking.total_price,
+      special_requests: booking.special_requests,
+      created_at: booking.created_at,
+      services: booking.booking_services?.map((service: any) => ({
+        name: service.service_name,
+        price: service.price,
+        duration: service.duration
+      })) || [],
+      vehicle: booking.customer_vehicles && booking.customer_vehicles.length > 0 ? {
+        make: booking.customer_vehicles[0]?.make,
+        model: booking.customer_vehicles[0]?.model,
+        year: booking.customer_vehicles[0]?.year,
+        color: booking.customer_vehicles[0]?.color,
+        license_number: booking.customer_vehicles[0]?.license_number,
+        vehicle_size: booking.customer_vehicles[0]?.vehicle_size
+      } : null,
+      address: booking.customer_addresses && booking.customer_addresses.length > 0 ? {
+        label: booking.customer_addresses[0]?.label,
+        address_line_1: booking.customer_addresses[0]?.address_line_1,
+        address_line_2: booking.customer_addresses[0]?.address_line_2,
+        city: booking.customer_addresses[0]?.city,
+        county: booking.customer_addresses[0]?.county,
+        postal_code: booking.customer_addresses[0]?.postal_code,
+        country: booking.customer_addresses[0]?.country
+      } : null
+    })) || []
+
+    return NextResponse.json({
+      success: true,
+      data: transformedBookings,
+      metadata: {
+        pagination: {
+          page: 1,
+          limit: transformedBookings.length,
+          total: transformedBookings.length
+        },
+        timestamp: new Date().toISOString()
       }
     })
 
   } catch (error) {
-    console.error('Get bookings error:', error)
-    return ApiResponseHandler.serverError('Failed to fetch bookings')
-  }
-}
-
-export async function POST(request: NextRequest) {
-  try {
-    const { auth, error: authError } = await ApiAuth.authenticate()
-    if (authError) {
-      return authError
-    }
-
-    const body = await request.json()
-    const validation = await ApiValidation.validateBody(body, createBookingSchema)
-    if (!validation.success) {
-      return validation.error
-    }
-
-    const bookingService = new BookingService()
-    
-    // Transform postal_code to postcode for the booking service
-    const bookingData = {
-      ...validation.data,
-      address: {
-        ...validation.data.address,
-        postcode: validation.data.address.postal_code
-      }
-    }
-    
-    const result = await bookingService.createBooking(auth!.profile.id as string, bookingData)
-
-    if (!result.success) {
-      return ApiResponseHandler.error(
-        result.error?.message || 'Failed to create booking',
-        'CREATE_BOOKING_FAILED'
-      )
-    }
-
+    console.error('Admin bookings API error:', error)
     return NextResponse.json({
-      success: true,
-      data: result.data,
-      metadata: {
-        timestamp: new Date().toISOString()
-      }
-    }, { status: 201 })
-
-  } catch (error) {
-    console.error('Create booking error:', error)
-    return ApiResponseHandler.serverError('Failed to create booking')
+      success: false,
+      error: { message: 'Internal server error', code: 'SERVER_ERROR' }
+    }, { status: 500 })
   }
 }

@@ -26,12 +26,6 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
-// Admin emails that should get admin role
-const ADMIN_EMAILS = [
-  'zell@love4detailing.com',
-  'paul@evans-studio.co.uk'
-]
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<UserProfile | null>(null)
@@ -96,63 +90,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     phone?: string
   ): Promise<{ success: boolean; error?: string; redirectTo?: string }> => {
     try {
-      // Determine role based on email
-      const role = ADMIN_EMAILS.includes(email.toLowerCase()) ? 'admin' : 'customer'
-
-      // Sign up with Supabase
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            first_name: firstName,
-            last_name: lastName,
-            phone: phone,
-            role: role
-          }
-        }
+      // Use the API route for consistent registration flow
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email,
+          password,
+          firstName,
+          lastName,
+          phone
+        })
       })
 
-      if (error) {
+      const result = await response.json()
+
+      if (!result.success) {
         return {
           success: false,
-          error: error.message
+          error: result.error?.message || 'Registration failed'
         }
       }
 
-      if (data.user) {
-        // Create user profile
-        const { error: profileError } = await supabase
-          .from('user_profiles')
-          .insert({
-            id: data.user.id,
-            email: email,
-            first_name: firstName,
-            last_name: lastName,
-            phone: phone,
-            role: role,
-            is_active: true
-          })
-
-        if (profileError) {
-          console.error('Profile creation error:', profileError)
-        }
-
-        // If user is confirmed (or auto-confirmed), set user state
-        if (data.user.email_confirmed_at) {
-          setUser(data.user)
-          await fetchProfile(data.user.id)
-          
-          return {
-            success: true,
-            redirectTo: role === 'admin' ? '/admin' : '/dashboard'
-          }
-        }
+      // Registration successful with auto-confirmation
+      // The user is now authenticated, fetch their session
+      const { data: { session } } = await supabase.auth.getSession()
+      
+      if (session?.user) {
+        setUser(session.user)
+        await fetchProfile(session.user.id)
       }
 
       return {
         success: true,
-        error: 'Registration successful! Please check your email to verify your account.'
+        redirectTo: result.data?.redirectTo
       }
     } catch (error) {
       return {

@@ -297,11 +297,12 @@ export const useBookingFlowStore = create<BookingFlowStore>()(
         setLoading(true)
         
         try {
-          const response = await apiCall<PriceCalculation>('/api/booking/calculate-price', {
+          const response = await apiCall<PriceCalculation>('/api/pricing/calculate', {
             method: 'POST',
             body: JSON.stringify({
               serviceId: formData.service.serviceId,
               vehicleSize: formData.vehicle.size,
+              // TODO: Add address for distance calculation if available
             }),
           })
           
@@ -411,23 +412,47 @@ export const useBookingFlowStore = create<BookingFlowStore>()(
         setSubmitting(true)
         
         try {
-          const response = await apiCall<BookingResponse>('/api/booking/create', {
+          const response = await apiCall<BookingResponse>('/api/bookings/create', {
             method: 'POST',
             body: JSON.stringify({
-              user: formData.user,
-              vehicle: formData.vehicle,
-              booking: {
-                slotId: formData.slot.slotId,
-                serviceId: formData.service.serviceId,
-                addressId: formData.address.addressId,
-                newAddress: formData.address.isExisting ? undefined : {
-                  street: formData.address.street,
-                  city: formData.address.city,
-                  state: formData.address.state,
-                  zipCode: formData.address.zipCode,
-                },
-                specialInstructions: '', // TODO: Add special instructions field
+              customer: {
+                firstName: formData.user.name.split(' ')[0] || formData.user.name,
+                lastName: formData.user.name.split(' ').slice(1).join(' ') || 'Customer',
+                email: formData.user.email,
+                phone: formData.user.phone
               },
+              vehicle: {
+                make: formData.vehicle.make,
+                model: formData.vehicle.model,
+                year: formData.vehicle.year,
+                color: formData.vehicle.color || '',
+                licenseNumber: formData.vehicle.registration,
+                vehicleSize: formData.vehicle.size,
+                notes: formData.vehicle.notes
+              },
+              address: {
+                addressLine1: formData.address.street,
+                addressLine2: '',
+                city: formData.address.city,
+                county: formData.address.state, // Map state to county for now
+                postalCode: formData.address.zipCode,
+                country: 'United Kingdom'
+              },
+              services: [{
+                serviceId: formData.service.serviceId,
+                serviceName: formData.service.name,
+                duration: formData.service.duration,
+                basePrice: formData.service.basePrice,
+                vehicleSizeMultiplier: 1 // This will be calculated by the API
+              }],
+              timeSlot: {
+                date: formData.slot.date,
+                startTime: formData.slot.startTime,
+                endTime: formData.slot.endTime,
+                slotId: formData.slot.slotId
+              },
+              specialRequests: '', // TODO: Add special requests field
+              totalPrice: get().calculatedPrice?.finalPrice || 0
             }),
           })
           

@@ -13,7 +13,7 @@ export default function HomePage() {
   const [openFaq, setOpenFaq] = React.useState<number | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
   // Enterprise authentication
-  const { user, isLoading, isAuthenticated, logout } = useAuth();
+  const { user, profile, isLoading, isAuthenticated, logout } = useAuth();
 
   // Close mobile menu when clicking outside
   React.useEffect(() => {
@@ -59,7 +59,7 @@ export default function HomePage() {
                           onClick={() => window.location.href = '/dashboard'}
                           leftIcon={<User className="w-4 h-4" />}
                         >
-                          {user?.firstName ? `Hi, ${user.firstName}` : 'Dashboard'}
+                          {profile?.first_name ? `Hi, ${profile.first_name}` : 'Dashboard'}
                         </Button>
                         <Button 
                           variant="ghost" 
@@ -155,7 +155,7 @@ export default function HomePage() {
                           }}
                           leftIcon={<User className="w-4 h-4" />}
                         >
-                          {user?.firstName ? `Hi, ${user.firstName}` : 'Dashboard'}
+                          {profile?.first_name ? `Hi, ${profile.first_name}` : 'Dashboard'}
                         </Button>
                         <Button 
                           variant="ghost" 

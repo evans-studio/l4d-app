@@ -15,7 +15,7 @@ export function ProtectedRoute({
   allowedRoles = ['customer', 'admin', 'super_admin'],
   redirectTo = '/auth/login'
 }: ProtectedRouteProps) {
-  const { user, isLoading, isAuthenticated } = useAuth()
+  const { user, profile, isLoading, isAuthenticated } = useAuth()
   const router = useRouter()
 
   useEffect(() => {
@@ -25,12 +25,12 @@ export function ProtectedRoute({
         return
       }
 
-      if (user && !allowedRoles.includes(user.role)) {
+      if (profile && !allowedRoles.includes(profile.role)) {
         router.push('/dashboard')
         return
       }
     }
-  }, [user, isAuthenticated, isLoading, router, allowedRoles, redirectTo])
+  }, [user, profile, isAuthenticated, isLoading, router, allowedRoles, redirectTo])
 
   if (isLoading) {
     return (
@@ -40,7 +40,7 @@ export function ProtectedRoute({
     )
   }
 
-  if (!isAuthenticated || (user && !allowedRoles.includes(user.role))) {
+  if (!isAuthenticated || (profile && !allowedRoles.includes(profile.role))) {
     return null
   }
 

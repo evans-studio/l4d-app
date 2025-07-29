@@ -1,8 +1,8 @@
-import { NextRequest } from 'next/server'
-import { ApiResponseHandler } from '@/lib/api/response'
-import { createClientFromRequest, createAdminClient } from '@/lib/supabase/server'
+import { NextRequest, NextResponse } from 'next/server'
+import { createClientFromRequest } from '@/lib/supabase/server'
+import { ApiResponse } from '@/types/booking'
 
-export async function GET(request: NextRequest) {
+export async function GET(request: NextRequest): Promise<NextResponse<ApiResponse>> {
   try {
     const supabase = createClientFromRequest(request)
     
@@ -10,151 +10,148 @@ export async function GET(request: NextRequest) {
     const { data: { user }, error: userError } = await supabase.auth.getUser()
     
     if (userError || !user) {
-      console.log('Customer bookings auth error:', userError?.message)
-      return ApiResponseHandler.unauthorized('Authentication required')
+      return NextResponse.json({
+        success: false,
+        error: { message: 'Authentication required', code: 'UNAUTHORIZED' }
+      }, { status: 401 })
     }
 
-    const userId = user.id
-    console.log('Fetching bookings for user:', userId)
-
-    // Double-check that user profile exists and is active
+    // Get user profile to get the actual customer ID
     const { data: profile, error: profileError } = await supabase
       .from('user_profiles')
       .select('id, is_active')
-      .eq('id', userId)
+      .eq('id', user.id)
       .single()
 
     if (profileError || !profile?.is_active) {
-      console.log('User profile check failed:', { profileError: profileError?.message, active: profile?.is_active })
-      return ApiResponseHandler.unauthorized('User account not found or inactive')
+      return NextResponse.json({
+        success: false,
+        error: { message: 'User account not found or inactive', code: 'USER_INACTIVE' }
+      }, { status: 401 })
     }
 
-    // Fetch bookings for the authenticated user
-    try {
-      const { data: bookings, error: bookingsError } = await supabase
-        .from('bookings')
-        .select(`
-          id,
-          booking_reference,
-          scheduled_date,
-          scheduled_start_time,
-          scheduled_end_time,
-          status,
-          total_price,
-          special_instructions,
-          vehicle_details,
-          service_address,
-          distance_km,
-          estimated_duration,
-          created_at,
-          confirmed_at,
-          completed_at,
-          cancelled_at,
-          cancellation_reason,
-          booking_services(
-            id,
-            service_id,
-            service_details,
-            price,
-            estimated_duration
+    // Fetch bookings with proper joins to the normalized schema
+    const { data: bookings, error: bookingsError } = await supabase
+      .from('bookings')
+      .select(`
+        id,
+        booking_reference,
+        scheduled_date,
+        scheduled_start_time,
+        scheduled_end_time,
+        status,
+        total_price,
+        pricing_breakdown,
+        special_instructions,
+        created_at,
+        confirmation_sent_at,
+        customer_vehicles!vehicle_id (
+          make,
+          model,
+          year,
+          color,
+          license_plate,
+          vehicle_sizes!vehicle_size_id (
+            name,
+            price_multiplier
           )
-        `)
-        .eq('customer_id', userId)
-        .order('created_at', { ascending: false })
+        ),
+        customer_addresses!address_id (
+          address_line_1,
+          address_line_2,
+          city,
+          county,
+          postal_code,
+          country,
+          distance_from_business
+        ),
+        services!service_id (
+          name,
+          short_description,
+          service_categories!category_id (
+            name
+          )
+        ),
+        booking_services!booking_id (
+          service_details,
+          price,
+          estimated_duration
+        )
+      `)
+      .eq('customer_id', profile.id)
+      .order('created_at', { ascending: false })
 
-      if (bookingsError) {
-        console.error('Error fetching bookings:', bookingsError)
-        return ApiResponseHandler.success([])
-      }
-
-      console.log(`Found ${bookings?.length || 0} bookings for user ${userId}`)
-
-      // Transform the data for frontend consumption
-      interface BookingWithServices {
-      id: string
-      booking_reference: string
-      scheduled_date: string
-      scheduled_start_time: string
-      scheduled_end_time: string
-      status: string
-      total_price: number
-      special_instructions?: string
-      distance_km?: number
-      estimated_duration?: number
-      created_at: string
-      confirmed_at?: string
-      completed_at?: string
-      cancelled_at?: string
-      cancellation_reason?: string
-      booking_services?: Array<{
-        service_id: string
-        service_details?: { name?: string }
-        price: number
-        estimated_duration: number
-      }>
-      vehicle_details?: {
-        make?: string
-        model?: string
-        year?: number
-        color?: string
-        registration?: string
-        size_name?: string
-      }
-      service_address?: {
-        name?: string
-        address_line_1?: string
-        address_line_2?: string
-        city?: string
-        postcode?: string
-      }
+    if (bookingsError) {
+      console.error('Error fetching bookings:', bookingsError)
+      return NextResponse.json({
+        success: false,
+        error: { message: 'Failed to fetch bookings', code: 'DATABASE_ERROR' }
+      }, { status: 500 })
     }
-    
-      const transformedBookings = bookings?.map((booking: BookingWithServices) => ({
+
+    // Transform the data for frontend consumption
+    const transformedBookings = bookings?.map((booking: any) => ({
       id: booking.id,
       booking_reference: booking.booking_reference,
       scheduled_date: booking.scheduled_date,
-      start_time: booking.scheduled_start_time,
-      end_time: booking.scheduled_end_time,
+      scheduled_start_time: booking.scheduled_start_time,
+      scheduled_end_time: booking.scheduled_end_time,
       status: booking.status,
       total_price: booking.total_price,
+      pricing_breakdown: booking.pricing_breakdown,
       special_instructions: booking.special_instructions,
-      distance_km: booking.distance_km,
-      estimated_duration: booking.estimated_duration,
       created_at: booking.created_at,
-      confirmed_at: booking.confirmed_at,
-      completed_at: booking.completed_at,
-      cancelled_at: booking.cancelled_at,
-      cancellation_reason: booking.cancellation_reason,
-      services: booking.booking_services?.map((service) => ({
-        id: service.service_id,
-        name: service.service_details?.name || 'Service',
-        price: service.price,
-        duration: service.estimated_duration
-      })) || [],
-      vehicle: booking.vehicle_details ? {
-        make: booking.vehicle_details.make || '',
-        model: booking.vehicle_details.model || '',
-        year: booking.vehicle_details.year,
-        color: booking.vehicle_details.color,
-        registration: booking.vehicle_details.registration
+      confirmation_sent_at: booking.confirmation_sent_at,
+      
+      // Service information from main service and booking services
+      service: booking.services ? {
+        name: booking.services.name,
+        short_description: booking.services.short_description,
+        category: booking.services.service_categories?.name || 'General'
       } : null,
-      address: booking.service_address ? {
-        name: booking.service_address.name || '',
-        address_line_1: booking.service_address.address_line_1 || '',
-        address_line_2: booking.service_address.address_line_2,
-        city: booking.service_address.city || '',
-        postal_code: booking.service_address.postcode || ''
+      
+      // Detailed service breakdown from booking_services
+      booking_services: booking.booking_services?.map((service: any) => ({
+        service_details: service.service_details,
+        price: service.price,
+        estimated_duration: service.estimated_duration
+      })) || [],
+      
+      // Vehicle information with size details
+      vehicle: booking.customer_vehicles ? {
+        make: booking.customer_vehicles.make,
+        model: booking.customer_vehicles.model,
+        year: booking.customer_vehicles.year,
+        color: booking.customer_vehicles.color,
+        license_plate: booking.customer_vehicles.license_plate,
+        vehicle_size: {
+          name: booking.customer_vehicles.vehicle_sizes?.name || 'Unknown',
+          price_multiplier: booking.customer_vehicles.vehicle_sizes?.price_multiplier || 1
+        }
+      } : null,
+      
+      // Address information with distance
+      address: booking.customer_addresses ? {
+        address_line_1: booking.customer_addresses.address_line_1,
+        address_line_2: booking.customer_addresses.address_line_2,
+        city: booking.customer_addresses.city,
+        county: booking.customer_addresses.county,
+        postal_code: booking.customer_addresses.postal_code,
+        country: booking.customer_addresses.country,
+        distance_from_business: booking.customer_addresses.distance_from_business
       } : null
-      })) || []
+    })) || []
 
-      return ApiResponseHandler.success(transformedBookings)
+    return NextResponse.json({
+      success: true,
+      data: transformedBookings
+    })
 
-    } catch (error) {
-      console.error('Customer bookings API error:', error)
-      return ApiResponseHandler.serverError('Failed to fetch customer bookings')
-    }
   } catch (error) {
     console.error('Customer bookings API error:', error)
-    return ApiResponseHandler.serverError('Failed to fetch customer bookings')
+    return NextResponse.json({
+      success: false,
+      error: { message: 'Internal server error', code: 'SERVER_ERROR' }
+    }, { status: 500 })
   }
 }

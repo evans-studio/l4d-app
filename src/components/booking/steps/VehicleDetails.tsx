@@ -103,15 +103,30 @@ export function VehicleDetails() {
     return 'extra_large'
   }
 
-  // Helper function to get size display info
+  // Helper function to get size display info from database
   const getSizeInfo = (sizeName: string) => {
-    const sizeMap = {
-      small: { label: 'Small', description: 'Hatchbacks, city cars', multiplier: '0.8x' },
-      medium: { label: 'Medium', description: 'Sedans, small SUVs', multiplier: '1.0x' },
-      large: { label: 'Large', description: 'Large SUVs, vans', multiplier: '1.3x' },
-      extra_large: { label: 'Extra Large', description: 'Large vans, trucks', multiplier: '1.5x' }
+    const vehicleSize = vehicleSizes.find(size => 
+      size.name.toLowerCase().replace(/\s+/g, '_') === sizeName
+    )
+    
+    if (vehicleSize) {
+      return {
+        id: vehicleSize.id,
+        label: vehicleSize.name,
+        description: vehicleSize.description || 'Vehicle size',
+        multiplier: `${vehicleSize.price_multiplier}x`,
+        examples: vehicleSize.examples || []
+      }
     }
-    return sizeMap[sizeName as keyof typeof sizeMap] || sizeMap.medium
+    
+    // Fallback for legacy size names
+    const legacyMap = {
+      small: { label: 'Small', description: 'Hatchbacks, city cars', multiplier: '0.8x', examples: [] },
+      medium: { label: 'Medium', description: 'Sedans, small SUVs', multiplier: '1.0x', examples: [] },
+      large: { label: 'Large', description: 'Large SUVs, vans', multiplier: '1.3x', examples: [] },
+      extra_large: { label: 'Extra Large', description: 'Large vans, trucks', multiplier: '1.5x', examples: [] }
+    }
+    return legacyMap[sizeName as keyof typeof legacyMap] || legacyMap.medium
   }
 
   if (!isCurrentStep) {
@@ -272,19 +287,19 @@ export function VehicleDetails() {
               </p>
               
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                {['small', 'medium', 'large', 'extra_large'].map((size) => {
-                  const sizeInfo = getSizeInfo(size)
-                  const isSelected = vehicleForm.size === size
+                {vehicleSizes.length > 0 ? vehicleSizes.map((vehicleSize) => {
+                  const sizeKey = vehicleSize.name.toLowerCase().replace(/\s+/g, '_')
+                  const isSelected = vehicleForm.size === sizeKey
                   
                   return (
                     <Card
-                      key={size}
+                      key={vehicleSize.id}
                       className={`cursor-pointer transition-all duration-200 ${
                         isSelected
                           ? 'border-brand-500 bg-brand-600/5 shadow-purple-lg'
                           : 'hover:border-brand-400 hover:shadow-purple'
                       }`}
-                      onClick={() => handleFormChange('size', size)}
+                      onClick={() => handleFormChange('size', sizeKey)}
                     >
                       <CardContent className="p-4 text-center">
                         <div className={`w-8 h-8 rounded-full mx-auto mb-2 flex items-center justify-center ${
@@ -293,21 +308,64 @@ export function VehicleDetails() {
                           <CarIcon className="w-4 h-4" />
                         </div>
                         <h4 className="font-semibold text-text-primary mb-1">
-                          {sizeInfo.label}
+                          {vehicleSize.name}
                         </h4>
                         <p className="text-xs text-text-secondary mb-1">
-                          {sizeInfo.description}
+                          {vehicleSize.description || 'Vehicle size'}
                         </p>
                         <p className="text-xs font-medium text-brand-400">
-                          Price: {sizeInfo.multiplier}
+                          Price: {vehicleSize.price_multiplier}x
                         </p>
+                        {vehicleSize.examples && vehicleSize.examples.length > 0 && (
+                          <p className="text-xs text-text-tertiary mt-1">
+                            {vehicleSize.examples.join(', ')}
+                          </p>
+                        )}
                         {isSelected && (
                           <CheckIcon className="w-4 h-4 text-brand-600 mx-auto mt-2" />
                         )}
                       </CardContent>
                     </Card>
                   )
-                })}
+                }) : (
+                  // Fallback while loading vehicle sizes from database
+                  ['small', 'medium', 'large', 'extra_large'].map((size) => {
+                    const sizeInfo = getSizeInfo(size)
+                    const isSelected = vehicleForm.size === size
+                    
+                    return (
+                      <Card
+                        key={size}
+                        className={`cursor-pointer transition-all duration-200 ${
+                          isSelected
+                            ? 'border-brand-500 bg-brand-600/5 shadow-purple-lg'
+                            : 'hover:border-brand-400 hover:shadow-purple'
+                        }`}
+                        onClick={() => handleFormChange('size', size)}
+                      >
+                        <CardContent className="p-4 text-center">
+                          <div className={`w-8 h-8 rounded-full mx-auto mb-2 flex items-center justify-center ${
+                            isSelected ? 'bg-brand-600 text-white' : 'bg-brand-600/10 text-brand-400'
+                          }`}>
+                            <CarIcon className="w-4 h-4" />
+                          </div>
+                          <h4 className="font-semibold text-text-primary mb-1">
+                            {sizeInfo.label}
+                          </h4>
+                          <p className="text-xs text-text-secondary mb-1">
+                            {sizeInfo.description}
+                          </p>
+                          <p className="text-xs font-medium text-brand-400">
+                            Price: {sizeInfo.multiplier}
+                          </p>
+                          {isSelected && (
+                            <CheckIcon className="w-4 h-4 text-brand-600 mx-auto mt-2" />
+                          )}
+                        </CardContent>
+                      </Card>
+                    )
+                  })
+                )}
               </div>
             </div>
 

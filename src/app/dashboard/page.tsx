@@ -88,7 +88,7 @@ const statusConfig = {
 
 export default function DashboardPage() {
   const router = useRouter()
-  const { user, isLoading: authLoading } = useAuth()
+  const { user, profile, isLoading: authLoading } = useAuth()
   const [bookings, setBookings] = useState<DashboardBooking[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<'upcoming' | 'completed'>('upcoming')
@@ -195,9 +195,9 @@ export default function DashboardPage() {
             <h1 className="text-3xl font-bold text-text-primary">
               My Dashboard
             </h1>
-            {user && (
+            {profile && (
               <p className="text-text-secondary">
-                Welcome back, {user.firstName || 'Customer'}
+                Welcome back, {profile.first_name || 'Customer'}
               </p>
             )}
           </div>

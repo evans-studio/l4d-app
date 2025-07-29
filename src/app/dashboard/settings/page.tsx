@@ -39,7 +39,7 @@ interface NotificationSettings {
 }
 
 export default function AccountSettingsPage() {
-  const { user, refreshProfile } = useAuth()
+  const { user, profile, refreshProfile } = useAuth()
   const [activeTab, setActiveTab] = useState<'profile' | 'password' | 'notifications' | 'privacy'>('profile')
   const [isLoading, setIsLoading] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
@@ -74,15 +74,15 @@ export default function AccountSettingsPage() {
 
   // Load profile data on mount
   useEffect(() => {
-    if (user) {
+    if (profile) {
       setProfileData({
-        firstName: user.firstName || '',
-        lastName: user.lastName || '',
-        email: user.email || '',
-        phone: user.phone || ''
+        firstName: profile.first_name || '',
+        lastName: profile.last_name || '',
+        email: profile.email || '',
+        phone: profile.phone || ''
       })
     }
-  }, [user])
+  }, [profile])
 
   const clearMessage = () => {
     setTimeout(() => setMessage(null), 5000)

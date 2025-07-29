@@ -1,162 +1,237 @@
-import { NextRequest } from 'next/server'
-import { BookingService } from '@/lib/services/booking'
-import { ApiResponseHandler } from '@/lib/api/response'
-import { ApiValidation } from '@/lib/api/validation'
-import { ApiAuth } from '@/lib/api/auth'
-import { z } from 'zod'
+import { NextRequest, NextResponse } from 'next/server'
+import { createClientFromRequest } from '@/lib/supabase/server'
+import { ApiResponse } from '@/types/booking'
 
-const updateBookingSchema = z.object({
-  special_instructions: z.string().optional(),
-  admin_notes: z.string().optional(),
-  internal_notes: z.string().optional(),
-  scheduled_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
-  time_slot_id: z.string().uuid().optional(),
-})
-
-const updateStatusSchema = z.object({
-  status: z.enum(['pending', 'confirmed', 'in_progress', 'completed', 'paid', 'cancelled', 'no_show']),
-  reason: z.string().optional(),
-  admin_notes: z.string().optional(),
-})
-
-const confirmBookingSchema = z.object({
-  scheduled_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  scheduled_start_time: z.string().regex(/^\d{2}:\d{2}$/),
-  scheduled_end_time: z.string().regex(/^\d{2}:\d{2}$/),
-  admin_notes: z.string().optional(),
-})
+const ADMIN_EMAILS = [
+  'zell@love4detailing.com',
+  'paul@evans-studio.co.uk'
+]
 
 export async function GET(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
-) {
-  const params = await context.params
+): Promise<NextResponse<ApiResponse>> {
   try {
-    const { auth, error: authError } = await ApiAuth.authenticate()
-    if (authError) {
-      return authError
+    const supabase = createClientFromRequest(request)
+    
+    // Get current user (this also validates the session)
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    
+    if (userError || !user) {
+      return NextResponse.json({
+        success: false,
+        error: { message: 'Authentication required', code: 'UNAUTHORIZED' }
+      }, { status: 401 })
     }
 
-    const bookingService = new BookingService()
-    const result = await bookingService.getBookingById(params.id)
+    // Get user profile to check role
+    const { data: profile, error: profileError } = await supabase
+      .from('user_profiles')
+      .select('id, email, role, is_active')
+      .eq('id', user.id)
+      .single()
 
-    if (!result.success) {
-      if (result.error?.message?.includes('not found')) {
-        return ApiResponseHandler.error('Booking not found', 'BOOKING_NOT_FOUND', 404)
+    if (profileError || !profile?.is_active) {
+      return NextResponse.json({
+        success: false,
+        error: { message: 'User account not found or inactive', code: 'USER_INACTIVE' }
+      }, { status: 401 })
+    }
+
+    const params = await context.params
+    const bookingId = params.id
+
+    // Determine if user is admin
+    const isAdmin = profile.role === 'admin' || ADMIN_EMAILS.includes(profile.email.toLowerCase())
+
+    // Fetch booking with proper joins
+    const { data: booking, error: bookingError } = await supabase
+      .from('bookings')
+      .select(`
+        id,
+        booking_reference,
+        customer_id,
+        scheduled_date,
+        scheduled_start_time,
+        scheduled_end_time,
+        status,
+        total_price,
+        special_requests,
+        created_at,
+        customer_vehicles (
+          make,
+          model,
+          year,
+          color,
+          license_number,
+          vehicle_size
+        ),
+        customer_addresses (
+          label,
+          address_line_1,
+          address_line_2,
+          city,
+          county,
+          postal_code,
+          country
+        ),
+        booking_services (
+          service_id,
+          service_name,
+          price,
+          duration
+        )
+      `)
+      .eq('id', bookingId)
+      .single()
+
+    if (bookingError) {
+      if (bookingError.code === 'PGRST116') {
+        return NextResponse.json({
+          success: false,
+          error: { message: 'Booking not found', code: 'NOT_FOUND' }
+        }, { status: 404 })
       }
-      
-      return ApiResponseHandler.error(
-        result.error?.message || 'Failed to fetch booking',
-        'FETCH_BOOKING_FAILED'
-      )
+      console.error('Error fetching booking:', bookingError)
+      return NextResponse.json({
+        success: false,
+        error: { message: 'Failed to fetch booking', code: 'DATABASE_ERROR' }
+      }, { status: 500 })
     }
 
-    // Check if user can access this booking
-    const booking = result.data!
-    if (!['admin', 'super_admin'].includes(auth!.profile.role as string) && 
-        booking.customer_id !== (auth!.profile.id as string)) {
-      return ApiResponseHandler.forbidden('Access denied')
+    // Check access permissions
+    if (!isAdmin && booking.customer_id !== profile.id) {
+      return NextResponse.json({
+        success: false,
+        error: { message: 'Access denied', code: 'FORBIDDEN' }
+      }, { status: 403 })
     }
 
-    return ApiResponseHandler.success(result.data)
+    // Transform the data for frontend consumption
+    const transformedBooking = {
+      id: booking.id,
+      booking_reference: booking.booking_reference,
+      customer_id: booking.customer_id,
+      scheduled_date: booking.scheduled_date,
+      start_time: booking.scheduled_start_time,
+      end_time: booking.scheduled_end_time,
+      status: booking.status,
+      total_price: booking.total_price,
+      special_requests: booking.special_requests,
+      created_at: booking.created_at,
+      services: booking.booking_services?.map((service: any) => ({
+        name: service.service_name,
+        price: service.price,
+        duration: service.duration
+      })) || [],
+      vehicle: booking.customer_vehicles && booking.customer_vehicles.length > 0 ? {
+        make: booking.customer_vehicles[0]?.make,
+        model: booking.customer_vehicles[0]?.model,
+        year: booking.customer_vehicles[0]?.year,
+        color: booking.customer_vehicles[0]?.color,
+        license_number: booking.customer_vehicles[0]?.license_number,
+        vehicle_size: booking.customer_vehicles[0]?.vehicle_size
+      } : null,
+      address: booking.customer_addresses && booking.customer_addresses.length > 0 ? {
+        label: booking.customer_addresses[0]?.label,
+        address_line_1: booking.customer_addresses[0]?.address_line_1,
+        address_line_2: booking.customer_addresses[0]?.address_line_2,
+        city: booking.customer_addresses[0]?.city,
+        county: booking.customer_addresses[0]?.county,
+        postal_code: booking.customer_addresses[0]?.postal_code,
+        country: booking.customer_addresses[0]?.country
+      } : null
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: transformedBooking
+    })
 
   } catch (error) {
-    console.error('Get booking error:', error)
-    return ApiResponseHandler.serverError('Failed to fetch booking')
+    console.error('Admin booking details API error:', error)
+    return NextResponse.json({
+      success: false,
+      error: { message: 'Internal server error', code: 'SERVER_ERROR' }
+    }, { status: 500 })
   }
 }
 
 export async function PUT(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
-) {
-  const params = await context.params
+): Promise<NextResponse<ApiResponse>> {
   try {
-    const { auth, error: authError } = await ApiAuth.authenticate()
-    if (authError) {
-      return authError
+    const supabase = createClientFromRequest(request)
+    
+    // Get current user (this also validates the session)
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    
+    if (userError || !user) {
+      return NextResponse.json({
+        success: false,
+        error: { message: 'Authentication required', code: 'UNAUTHORIZED' }
+      }, { status: 401 })
     }
 
+    // Get user profile to check role
+    const { data: profile, error: profileError } = await supabase
+      .from('user_profiles')
+      .select('id, email, role, is_active')
+      .eq('id', user.id)
+      .single()
+
+    if (profileError || !profile?.is_active) {
+      return NextResponse.json({
+        success: false,
+        error: { message: 'User account not found or inactive', code: 'USER_INACTIVE' }
+      }, { status: 401 })
+    }
+
+    const params = await context.params
+    const bookingId = params.id
     const body = await request.json()
-    const validation = await ApiValidation.validateBody(body, updateBookingSchema)
-    if (!validation.success) {
-      return validation.error
-    }
 
-    const bookingService = new BookingService()
+    // Only admins can update bookings via this route
+    const isAdmin = profile.role === 'admin' || ADMIN_EMAILS.includes(profile.email.toLowerCase())
     
-    // Get existing booking to check permissions
-    const existingResult = await bookingService.getBookingById(params.id)
-    if (!existingResult.success) {
-      return ApiResponseHandler.error('Booking not found', 'BOOKING_NOT_FOUND', 404)
-    }
-
-    const booking = existingResult.data!
-    
-    // Check permissions
-    const isAdmin = ['admin', 'super_admin'].includes(auth!.profile.role as string)
-    const isOwner = booking.customer_id === (auth!.profile.id as string)
-    
-    if (!isAdmin && !isOwner) {
-      return ApiResponseHandler.forbidden('Access denied')
-    }
-
-    // Customers can only update special_instructions
-    if (!isAdmin && Object.keys(validation.data).some(key => key !== 'special_instructions')) {
-      return ApiResponseHandler.forbidden('Customers can only update special instructions')
+    if (!isAdmin) {
+      return NextResponse.json({
+        success: false,
+        error: { message: 'Admin access required', code: 'FORBIDDEN' }
+      }, { status: 403 })
     }
 
     // Update booking
-    const result = await bookingService.updateBooking(params.id, validation.data)
+    const { data: updatedBooking, error: updateError } = await supabase
+      .from('bookings')
+      .update({
+        status: body.status,
+        special_requests: body.special_requests,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', bookingId)
+      .select('*')
+      .single()
 
-    if (!result.success) {
-      return ApiResponseHandler.error(
-        result.error?.message || 'Failed to update booking',
-        'UPDATE_BOOKING_FAILED'
-      )
+    if (updateError) {
+      console.error('Error updating booking:', updateError)
+      return NextResponse.json({
+        success: false,
+        error: { message: 'Failed to update booking', code: 'UPDATE_FAILED' }
+      }, { status: 500 })
     }
 
-    return ApiResponseHandler.success(result.data)
+    return NextResponse.json({
+      success: true,
+      data: updatedBooking
+    })
 
   } catch (error) {
-    console.error('Update booking error:', error)
-    return ApiResponseHandler.serverError('Failed to update booking')
-  }
-}
-
-export async function DELETE(
-  request: NextRequest,
-  context: { params: Promise<{ id: string }> }
-) {
-  const params = await context.params
-  try {
-    const { auth, error: authError } = await ApiAuth.requireRole(['admin', 'super_admin'])
-    if (authError) {
-      return authError
-    }
-
-    const bookingService = new BookingService()
-    const result = await bookingService.cancelBooking(
-      params.id,
-      auth!.profile.id as string,
-      'Cancelled by admin'
-    )
-
-    if (!result.success) {
-      if (result.error?.message?.includes('not found')) {
-        return ApiResponseHandler.error('Booking not found', 'BOOKING_NOT_FOUND', 404)
-      }
-      
-      return ApiResponseHandler.error(
-        result.error?.message || 'Failed to cancel booking',
-        'CANCEL_BOOKING_FAILED'
-      )
-    }
-
-    return ApiResponseHandler.success({ message: 'Booking cancelled successfully' })
-
-  } catch (error) {
-    console.error('Cancel booking error:', error)
-    return ApiResponseHandler.serverError('Failed to cancel booking')
+    console.error('Update booking API error:', error)
+    return NextResponse.json({
+      success: false,
+      error: { message: 'Internal server error', code: 'SERVER_ERROR' }
+    }, { status: 500 })
   }
 }
