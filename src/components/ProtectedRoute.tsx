@@ -29,8 +29,10 @@ export function ProtectedRoute({
       }
 
       if (profile && !allowedRoles.includes(profile.role)) {
-        console.log('Role not allowed, redirecting to dashboard')
-        router.push('/dashboard')
+        console.log('Role not allowed, redirecting based on user role')
+        // Redirect based on user's actual role
+        const userRedirectTo = profile.role === 'admin' || profile.role === 'super_admin' ? '/admin' : '/dashboard'
+        router.push(userRedirectTo)
         return
       }
       
@@ -55,7 +57,7 @@ export function ProtectedRoute({
 
 export function CustomerRoute({ children }: { children: React.ReactNode }) {
   return (
-    <ProtectedRoute allowedRoles={['customer', 'admin', 'super_admin']}>
+    <ProtectedRoute allowedRoles={['customer']}>
       {children}
     </ProtectedRoute>
   )

@@ -17,16 +17,18 @@ export function ZustandAuthInitializer({ children }: { children: React.ReactNode
       
       // Set up auth state listener on client side only after hydration
       const { data } = supabase.auth.onAuthStateChange(async (event, session) => {
-        console.log('Auth state change:', event, !!session?.user)
+        console.log('Auth state change:', event, !!session?.user, 'Session user ID:', session?.user?.id)
         
         const store = useStore.getState()
         
         if (session?.user) {
+          console.log('Setting user in store:', session.user.id, session.user.email)
           store.setUser(session.user)
           
           let profile = await store.fetchProfile(session.user.id)
           
           if (!profile && session.user.email) {
+            console.log('Profile not found, creating new profile')
             profile = await store.createProfile(
               session.user.id,
               session.user.email,
@@ -35,7 +37,16 @@ export function ZustandAuthInitializer({ children }: { children: React.ReactNode
               session.user.user_metadata?.phone
             )
           }
+          
+          const finalState = useStore.getState()
+          console.log('Final auth state after listener:', {
+            hasUser: !!finalState.user,
+            hasProfile: !!finalState.profile,
+            isAuthenticated: finalState.isAuthenticated
+          })
+          
         } else {
+          console.log('No session, clearing auth state')
           store.setUser(null)
           store.setProfile(null)
         }

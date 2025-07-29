@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useSessionRefresh } from '@/lib/hooks/useSessionRefresh'
 import { Button } from '@/components/ui/primitives/Button'
 import { AdminLayout } from '@/components/layouts/AdminLayout'
+import { AdminRoute } from '@/components/ProtectedRoute'
 import { 
   CalendarIcon, 
   UsersIcon, 
@@ -84,7 +85,7 @@ const statusConfig = {
   }
 }
 
-export default function AdminDashboard() {
+function AdminDashboard() {
   const router = useRouter()
   const { refreshSession, isRefreshing } = useSessionRefresh()
   const [stats, setStats] = useState<AdminStats | null>(null)
@@ -537,5 +538,13 @@ export default function AdminDashboard() {
         </div>
       </div>
     </AdminLayout>
+  )
+}
+
+export default function AdminPage() {
+  return (
+    <AdminRoute>
+      <AdminDashboard />
+    </AdminRoute>
   )
 }

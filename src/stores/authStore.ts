@@ -248,6 +248,7 @@ export const useAuthStore = create<AuthState>()(
           }
 
           if (data.user) {
+            console.log('Login successful, setting user:', data.user.id, data.user.email)
             set({ user: data.user })
             
             // Fetch or create profile
@@ -262,6 +263,12 @@ export const useAuthStore = create<AuthState>()(
                 data.user.user_metadata?.phone
               )
             }
+            
+            console.log('Login method complete, final state:', {
+              hasUser: !!get().user,
+              hasProfile: !!get().profile,
+              isAuthenticated: get().isAuthenticated
+            })
             
             set({ isLoading: false })
             return { success: true }
