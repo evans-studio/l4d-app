@@ -65,17 +65,29 @@ export function ZustandAuthInitializer({ children }: { children: React.ReactNode
 
 // New hook for components migrated to Zustand
 export function useAuth() {
-  return useStore((state) => ({
-    user: state.user,
-    profile: state.profile,
-    isLoading: state.isLoading,
-    isAuthenticated: state.isAuthenticated,
-    isAdmin: state.isAdmin,
-    isCustomer: state.isCustomer,
-    error: state.error,
-    login: state.login,
-    register: state.register,
-    logout: state.logout,
-    refreshProfile: state.refreshProfile,
-  }))
+  const user = useStore((state) => state.user)
+  const profile = useStore((state) => state.profile)
+  const isLoading = useStore((state) => state.isLoading)
+  const isAuthenticated = useStore((state) => state.isAuthenticated)
+  const isAdmin = useStore((state) => state.isAdmin)
+  const isCustomer = useStore((state) => state.isCustomer)
+  const error = useStore((state) => state.error)
+  const login = useStore((state) => state.login)
+  const register = useStore((state) => state.register)
+  const logout = useStore((state) => state.logout)
+  const refreshProfile = useStore((state) => state.refreshProfile)
+
+  return {
+    user,
+    profile,
+    isLoading,
+    isAuthenticated,
+    isAdmin,
+    isCustomer,
+    error,
+    login,
+    register,
+    logout,
+    refreshProfile,
+  }
 }

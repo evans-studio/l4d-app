@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useState, useMemo } from 'react'
 import { useAuthStore } from '@/stores/authStore'
 import { User } from '@supabase/supabase-js'
 
@@ -25,31 +25,35 @@ const LegacyAuthContext = createContext<LegacyAuthContextType | undefined>(undef
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isHydrated, setIsHydrated] = useState(false)
   
-  // Get auth state from Zustand store
-  const authState = useAuthStore((state) => ({
-    user: state.user,
-    profile: state.profile,
-    isLoading: state.isLoading,
-    isAuthenticated: state.isAuthenticated,
-    error: state.error,
-    login: state.login,
-    register: state.register,
-    logout: state.logout,
-    refreshProfile: state.refreshProfile,
-  }))
+  // Get auth state from Zustand store with stable selectors
+  const user = useAuthStore((state) => state.user)
+  const profile = useAuthStore((state) => state.profile)
+  const isLoading = useAuthStore((state) => state.isLoading)
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
+  const error = useAuthStore((state) => state.error)
+  const login = useAuthStore((state) => state.login)
+  const register = useAuthStore((state) => state.register)
+  const logout = useAuthStore((state) => state.logout)
+  const refreshProfile = useAuthStore((state) => state.refreshProfile)
 
   useEffect(() => {
     setIsHydrated(true)
   }, [])
 
-  // Provide consistent initial state until hydration is complete
-  const value: LegacyAuthContextType = {
-    ...authState,
-    // Ensure consistent state until hydrated
-    isLoading: isHydrated ? authState.isLoading : false,
-    isAdmin: authState.profile?.role === 'admin' || authState.profile?.role === 'super_admin' || false,
-    isCustomer: authState.profile?.role === 'customer' || false,
-  }
+  // Memoize the value to prevent unnecessary re-renders
+  const value: LegacyAuthContextType = useMemo(() => ({
+    user,
+    profile,
+    isLoading: isHydrated ? isLoading : false,
+    isAuthenticated,
+    error,
+    isAdmin: profile?.role === 'admin' || profile?.role === 'super_admin' || false,
+    isCustomer: profile?.role === 'customer' || false,
+    login,
+    register,
+    logout,
+    refreshProfile,
+  }), [user, profile, isLoading, isAuthenticated, error, login, register, logout, refreshProfile, isHydrated])
 
   return (
     <LegacyAuthContext.Provider value={value}>
