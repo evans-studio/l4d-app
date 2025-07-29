@@ -32,16 +32,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
 
   const isAuthenticated = !!user && !!profile
-  
-  // Debug logging
-  console.log('Auth State:', { 
-    user: !!user, 
-    userEmail: user?.email, 
-    profile: !!profile, 
-    profileRole: profile?.role,
-    isAuthenticated,
-    isLoading 
-  })
 
   const fetchProfile = async (userId: string) => {
     try {
