@@ -42,7 +42,7 @@ export function ZustandAuthInitializer({ children }: { children: React.ReactNode
           console.log('Final auth state after listener:', {
             hasUser: !!finalState.user,
             hasProfile: !!finalState.profile,
-            isAuthenticated: finalState.isAuthenticated
+            isAuthenticated: !!finalState.user && !!finalState.profile
           })
           
         } else {
