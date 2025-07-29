@@ -83,48 +83,27 @@ export const useAuthStore = create<AuthState>()(
       // Profile operations
       fetchProfile: async (userId: string) => {
         try {
-          console.log('Fetching profile for user:', userId)
+          console.log('Fetching profile for user via API:', userId)
           
-          // Use direct query only - simpler and more reliable
-          console.log('Attempting direct profile query...')
-          const { data, error } = await supabase
-            .from('user_profiles')
-            .select('id, email, first_name, last_name, phone, role, is_active, created_at, updated_at')
-            .eq('id', userId)
-            .eq('is_active', true)
-            .single()
-
-          if (error) {
-            console.error('Profile fetch error:', error)
-            console.error('Error details:', { code: error.code, message: error.message, details: error.details, hint: error.hint })
+          const response = await fetch(`/api/auth/profile?userId=${userId}`)
+          const result = await response.json()
+          
+          if (!result.success) {
+            console.error('Profile fetch API error:', result.error)
             
-            // If profile doesn't exist but user is authenticated, create it
-            if (error.code === 'PGRST116') {
+            if (result.error.code === 'PROFILE_NOT_FOUND') {
               console.log('Profile not found, will need to create one')
               set({ error: 'Profile not found' })
               return null
             }
             
-            set({ error: `Failed to fetch profile: ${error.message}` })
+            set({ error: result.error.message })
             return null
           }
 
-          if (!data) {
-            console.error('No profile data returned')
-            set({ error: 'No profile data received' })
-            return null
-          }
-
-          const profile = parseUserProfile(data)
-          if (profile) {
-            console.log('Profile fetched successfully:', profile)
-            set({ profile })
-            return profile
-          }
-          
-          console.error('Profile parsing failed:', data)
-          set({ error: 'Invalid profile data received' })
-          return null
+          console.log('Profile fetched successfully via API:', result.data)
+          set({ profile: result.data })
+          return result.data
         } catch (error) {
           console.error('Profile fetch exception:', error)
           set({ error: 'Network error while fetching profile' })
@@ -134,42 +113,25 @@ export const useAuthStore = create<AuthState>()(
       
       createProfile: async (userId: string, email: string, firstName?: string, lastName?: string, phone?: string) => {
         try {
-          const role = ADMIN_EMAILS.includes(email.toLowerCase()) ? 'admin' : 'customer'
+          console.log('Creating profile via API:', { userId, email, firstName, lastName, phone })
           
-          console.log('Creating profile:', { userId, email, firstName, lastName, phone, role })
+          const response = await fetch('/api/auth/profile', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId, email, firstName, lastName, phone })
+          })
           
-          // Use direct insert only - simpler and more reliable
-          const profileData = {
-            id: userId,
-            email: email.toLowerCase(),
-            first_name: firstName || '',
-            last_name: lastName || '',
-            phone: phone || null,
-            role: role,
-            is_active: true
-          }
+          const result = await response.json()
           
-          const { data, error } = await supabase
-            .from('user_profiles')
-            .upsert(profileData)
-            .select()
-            .single()
-          
-          if (error) {
-            console.error('Profile creation error:', error)
-            set({ error: `Failed to create profile: ${error.message}` })
+          if (!result.success) {
+            console.error('Profile creation API error:', result.error)
+            set({ error: result.error.message })
             return null
           }
           
-          const profile = parseUserProfile(data)
-          if (profile) {
-            console.log('Profile created successfully:', profile)
-            set({ profile })
-            return profile
-          }
-          
-          set({ error: 'Invalid profile data received after creation' })
-          return null
+          console.log('Profile created successfully via API:', result.data)
+          set({ profile: result.data })
+          return result.data
         } catch (error) {
           console.error('Profile creation exception:', error)
           set({ error: 'Network error while creating profile' })
