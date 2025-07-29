@@ -10,8 +10,6 @@ import {
   SearchIcon,
   PhoneIcon,
   MailIcon,
-  MapPinIcon,
-  CarIcon,
   CalendarIcon,
   DollarSignIcon,
   TrendingUpIcon,
@@ -28,29 +26,9 @@ interface Customer {
   email: string
   phone?: string
   created_at: string
-  last_booking_date?: string
-  total_bookings: number
-  total_spent: number
-  avg_booking_value: number
-  status: 'active' | 'inactive' | 'vip'
-  addresses: Array<{
-    id: string
-    address_line_1: string
-    city: string
-    postcode: string
-    is_primary: boolean
-  }>
-  vehicles: Array<{
-    id: string
-    make: string
-    model: string
-    year?: number
-    is_primary: boolean
-  }>
-  recent_services: Array<{
-    name: string
-    date: string
-  }>
+  updated_at: string
+  role: string
+  is_active: boolean
 }
 
 interface CustomerStats {
@@ -135,15 +113,17 @@ function AdminCustomersPage() {
       filtered = filtered.filter(customer => 
         `${customer.first_name} ${customer.last_name}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
         customer.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        customer.phone?.includes(searchTerm) ||
-        customer.addresses.some(addr => addr.city.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                       addr.postcode.toLowerCase().includes(searchTerm.toLowerCase()))
+        customer.phone?.includes(searchTerm)
       )
     }
 
-    // Status filter
+    // Status filter (based on is_active)
     if (statusFilter !== 'all') {
-      filtered = filtered.filter(customer => customer.status === statusFilter)
+      if (statusFilter === 'active') {
+        filtered = filtered.filter(customer => customer.is_active)
+      } else if (statusFilter === 'inactive') {
+        filtered = filtered.filter(customer => !customer.is_active)
+      }
     }
 
     // Sort
@@ -154,9 +134,9 @@ function AdminCustomersPage() {
         case 'date':
           return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
         case 'spent':
-          return b.total_spent - a.total_spent
+          return 0 // Not available in simplified interface
         case 'bookings':
-          return b.total_bookings - a.total_bookings
+          return 0 // Not available in simplified interface
         default:
           return 0
       }
@@ -196,9 +176,9 @@ function AdminCustomersPage() {
     })
   }
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (isActive: boolean) => {
+    const status = isActive ? 'active' : 'inactive'
     const config = statusConfig[status as keyof typeof statusConfig]
-    if (!config) return null
     
     return (
       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${config.bgColor} ${config.borderColor} ${config.color}`}>
@@ -207,9 +187,8 @@ function AdminCustomersPage() {
     )
   }
 
-  const getDaysSinceLastBooking = (lastBookingDate?: string) => {
-    if (!lastBookingDate) return 'Never'
-    const days = Math.floor((Date.now() - new Date(lastBookingDate).getTime()) / (1000 * 60 * 60 * 24))
+  const getDaysSinceRegistration = (createdAt: string) => {
+    const days = Math.floor((Date.now() - new Date(createdAt).getTime()) / (1000 * 60 * 60 * 24))
     if (days === 0) return 'Today'
     if (days === 1) return '1 day ago'
     if (days < 30) return `${days} days ago`
@@ -332,7 +311,7 @@ function AdminCustomersPage() {
                 <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-text-muted" />
                 <input
                   type="text"
-                  placeholder="Search customers by name, email, phone, or location..."
+                  placeholder="Search customers by name, email, or phone..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 bg-surface-primary border border-border-secondary rounded-md text-text-primary placeholder-text-muted focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-600/20"
@@ -350,7 +329,6 @@ function AdminCustomersPage() {
                 <option value="all">All Status</option>
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
-                <option value="vip">VIP</option>
               </select>
             </div>
 
@@ -363,8 +341,6 @@ function AdminCustomersPage() {
               >
                 <option value="name">Sort by Name</option>
                 <option value="date">Sort by Date</option>
-                <option value="spent">Sort by Spent</option>
-                <option value="bookings">Sort by Bookings</option>
               </select>
             </div>
           </div>
@@ -395,19 +371,19 @@ function AdminCustomersPage() {
                               {customer.first_name} {customer.last_name}
                             </h3>
                             <div className="flex items-center gap-3 mt-1">
-                              {getStatusBadge(customer.status)}
+                              {getStatusBadge(customer.is_active)}
                               <span className="text-text-muted text-sm">
                                 Member since {formatDate(customer.created_at)}
                               </span>
                             </div>
                           </div>
                           <div className="text-right">
-                            <p className="text-2xl font-bold text-brand-purple">£{customer.total_spent}</p>
-                            <p className="text-text-muted text-sm">{customer.total_bookings} bookings</p>
+                            <p className="text-lg font-semibold text-text-primary">{customer.role}</p>
+                            <p className="text-text-muted text-sm">Role</p>
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           {/* Contact */}
                           <div className="space-y-2">
                             <p className="text-text-secondary text-xs font-medium">Contact</p>
@@ -423,78 +399,21 @@ function AdminCustomersPage() {
                             )}
                           </div>
 
-                          {/* Location */}
+                          {/* Account Info */}
                           <div className="space-y-2">
-                            <p className="text-text-secondary text-xs font-medium">Primary Address</p>
-                            {customer.addresses.length > 0 && customer.addresses[0] ? (
-                              <div className="flex items-center gap-2">
-                                <MapPinIcon className="w-4 h-4 text-text-secondary" />
-                                <span className="text-text-primary text-sm">
-                                  {customer.addresses[0].city}, {customer.addresses[0].postcode}
-                                </span>
-                              </div>
-                            ) : (
-                              <span className="text-text-muted text-sm">No address</span>
-                            )}
-                            <p className="text-text-muted text-xs">
-                              {customer.addresses.length} address{customer.addresses.length !== 1 ? 'es' : ''}
-                            </p>
-                          </div>
-
-                          {/* Vehicles */}
-                          <div className="space-y-2">
-                            <p className="text-text-secondary text-xs font-medium">Vehicles</p>
-                            {customer.vehicles.length > 0 && customer.vehicles[0] ? (
-                              <div className="flex items-center gap-2">
-                                <CarIcon className="w-4 h-4 text-text-secondary" />
-                                <span className="text-text-primary text-sm">
-                                  {customer.vehicles[0].year} {customer.vehicles[0].make} {customer.vehicles[0].model}
-                                </span>
-                              </div>
-                            ) : (
-                              <span className="text-text-muted text-sm">No vehicles</span>
-                            )}
-                            <p className="text-text-muted text-xs">
-                              {customer.vehicles.length} vehicle{customer.vehicles.length !== 1 ? 's' : ''}
-                            </p>
-                          </div>
-
-                          {/* Activity */}
-                          <div className="space-y-2">
-                            <p className="text-text-secondary text-xs font-medium">Activity</p>
+                            <p className="text-text-secondary text-xs font-medium">Account</p>
                             <div className="flex items-center gap-2">
                               <CalendarIcon className="w-4 h-4 text-text-secondary" />
                               <span className="text-text-primary text-sm">
-                                {getDaysSinceLastBooking(customer.last_booking_date)}
+                                Registered {getDaysSinceRegistration(customer.created_at)}
                               </span>
                             </div>
                             <p className="text-text-muted text-xs">
-                              Avg. £{customer.avg_booking_value} per booking
+                              Last updated {formatDate(customer.updated_at)}
                             </p>
                           </div>
                         </div>
 
-                        {/* Recent Services */}
-                        {customer.recent_services.length > 0 && (
-                          <div className="mt-3">
-                            <p className="text-text-secondary text-xs font-medium mb-2">Recent Services</p>
-                            <div className="flex flex-wrap gap-1">
-                              {customer.recent_services.slice(0, 3).map((service, index) => (
-                                <span
-                                  key={index}
-                                  className="px-2 py-1 bg-surface-primary rounded text-xs text-text-primary"
-                                >
-                                  {service.name}
-                                </span>
-                              ))}
-                              {customer.recent_services.length > 3 && (
-                                <span className="px-2 py-1 bg-surface-primary rounded text-xs text-text-muted">
-                                  +{customer.recent_services.length - 3} more
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        )}
                       </div>
 
                       {/* Actions */}
