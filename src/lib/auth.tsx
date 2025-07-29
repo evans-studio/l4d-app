@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { User } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase/client'
+import { useRouter } from 'next/navigation'
 
 interface UserProfile {
   id: string
@@ -30,6 +31,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const router = useRouter()
 
   const isAuthenticated = !!user && !!profile
 
@@ -37,7 +39,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log('Fetching profile for user:', userId)
       
-      // First try regular query
       const { data, error } = await supabase
         .from('user_profiles')
         .select('id, email, first_name, last_name, phone, role')
@@ -46,28 +47,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (error) {
         console.error('Error fetching profile:', error)
-        console.error('Profile fetch error details:', {
-          message: error.message,
-          details: error.details,
-          hint: error.hint,
-          code: error.code
-        })
-        
-        // Log common error scenarios
-        if (error.code === 'PGRST116') {
-          console.log('PGRST116: No rows returned - profile does not exist')
-        } else if (error.message.includes('permission') || error.message.includes('RLS')) {
-          console.log('Permission error detected, this indicates RLS policy issue')
-          console.log('Please run the fix-profile-access.sql script in your Supabase dashboard')
-        } else if (error.message.includes('JWT')) {
-          console.log('JWT error - authentication token might be invalid')
-        }
-        
-        return null
-      }
-
-      if (!data) {
-        console.error('No profile data returned for user:', userId)
         return null
       }
 
@@ -78,6 +57,62 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error('Profile fetch exception:', error)
       return null
     }
+  }
+
+  const createProfile = async (userId: string, email: string, firstName?: string, lastName?: string, phone?: string) => {
+    const role = ['zell@love4detailing.com', 'paul@evans-studio.co.uk'].includes(email.toLowerCase()) ? 'admin' : 'customer'
+    
+    const profileData = {
+      id: userId,
+      email: email.toLowerCase(),
+      first_name: firstName || '',
+      last_name: lastName || '',
+      phone: phone || null,
+      role: role,
+      is_active: true
+    }
+    
+    console.log('Creating profile with data:', profileData)
+    
+    // First, check if profile already exists
+    const { data: existing } = await supabase
+      .from('user_profiles')
+      .select('id')
+      .eq('id', userId)
+      .single()
+    
+    if (existing) {
+      console.log('Profile already exists, fetching it')
+      return await fetchProfile(userId)
+    }
+    
+    // Create new profile
+    const { data, error } = await supabase
+      .from('user_profiles')
+      .insert(profileData)
+      .select()
+      .single()
+    
+    if (error) {
+      console.error('Failed to create profile:', error)
+      // Try upsert as fallback
+      const { data: upsertData, error: upsertError } = await supabase
+        .from('user_profiles')
+        .upsert(profileData)
+        .select()
+        .single()
+      
+      if (upsertError) {
+        console.error('Upsert also failed:', upsertError)
+        return null
+      }
+      
+      return upsertData
+    }
+    
+    console.log('Profile created successfully:', data)
+    setProfile(data)
+    return data
   }
 
   const login = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
@@ -96,27 +131,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (data.user) {
         setUser(data.user)
-        const profile = await fetchProfile(data.user.id)
+        let profile = await fetchProfile(data.user.id)
         
         // If profile doesn't exist, create it
         if (!profile) {
-          const role = ['zell@love4detailing.com', 'paul@evans-studio.co.uk'].includes(email.toLowerCase()) ? 'admin' : 'customer'
-          
-          const { error: createError } = await supabase
-            .from('user_profiles')
-            .insert({
-              id: data.user.id,
-              email: email,
-              first_name: data.user.user_metadata?.first_name || '',
-              last_name: data.user.user_metadata?.last_name || '',
-              phone: data.user.user_metadata?.phone || null,
-              role: role,
-              is_active: true
-            })
-          
-          if (!createError) {
-            await fetchProfile(data.user.id)
-          }
+          profile = await createProfile(
+            data.user.id,
+            data.user.email!,
+            data.user.user_metadata?.first_name,
+            data.user.user_metadata?.last_name,
+            data.user.user_metadata?.phone
+          )
+        }
+        
+        // Redirect based on role
+        if (profile) {
+          const redirectTo = profile.role === 'admin' ? '/admin' : '/dashboard'
+          router.push(redirectTo)
         }
       }
 
@@ -138,7 +169,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     phone?: string
   ): Promise<{ success: boolean; error?: string; redirectTo?: string }> => {
     try {
-      // Use client-side registration to establish session immediately
+      // 1. Create the user account
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
@@ -165,35 +196,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
-      // Determine role based on email
-      const role = ['zell@love4detailing.com', 'paul@evans-studio.co.uk'].includes(email.toLowerCase()) ? 'admin' : 'customer'
+      // 2. Create the user profile immediately
+      const profile = await createProfile(
+        authData.user.id,
+        email,
+        firstName,
+        lastName,
+        phone
+      )
 
-      // Create user profile
-      const { error: profileError } = await supabase
-        .from('user_profiles')
-        .insert({
-          id: authData.user.id,
-          email: email,
-          first_name: firstName,
-          last_name: lastName,
-          phone: phone || null,
-          role: role,
-          is_active: true
-        })
-
-      if (profileError) {
-        console.error('Profile creation error:', profileError)
-        // Continue anyway - profile might already exist
-      }
-
-      // If user is confirmed immediately (auto-confirm enabled)
+      // 3. If email is auto-confirmed, sign them in immediately
       if (authData.user.email_confirmed_at) {
-        setUser(authData.user)
-        await fetchProfile(authData.user.id)
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email,
+          password
+        })
         
-        return {
-          success: true,
-          redirectTo: role === 'admin' ? '/admin' : '/dashboard'
+        if (!signInError && profile) {
+          setUser(authData.user)
+          setProfile(profile)
+          
+          // Redirect immediately
+          const redirectTo = profile.role === 'admin' ? '/admin' : '/dashboard'
+          router.push(redirectTo)
+          
+          return {
+            success: true,
+            redirectTo
+          }
         }
       }
 
@@ -216,7 +246,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await supabase.auth.signOut()
       setUser(null)
       setProfile(null)
-      window.location.href = '/'
+      router.push('/')
     } catch (error) {
       console.error('Sign out error:', error)
     }
@@ -230,7 +260,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(session?.user ?? null)
         
         if (session?.user) {
-          await fetchProfile(session.user.id)
+          let profile = await fetchProfile(session.user.id)
+          
+          // Create profile if it doesn't exist
+          if (!profile && session.user.email) {
+            profile = await createProfile(
+              session.user.id,
+              session.user.email,
+              session.user.user_metadata?.first_name,
+              session.user.user_metadata?.last_name,
+              session.user.user_metadata?.phone
+            )
+          }
         }
       } catch (error) {
         console.error('Initial session error:', error)
@@ -249,61 +290,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(session?.user ?? null)
         
         if (session?.user) {
-          // Don't clear profile immediately to avoid auth state flickering
           let profile = await fetchProfile(session.user.id)
           
-          // If profile doesn't exist, create it
-          if (!profile) {
-            console.log('Profile not found, creating new profile for user:', session.user.id)
-            console.log('User metadata:', session.user.user_metadata)
-            console.log('User email:', session.user.email)
-            
-            const role = ['zell@love4detailing.com', 'paul@evans-studio.co.uk'].includes(session.user.email?.toLowerCase() || '') ? 'admin' : 'customer'
-            
-            const profileData = {
-              id: session.user.id,
-              email: session.user.email || '',
-              first_name: session.user.user_metadata?.first_name || session.user.user_metadata?.firstName || '',
-              last_name: session.user.user_metadata?.last_name || session.user.user_metadata?.lastName || '',
-              phone: session.user.user_metadata?.phone || null,
-              role: role,
-              is_active: true
-            }
-            
-            console.log('Creating profile with data:', profileData)
-            
-            const { data: createdProfile, error: createError } = await supabase
-              .from('user_profiles')
-              .insert(profileData)
-              .select()
-              .single()
-            
-            if (createError) {
-              console.error('Failed to create profile:', createError)
-              console.error('Create error details:', {
-                message: createError.message,
-                details: createError.details,
-                hint: createError.hint,
-                code: createError.code
-              })
-            } else {
-              console.log('Profile created successfully:', createdProfile)
-              profile = await fetchProfile(session.user.id)
-            }
-          }
-          
-          // Handle role-based redirects for login events
-          if (event === 'SIGNED_IN' && profile) {
-            const currentPath = window.location.pathname
-            
-            // Only redirect if user is on auth pages
-            if (currentPath.startsWith('/auth/')) {
-              const redirectTo = profile.role === 'admin' ? '/admin' : '/dashboard'
-              window.location.href = redirectTo
-            }
+          // Create profile if it doesn't exist
+          if (!profile && session.user.email) {
+            profile = await createProfile(
+              session.user.id,
+              session.user.email,
+              session.user.user_metadata?.first_name,
+              session.user.user_metadata?.last_name,
+              session.user.user_metadata?.phone
+            )
           }
         } else {
-          // Only clear profile if there's no user
           setProfile(null)
         }
         
@@ -314,7 +313,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       subscription.unsubscribe()
     }
-  }, [])
+  }, [router])
 
   const refreshProfile = async () => {
     if (user) {
