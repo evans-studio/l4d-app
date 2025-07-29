@@ -65,50 +65,69 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  // Get current session
-  const { data: { session }, error } = await supabase.auth.getSession()
+  // Get current user (more secure than getSession)
+  const { data: { user }, error } = await supabase.auth.getUser()
+  
+  // Create service client for profile lookup (bypasses RLS)
+  const supabaseService = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return request.cookies.get(name)?.value
+        },
+        set(name: string, value: string, options: any) {
+          response.cookies.set(name, value, options)
+        },
+        remove(name: string, options: any) {
+          response.cookies.set(name, '', { ...options, maxAge: 0 })
+        },
+      },
+    }
+  )
 
   // Handle API routes - require authentication
   if (path.startsWith('/api/')) {
-    if (!session?.user) {
+    if (!user) {
       return NextResponse.json(
         { success: false, error: { message: 'Authentication required', code: 'UNAUTHORIZED' } },
         { status: 401 }
       )
     }
 
-    // Get user profile for role information
-    const { data: profile } = await supabase
+    // Get user profile for role information using service client (bypasses RLS)
+    const { data: profile } = await supabaseService
       .from('user_profiles')
       .select('role')
-      .eq('id', session.user.id)
+      .eq('id', user.id)
       .single()
 
     // Add user context to response headers for API routes
-    response.headers.set('x-user-id', session.user.id)
+    response.headers.set('x-user-id', user.id)
     response.headers.set('x-user-role', profile?.role || 'customer')
 
     return response
   }
 
   // Handle page routes - redirect to login if not authenticated
-  if (!session?.user) {
+  if (!user) {
     return NextResponse.redirect(new URL('/auth/login', request.url))
   }
 
-  // Get user profile for role-based routing
-  const { data: profile } = await supabase
+  // Get user profile for role-based routing using service client (bypasses RLS)
+  const { data: profile } = await supabaseService
     .from('user_profiles')
     .select('role')
-    .eq('id', session.user.id)
+    .eq('id', user.id)
     .single()
 
   const userRole = profile?.role || 'customer'
   
   // Debug: Log the role information
   console.log('Middleware role check:', {
-    userId: session.user.id,
-    email: session.user.email,
+    userId: user.id,
+    email: user.email,
     profileData: profile,
     userRole,
     path,
