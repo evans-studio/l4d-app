@@ -16,13 +16,8 @@ const previewSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    const { auth, error: authError } = await ApiAuth.authenticate()
-    if (authError) return authError
-
-    // Check admin permissions
-    if (auth!.profile.role !== 'admin' && auth!.profile.role !== 'super_admin') {
-      return ApiResponseHandler.forbidden('Admin access required')
-    }
+    const authResult = await ApiAuth.authenticateAdmin(request)
+    if (!authResult.success) return authResult.error
 
     const body = await request.json()
     const validatedData = previewSchema.parse(body)

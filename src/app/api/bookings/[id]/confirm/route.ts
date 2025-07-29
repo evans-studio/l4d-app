@@ -18,9 +18,9 @@ export async function POST(
 ) {
   const params = await context.params
   try {
-    const { auth, error: authError } = await ApiAuth.requireRole(['admin', 'super_admin'])
-    if (authError) {
-      return authError
+    const authResult = await ApiAuth.authenticateAdmin(request)
+    if (!authResult.success) {
+      return authResult.error
     }
 
     const body = await request.json()
@@ -35,7 +35,7 @@ export async function POST(
       validation.data.scheduled_date,
       validation.data.scheduled_start_time,
       validation.data.scheduled_end_time,
-      auth!.profile.id as string,
+      authResult.user!.id as string,
       validation.data.admin_notes
     )
 

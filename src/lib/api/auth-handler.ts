@@ -1,4 +1,4 @@
-import { NextRequest } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 
 export interface AuthenticatedUser {
@@ -85,5 +85,54 @@ export class AuthHandler {
    */
   static isCustomer(user: AuthenticatedUser): boolean {
     return user.role === 'customer'
+  }
+}
+
+export interface AuthResult {
+  success: boolean
+  user?: AuthenticatedUser
+  error?: NextResponse
+}
+
+/**
+ * Authenticate admin user from request
+ * For backward compatibility with existing API routes
+ */
+export async function authenticateAdmin(request: NextRequest): Promise<AuthResult> {
+  try {
+    const user = await AuthHandler.getUserFromRequest(request)
+    
+    if (!user) {
+      return {
+        success: false,
+        error: NextResponse.json({
+          success: false,
+          error: { message: 'Authentication required', code: 'UNAUTHORIZED' }
+        }, { status: 401 })
+      }
+    }
+    
+    if (!AuthHandler.isAdmin(user)) {
+      return {
+        success: false,
+        error: NextResponse.json({
+          success: false,
+          error: { message: 'Admin access required', code: 'FORBIDDEN' }
+        }, { status: 403 })
+      }
+    }
+    
+    return {
+      success: true,
+      user
+    }
+  } catch (error) {
+    return {
+      success: false,
+      error: NextResponse.json({
+        success: false,
+        error: { message: 'Authentication failed', code: 'AUTH_ERROR' }
+      }, { status: 500 })
+    }
   }
 }
