@@ -107,13 +107,13 @@ export async function middleware(request: NextRequest) {
 
   // Role-based access control
   if (path.startsWith('/admin/')) {
-    if (userRole !== 'admin') {
+    if (userRole !== 'admin' && userRole !== 'super_admin') {
       return NextResponse.redirect(new URL('/dashboard', request.url))
     }
   }
 
   // If user is admin trying to access /dashboard, redirect to /admin
-  if (path.startsWith('/dashboard/') && userRole === 'admin') {
+  if (path.startsWith('/dashboard/') && (userRole === 'admin' || userRole === 'super_admin')) {
     return NextResponse.redirect(new URL('/admin', request.url))
   }
 
