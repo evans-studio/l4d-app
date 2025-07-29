@@ -85,10 +85,18 @@ export const useAuthStore = create<AuthState>()(
         try {
           console.log('Fetching profile for user:', userId)
           
-          // Try RLS bypass function first
+          // Try RLS bypass function first with timeout
           try {
-            const { data: functionData, error: functionError } = await supabase
-              .rpc('get_user_profile', { user_id: userId })
+            console.log('Trying RLS bypass function...')
+            const rpcPromise = supabase.rpc('get_user_profile', { user_id: userId })
+            const timeoutPromise = new Promise((_, reject) => 
+              setTimeout(() => reject(new Error('RLS function timeout')), 5000)
+            )
+            
+            const { data: functionData, error: functionError } = await Promise.race([
+              rpcPromise, 
+              timeoutPromise
+            ]) as any
             
             if (!functionError && functionData && functionData.length > 0) {
               const profile = parseUserProfile(functionData[0])
@@ -98,11 +106,13 @@ export const useAuthStore = create<AuthState>()(
                 return profile
               }
             }
+            console.log('RLS bypass returned no data, trying direct query')
           } catch (rpcError) {
-            console.log('RLS bypass not available, trying direct query')
+            console.log('RLS bypass failed or timed out, trying direct query:', rpcError)
           }
           
           // Fallback to direct query
+          console.log('Attempting direct profile query...')
           const { data, error } = await supabase
             .from('user_profiles')
             .select('id, email, first_name, last_name, phone, role, is_active, created_at, updated_at')
@@ -111,7 +121,7 @@ export const useAuthStore = create<AuthState>()(
             .single()
 
           if (error) {
-            console.error('Profile fetch error:', error)
+            console.error('Direct profile fetch error:', error)
             set({ error: `Failed to fetch profile: ${error.message}` })
             return null
           }
@@ -138,17 +148,25 @@ export const useAuthStore = create<AuthState>()(
           
           console.log('Creating profile:', { userId, email, firstName, lastName, phone, role })
           
-          // Try RLS bypass function first
+          // Try RLS bypass function first with timeout
           try {
-            const { data: functionData, error: functionError } = await supabase
-              .rpc('create_user_profile', {
-                user_id: userId,
-                user_email: email.toLowerCase(),
-                first_name: firstName || '',
-                last_name: lastName || '',
-                phone: phone || null,
-                user_role: role
-              })
+            console.log('Trying RLS bypass function for profile creation...')
+            const rpcPromise = supabase.rpc('create_user_profile', {
+              user_id: userId,
+              user_email: email.toLowerCase(),
+              first_name: firstName || '',
+              last_name: lastName || '',
+              phone: phone || null,
+              user_role: role
+            })
+            const timeoutPromise = new Promise((_, reject) => 
+              setTimeout(() => reject(new Error('RLS create function timeout')), 5000)
+            )
+            
+            const { data: functionData, error: functionError } = await Promise.race([
+              rpcPromise, 
+              timeoutPromise
+            ]) as any
             
             if (!functionError && functionData) {
               const profile = parseUserProfile(functionData)
@@ -158,8 +176,9 @@ export const useAuthStore = create<AuthState>()(
                 return profile
               }
             }
+            console.log('RLS bypass create returned no data, trying direct insert')
           } catch (rpcError) {
-            console.log('RLS bypass not available, trying direct insert')
+            console.log('RLS bypass create failed or timed out, trying direct insert:', rpcError)
           }
           
           // Fallback to direct insert
