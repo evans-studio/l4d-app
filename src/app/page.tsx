@@ -7,7 +7,7 @@ import { Container, Section } from '@/components/layout/templates/PageLayout';
 import { Phone, ArrowRight, Star, CheckCircle, Award, Car, Sparkles, Palette, Shield, Heart, Users, ChevronDown, LogIn, LogOut, User } from 'lucide-react';
 import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/composites/Card';
 import { cn } from '@/lib/utils';
-import { useAuth } from '@/lib/auth';
+import { useAuth } from '@/lib/auth-compat';
 
 export default function HomePage() {
   const [openFaq, setOpenFaq] = React.useState<number | null>(null);

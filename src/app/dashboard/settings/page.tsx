@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/primitives/Button'
 import { CustomerLayout } from '@/components/layout/templates/CustomerLayout'
 import { CustomerRoute } from '@/components/ProtectedRoute'
-import { useAuth } from '@/lib/auth'
+import { useAuth } from '@/lib/auth-compat'
 import { 
   User, 
   Mail, 

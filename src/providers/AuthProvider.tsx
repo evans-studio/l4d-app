@@ -1,10 +1,10 @@
 'use client'
 
 import { useEffect } from 'react'
-import { useAuthStore } from '@/stores/authStore'
+import { useAuthStore as useStore } from '@/stores/authStore'
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const initializeAuth = useAuthStore((state) => state.initializeAuth)
+export function ZustandAuthInitializer({ children }: { children: React.ReactNode }) {
+  const initializeAuth = useStore((state) => state.initializeAuth)
   
   useEffect(() => {
     // Initialize auth on app start
@@ -14,9 +14,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   return <>{children}</>
 }
 
-// Hook for components that need auth state
+// New hook for components migrated to Zustand
 export function useAuth() {
-  return useAuthStore((state) => ({
+  return useStore((state) => ({
     user: state.user,
     profile: state.profile,
     isLoading: state.isLoading,

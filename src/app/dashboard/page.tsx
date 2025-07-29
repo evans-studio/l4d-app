@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
-import { useAuth } from '@/lib/auth'
+import { useAuth } from '@/lib/auth-compat'
 import { Button } from '@/components/ui/primitives/Button'
 import { CustomerLayout } from '@/components/layout/templates/CustomerLayout'
 import { Container } from '@/components/layout/templates/PageLayout'

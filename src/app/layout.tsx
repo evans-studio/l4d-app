@@ -2,7 +2,8 @@ import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
 import { env } from '@/lib/config/environment'
-import { AuthProvider } from '@/providers/AuthProvider'
+import { AuthProvider } from '@/lib/auth-compat'
+import { ZustandAuthInitializer } from '@/providers/AuthProvider'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -46,9 +47,11 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body className={inter.className}>
-        <AuthProvider>
-          {children}
-        </AuthProvider>
+        <ZustandAuthInitializer>
+          <AuthProvider>
+            {children}
+          </AuthProvider>
+        </ZustandAuthInitializer>
       </body>
     </html>
   )
