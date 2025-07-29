@@ -35,18 +35,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const isAuthenticated = !!user && !!profile
 
-  const fetchProfile = async (userId: string) => {
+  const fetchProfile = async (userId: string, timeout = 10000) => {
     try {
       console.log('Fetching profile for user:', userId)
       
-      const { data, error } = await supabase
+      // Add timeout to prevent hanging
+      const fetchPromise = supabase
         .from('user_profiles')
         .select('id, email, first_name, last_name, phone, role')
         .eq('id', userId)
         .single()
 
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Profile fetch timeout')), timeout)
+      )
+
+      const { data, error } = await Promise.race([fetchPromise, timeoutPromise]) as any
+
       if (error) {
         console.error('Error fetching profile:', error)
+        console.error('Error details:', {
+          message: error.message,
+          code: error.code,
+          details: error.details,
+          hint: error.hint
+        })
+        return null
+      }
+
+      if (!data) {
+        console.log('No profile data returned - profile does not exist')
         return null
       }
 
@@ -55,6 +73,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return data
     } catch (error) {
       console.error('Profile fetch exception:', error)
+      if (error instanceof Error && error.message === 'Profile fetch timeout') {
+        console.error('Profile fetch timed out after 10 seconds - possible network or RLS issue')
+      }
       return null
     }
   }
