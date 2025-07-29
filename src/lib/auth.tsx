@@ -47,6 +47,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log('Fetching profile for user:', userId)
       
+      // First try regular query
       const { data, error } = await supabase
         .from('user_profiles')
         .select('id, email, first_name, last_name, phone, role')
@@ -61,6 +62,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           hint: error.hint,
           code: error.code
         })
+        
+        // If it's a permission error, try using RPC as fallback
+        if (error.code === 'PGRST116' || error.message.includes('permission')) {
+          console.log('Permission error detected, this indicates RLS policy issue')
+          console.log('Please run the fix-profile-access.sql script in your Supabase dashboard')
+        }
+        
         return null
       }
 
