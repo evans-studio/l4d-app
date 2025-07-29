@@ -85,33 +85,7 @@ export const useAuthStore = create<AuthState>()(
         try {
           console.log('Fetching profile for user:', userId)
           
-          // Try RLS bypass function first with timeout
-          try {
-            console.log('Trying RLS bypass function...')
-            const rpcPromise = supabase.rpc('get_user_profile', { user_id: userId })
-            const timeoutPromise = new Promise((_, reject) => 
-              setTimeout(() => reject(new Error('RLS function timeout')), 5000)
-            )
-            
-            const { data: functionData, error: functionError } = await Promise.race([
-              rpcPromise, 
-              timeoutPromise
-            ]) as any
-            
-            if (!functionError && functionData && functionData.length > 0) {
-              const profile = parseUserProfile(functionData[0])
-              if (profile) {
-                console.log('Profile fetched via RLS bypass:', profile)
-                set({ profile })
-                return profile
-              }
-            }
-            console.log('RLS bypass returned no data, trying direct query')
-          } catch (rpcError) {
-            console.log('RLS bypass failed or timed out, trying direct query:', rpcError)
-          }
-          
-          // Fallback to direct query
+          // Use direct query only - simpler and more reliable
           console.log('Attempting direct profile query...')
           const { data, error } = await supabase
             .from('user_profiles')
@@ -121,8 +95,23 @@ export const useAuthStore = create<AuthState>()(
             .single()
 
           if (error) {
-            console.error('Direct profile fetch error:', error)
+            console.error('Profile fetch error:', error)
+            console.error('Error details:', { code: error.code, message: error.message, details: error.details, hint: error.hint })
+            
+            // If profile doesn't exist but user is authenticated, create it
+            if (error.code === 'PGRST116') {
+              console.log('Profile not found, will need to create one')
+              set({ error: 'Profile not found' })
+              return null
+            }
+            
             set({ error: `Failed to fetch profile: ${error.message}` })
+            return null
+          }
+
+          if (!data) {
+            console.error('No profile data returned')
+            set({ error: 'No profile data received' })
             return null
           }
 
@@ -133,6 +122,7 @@ export const useAuthStore = create<AuthState>()(
             return profile
           }
           
+          console.error('Profile parsing failed:', data)
           set({ error: 'Invalid profile data received' })
           return null
         } catch (error) {
@@ -148,40 +138,7 @@ export const useAuthStore = create<AuthState>()(
           
           console.log('Creating profile:', { userId, email, firstName, lastName, phone, role })
           
-          // Try RLS bypass function first with timeout
-          try {
-            console.log('Trying RLS bypass function for profile creation...')
-            const rpcPromise = supabase.rpc('create_user_profile', {
-              user_id: userId,
-              user_email: email.toLowerCase(),
-              first_name: firstName || '',
-              last_name: lastName || '',
-              phone: phone || null,
-              user_role: role
-            })
-            const timeoutPromise = new Promise((_, reject) => 
-              setTimeout(() => reject(new Error('RLS create function timeout')), 5000)
-            )
-            
-            const { data: functionData, error: functionError } = await Promise.race([
-              rpcPromise, 
-              timeoutPromise
-            ]) as any
-            
-            if (!functionError && functionData) {
-              const profile = parseUserProfile(functionData)
-              if (profile) {
-                console.log('Profile created via RLS bypass:', profile)
-                set({ profile })
-                return profile
-              }
-            }
-            console.log('RLS bypass create returned no data, trying direct insert')
-          } catch (rpcError) {
-            console.log('RLS bypass create failed or timed out, trying direct insert:', rpcError)
-          }
-          
-          // Fallback to direct insert
+          // Use direct insert only - simpler and more reliable
           const profileData = {
             id: userId,
             email: email.toLowerCase(),
