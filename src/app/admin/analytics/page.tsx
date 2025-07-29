@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { AdminLayout } from '@/components/layouts/AdminLayout'
+import { AdminRoute } from '@/components/ProtectedRoute'
 import { Button } from '@/components/ui/primitives/Button'
 import { 
   TrendingUpIcon,
@@ -108,7 +109,7 @@ const dateRanges: DateRange[] = [
   }
 ]
 
-export default function AdminAnalyticsPage() {
+function AdminAnalyticsPage() {
   const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [selectedRange, setSelectedRange] = useState<DateRange>(() => dateRanges[1] || dateRanges[0] || { start: '', end: '', label: '' }) // Default to last 30 days
@@ -469,5 +470,13 @@ export default function AdminAnalyticsPage() {
         )}
       </div>
     </AdminLayout>
+  )
+}
+
+export default function AdminAnalyticsPageWithProtection() {
+  return (
+    <AdminRoute>
+      <AdminAnalyticsPage />
+    </AdminRoute>
   )
 }

@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { AdminLayout } from '@/components/layouts/AdminLayout'
+import { AdminRoute } from '@/components/ProtectedRoute'
 import { Button } from '@/components/ui/primitives/Button'
 import {
   MetricCard,
@@ -77,7 +78,7 @@ interface DashboardData {
   }
 }
 
-export default function EnhancedAdminDashboard() {
+function EnhancedAdminDashboard() {
   const router = useRouter()
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -422,5 +423,13 @@ export default function EnhancedAdminDashboard() {
         )}
       </div>
     </AdminLayout>
+  )
+}
+
+export default function EnhancedAdminDashboardWithProtection() {
+  return (
+    <AdminRoute>
+      <EnhancedAdminDashboard />
+    </AdminRoute>
   )
 }

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/primitives/Button'
 import { AdminLayout } from '@/components/layouts/AdminLayout'
+import { AdminRoute } from '@/components/ProtectedRoute'
 import { 
   PlusIcon,
   EditIcon,
@@ -34,7 +35,7 @@ interface ServiceCategory {
   sort_order: number
 }
 
-export default function AdminServicesPage() {
+function AdminServicesPage() {
   const router = useRouter()
   const [services, setServices] = useState<Service[]>([])
   const [categories, setCategories] = useState<ServiceCategory[]>([])
@@ -357,5 +358,13 @@ export default function AdminServicesPage() {
         )}
       </div>
     </AdminLayout>
+  )
+}
+
+export default function AdminServicesPageWithProtection() {
+  return (
+    <AdminRoute>
+      <AdminServicesPage />
+    </AdminRoute>
   )
 }

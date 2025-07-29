@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/primitives/Button'
 import { AdminLayout } from '@/components/layouts/AdminLayout'
+import { AdminRoute } from '@/components/ProtectedRoute'
 import { 
   ArrowLeftIcon,
   PlusIcon,
@@ -382,7 +383,7 @@ function DeleteConfirmationModal({ isOpen, onClose, onConfirm, vehicleSizeName, 
   )
 }
 
-export default function VehicleSizesPage() {
+function VehicleSizesPage() {
   const router = useRouter()
   const [vehicleSizes, setVehicleSizes] = useState<VehicleSize[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -714,5 +715,13 @@ export default function VehicleSizesPage() {
         />
       </div>
     </AdminLayout>
+  )
+}
+
+export default function VehicleSizesPageWithProtection() {
+  return (
+    <AdminRoute>
+      <VehicleSizesPage />
+    </AdminRoute>
   )
 }

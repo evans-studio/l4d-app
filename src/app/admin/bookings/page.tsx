@@ -4,6 +4,7 @@ import { useEffect, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/primitives/Button'
 import { AdminLayout } from '@/components/layouts/AdminLayout'
+import { AdminRoute } from '@/components/ProtectedRoute'
 import { TodaysSchedule } from '@/components/admin/TodaysSchedule'
 import { 
   CalendarIcon, 
@@ -554,14 +555,16 @@ function AdminBookingsContent() {
 
 export default function AdminBookingsPage() {
   return (
-    <Suspense fallback={
-      <AdminLayout>
-        <div className="flex items-center justify-center min-h-96">
-          <div className="animate-spin w-8 h-8 border-4 border-[var(--primary)] border-t-transparent rounded-full"></div>
-        </div>
-      </AdminLayout>
-    }>
-      <AdminBookingsContent />
-    </Suspense>
+    <AdminRoute>
+      <Suspense fallback={
+        <AdminLayout>
+          <div className="flex items-center justify-center min-h-96">
+            <div className="animate-spin w-8 h-8 border-4 border-[var(--primary)] border-t-transparent rounded-full"></div>
+          </div>
+        </AdminLayout>
+      }>
+        <AdminBookingsContent />
+      </Suspense>
+    </AdminRoute>
   )
 }

@@ -1,6 +1,8 @@
 'use client'
 
 import { useState } from 'react'
+import { AdminLayout } from '@/components/layouts/AdminLayout'
+import { AdminRoute } from '@/components/ProtectedRoute'
 import { Card, CardContent, CardHeader } from '@/components/ui/composites/Card'
 import { Button } from '@/components/ui/primitives/Button'
 import { Input } from '@/components/ui/primitives/Input'
@@ -20,7 +22,7 @@ import {
   Send
 } from 'lucide-react'
 
-export default function IntegrationsTestPage() {
+function IntegrationsTestPage() {
   const [emailTest, setEmailTest] = useState({
     to: '',
     subject: 'Love 4 Detailing - Test Email',
@@ -120,7 +122,8 @@ export default function IntegrationsTestPage() {
   }
 
   return (
-    <div className="container mx-auto p-6">
+    <AdminLayout>
+      <div className="container mx-auto p-6">
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">Phase 3 Integrations Test</h1>
         <p className="text-muted-foreground">
@@ -364,6 +367,15 @@ export default function IntegrationsTestPage() {
           </div>
         </TabsContent>
       </Tabs>
-    </div>
+      </div>
+    </AdminLayout>
+  )
+}
+
+export default function IntegrationsTestPageWithProtection() {
+  return (
+    <AdminRoute>
+      <IntegrationsTestPage />
+    </AdminRoute>
   )
 }

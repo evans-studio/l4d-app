@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { AdminLayout } from '@/components/layouts/AdminLayout'
+import { AdminRoute } from '@/components/ProtectedRoute'
 import { Button } from '@/components/ui/primitives/Button'
 import { Card, CardHeader, CardContent } from '@/components/ui/composites/Card'
 import { CalendarIcon, ClockIcon, PlusIcon, SaveIcon, ArrowLeftIcon } from 'lucide-react'
@@ -21,7 +22,7 @@ interface DayInfo {
   isWeekend: boolean
 }
 
-export default function AddSchedulePage() {
+function AddSchedulePage() {
   const router = useRouter()
   const [selectedDates, setSelectedDates] = useState<string[]>([])
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([
@@ -304,5 +305,13 @@ export default function AddSchedulePage() {
         </form>
       </div>
     </AdminLayout>
+  )
+}
+
+export default function AddSchedulePageWithProtection() {
+  return (
+    <AdminRoute>
+      <AddSchedulePage />
+    </AdminRoute>
   )
 }

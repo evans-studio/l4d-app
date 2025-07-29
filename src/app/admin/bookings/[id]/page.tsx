@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/primitives/Button'
 import { AdminLayout } from '@/components/layouts/AdminLayout'
+import { AdminRoute } from '@/components/ProtectedRoute'
 // BookingStatus imported but not used - removed
 import { 
   CalendarIcon, 
@@ -97,7 +98,7 @@ const statusConfig = {
   }
 }
 
-export default function AdminBookingDetailsPage() {
+function AdminBookingDetailsPage() {
   const params = useParams()
   const router = useRouter()
   const [booking, setBooking] = useState<BookingDetails | null>(null)
@@ -510,5 +511,13 @@ export default function AdminBookingDetailsPage() {
         </div>
       </div>
     </AdminLayout>
+  )
+}
+
+export default function AdminBookingDetailsPageWithProtection() {
+  return (
+    <AdminRoute>
+      <AdminBookingDetailsPage />
+    </AdminRoute>
   )
 }

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { AdminLayout } from '@/components/layouts/AdminLayout'
+import { AdminRoute } from '@/components/ProtectedRoute'
 import { Button } from '@/components/ui/primitives/Button'
 import { 
   DollarSignIcon,
@@ -58,7 +59,7 @@ interface ProfitabilityData {
   profitability_score: number
 }
 
-export default function ServicePricingPage() {
+function ServicePricingPage() {
   const router = useRouter()
   const [services, setServices] = useState<Service[]>([])
   const [vehicleSizes, setVehicleSizes] = useState<VehicleSize[]>([])
@@ -574,5 +575,13 @@ export default function ServicePricingPage() {
         </div>
       </div>
     </AdminLayout>
+  )
+}
+
+export default function ServicePricingPageWithProtection() {
+  return (
+    <AdminRoute>
+      <ServicePricingPage />
+    </AdminRoute>
   )
 }

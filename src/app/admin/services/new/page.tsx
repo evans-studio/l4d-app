@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/primitives/Button'
 import { AdminLayout } from '@/components/layouts/AdminLayout'
+import { AdminRoute } from '@/components/ProtectedRoute'
 import { 
   ArrowLeftIcon,
   SaveIcon,
@@ -32,7 +33,7 @@ interface ServiceFormData {
   display_order: number
 }
 
-export default function NewServicePage() {
+function NewServicePage() {
   const router = useRouter()
   const [categories, setCategories] = useState<ServiceCategory[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -478,5 +479,13 @@ export default function NewServicePage() {
         </form>
       </div>
     </AdminLayout>
+  )
+}
+
+export default function NewServicePageWithProtection() {
+  return (
+    <AdminRoute>
+      <NewServicePage />
+    </AdminRoute>
   )
 }

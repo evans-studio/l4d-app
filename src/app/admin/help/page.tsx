@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { AdminLayout } from '@/components/layouts/AdminLayout'
+import { AdminRoute } from '@/components/ProtectedRoute'
 import { Card, CardHeader, CardContent } from '@/components/ui/composites/Card'
 import { Button } from '@/components/ui/primitives/Button'
 import { 
@@ -32,7 +33,7 @@ interface HelpResource {
   duration?: string
 }
 
-export default function HelpPage() {
+function HelpPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [expandedFAQ, setExpandedFAQ] = useState<number | null>(null)
@@ -355,5 +356,13 @@ export default function HelpPage() {
         </div>
       </div>
     </AdminLayout>
+  )
+}
+
+export default function HelpPageWithProtection() {
+  return (
+    <AdminRoute>
+      <HelpPage />
+    </AdminRoute>
   )
 }

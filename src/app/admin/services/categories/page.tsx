@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/primitives/Button'
 import { AdminLayout } from '@/components/layouts/AdminLayout'
+import { AdminRoute } from '@/components/ProtectedRoute'
 import { 
   ArrowLeftIcon,
   PlusIcon,
@@ -268,7 +269,7 @@ function DeleteConfirmationModal({ isOpen, onClose, onConfirm, categoryName, isD
   )
 }
 
-export default function ServiceCategoriesPage() {
+function ServiceCategoriesPage() {
   const router = useRouter()
   const [categories, setCategories] = useState<ServiceCategory[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -603,5 +604,13 @@ export default function ServiceCategoriesPage() {
         />
       </div>
     </AdminLayout>
+  )
+}
+
+export default function ServiceCategoriesPageWithProtection() {
+  return (
+    <AdminRoute>
+      <ServiceCategoriesPage />
+    </AdminRoute>
   )
 }

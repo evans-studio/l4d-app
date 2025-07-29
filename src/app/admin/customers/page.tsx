@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { AdminLayout } from '@/components/layouts/AdminLayout'
+import { AdminRoute } from '@/components/ProtectedRoute'
 import { Button } from '@/components/ui/primitives/Button'
 import { 
   UsersIcon,
@@ -82,7 +83,7 @@ const statusConfig = {
   }
 }
 
-export default function AdminCustomersPage() {
+function AdminCustomersPage() {
   const router = useRouter()
   const [customers, setCustomers] = useState<Customer[]>([])
   const [filteredCustomers, setFilteredCustomers] = useState<Customer[]>([])
@@ -529,5 +530,13 @@ export default function AdminCustomersPage() {
         </div>
       </div>
     </AdminLayout>
+  )
+}
+
+export default function AdminCustomersPageWithProtection() {
+  return (
+    <AdminRoute>
+      <AdminCustomersPage />
+    </AdminRoute>
   )
 }

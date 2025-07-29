@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { AdminLayout } from '@/components/layouts/AdminLayout'
+import { AdminRoute } from '@/components/ProtectedRoute'
 import { Button } from '@/components/ui/primitives/Button'
 import { 
   CalendarIcon, 
@@ -33,7 +34,7 @@ interface ScheduleStats {
   revenue: number
 }
 
-export default function AdminSchedulePage() {
+function AdminSchedulePage() {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([])
   const [stats, setStats] = useState<ScheduleStats | null>(null)
@@ -372,5 +373,13 @@ export default function AdminSchedulePage() {
         onSuccess={loadScheduleData}
       />
     </AdminLayout>
+  )
+}
+
+export default function AdminSchedulePageWithProtection() {
+  return (
+    <AdminRoute>
+      <AdminSchedulePage />
+    </AdminRoute>
   )
 }

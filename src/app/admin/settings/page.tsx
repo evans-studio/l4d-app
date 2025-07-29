@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { AdminLayout } from '@/components/layouts/AdminLayout'
+import { AdminRoute } from '@/components/ProtectedRoute'
 import { Card, CardHeader, CardContent } from '@/components/ui/composites/Card'
 import { Button } from '@/components/ui/primitives/Button'
 import { 
@@ -48,7 +49,7 @@ interface BusinessSettings {
   }
 }
 
-export default function SettingsPage() {
+function SettingsPage() {
   const [settings, setSettings] = useState<BusinessSettings>({
     businessName: 'Love 4 Detailing',
     businessAddress: '',
@@ -510,5 +511,13 @@ export default function SettingsPage() {
         </div>
       </div>
     </AdminLayout>
+  )
+}
+
+export default function SettingsPageWithProtection() {
+  return (
+    <AdminRoute>
+      <SettingsPage />
+    </AdminRoute>
   )
 }

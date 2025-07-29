@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { AdminLayout } from '@/components/layouts/AdminLayout'
+import { AdminRoute } from '@/components/ProtectedRoute'
 import { Card, CardHeader, CardContent } from '@/components/ui/composites/Card'
 import { Button } from '@/components/ui/primitives/Button'
 import { 
@@ -40,7 +41,7 @@ interface ReportData {
   }
 }
 
-export default function ReportsPage() {
+function ReportsPage() {
   const [reportData, setReportData] = useState<ReportData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
@@ -354,5 +355,13 @@ export default function ReportsPage() {
         )}
       </div>
     </AdminLayout>
+  )
+}
+
+export default function ReportsPageWithProtection() {
+  return (
+    <AdminRoute>
+      <ReportsPage />
+    </AdminRoute>
   )
 }
