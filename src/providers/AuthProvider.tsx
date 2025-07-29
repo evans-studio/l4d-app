@@ -79,14 +79,16 @@ export function useAuth() {
   const user = useStore((state) => state.user)
   const profile = useStore((state) => state.profile)
   const isLoading = useStore((state) => state.isLoading)
-  const isAuthenticated = useStore((state) => state.isAuthenticated)
-  const isAdmin = useStore((state) => state.isAdmin)
-  const isCustomer = useStore((state) => state.isCustomer)
   const error = useStore((state) => state.error)
   const login = useStore((state) => state.login)
   const register = useStore((state) => state.register)
   const logout = useStore((state) => state.logout)
   const refreshProfile = useStore((state) => state.refreshProfile)
+
+  // Compute auth state directly instead of relying on getters
+  const isAuthenticated = !!user && !!profile
+  const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin'
+  const isCustomer = profile?.role === 'customer'
 
   return {
     user,

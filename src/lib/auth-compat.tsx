@@ -29,7 +29,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const user = useAuthStore((state) => state.user)
   const profile = useAuthStore((state) => state.profile)
   const isLoading = useAuthStore((state) => state.isLoading)
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
   const error = useAuthStore((state) => state.error)
   const login = useAuthStore((state) => state.login)
   const register = useAuthStore((state) => state.register)
@@ -47,15 +46,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     console.log('Auth compatibility check:', { 
       user: !!user, 
       profile: !!profile, 
-      isAuthenticated: authState,
-      zustandIsAuthenticated: isAuthenticated 
+      isAuthenticated: authState
     })
     
     return {
       user,
       profile,
       isLoading: isHydrated ? isLoading : false,
-      isAuthenticated: !!user && !!profile, // Calculate directly instead of relying on Zustand getter
+      isAuthenticated: authState, // Calculate directly instead of relying on Zustand getter
       error,
       isAdmin: profile?.role === 'admin' || profile?.role === 'super_admin' || false,
       isCustomer: profile?.role === 'customer' || false,
@@ -64,7 +62,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       logout,
       refreshProfile,
     }
-  }, [user, profile, isLoading, isAuthenticated, error, login, register, logout, refreshProfile, isHydrated])
+  }, [user, profile, isLoading, error, login, register, logout, refreshProfile, isHydrated])
 
   return (
     <LegacyAuthContext.Provider value={value}>

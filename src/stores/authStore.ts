@@ -39,11 +39,6 @@ interface AuthState {
   isLoading: boolean
   error: string | null
   
-  // Computed getters
-  isAuthenticated: boolean
-  isAdmin: boolean
-  isCustomer: boolean
-  
   // Actions
   setUser: (user: User | null) => void
   setProfile: (profile: UserProfile | null) => void
@@ -76,27 +71,8 @@ export const useAuthStore = create<AuthState>()(
       isLoading: false, // Start with false to prevent hydration mismatch
       error: null,
       
-      // Computed getters
-      get isAuthenticated() {
-        const state = get()
-        const result = !!state.user && !!state.profile
-        console.log('Zustand isAuthenticated getter:', { 
-          user: !!state.user, 
-          profile: !!state.profile, 
-          result 
-        })
-        return result
-      },
-      
-      get isAdmin() {
-        const state = get()
-        return state.profile?.role === 'admin' || state.profile?.role === 'super_admin'
-      },
-      
-      get isCustomer() {
-        const state = get()
-        return state.profile?.role === 'customer'
-      },
+      // Remove computed getters - they don't work properly in production
+      // These will be computed in the compatibility layer instead
       
       // State setters
       setUser: (user) => set({ user }),
@@ -267,7 +243,7 @@ export const useAuthStore = create<AuthState>()(
             console.log('Login method complete, final state:', {
               hasUser: !!get().user,
               hasProfile: !!get().profile,
-              isAuthenticated: get().isAuthenticated
+              isAuthenticated: !!get().user && !!get().profile
             })
             
             set({ isLoading: false })
