@@ -104,12 +104,24 @@ export async function middleware(request: NextRequest) {
     .single()
 
   const userRole = profile?.role || 'customer'
+  
+  // Debug: Log the role information
+  console.log('Middleware role check:', {
+    userId: session.user.id,
+    email: session.user.email,
+    profileData: profile,
+    userRole,
+    path,
+    isAdminPath: path.startsWith('/admin/')
+  })
 
   // Role-based access control
   if (path.startsWith('/admin/')) {
     if (userRole !== 'admin' && userRole !== 'super_admin') {
+      console.log('Middleware: Redirecting to dashboard - role not allowed:', userRole)
       return NextResponse.redirect(new URL('/dashboard', request.url))
     }
+    console.log('Middleware: Admin access granted for role:', userRole)
   }
 
   // If user is admin trying to access /dashboard, redirect to /admin
