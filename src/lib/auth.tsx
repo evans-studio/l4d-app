@@ -39,7 +39,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log('Fetching profile for user:', userId)
       
-      // Add timeout to prevent hanging
+      // Try using the RLS bypass function first
+      try {
+        console.log('Attempting to fetch profile using RLS bypass function')
+        const { data: functionData, error: functionError } = await supabase
+          .rpc('get_user_profile', { user_id: userId })
+        
+        if (!functionError && functionData && functionData.length > 0) {
+          const profileData = functionData[0]
+          console.log('Profile fetched successfully via RLS bypass:', profileData)
+          setProfile(profileData)
+          return profileData
+        }
+        
+        if (functionError) {
+          console.log('RLS bypass function failed:', functionError)
+        } else {
+          console.log('No profile found via RLS bypass function')
+        }
+      } catch (rpcError) {
+        console.log('RLS bypass function not available, falling back to direct query')
+      }
+      
+      // Fallback to direct query with timeout
       const fetchPromise = supabase
         .from('user_profiles')
         .select('id, email, first_name, last_name, phone, role')
@@ -83,6 +105,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const createProfile = async (userId: string, email: string, firstName?: string, lastName?: string, phone?: string) => {
     const role = ['zell@love4detailing.com', 'paul@evans-studio.co.uk'].includes(email.toLowerCase()) ? 'admin' : 'customer'
     
+    console.log('Creating profile with data:', {
+      id: userId,
+      email: email.toLowerCase(),
+      first_name: firstName || '',
+      last_name: lastName || '',
+      phone: phone || null,
+      role: role
+    })
+    
+    // Try using the RLS bypass function first
+    try {
+      console.log('Attempting to create profile using RLS bypass function')
+      const { data: functionData, error: functionError } = await supabase
+        .rpc('create_user_profile', {
+          user_id: userId,
+          user_email: email.toLowerCase(),
+          first_name: firstName || '',
+          last_name: lastName || '',
+          phone: phone || null,
+          user_role: role
+        })
+      
+      if (!functionError && functionData) {
+        console.log('Profile created successfully via RLS bypass:', functionData)
+        setProfile(functionData)
+        return functionData
+      }
+      
+      if (functionError) {
+        console.error('RLS bypass function failed:', functionError)
+      }
+    } catch (rpcError) {
+      console.log('RLS bypass function not available, falling back to direct insert')
+    }
+    
+    // Fallback to direct operations
     const profileData = {
       id: userId,
       email: email.toLowerCase(),
@@ -92,8 +150,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       role: role,
       is_active: true
     }
-    
-    console.log('Creating profile with data:', profileData)
     
     // First, check if profile already exists
     const { data: existing } = await supabase
@@ -128,6 +184,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return null
       }
       
+      console.log('Profile created via upsert:', upsertData)
+      setProfile(upsertData)
       return upsertData
     }
     
