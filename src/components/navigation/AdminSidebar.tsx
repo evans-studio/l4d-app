@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter, usePathname } from 'next/navigation'
-import { useAuth } from '@/lib/auth/auth-enterprise'
+import { useAuth } from '@/lib/auth'
 import { 
   HomeIcon, 
   CalendarIcon, 

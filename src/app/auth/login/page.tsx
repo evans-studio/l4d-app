@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { useAuth } from '@/lib/auth/auth-enterprise'
+import { useAuth } from '@/lib/auth'
 import { Button } from '@/components/ui/primitives/Button'
 import { ResponsiveLogo } from '@/components/ui/primitives/Logo'
 import { Container } from '@/components/layout/templates/PageLayout'
@@ -46,7 +46,7 @@ export default function LoginPage() {
     setError('')
 
     try {
-      const result = await login(formData.email, formData.password, formData.rememberMe)
+      const result = await login(formData.email, formData.password)
 
       if (!result.success) {
         setError(result.error || 'Login failed. Please try again.')

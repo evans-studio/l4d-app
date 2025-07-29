@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useAuth } from '@/lib/auth'
 import { Button } from '@/components/ui/primitives/Button'
 import { ResponsiveLogo } from '@/components/ui/primitives/Logo'
 import { Container } from '@/components/layout/templates/PageLayout'
@@ -8,6 +9,7 @@ import { Mail, Lock, User, Phone, AlertCircle, CheckCircle } from 'lucide-react'
 import Link from 'next/link'
 
 export default function RegisterPage() {
+  const { register } = useAuth()
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -25,38 +27,27 @@ export default function RegisterPage() {
     setError('')
 
     try {
-      const response = await fetch('/api/auth/enterprise/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: formData.email,
-          password: formData.password,
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          phone: formData.phone,
-          rememberMe: false
-        }),
-        credentials: 'include'
-      })
+      const result = await register(
+        formData.email,
+        formData.password,
+        formData.firstName,
+        formData.lastName,
+        formData.phone
+      )
 
-      const data = await response.json()
-
-      if (!response.ok || !data.success) {
-        setError(data.error?.message || 'Registration failed')
+      if (!result.success) {
+        setError(result.error || 'Registration failed')
         return
       }
 
       // Handle different registration outcomes
-      if (data.data.emailConfirmationRequired) {
-        // Email confirmation required - show success message
-        console.log('Email confirmation required:', data.data.message)
-        setSuccess(true)
-      } else {
+      if (result.redirectTo) {
         // Registration complete with auto-login, redirect based on role
-        console.log('Registration successful, redirecting to:', data.data.redirectTo)
-        window.location.href = data.data.redirectTo
+        console.log('Registration successful, redirecting to:', result.redirectTo)
+        window.location.href = result.redirectTo
+      } else {
+        // Email confirmation required - show success message
+        setSuccess(true)
       }
 
     } catch (error) {

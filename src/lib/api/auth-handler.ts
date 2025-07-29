@@ -1,88 +1,89 @@
 import { NextRequest } from 'next/server'
-import { createClientFromRequest } from '@/lib/supabase/server'
-import { ApiResponseHandler } from '@/lib/api/response'
+import { createServerClient } from '@supabase/ssr'
 
-export interface AuthResult {
-  success: boolean
-  user?: any
-  profile?: any
-  error?: any
+export interface AuthenticatedUser {
+  id: string
+  email: string
+  role: string
 }
 
-export async function authenticateAdmin(request: NextRequest): Promise<AuthResult> {
-  try {
-    const supabase = createClientFromRequest(request)
+export class AuthHandler {
+  /**
+   * Get authenticated user from request headers (set by middleware)
+   */
+  static getUserFromHeaders(request: NextRequest): AuthenticatedUser | null {
+    const userId = request.headers.get('x-user-id')
+    const userRole = request.headers.get('x-user-role')
     
-    // Try to get user with current session
-    let { data: { user }, error: authError } = await supabase.auth.getUser()
-    
-    // If we get a refresh token error, try to refresh the session
-    if (authError?.message?.includes('Invalid Refresh Token') || authError?.message?.includes('Refresh Token Not Found')) {
-      console.log('Attempting session refresh due to:', authError.message)
-      
-      const { data: { session }, error: refreshError } = await supabase.auth.refreshSession()
-      
-      if (refreshError || !session) {
-        console.log('Session refresh failed:', refreshError?.message)
-        return {
-          success: false,
-          error: ApiResponseHandler.unauthorized('Session expired. Please log in again.')
-        }
-      }
-      
-      // Try to get user again with refreshed session
-      const { data: { user: refreshedUser }, error: userError } = await supabase.auth.getUser()
-      
-      if (userError || !refreshedUser) {
-        return {
-          success: false,
-          error: ApiResponseHandler.unauthorized('Authentication failed after refresh')
-        }
-      }
-      
-      user = refreshedUser
-    } else if (authError || !user) {
-      console.log('Authentication failed:', authError?.message)
-      return {
-        success: false,
-        error: ApiResponseHandler.unauthorized('Authentication required')
-      }
-    }
-
-    // Get user profile and verify admin role
-    const { data: profile, error: profileError } = await supabase
-      .from('user_profiles')
-      .select('role, email, first_name, last_name')
-      .eq('id', user.id)
-      .single()
-
-    if (profileError) {
-      console.log('Profile fetch error:', profileError.message)
-      return {
-        success: false,
-        error: ApiResponseHandler.serverError('Failed to fetch user profile')
-      }
-    }
-
-    if (!profile || (profile.role !== 'admin' && profile.role !== 'super_admin')) {
-      console.log('Access denied - user role:', profile?.role)
-      return {
-        success: false,
-        error: ApiResponseHandler.forbidden('Admin access required')
-      }
+    if (!userId || !userRole) {
+      return null
     }
 
     return {
-      success: true,
-      user,
-      profile
+      id: userId,
+      email: '', // Email not available in headers, would need to fetch from DB
+      role: userRole
     }
+  }
 
-  } catch (error) {
-    console.error('Authentication handler error:', error)
-    return {
-      success: false,
-      error: ApiResponseHandler.serverError('Authentication failed')
+  /**
+   * Get authenticated user from cookies directly
+   */
+  static async getUserFromRequest(request: NextRequest): Promise<AuthenticatedUser | null> {
+    try {
+      const supabase = createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        {
+          cookies: {
+            get(name: string) {
+              return request.cookies.get(name)?.value
+            },
+            set() {
+              // Not used in this context
+            },
+            remove() {
+              // Not used in this context
+            },
+          },
+        }
+      )
+
+      const { data: { session } } = await supabase.auth.getSession()
+      
+      if (!session?.user) {
+        return null
+      }
+
+      // Get user profile for role
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('role')
+        .eq('id', session.user.id)
+        .single()
+
+      return {
+        id: session.user.id,
+        email: session.user.email || '',
+        role: profile?.role || 'customer'
+      }
+    } catch (error) {
+      console.error('Auth error:', error)
+      return null
     }
+  }
+
+  /**
+   * Check if user has admin role
+   */
+  static isAdmin(user: AuthenticatedUser): boolean {
+    return user.role === 'admin'
+  }
+
+  /**
+   * Check if user has customer role
+   */
+  static isCustomer(user: AuthenticatedUser): boolean {
+    return user.role === 'customer'
   }
 }

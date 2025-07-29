@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useAuth } from '@/lib/auth/auth-enterprise'
+import { useAuth } from '@/lib/auth'
 import { Button } from '@/components/ui/primitives/Button'
 import { 
   MenuIcon, 

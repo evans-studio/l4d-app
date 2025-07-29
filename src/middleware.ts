@@ -1,14 +1,15 @@
 import { NextResponse, type NextRequest } from 'next/server'
-import { AuthMiddleware } from '@/lib/auth/auth-middleware'
+import { createServerClient } from '@supabase/ssr'
 
 export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname
+  const response = NextResponse.next()
 
   // Public routes that don't require authentication
   const publicRoutes = [
     '/',
     '/auth/login',
-    '/auth/register',
+    '/auth/register', 
     '/auth/forgot-password',
     '/auth/reset-password',
     '/auth/verify-email',
@@ -27,94 +28,93 @@ export async function middleware(request: NextRequest) {
     '/api/booking/calculate-price',
     '/api/booking/validate-user',
     '/api/booking/create',
-    '/api/auth/reset-password',
-    '/api/auth/verify-email',
-    '/api/debug',
+    '/api/auth/register',
+    '/api/auth/login',
     '/api/admin/cleanup-users',
     '/api/admin/simple-cleanup',
     '/api/admin/direct-cleanup',
-    '/api/auth/enterprise/register'
+    '/api/admin/drop-enterprise-tables'
   ]
 
   // Skip auth check for public routes
   if (publicRoutes.includes(path)) {
-    return NextResponse.next()
+    return response
   }
 
   // Skip auth check for public API routes
   if (publicApiRoutes.some(route => path.startsWith(route))) {
-    return NextResponse.next()
+    return response
   }
 
-  // Rate limiting for auth endpoints
-  if (path.startsWith('/api/auth/')) {
-    const clientIP = AuthMiddleware.getClientIP(request)
-    const rateLimit = await AuthMiddleware.checkRateLimit(clientIP, 'api')
-    
-    if (!rateLimit.allowed) {
-      return AuthMiddleware.createRateLimitResponse(rateLimit)
+  // Create Supabase client for server-side auth
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return request.cookies.get(name)?.value
+        },
+        set(name: string, value: string, options: any) {
+          response.cookies.set(name, value, options)
+        },
+        remove(name: string, options: any) {
+          response.cookies.set(name, '', { ...options, maxAge: 0 })
+        },
+      },
     }
-  }
+  )
 
-  // Enterprise authentication for protected routes
-  const authResult = await AuthMiddleware.authenticate(request)
+  // Get current session
+  const { data: { session }, error } = await supabase.auth.getSession()
 
-  // Handle API routes
+  // Handle API routes - require authentication
   if (path.startsWith('/api/')) {
-    if (!authResult.success) {
-      return AuthMiddleware.createErrorResponse(
-        authResult.error || { message: 'Authentication required', code: 'UNAUTHORIZED' },
-        401
+    if (!session?.user) {
+      return NextResponse.json(
+        { success: false, error: { message: 'Authentication required', code: 'UNAUTHORIZED' } },
+        { status: 401 }
       )
     }
 
-    // Create response with user context
-    const response = NextResponse.next()
-    
-    // Add user context to response headers for API routes to access
-    response.headers.set('x-user-id', authResult.user!.id)
-    response.headers.set('x-user-role', authResult.user!.role)
-    response.headers.set('x-session-id', authResult.session!.id)
+    // Get user profile for role information
+    const { data: profile } = await supabase
+      .from('user_profiles')
+      .select('role')
+      .eq('id', session.user.id)
+      .single()
 
-    // If we have new tokens from refresh, set them in cookies
-    if (authResult.newTokens) {
-      AuthMiddleware.setAuthCookies(response, {
-        accessToken: authResult.newTokens.accessToken,
-        refreshToken: authResult.newTokens.refreshToken,
-        expiresIn: authResult.newTokens.expiresIn,
-        refreshExpiresIn: 7 * 24 * 60 * 60 // 7 days
-      })
-    }
+    // Add user context to response headers for API routes
+    response.headers.set('x-user-id', session.user.id)
+    response.headers.set('x-user-role', profile?.role || 'customer')
 
     return response
   }
 
-  // Handle page routes
-  if (!authResult.success) {
-    // Clear any invalid cookies
-    const response = NextResponse.redirect(new URL('/auth/login', request.url))
-    AuthMiddleware.clearAuthCookies(response)
-    return response
+  // Handle page routes - redirect to login if not authenticated
+  if (!session?.user) {
+    return NextResponse.redirect(new URL('/auth/login', request.url))
   }
 
-  // Check role-based access for admin routes
+  // Get user profile for role-based routing
+  const { data: profile } = await supabase
+    .from('user_profiles')
+    .select('role')
+    .eq('id', session.user.id)
+    .single()
+
+  const userRole = profile?.role || 'customer'
+
+  // Role-based access control
   if (path.startsWith('/admin/')) {
-    if (!AuthMiddleware.isAdmin(authResult.user!.role)) {
+    if (userRole !== 'admin') {
       return NextResponse.redirect(new URL('/dashboard', request.url))
     }
   }
 
-  // Create successful response
-  const response = NextResponse.next()
-
-  // If we have new tokens from refresh, set them in cookies
-  if (authResult.newTokens) {
-    AuthMiddleware.setAuthCookies(response, {
-      accessToken: authResult.newTokens.accessToken,
-      refreshToken: authResult.newTokens.refreshToken,
-      expiresIn: authResult.newTokens.expiresIn,
-      refreshExpiresIn: 7 * 24 * 60 * 60 // 7 days
-    })
+  // If user is admin trying to access /dashboard, redirect to /admin
+  if (path.startsWith('/dashboard/') && userRole === 'admin') {
+    return NextResponse.redirect(new URL('/admin', request.url))
   }
 
   return response
