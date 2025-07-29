@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { useAuth } from '@/lib/auth'
+import { useAuth } from '@/providers/AuthProvider'
 import { Button } from '@/components/ui/primitives/Button'
 import { ResponsiveLogo } from '@/components/ui/primitives/Logo'
 import { Container } from '@/components/layout/templates/PageLayout'
@@ -11,7 +11,7 @@ import Link from 'next/link'
 
 export default function LoginPage() {
   const router = useRouter()
-  const { login, isAuthenticated } = useAuth()
+  const { login, isAuthenticated, isAdmin } = useAuth()
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -36,9 +36,10 @@ export default function LoginPage() {
   // Redirect if already authenticated
   useEffect(() => {
     if (isAuthenticated) {
-      router.replace('/dashboard')
+      const redirectTo = isAdmin ? '/admin' : '/dashboard'
+      router.replace(redirectTo)
     }
-  }, [isAuthenticated, router])
+  }, [isAuthenticated, isAdmin, router])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -50,15 +51,21 @@ export default function LoginPage() {
 
       if (!result.success) {
         setError(result.error || 'Login failed. Please try again.')
+        setIsLoading(false)
         return
       }
 
-      // Login successful - auth context will handle redirect
+      // Success - redirect will happen via useEffect when auth state updates
+      // Small delay to allow state to update
+      setTimeout(() => {
+        const redirectTo = isAdmin ? '/admin' : '/dashboard'
+        router.push(redirectTo)
+        setIsLoading(false)
+      }, 100)
 
     } catch (error: unknown) {
       console.error('Login exception:', error)
       setError('Network error. Please try again.')
-    } finally {
       setIsLoading(false)
     }
   }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase/direct'
+import { RegisterRequestSchema, AuthResponseSchema } from '@/schemas/auth.schema'
 
 // Admin emails that should get admin role
 const ADMIN_EMAILS = [
@@ -9,34 +10,28 @@ const ADMIN_EMAILS = [
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, password, firstName, lastName, phone } = await request.json()
+    const body = await request.json()
 
-    // Basic validation
-    if (!email || !password || !firstName || !lastName) {
+    // Validate request with Zod
+    const validation = RegisterRequestSchema.safeParse(body)
+    
+    if (!validation.success) {
       return NextResponse.json(
         {
           success: false,
           error: {
-            message: 'Email, password, first name, and last name are required',
-            code: 'MISSING_FIELDS'
+            message: 'Validation failed',
+            code: 'INVALID_INPUT'
+          },
+          metadata: {
+            validationErrors: validation.error.flatten().fieldErrors
           }
         },
         { status: 400 }
       )
     }
 
-    if (password.length < 8) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: {
-            message: 'Password must be at least 8 characters long',
-            code: 'WEAK_PASSWORD'
-          }
-        },
-        { status: 400 }
-      )
-    }
+    const { email, password, firstName, lastName, phone } = validation.data
 
     // Determine role based on email
     const role = ADMIN_EMAILS.includes(email.toLowerCase()) ? 'admin' : 'customer'
