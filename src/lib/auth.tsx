@@ -63,10 +63,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           code: error.code
         })
         
-        // If it's a permission error, try using RPC as fallback
-        if (error.code === 'PGRST116' || error.message.includes('permission')) {
+        // Log common error scenarios
+        if (error.code === 'PGRST116') {
+          console.log('PGRST116: No rows returned - profile does not exist')
+        } else if (error.message.includes('permission') || error.message.includes('RLS')) {
           console.log('Permission error detected, this indicates RLS policy issue')
           console.log('Please run the fix-profile-access.sql script in your Supabase dashboard')
+        } else if (error.message.includes('JWT')) {
+          console.log('JWT error - authentication token might be invalid')
         }
         
         return null
@@ -261,24 +265,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // If profile doesn't exist, create it
           if (!profile) {
             console.log('Profile not found, creating new profile for user:', session.user.id)
+            console.log('User metadata:', session.user.user_metadata)
+            console.log('User email:', session.user.email)
+            
             const role = ['zell@love4detailing.com', 'paul@evans-studio.co.uk'].includes(session.user.email?.toLowerCase() || '') ? 'admin' : 'customer'
             
-            const { error: createError } = await supabase
+            const profileData = {
+              id: session.user.id,
+              email: session.user.email || '',
+              first_name: session.user.user_metadata?.first_name || session.user.user_metadata?.firstName || '',
+              last_name: session.user.user_metadata?.last_name || session.user.user_metadata?.lastName || '',
+              phone: session.user.user_metadata?.phone || null,
+              role: role,
+              is_active: true
+            }
+            
+            console.log('Creating profile with data:', profileData)
+            
+            const { data: createdProfile, error: createError } = await supabase
               .from('user_profiles')
-              .insert({
-                id: session.user.id,
-                email: session.user.email || '',
-                first_name: session.user.user_metadata?.first_name || '',
-                last_name: session.user.user_metadata?.last_name || '',
-                phone: session.user.user_metadata?.phone || null,
-                role: role,
-                is_active: true
-              })
+              .insert(profileData)
+              .select()
+              .single()
             
             if (createError) {
               console.error('Failed to create profile:', createError)
+              console.error('Create error details:', {
+                message: createError.message,
+                details: createError.details,
+                hint: createError.hint,
+                code: createError.code
+              })
             } else {
-              console.log('Profile created successfully, fetching again...')
+              console.log('Profile created successfully:', createdProfile)
               profile = await fetchProfile(session.user.id)
             }
           }
