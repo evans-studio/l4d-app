@@ -1,16 +1,13 @@
 import { NextRequest } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { ApiResponseHandler } from '@/lib/api/response'
-import { z } from 'zod'
+import { ForgotPasswordRequestSchema } from '@/schemas/auth.schema'
 import { Resend } from 'resend'
 import { randomBytes, createHash } from 'crypto'
+import { z } from 'zod'
 
 // Force Node.js runtime for email service compatibility
 export const runtime = 'nodejs'
-
-const forgotPasswordSchema = z.object({
-  email: z.string().email('Invalid email address')
-})
 
 // Initialize Resend
 const resend = new Resend(process.env.RESEND_API_KEY)
@@ -18,7 +15,15 @@ const resend = new Resend(process.env.RESEND_API_KEY)
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { email } = forgotPasswordSchema.parse(body)
+    const validation = ForgotPasswordRequestSchema.safeParse(body)
+    
+    if (!validation.success) {
+      return ApiResponseHandler.error('Validation failed', 'INVALID_INPUT', 400, {
+        validationErrors: validation.error.flatten().fieldErrors
+      })
+    }
+    
+    const { email } = validation.data
 
     console.log('Password reset request for:', email.toLowerCase())
     

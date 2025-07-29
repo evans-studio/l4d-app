@@ -1,21 +1,25 @@
 import { NextRequest } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { ApiResponseHandler } from '@/lib/api/response'
-import { z } from 'zod'
+import { ResetPasswordRequestSchema } from '@/schemas/auth.schema'
 import { createHash } from 'crypto'
+import { z } from 'zod'
 
 // Force Node.js runtime
 export const runtime = 'nodejs'
 
-const resetPasswordSchema = z.object({
-  token: z.string().min(1, 'Reset token is required'),
-  password: z.string().min(8, 'Password must be at least 8 characters long')
-})
-
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { token, password } = resetPasswordSchema.parse(body)
+    const validation = ResetPasswordRequestSchema.safeParse(body)
+    
+    if (!validation.success) {
+      return ApiResponseHandler.error('Validation failed', 'INVALID_INPUT', 400, {
+        validationErrors: validation.error.flatten().fieldErrors
+      })
+    }
+    
+    const { token, password } = validation.data
 
     console.log('Password reset attempt with token')
 
