@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext } from 'react'
+import { createContext, useContext, useEffect, useState } from 'react'
 import { useAuthStore } from '@/stores/authStore'
 import { User } from '@supabase/supabase-js'
 
@@ -23,6 +23,8 @@ const LegacyAuthContext = createContext<LegacyAuthContextType | undefined>(undef
 
 // Legacy AuthProvider that wraps the new Zustand store
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [isHydrated, setIsHydrated] = useState(false)
+  
   // Get auth state from Zustand store
   const authState = useAuthStore((state) => ({
     user: state.user,
@@ -36,8 +38,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     refreshProfile: state.refreshProfile,
   }))
 
+  useEffect(() => {
+    setIsHydrated(true)
+  }, [])
+
+  // Provide consistent initial state until hydration is complete
   const value: LegacyAuthContextType = {
     ...authState,
+    // Ensure consistent state until hydrated
+    isLoading: isHydrated ? authState.isLoading : false,
     isAdmin: authState.profile?.role === 'admin' || authState.profile?.role === 'super_admin' || false,
     isCustomer: authState.profile?.role === 'customer' || false,
   }

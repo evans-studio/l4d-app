@@ -8,43 +8,55 @@ export function ZustandAuthInitializer({ children }: { children: React.ReactNode
   const initializeAuth = useStore((state) => state.initializeAuth)
   
   useEffect(() => {
-    // Hydrate persisted state first, then initialize auth
-    useStore.persist.rehydrate()
+    let subscription: any = null
     
-    // Set up auth state listener on client side only
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('Auth state change:', event, !!session?.user)
+    // Wait for hydration to complete
+    const initAuth = async () => {
+      // Ensure store is hydrated
+      await useStore.persist.rehydrate()
       
-      const store = useStore.getState()
-      
-      if (session?.user) {
-        store.setUser(session.user)
+      // Set up auth state listener on client side only after hydration
+      const { data } = supabase.auth.onAuthStateChange(async (event, session) => {
+        console.log('Auth state change:', event, !!session?.user)
         
-        let profile = await store.fetchProfile(session.user.id)
+        const store = useStore.getState()
         
-        if (!profile && session.user.email) {
-          profile = await store.createProfile(
-            session.user.id,
-            session.user.email,
-            session.user.user_metadata?.first_name,
-            session.user.user_metadata?.last_name,
-            session.user.user_metadata?.phone
-          )
+        if (session?.user) {
+          store.setUser(session.user)
+          
+          let profile = await store.fetchProfile(session.user.id)
+          
+          if (!profile && session.user.email) {
+            profile = await store.createProfile(
+              session.user.id,
+              session.user.email,
+              session.user.user_metadata?.first_name,
+              session.user.user_metadata?.last_name,
+              session.user.user_metadata?.phone
+            )
+          }
+        } else {
+          store.setUser(null)
+          store.setProfile(null)
         }
-      } else {
-        store.setUser(null)
-        store.setProfile(null)
-      }
+        
+        store.setLoading(false)
+      })
       
-      store.setLoading(false)
-    })
+      subscription = data.subscription
+      
+      // Initialize auth on app start after hydration
+      await initializeAuth()
+    }
     
-    // Initialize auth on app start
-    initializeAuth()
+    // Start initialization on next tick to ensure hydration is complete
+    setTimeout(initAuth, 0)
     
     // Cleanup subscription
     return () => {
-      subscription.unsubscribe()
+      if (subscription) {
+        subscription.unsubscribe()
+      }
     }
   }, [initializeAuth])
 

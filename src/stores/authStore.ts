@@ -70,10 +70,10 @@ const ADMIN_EMAILS = ['zell@love4detailing.com', 'paul@evans-studio.co.uk']
 export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
-      // Initial state
+      // Initial state - consistent between server and client
       user: null,
       profile: null,
-      isLoading: true,
+      isLoading: false, // Start with false to prevent hydration mismatch
       error: null,
       
       // Computed getters
