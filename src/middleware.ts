@@ -97,11 +97,20 @@ export async function middleware(request: NextRequest) {
     }
 
     // Get user profile for role information using service client (bypasses RLS)
-    const { data: profile } = await supabaseService
+    const { data: profile, error: profileError } = await supabaseService
       .from('user_profiles')
-      .select('role')
+      .select('role')  
       .eq('id', user.id)
       .single()
+      
+    if (profileError) {
+      console.error('Middleware API profile fetch error:', {
+        error: profileError,
+        userId: user.id,
+        errorCode: profileError.code,
+        errorMessage: profileError.message
+      })
+    }
 
     // Add user context to response headers for API routes
     response.headers.set('x-user-id', user.id)
@@ -116,11 +125,20 @@ export async function middleware(request: NextRequest) {
   }
 
   // Get user profile for role-based routing using service client (bypasses RLS)
-  const { data: profile } = await supabaseService
+  const { data: profile, error: profileError } = await supabaseService
     .from('user_profiles')
     .select('role')
     .eq('id', user.id)
     .single()
+    
+  if (profileError) {
+    console.error('Middleware profile fetch error:', {
+      error: profileError,
+      userId: user.id,
+      errorCode: profileError.code,
+      errorMessage: profileError.message
+    })
+  }
 
   const userRole = profile?.role || 'customer'
   
