@@ -65,7 +65,8 @@ export async function GET(request: NextRequest) {
     if (servicePricing && servicePricing.length > 0) {
       servicePricing.forEach(pricing => {
         if (pricing && pricing.service_id) {
-          pricingMatrix[pricing.service_id] = {}
+          const serviceId = pricing.service_id
+          pricingMatrix[serviceId] = {}
           
           // Map denormalized columns to vehicle size IDs
           const priceMap = {
@@ -77,9 +78,9 @@ export async function GET(request: NextRequest) {
           
           Object.entries(priceMap).forEach(([sizeName, price]) => {
             const vehicleSizeId = sizeNameToId[sizeName]
-            if (vehicleSizeId && price > 0) {
-              pricingMatrix[pricing.service_id][vehicleSizeId] = {
-                service_id: pricing.service_id,
+            if (vehicleSizeId && price > 0 && pricingMatrix[serviceId]) {
+              pricingMatrix[serviceId][vehicleSizeId] = {
+                service_id: serviceId,
                 vehicle_size_id: vehicleSizeId,
                 price: price
               }
@@ -93,7 +94,7 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     console.error('Pricing data error:', error)
-    return ApiResponseHandler.serverError(`Failed to fetch pricing data: ${error.message}`)
+    return ApiResponseHandler.serverError(`Failed to fetch pricing data: ${error instanceof Error ? error.message : 'Unknown error'}`)
   }
 }
 
@@ -152,7 +153,15 @@ export async function PUT(request: NextRequest) {
     Object.entries(pricing as Record<string, number>).forEach(([vehicleSizeId, price]) => {
       const columnName = sizeIdToColumn[vehicleSizeId]
       if (columnName && price && Number(price) > 0) {
-        pricingRecord[columnName as keyof typeof pricingRecord] = Number(price)
+        if (columnName === 'small') {
+          pricingRecord.small = Number(price)
+        } else if (columnName === 'medium') {
+          pricingRecord.medium = Number(price)
+        } else if (columnName === 'large') {
+          pricingRecord.large = Number(price)
+        } else if (columnName === 'extra_large') {
+          pricingRecord.extra_large = Number(price)
+        }
       }
     })
 
@@ -191,6 +200,6 @@ export async function PUT(request: NextRequest) {
 
   } catch (error) {
     console.error('Pricing update error:', error)
-    return ApiResponseHandler.serverError(`Failed to update pricing data: ${error.message}`)  
+    return ApiResponseHandler.serverError(`Failed to update pricing data: ${error instanceof Error ? error.message : 'Unknown error'}`)  
   }
 }

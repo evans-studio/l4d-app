@@ -365,7 +365,7 @@ export function PricingConfirmation() {
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
                   <span className="text-text-secondary">
-                    {formData.service?.name} ({formData.vehicleDetails?.size || 'Vehicle Size'})
+                    {formData.service?.name} ({formData.vehicle?.size || 'Vehicle Size'})
                   </span>
                   <span className="text-text-primary">£{calculatedPrice.servicePrice}</span>
                 </div>
