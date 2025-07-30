@@ -142,8 +142,9 @@ function EditServicePage({ params }: { params: Promise<{ id: string }> }) {
           // Get pricing for this service
           const servicePricing: { [vehicleSizeId: string]: number } = {}
           if (pricingData.success && pricingData.data[serviceId]) {
-            Object.entries(pricingData.data[serviceId]).forEach(([vehicleSizeId, pricing]: [string, { price: number }]) => {
-              servicePricing[vehicleSizeId] = pricing.price || 0
+            Object.entries(pricingData.data[serviceId]).forEach(([vehicleSizeId, pricing]) => {
+              const pricingData = pricing as { price: number }
+              servicePricing[vehicleSizeId] = pricingData.price || 0
             })
           }
 
