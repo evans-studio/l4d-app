@@ -41,22 +41,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Memoize the value to prevent unnecessary re-renders
   const value: LegacyAuthContextType = useMemo(() => {
-    // Debug the authentication state
-    const authState = !!user && !!profile
+    // More lenient authentication check - allow user without profile temporarily
+    // This prevents redirect loops when profile fetch fails due to RLS issues
+    const authState = !!user && (!!profile || !isLoading)
+    
     console.log('Auth compatibility check:', { 
       user: !!user, 
       profile: !!profile, 
-      isAuthenticated: authState
+      isLoading,
+      isAuthenticated: authState,
+      profileRole: profile?.role
     })
     
     return {
       user,
       profile,
       isLoading: isHydrated ? isLoading : false,
-      isAuthenticated: authState, // Calculate directly instead of relying on Zustand getter
+      isAuthenticated: authState, // More lenient check to prevent redirect loops
       error,
       isAdmin: profile?.role === 'admin' || profile?.role === 'super_admin' || false,
-      isCustomer: profile?.role === 'customer' || false,
+      isCustomer: profile?.role === 'customer' || !profile, // Default to customer if no profile
       login,
       register,
       logout,

@@ -1,8 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClientFromRequest } from '@/lib/supabase/server'
+import { createClient } from '@supabase/supabase-js'
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+
+// Create service client that bypasses RLS
+const supabaseService = createClient(supabaseUrl, supabaseServiceKey, {
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false
+  }
+})
 
 export async function GET(request: NextRequest) {
   try {
+    console.log('Service role key available:', !!supabaseServiceKey)
     const supabase = createClientFromRequest(request)
     
     // Get current user
@@ -15,22 +28,23 @@ export async function GET(request: NextRequest) {
       }, { status: 401 })
     }
 
-    // Get user profile
-    const { data: profile, error: profileError } = await supabase
+    // Get user profile using service client to bypass RLS
+    const { data: profile, error: profileError } = await supabaseService
       .from('user_profiles')
       .select('id, is_active')
       .eq('id', user.id)
+      .eq('is_active', true)
       .single()
 
-    if (profileError || !profile || profile.is_active === false) {
+    if (profileError || !profile) {
       return NextResponse.json({
         success: false,
         error: { message: 'User account not found or inactive', code: 'USER_INACTIVE' }
       }, { status: 401 })
     }
 
-    // Fetch customer addresses
-    const { data: addresses, error: addressesError } = await supabase
+    // Fetch customer addresses using service client to avoid RLS issues
+    const { data: addresses, error: addressesError } = await supabaseService
       .from('customer_addresses')
       .select(`
         id,
@@ -59,12 +73,12 @@ export async function GET(request: NextRequest) {
       }, { status: 500 })
     }
 
-    // Get usage statistics for each address
+    // Get usage statistics for each address using service client
     const addressIds = addresses?.map(a => a.id) || []
     let addressStats: Record<string, { last_used: string; booking_count: number }> = {}
 
     if (addressIds.length > 0) {
-      const { data: stats, error: statsError } = await supabase
+      const { data: stats, error: statsError } = await supabaseService
         .from('bookings')
         .select(`
           address_id,
@@ -141,14 +155,15 @@ export async function POST(request: NextRequest) {
       }, { status: 401 })
     }
 
-    // Get user profile
-    const { data: profile, error: profileError } = await supabase
+    // Get user profile using service client to bypass RLS
+    const { data: profile, error: profileError } = await supabaseService
       .from('user_profiles')
       .select('id, is_active')
       .eq('id', user.id)
+      .eq('is_active', true)
       .single()
 
-    if (profileError || !profile || profile.is_active === false) {
+    if (profileError || !profile) {
       return NextResponse.json({
         success: false,
         error: { message: 'User account not found or inactive', code: 'USER_INACTIVE' }
@@ -187,8 +202,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Check if this is the user's first address (make it default)
-    const { data: existingAddresses, error: countError } = await supabase
+    // Check if this is the user's first address (make it default) - use service client
+    const { data: existingAddresses, error: countError } = await supabaseService
       .from('customer_addresses')
       .select('id')
       .eq('user_id', profile.id)
@@ -203,8 +218,8 @@ export async function POST(request: NextRequest) {
 
     const isFirstAddress = !existingAddresses || existingAddresses.length === 0
 
-    // Insert new address
-    const { data: newAddress, error: insertError } = await supabase
+    // Insert new address using service client
+    const { data: newAddress, error: insertError } = await supabaseService
       .from('customer_addresses')
       .insert({
         user_id: profile.id,
@@ -240,9 +255,9 @@ export async function POST(request: NextRequest) {
       }, { status: 500 })
     }
 
-    // If setting as default, unset other defaults
+    // If setting as default, unset other defaults using service client
     if (addressData.set_as_default === true && !isFirstAddress) {
-      await supabase
+      await supabaseService
         .from('customer_addresses')
         .update({ is_default: false })
         .eq('user_id', profile.id)

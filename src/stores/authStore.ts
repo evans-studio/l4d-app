@@ -77,23 +77,37 @@ export const useAuthStore = create<AuthState>()(
       // State setters
       setUser: (user) => set({ user }),
       setProfile: (profile) => set({ profile }),
-      setLoading: (isLoading) => set({ isLoading }),
-      setError: (error) => set({ error }),
+      setLoading: (isLoading) => {
+        console.log('🔄 Auth loading state changed:', isLoading)
+        set({ isLoading })
+      },
+      setError: (error) => {
+        console.log('🚨 Auth error state changed:', error)
+        set({ error })
+      },
       
       // Profile operations
       fetchProfile: async (userId: string) => {
         try {
-          console.log('Fetching profile for user via API:', userId)
+          console.log('🔵 Fetching profile for user via API:', userId)
           
-          const response = await fetch(`/api/auth/profile?userId=${userId}`)
+          const response = await fetch(`/api/auth/profile?userId=${userId}`, {
+            credentials: 'include',
+            headers: {
+              'Content-Type': 'application/json',
+            }
+          })
+          
+          console.log('🔵 Profile API response status:', response.status)
+          
           const result = await response.json()
           
           if (!result.success) {
-            console.error('Profile fetch API error:', result.error)
+            console.error('🔴 Profile fetch API error:', result.error)
             
             if (result.error.code === 'PROFILE_NOT_FOUND') {
-              console.log('Profile not found, will need to create one')
-              set({ error: 'Profile not found' })
+              console.log('🟡 Profile not found, will need to create one')
+              set({ error: null }) // Don't set this as an error
               return null
             }
             
@@ -101,11 +115,11 @@ export const useAuthStore = create<AuthState>()(
             return null
           }
 
-          console.log('Profile fetched successfully via API:', result.data)
-          set({ profile: result.data })
+          console.log('🟢 Profile fetched successfully via API:', result.data)
+          set({ profile: result.data, error: null })
           return result.data
         } catch (error) {
-          console.error('Profile fetch exception:', error)
+          console.error('🔴 Profile fetch exception:', error)
           set({ error: 'Network error while fetching profile' })
           return null
         }
@@ -149,51 +163,82 @@ export const useAuthStore = create<AuthState>()(
       // Auth operations
       login: async (email: string, password: string) => {
         try {
+          console.log('🔵 Starting login process for:', email)
           set({ isLoading: true, error: null })
           
-          const { data, error } = await supabase.auth.signInWithPassword({
+          // Add timeout to prevent hanging
+          const loginPromise = supabase.auth.signInWithPassword({
             email,
             password
           })
+          
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Login timeout')), 30000)
+          )
+          
+          const { data, error } = await Promise.race([loginPromise, timeoutPromise]) as any
 
           if (error) {
+            console.error('🔴 Auth login error:', error)
             set({ isLoading: false, error: error.message })
             return { success: false, error: error.message }
           }
 
           if (data.user) {
-            console.log('Login successful, setting user:', data.user.id, data.user.email)
+            console.log('🟢 Login successful, setting user:', data.user.id, data.user.email)
             set({ user: data.user })
             
-            // Fetch or create profile
-            let profile = await get().fetchProfile(data.user.id)
+            // Fetch or create profile with timeout
+            console.log('🔵 Fetching profile for user:', data.user.id)
             
-            if (!profile) {
-              profile = await get().createProfile(
-                data.user.id,
-                data.user.email!,
-                data.user.user_metadata?.first_name,
-                data.user.user_metadata?.last_name,
-                data.user.user_metadata?.phone
-              )
+            try {
+              let profile = await Promise.race([
+                get().fetchProfile(data.user.id),
+                new Promise((_, reject) => setTimeout(() => reject(new Error('Profile fetch timeout')), 10000))
+              ]) as any
+              
+              if (!profile) {
+                console.log('🔵 Profile not found, creating new profile')
+                profile = await Promise.race([
+                  get().createProfile(
+                    data.user.id,
+                    data.user.email!,
+                    data.user.user_metadata?.first_name,
+                    data.user.user_metadata?.last_name,
+                    data.user.user_metadata?.phone
+                  ),
+                  new Promise((_, reject) => setTimeout(() => reject(new Error('Profile creation timeout')), 10000))
+                ]) as any
+              }
+              
+              console.log('🟢 Login method complete, final state:', {
+                hasUser: !!get().user,
+                hasProfile: !!get().profile,
+                profileRole: get().profile?.role,
+                isAuthenticated: !!get().user && !!get().profile
+              })
+              
+            } catch (profileError) {
+              console.error('🔴 Profile operation failed:', profileError)
+              // Continue with login even if profile operations fail
+              // The middleware and auth compatibility layer will handle this
             }
-            
-            console.log('Login method complete, final state:', {
-              hasUser: !!get().user,
-              hasProfile: !!get().profile,
-              isAuthenticated: !!get().user && !!get().profile
-            })
             
             set({ isLoading: false })
             return { success: true }
           }
 
+          console.error('🔴 Login failed - no user data')
           set({ isLoading: false, error: 'Login failed' })
           return { success: false, error: 'Login failed' }
         } catch (error) {
-          console.error('Login error:', error)
-          set({ isLoading: false, error: 'Network error' })
-          return { success: false, error: 'Network error. Please try again.' }
+          console.error('🔴 Login exception:', error)
+          set({ isLoading: false, error: error instanceof Error && error.message === 'Login timeout' 
+            ? 'Login is taking too long. Please try again.' 
+            : 'Network error. Please try again.' })
+          return { success: false, error: error instanceof Error && error.message === 'Login timeout'
+            ? 'Login is taking too long. Please try again.'
+            : 'Network error. Please try again.' }
         }
       },
       

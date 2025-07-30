@@ -18,7 +18,9 @@ import {
   LoaderIcon,
   AlertCircleIcon,
   PhoneIcon,
-  MailIcon
+  MailIcon,
+  Calculator,
+  Receipt
 } from 'lucide-react'
 import { format } from 'date-fns'
 
@@ -337,8 +339,9 @@ export function PricingConfirmation() {
                     <h4 className="font-medium text-text-primary">Service Location</h4>
                   </div>
                   <p className="text-sm text-text-secondary">
-                    {formData.address.street}<br />
-                    {formData.address.city}, {formData.address.state} {formData.address.zipCode}
+                    {formData.address.addressLine1}<br />
+                    {formData.address.addressLine2 && <>{formData.address.addressLine2}<br /></>}
+                    {formData.address.city}, {formData.address.postcode}
                   </p>
                 </div>
               )}
@@ -352,31 +355,67 @@ export function PricingConfirmation() {
         <Card>
           <CardHeader>
             <h3 className="text-lg font-semibold text-text-primary flex items-center gap-2">
-              <CreditCardIcon className="w-5 h-5 text-brand-400" />
+              <Receipt className="w-5 h-5 text-brand-400" />
               Pricing Breakdown
             </h3>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-text-secondary">{formData.service?.name} (Base Price)</span>
-                <span className="text-text-primary">£{calculatedPrice.basePrice}</span>
+            <div className="space-y-4">
+              {/* Service Price Section */}
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-text-secondary">
+                    {formData.service?.name} ({formData.vehicleDetails?.size || 'Vehicle Size'})
+                  </span>
+                  <span className="text-text-primary">£{calculatedPrice.servicePrice}</span>
+                </div>
+                
+                <div className="flex justify-between items-center font-medium">
+                  <span className="text-text-primary">Service Subtotal</span>
+                  <span className="text-text-primary">£{calculatedPrice.servicePrice}</span>
+                </div>
               </div>
               
-              <div className="flex justify-between items-center">
-                <span className="text-text-secondary">
-                  Vehicle Size Multiplier ({calculatedPrice.sizeMultiplier}x)
-                </span>
-                <span className="text-text-primary">
-                  {calculatedPrice.sizeMultiplier > 1 ? '+' : ''}
-                  £{(calculatedPrice.finalPrice - calculatedPrice.basePrice).toFixed(2)}
-                </span>
+              {/* Travel Surcharge Section */}
+              <div className="border-t border-border-secondary pt-3 space-y-3">
+                <div className="flex items-center gap-2 mb-2">
+                  <Calculator className="w-4 h-4 text-brand-400" />
+                  <h4 className="font-medium text-text-primary">Travel Information</h4>
+                </div>
+                
+                {calculatedPrice.travelDistance && (
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-text-secondary">Distance from SW9</span>
+                    <span className="text-text-primary">{calculatedPrice.travelDistance} miles</span>
+                  </div>
+                )}
+                
+                <div className="flex justify-between items-center">
+                  <span className="text-text-secondary">
+                    Travel Surcharge {calculatedPrice.withinFreeRadius ? '(Within 17.5 miles)' : '(Beyond 17.5 miles)'}
+                  </span>
+                  <span className={`font-medium ${
+                    calculatedPrice.withinFreeRadius ? 'text-green-600' : 'text-text-primary'
+                  }`}>
+                    {calculatedPrice.withinFreeRadius ? 'FREE' : `£${calculatedPrice.travelSurcharge}`}
+                  </span>
+                </div>
+                
+                {!calculatedPrice.withinFreeRadius && (
+                  <div className="text-xs text-text-muted">
+                    £0.50 per mile beyond free radius
+                  </div>
+                )}
               </div>
               
+              {/* Total Section */}
               <div className="border-t border-border-secondary pt-3">
                 <div className="flex justify-between items-center">
-                  <span className="text-lg font-semibold text-text-primary">Total</span>
+                  <span className="text-xl font-bold text-text-primary">Total Price</span>
                   <span className="text-2xl font-bold text-brand-400">£{calculatedPrice.finalPrice}</span>
+                </div>
+                <div className="text-xs text-text-muted mt-1 text-right">
+                  Payment due on completion
                 </div>
               </div>
             </div>
@@ -416,28 +455,59 @@ export function PricingConfirmation() {
 
       {/* Navigation */}
       <div className="flex justify-between items-center pt-6">
-        <Button
-          variant="outline"
-          onClick={previousStep}
-          disabled={isProcessing || isSubmitting}
-          leftIcon={<ChevronLeftIcon className="w-4 h-4" />}
-        >
-          Back to Service Location
-        </Button>
+        {/* Mobile: Stacked */}
+        <div className="sm:hidden space-y-3 pt-6 w-full">
+          <Button
+            onClick={handleConfirmBooking}
+            disabled={isProcessing || isSubmitting}
+            size="lg"
+            fullWidth
+            className="min-h-[48px]"
+            rightIcon={
+              (isProcessing || isSubmitting) ? 
+                <LoaderIcon className="w-4 h-4 animate-spin" /> : 
+                <CheckCircleIcon className="w-4 h-4" />
+            }
+          >
+            {isProcessing || isSubmitting ? 'Confirming...' : 'Confirm Booking'}
+          </Button>
+          <Button
+            variant="outline"
+            onClick={previousStep}
+            disabled={isProcessing || isSubmitting}
+            leftIcon={<ChevronLeftIcon className="w-4 h-4" />}
+            fullWidth
+            className="min-h-[48px]"
+          >
+            Back to Personal Details
+          </Button>
+        </div>
         
-        <Button
-          onClick={handleConfirmBooking}
-          disabled={isProcessing || isSubmitting}
-          size="lg"
-          className="min-w-[200px]"
-          rightIcon={
-            (isProcessing || isSubmitting) ? 
-              <LoaderIcon className="w-4 h-4 animate-spin" /> : 
-              <CheckCircleIcon className="w-4 h-4" />
-          }
-        >
-          {isProcessing || isSubmitting ? 'Confirming...' : 'Confirm Booking'}
-        </Button>
+        {/* Desktop: Side by side */}
+        <div className="hidden sm:flex justify-between items-center pt-6 w-full">
+          <Button
+            variant="outline"
+            onClick={previousStep}
+            disabled={isProcessing || isSubmitting}
+            leftIcon={<ChevronLeftIcon className="w-4 h-4" />}
+          >
+            Back to Personal Details
+          </Button>
+        
+          <Button
+            onClick={handleConfirmBooking}
+            disabled={isProcessing || isSubmitting}
+            size="lg"
+            className="min-w-[200px]"
+            rightIcon={
+              (isProcessing || isSubmitting) ? 
+                <LoaderIcon className="w-4 h-4 animate-spin" /> : 
+                <CheckCircleIcon className="w-4 h-4" />
+            }
+          >
+            {isProcessing || isSubmitting ? 'Confirming...' : 'Confirm Booking'}
+          </Button>
+        </div>
       </div>
     </div>
   )

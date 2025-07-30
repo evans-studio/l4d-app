@@ -19,8 +19,16 @@ import {
 interface Service {
   id: string
   name: string
-  description: string
-  category: string
+  description?: string
+  short_description?: string
+  category: {
+    id: string
+    name: string
+    is_active: boolean
+    created_at: string
+    description: string
+    display_order: number
+  } | null
   base_price: number
   duration_minutes: number
   is_active: boolean
@@ -35,10 +43,28 @@ interface ServiceCategory {
   sort_order: number
 }
 
+interface VehicleSize {
+  id: string
+  name: string
+  display_order: number
+}
+
+interface ServicePricing {
+  [serviceId: string]: {
+    [vehicleSizeId: string]: {
+      service_id: string
+      vehicle_size_id: string
+      price: number
+    }
+  }
+}
+
 function AdminServicesPage() {
   const router = useRouter()
   const [services, setServices] = useState<Service[]>([])
   const [categories, setCategories] = useState<ServiceCategory[]>([])
+  const [vehicleSizes, setVehicleSizes] = useState<VehicleSize[]>([])
+  const [pricing, setPricing] = useState<ServicePricing>({})
   const [isLoading, setIsLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('all')
@@ -47,20 +73,33 @@ function AdminServicesPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch services
-        const servicesResponse = await fetch('/api/services')
+        // Fetch services, categories, vehicle sizes, and pricing in parallel
+        const [servicesResponse, categoriesResponse, vehicleSizesResponse, pricingResponse] = await Promise.all([
+          fetch('/api/services'),
+          fetch('/api/services/categories'),
+          fetch('/api/services/vehicle-sizes'),
+          fetch('/api/admin/services/pricing')
+        ])
+
         const servicesData = await servicesResponse.json()
+        const categoriesData = await categoriesResponse.json()
+        const vehicleSizesData = await vehicleSizesResponse.json()
+        const pricingData = await pricingResponse.json()
         
         if (servicesData.success) {
           setServices(servicesData.data || [])
         }
 
-        // Fetch categories
-        const categoriesResponse = await fetch('/api/services/categories')
-        const categoriesData = await categoriesResponse.json()
-        
         if (categoriesData.success) {
           setCategories(categoriesData.data || [])
+        }
+
+        if (vehicleSizesData.success) {
+          setVehicleSizes(vehicleSizesData.data || [])
+        }
+
+        if (pricingData.success) {
+          setPricing(pricingData.data || {})
         }
       } catch (error) {
         console.error('Failed to fetch services data:', error)
@@ -75,12 +114,12 @@ function AdminServicesPage() {
   const filteredServices = services.filter(service => {
     // Search filter
     if (searchTerm && !service.name.toLowerCase().includes(searchTerm.toLowerCase()) && 
-        !service.description.toLowerCase().includes(searchTerm.toLowerCase())) {
+        !(service.description || service.short_description || '').toLowerCase().includes(searchTerm.toLowerCase())) {
       return false
     }
 
     // Category filter
-    if (categoryFilter !== 'all' && service.category !== categoryFilter) {
+    if (categoryFilter !== 'all' && service.category?.name !== categoryFilter) {
       return false
     }
 
@@ -159,20 +198,6 @@ function AdminServicesPage() {
             >
               <TagIcon className="w-4 h-4 mr-2" />
               Manage Categories
-            </Button>
-            <Button
-              onClick={() => router.push('/admin/services/pricing')}
-              variant="outline"
-            >
-              <DollarSignIcon className="w-4 h-4 mr-2" />
-              Pricing Management
-            </Button>
-            <Button
-              onClick={() => router.push('/admin/services/vehicle-sizes')}
-              variant="outline"
-            >
-              <CarIcon className="w-4 h-4 mr-2" />
-              Vehicle Sizes
             </Button>
             <Button
               onClick={() => router.push('/admin/services/new')}
@@ -307,7 +332,7 @@ function AdminServicesPage() {
                         {service.category && (
                           <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-[var(--surface-tertiary)] text-[var(--text-secondary)]">
                             <TagIcon className="w-3 h-3 mr-1" />
-                            {service.category}
+                            {service.category.name}
                           </span>
                         )}
                       </div>
@@ -318,13 +343,33 @@ function AdminServicesPage() {
                 {/* Service Details */}
                 <div className="space-y-3 mb-4">
                   <p className="text-[var(--text-secondary)] text-sm line-clamp-2">
-                    {service.description}
+                    {service.description || service.short_description || 'No description available'}
                   </p>
                   
                   <div className="flex items-center justify-between text-sm">
                     <div className="flex items-center gap-2 text-[var(--text-primary)]">
                       <DollarSignIcon className="w-4 h-4 text-[var(--primary)]" />
-                      <span className="font-semibold">{formatPrice(service.base_price)}</span>
+                      <div className="text-xs">
+                        {pricing[service.id] && vehicleSizes.length > 0 ? (
+                          <div className="space-y-0.5">
+                            {vehicleSizes.slice(0, 2).map(size => (
+                              <div key={size.id} className="flex justify-between min-w-[120px]">
+                                <span className="text-[var(--text-muted)]">{size.name}:</span>
+                                <span className="font-semibold">
+                                  £{(pricing[service.id]?.[size.id]?.price || 0).toFixed(2)}
+                                </span>
+                              </div>
+                            ))}
+                            {vehicleSizes.length > 2 && (
+                              <div className="text-[var(--text-muted)] text-xs">
+                                +{vehicleSizes.length - 2} more sizes
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-[var(--text-muted)] text-xs">No pricing set</span>
+                        )}
+                      </div>
                     </div>
                     <div className="text-[var(--text-secondary)]">
                       {formatDuration(service.duration_minutes)}

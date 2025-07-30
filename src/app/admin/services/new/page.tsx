@@ -22,20 +22,29 @@ interface ServiceCategory {
   display_order: number
 }
 
+interface VehicleSize {
+  id: string
+  name: string
+  display_order: number
+}
+
 interface ServiceFormData {
   name: string
   short_description: string
   long_description: string
-  base_price: number
   category_id: string
   estimated_duration: number
   is_active: boolean
   display_order: number
+  pricing: {
+    [vehicleSizeId: string]: number
+  }
 }
 
 function NewServicePage() {
   const router = useRouter()
   const [categories, setCategories] = useState<ServiceCategory[]>([])
+  const [vehicleSizes, setVehicleSizes] = useState<VehicleSize[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -44,34 +53,44 @@ function NewServicePage() {
     name: '',
     short_description: '',
     long_description: '',
-    base_price: 0,
     category_id: '',
     estimated_duration: 60,
     is_active: true,
-    display_order: 0
+    display_order: 0,
+    pricing: {}
   })
 
   useEffect(() => {
-    const fetchCategories = async () => {
+    const fetchData = async () => {
       try {
-        const response = await fetch('/api/services/categories')
-        const data = await response.json()
+        // Fetch categories and vehicle sizes in parallel
+        const [categoriesResponse, vehicleSizesResponse] = await Promise.all([
+          fetch('/api/services/categories'),
+          fetch('/api/services/vehicle-sizes')
+        ])
+
+        const categoriesData = await categoriesResponse.json()
+        const vehicleSizesData = await vehicleSizesResponse.json()
         
-        if (data.success) {
-          setCategories(data.data || [])
+        if (categoriesData.success) {
+          setCategories(categoriesData.data || [])
           // Set first category as default
-          if (data.data?.length > 0) {
-            setFormData(prev => ({ ...prev, category_id: data.data[0].id }))
+          if (categoriesData.data?.length > 0) {
+            setFormData(prev => ({ ...prev, category_id: categoriesData.data[0].id }))
           }
         }
+
+        if (vehicleSizesData.success) {
+          setVehicleSizes(vehicleSizesData.data || [])
+        }
       } catch (error) {
-        console.error('Failed to fetch categories:', error)
+        console.error('Failed to fetch data:', error)
       } finally {
         setIsLoading(false)
       }
     }
 
-    fetchCategories()
+    fetchData()
   }, [])
 
   const validateForm = (): boolean => {
@@ -83,10 +102,6 @@ function NewServicePage() {
 
     if (!formData.short_description.trim()) {
       newErrors.short_description = 'Short description is required'
-    }
-
-    if (formData.base_price <= 0) {
-      newErrors.base_price = 'Base price must be greater than 0'
     }
 
     if (!formData.category_id) {
@@ -110,14 +125,14 @@ function NewServicePage() {
 
     setIsSaving(true)
     try {
-      const response = await fetch('/api/services', {
+      // Create the service
+      const serviceResponse = await fetch('/api/services', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: formData.name,
           shortDescription: formData.short_description,
           longDescription: formData.long_description,
-          basePrice: formData.base_price,
           categoryId: formData.category_id,
           estimatedDuration: formData.estimated_duration,
           isActive: formData.is_active,
@@ -125,13 +140,33 @@ function NewServicePage() {
         })
       })
 
-      const data = await response.json()
+      const serviceData = await serviceResponse.json()
       
-      if (data.success) {
-        router.push('/admin/services')
-      } else {
-        setErrors({ submit: data.error?.message || 'Failed to create service' })
+      if (!serviceData.success) {
+        setErrors({ submit: serviceData.error?.message || 'Failed to create service' })
+        return
       }
+
+      const newServiceId = serviceData.data.id
+
+      // Save pricing if we have any
+      if (Object.keys(formData.pricing).length > 0) {
+        const pricingResponse = await fetch('/api/admin/services/pricing', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            serviceId: newServiceId,
+            pricing: formData.pricing
+          })
+        })
+
+        const pricingData = await pricingResponse.json()
+        if (!pricingData.success) {
+          console.warn('Service created but pricing failed to save:', pricingData.error?.message)
+        }
+      }
+      
+      router.push('/admin/services')
     } catch (error) {
       console.error('Failed to create service:', error)
       setErrors({ submit: 'Failed to create service. Please try again.' })
@@ -175,7 +210,7 @@ function NewServicePage() {
               Create New Service
             </h1>
             <p className="text-[var(--text-secondary)]">
-              Add a new detailing service to your offerings
+              Add a new detailing service with custom pricing
             </p>
           </div>
           
@@ -265,61 +300,75 @@ function NewServicePage() {
                   Pricing & Duration
                 </h2>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-6">
+                  {/* Vehicle Size Pricing */}
                   <div>
-                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
-                      Base Price (£) *
+                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-4">
+                      Vehicle Size Pricing (£)
                     </label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[var(--text-secondary)]">£</span>
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={formData.base_price}
-                        onChange={(e) => handleInputChange('base_price', parseFloat(e.target.value) || 0)}
-                        placeholder="0.00"
-                        className={`w-full pl-8 pr-4 py-3 bg-[var(--input-bg)] border rounded-md text-[var(--input-text)] placeholder-[var(--input-placeholder)] focus:outline-none transition-colors ${
-                          errors.base_price ? 'border-[var(--error)]' : 'border-[var(--input-border)] focus:border-[var(--input-border-focus)]'
-                        }`}
-                      />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {vehicleSizes.map((vehicleSize) => (
+                        <div key={vehicleSize.id}>
+                          <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
+                            {vehicleSize.name}
+                          </label>
+                          <div className="relative">
+                            <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[var(--text-secondary)]">£</span>
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={formData.pricing[vehicleSize.id] || ''}
+                              onChange={(e) => {
+                                const value = parseFloat(e.target.value) || 0
+                                setFormData(prev => ({
+                                  ...prev,
+                                  pricing: {
+                                    ...prev.pricing,
+                                    [vehicleSize.id]: value
+                                  }
+                                }))
+                              }}
+                              placeholder="0.00"
+                              className="w-full pl-8 pr-4 py-3 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-md text-[var(--input-text)] placeholder-[var(--input-placeholder)] focus:border-[var(--input-border-focus)] focus:outline-none transition-colors"
+                            />
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                    {errors.base_price && (
-                      <p className="text-[var(--error)] text-sm mt-1 flex items-center gap-1">
-                        <AlertCircleIcon className="w-4 h-4" />
-                        {errors.base_price}
-                      </p>
-                    )}
-                    <p className="text-[var(--text-muted)] text-xs mt-1">
-                      Price before vehicle size adjustments
+                    <p className="text-[var(--text-muted)] text-xs mt-2">
+                      Set individual prices for each vehicle size (optional)
                     </p>
                   </div>
 
+                  {/* Duration */}
                   <div>
-                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
-                      Estimated Duration (minutes) *
-                    </label>
-                    <div className="relative">
-                      <ClockIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-[var(--text-secondary)]" />
-                      <input
-                        type="number"
-                        min="1"
-                        value={formData.estimated_duration}
-                        onChange={(e) => handleInputChange('estimated_duration', parseInt(e.target.value) || 0)}
-                        className={`w-full pl-10 pr-4 py-3 bg-[var(--input-bg)] border rounded-md text-[var(--input-text)] focus:outline-none transition-colors ${
-                          errors.estimated_duration ? 'border-[var(--error)]' : 'border-[var(--input-border)] focus:border-[var(--input-border-focus)]'
-                        }`}
-                      />
-                    </div>
-                    {errors.estimated_duration && (
-                      <p className="text-[var(--error)] text-sm mt-1 flex items-center gap-1">
-                        <AlertCircleIcon className="w-4 h-4" />
-                        {errors.estimated_duration}
+                    <div>
+                      <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
+                        Estimated Duration (minutes) *
+                      </label>
+                      <div className="relative">
+                        <ClockIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-[var(--text-secondary)]" />
+                        <input
+                          type="number"
+                          min="1"
+                          value={formData.estimated_duration}
+                          onChange={(e) => handleInputChange('estimated_duration', parseInt(e.target.value) || 0)}
+                          className={`w-full pl-10 pr-4 py-3 bg-[var(--input-bg)] border rounded-md text-[var(--input-text)] focus:outline-none transition-colors ${
+                            errors.estimated_duration ? 'border-[var(--error)]' : 'border-[var(--input-border)] focus:border-[var(--input-border-focus)]'
+                          }`}
+                        />
+                      </div>
+                      {errors.estimated_duration && (
+                        <p className="text-[var(--error)] text-sm mt-1 flex items-center gap-1">
+                          <AlertCircleIcon className="w-4 h-4" />
+                          {errors.estimated_duration}
+                        </p>
+                      )}
+                      <p className="text-[var(--text-muted)] text-xs mt-1">
+                        {formatDuration(formData.estimated_duration)}
                       </p>
-                    )}
-                    <p className="text-[var(--text-muted)] text-xs mt-1">
-                      {formatDuration(formData.estimated_duration)}
-                    </p>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -418,9 +467,22 @@ function NewServicePage() {
                     <div className="flex items-center justify-between text-sm">
                       <div className="flex items-center gap-1">
                         <DollarSignIcon className="w-4 h-4" />
-                        <span className="font-semibold">
-                          £{formData.base_price.toFixed(2)}
-                        </span>
+                        <div className="text-xs">
+                          {Object.keys(formData.pricing).length > 0 ? (
+                            <div className="space-y-1">
+                              {vehicleSizes.map(size => (
+                                <div key={size.id} className="flex justify-between">
+                                  <span className="text-[var(--text-muted)]">{size.name}:</span>
+                                  <span className="font-semibold">
+                                    £{(formData.pricing[size.id] || 0).toFixed(2)}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="text-[var(--text-muted)] text-xs">No pricing set</span>
+                          )}
+                        </div>
                       </div>
                       <div className="flex items-center gap-1">
                         <ClockIcon className="w-4 h-4" />
@@ -430,7 +492,7 @@ function NewServicePage() {
                   </div>
 
                   <div className="text-xs text-[var(--text-muted)] space-y-1">
-                    <p>• Price will vary by vehicle size</p>
+                    <p>• {Object.keys(formData.pricing).length > 0 ? 'Individual pricing set per vehicle size' : 'No pricing configured yet'}</p>
                     <p>• Duration is estimated</p>
                     <p>• {formData.is_active ? 'Available for booking' : 'Hidden from customers'}</p>
                   </div>

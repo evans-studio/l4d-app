@@ -52,7 +52,7 @@ export class PricingService extends BaseService {
 
       if (serviceError) return { data: null, error: serviceError }
 
-      // Get vehicle size details
+      // Get vehicle size details  
       const { data: vehicleSize, error: sizeError } = await supabase
         .from('vehicle_sizes')
         .select('*')
@@ -62,10 +62,33 @@ export class PricingService extends BaseService {
 
       if (sizeError) return { data: null, error: sizeError }
 
-      // Calculate base pricing
-      const basePrice = service.base_price
-      const vehicleMultiplier = vehicleSize.price_multiplier
-      const subtotal = Math.round(basePrice * vehicleMultiplier)
+      // Get service pricing from new denormalized table
+      const { data: servicePricing, error: pricingError } = await supabase
+        .from('service_pricing')
+        .select('small, medium, large, extra_large')
+        .eq('service_id', request.serviceId)
+        .single()
+
+      if (pricingError) {
+        console.error('Service pricing not found:', pricingError)
+        return { data: null, error: new Error('Service pricing not configured') }
+      }
+
+      // Map vehicle size name to pricing column
+      const sizeNameToColumn: Record<string, keyof typeof servicePricing> = {
+        'Small': 'small',
+        'Medium': 'medium', 
+        'Large': 'large',
+        'Extra Large': 'extra_large'
+      }
+
+      const pricingColumn = sizeNameToColumn[vehicleSize.name]
+      if (!pricingColumn || !servicePricing[pricingColumn]) {
+        return { data: null, error: new Error(`No pricing found for vehicle size: ${vehicleSize.name}`) }
+      }
+
+      const servicePrice = servicePricing[pricingColumn]
+      const subtotal = Math.round(servicePrice)
 
       // Calculate distance surcharge
       let distanceSurcharge = 0
@@ -88,15 +111,15 @@ export class PricingService extends BaseService {
         serviceName: service.name,
         vehicleSizeId: vehicleSize.id,
         vehicleSizeName: vehicleSize.name,
-        basePrice,
-        vehicleMultiplier,
+        basePrice: servicePrice, // Use actual service price instead of base_price
+        vehicleMultiplier: 1, // No longer using multipliers 
         subtotal,
         distanceSurcharge,
         totalPrice,
         distanceKm,
         breakdown: {
-          basePrice,
-          vehicleAdjustment: subtotal - basePrice,
+          basePrice: servicePrice,
+          vehicleAdjustment: 0, // No adjustment needed with direct pricing
           distanceSurcharge,
         },
       }
@@ -241,27 +264,52 @@ export class PricingService extends BaseService {
         .from('vehicle_sizes')
         .select('*')
         .eq('is_active', true)
-        .order('price_multiplier')
+        .order('display_order')
 
       if (sizesError) return { data: null, error: sizesError }
 
-      const basePrice = service.base_price
-      const vehiclePrices = vehicleSizes.map(size => ({
-        id: size.id,
-        name: size.name,
-        price: Math.round(basePrice * size.price_multiplier),
-        multiplier: size.price_multiplier,
-      }))
+      // Get service pricing from denormalized table
+      const { data: servicePricing, error: pricingError } = await supabase
+        .from('service_pricing')
+        .select('small, medium, large, extra_large')
+        .eq('service_id', serviceId)
+        .single()
 
-      const minPrice = vehiclePrices[0]?.price || basePrice
-      const maxPrice = vehiclePrices[vehiclePrices.length - 1]?.price || basePrice
+      if (pricingError) {
+        console.error('Service pricing not found:', pricingError)
+        return { data: null, error: new Error('Service pricing not configured') }
+      }
+
+      // Map vehicle sizes to their actual prices
+      const sizeNameToColumn: Record<string, keyof typeof servicePricing> = {
+        'Small': 'small',
+        'Medium': 'medium',
+        'Large': 'large', 
+        'Extra Large': 'extra_large'
+      }
+
+      const vehiclePrices = vehicleSizes.map(size => {
+        const pricingColumn = sizeNameToColumn[size.name]
+        const price = pricingColumn ? (servicePricing[pricingColumn] || 0) : 0
+        
+        return {
+          id: size.id,
+          name: size.name,
+          price: Math.round(price),
+          multiplier: 1, // No longer using multipliers
+        }
+      }).filter(item => item.price > 0) // Only include sizes with pricing
+
+      const prices = vehiclePrices.map(vp => vp.price)
+      const minPrice = Math.min(...prices) || 0
+      const maxPrice = Math.max(...prices) || 0
 
       const result = {
         serviceId: service.id,
         serviceName: service.name,
         minPrice,
         maxPrice,
-        basePrice,
+        basePrice: minPrice, // Use minimum price as "base" for compatibility
         vehicleSizes: vehiclePrices,
       }
 

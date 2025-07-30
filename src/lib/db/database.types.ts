@@ -184,6 +184,75 @@ export type Database = {
           }
         ]
       }
+      booking_reschedule_requests: {
+        Row: {
+          id: string
+          booking_id: string
+          requested_date: string
+          requested_time: string
+          reason: string | null
+          status: string
+          admin_response: string | null
+          admin_id: string | null
+          customer_notes: string | null
+          admin_notes: string | null
+          original_date: string
+          original_time: string
+          created_at: string
+          updated_at: string
+          responded_at: string | null
+        }
+        Insert: {
+          id?: string
+          booking_id: string
+          requested_date: string
+          requested_time: string
+          reason?: string | null
+          status?: string
+          admin_response?: string | null
+          admin_id?: string | null
+          customer_notes?: string | null
+          admin_notes?: string | null
+          original_date: string
+          original_time: string
+          created_at?: string
+          updated_at?: string
+          responded_at?: string | null
+        }
+        Update: {
+          id?: string
+          booking_id?: string
+          requested_date?: string
+          requested_time?: string
+          reason?: string | null
+          status?: string
+          admin_response?: string | null
+          admin_id?: string | null
+          customer_notes?: string | null
+          admin_notes?: string | null
+          original_date?: string
+          original_time?: string
+          created_at?: string
+          updated_at?: string
+          responded_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_reschedule_requests_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_reschedule_requests_admin_id_fkey"
+            columns: ["admin_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       bookings: {
         Row: {
           id: string
@@ -607,6 +676,54 @@ export type Database = {
           }
         ]
       }
+      service_pricing: {
+        Row: {
+          id: string
+          service_id: string
+          vehicle_size_id: string
+          price: number
+          profit_margin: number | null
+          cost_basis: number | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          service_id: string
+          vehicle_size_id: string
+          price: number
+          profit_margin?: number | null
+          cost_basis?: number | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          service_id?: string
+          vehicle_size_id?: string
+          price?: number
+          profit_margin?: number | null
+          cost_basis?: number | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_pricing_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_pricing_vehicle_size_id_fkey"
+            columns: ["vehicle_size_id"]
+            isOneToOne: false
+            referencedRelation: "vehicle_sizes"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       site_settings: {
         Row: {
           id: string
@@ -829,7 +946,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      booking_status: "draft" | "pending" | "confirmed" | "in_progress" | "completed" | "paid" | "cancelled" | "no_show"
+      booking_status: "draft" | "pending" | "confirmed" | "rescheduled" | "in_progress" | "completed" | "paid" | "cancelled" | "no_show"
       user_role: "customer" | "admin" | "super_admin"
       payment_status: "pending" | "processing" | "completed" | "failed" | "refunded"
     }
@@ -953,6 +1070,10 @@ export type BookingStatusHistoryRow = Tables<'booking_status_history'>
 export type BookingStatusHistoryInsert = TablesInsert<'booking_status_history'>
 export type BookingStatusHistoryUpdate = TablesUpdate<'booking_status_history'>
 
+export type BookingRescheduleRequestRow = Tables<'booking_reschedule_requests'>
+export type BookingRescheduleRequestInsert = TablesInsert<'booking_reschedule_requests'>
+export type BookingRescheduleRequestUpdate = TablesUpdate<'booking_reschedule_requests'>
+
 export type BookingRow = Tables<'bookings'>
 export type BookingInsert = TablesInsert<'bookings'>
 export type BookingUpdate = TablesUpdate<'bookings'>
@@ -980,6 +1101,10 @@ export type ServiceCategoryUpdate = TablesUpdate<'service_categories'>
 export type ServiceRow = Tables<'services'>
 export type ServiceInsert = TablesInsert<'services'>
 export type ServiceUpdate = TablesUpdate<'services'>
+
+export type ServicePricingRow = Tables<'service_pricing'>
+export type ServicePricingInsert = TablesInsert<'service_pricing'>
+export type ServicePricingUpdate = TablesUpdate<'service_pricing'>
 
 export type SiteSettingRow = Tables<'site_settings'>
 export type SiteSettingInsert = TablesInsert<'site_settings'>

@@ -5,7 +5,9 @@ import { useBookingFlowStore, useBookingStep } from '@/lib/store/bookingFlowStor
 import { Button } from '@/components/ui/primitives/Button'
 import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/composites/Card'
 import { Input } from '@/components/ui/primitives/Input'
-import { ChevronLeftIcon, ChevronRightIcon, PlusIcon, CarIcon, CheckIcon } from 'lucide-react'
+import { Select } from '@/components/ui/primitives/Select'
+import { ChevronLeftIcon, ChevronRightIcon, PlusIcon, CarIcon, CheckIcon, Clock } from 'lucide-react'
+import { getVehicleSizeDescription, PRICING_CONFIG } from '@/lib/pricing/calculator'
 
 export function VehicleDetails() {
   const {
@@ -23,7 +25,7 @@ export function VehicleDetails() {
     calculatePrice
   } = useBookingFlowStore()
 
-  const { isCurrentStep } = useBookingStep(3)
+  const { isCurrentStep } = useBookingStep(2)
   
   const [showNewVehicleForm, setShowNewVehicleForm] = useState(!isExistingUser || userVehicles.length === 0)
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null)
@@ -33,7 +35,7 @@ export function VehicleDetails() {
     year: formData.vehicle?.year || new Date().getFullYear(),
     color: formData.vehicle?.color || '',
     registration: formData.vehicle?.registration || '',
-    size: formData.vehicle?.size || 'medium' as 'small' | 'medium' | 'large' | 'extra_large',
+    size: formData.vehicle?.size || 'M' as 'S' | 'M' | 'L' | 'XL',
     notes: formData.vehicle?.notes || '',
   })
 
@@ -96,11 +98,11 @@ export function VehicleDetails() {
   }
 
   // Helper function to map price multiplier to size name
-  const getSizeNameFromMultiplier = (multiplier: number): 'small' | 'medium' | 'large' | 'extra_large' => {
-    if (multiplier <= 0.8) return 'small'
-    if (multiplier <= 1.0) return 'medium'
-    if (multiplier <= 1.3) return 'large'
-    return 'extra_large'
+  const getSizeNameFromMultiplier = (multiplier: number): 'S' | 'M' | 'L' | 'XL' => {
+    if (multiplier <= 1.0) return 'S'
+    if (multiplier <= 1.3) return 'M'
+    if (multiplier <= 1.6) return 'L'
+    return 'XL'
   }
 
   // Helper function to get size display info from database
@@ -119,14 +121,14 @@ export function VehicleDetails() {
       }
     }
     
-    // Fallback for legacy size names
-    const legacyMap = {
-      small: { label: 'Small', description: 'Hatchbacks, city cars', multiplier: '0.8x', examples: [] },
-      medium: { label: 'Medium', description: 'Sedans, small SUVs', multiplier: '1.0x', examples: [] },
-      large: { label: 'Large', description: 'Large SUVs, vans', multiplier: '1.3x', examples: [] },
-      extra_large: { label: 'Extra Large', description: 'Large vans, trucks', multiplier: '1.5x', examples: [] }
+    // Use new size system
+    const sizeMap: Record<string, any> = {
+      S: { label: 'Small', description: getVehicleSizeDescription('S'), multiplier: `${PRICING_CONFIG.VEHICLE_SIZE_MULTIPLIERS.S}x`, examples: [] },
+      M: { label: 'Medium', description: getVehicleSizeDescription('M'), multiplier: `${PRICING_CONFIG.VEHICLE_SIZE_MULTIPLIERS.M}x`, examples: [] },
+      L: { label: 'Large', description: getVehicleSizeDescription('L'), multiplier: `${PRICING_CONFIG.VEHICLE_SIZE_MULTIPLIERS.L}x`, examples: [] },
+      XL: { label: 'Extra Large', description: getVehicleSizeDescription('XL'), multiplier: `${PRICING_CONFIG.VEHICLE_SIZE_MULTIPLIERS.XL}x`, examples: [] }
     }
-    return legacyMap[sizeName as keyof typeof legacyMap] || legacyMap.medium
+    return sizeMap[sizeName] || sizeMap.M
   }
 
   if (!isCurrentStep) {
@@ -328,8 +330,8 @@ export function VehicleDetails() {
                     </Card>
                   )
                 }) : (
-                  // Fallback while loading vehicle sizes from database
-                  ['small', 'medium', 'large', 'extra_large'].map((size) => {
+                  // Use new size system
+                  (['S', 'M', 'L', 'XL'] as const).map((size) => {
                     const sizeInfo = getSizeInfo(size)
                     const isSelected = vehicleForm.size === size
                     
@@ -457,7 +459,7 @@ export function VehicleDetails() {
           onClick={previousStep}
           leftIcon={<ChevronLeftIcon className="w-4 h-4" />}
         >
-          Back to Contact Details
+          Back to Service Selection
         </Button>
         
         <Button
@@ -466,7 +468,7 @@ export function VehicleDetails() {
           size="lg"
           rightIcon={<ChevronRightIcon className="w-4 h-4" />}
         >
-          {isLoading ? 'Calculating Price...' : 'Continue to Services'}
+          {isLoading ? 'Calculating Price...' : 'Continue to Time Selection'}
         </Button>
       </div>
     </div>

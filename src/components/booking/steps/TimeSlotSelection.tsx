@@ -22,7 +22,7 @@ export function TimeSlotSelection() {
     canProceedToNextStep
   } = useBookingFlowStore()
 
-  const { isCurrentStep } = useBookingStep(1)
+  const { isCurrentStep } = useBookingStep(3)
   
   const [selectedDate, setSelectedDate] = useState<string>(
     formData.slot?.date || format(addDays(new Date(), 1), 'yyyy-MM-dd')
@@ -385,19 +385,49 @@ export function TimeSlotSelection() {
       )}
 
       {/* Navigation */}
-      <div className="flex justify-between items-center pt-6">
-        <div>
-          {/* No back button for first step */}
+      <div className="px-4 sm:px-0">
+        {/* Mobile: Stacked */}
+        <div className="sm:hidden space-y-3 pt-6">
+          <Button
+            onClick={nextStep}
+            disabled={!canProceedToNextStep() || isLoading}
+            size="lg"
+            fullWidth
+            rightIcon={<ChevronRightIcon className="w-4 h-4" />}
+            className="min-h-[48px]"
+          >
+            Continue to Service Address
+          </Button>
+          <Button
+            variant="outline"
+            onClick={previousStep}
+            leftIcon={<ChevronLeftIcon className="w-4 h-4" />}
+            fullWidth
+            className="min-h-[48px]"
+          >
+            Back to Vehicle Details
+          </Button>
         </div>
         
-        <Button
-          onClick={nextStep}
-          disabled={!canProceedToNextStep() || isLoading}
-          size="lg"
-          rightIcon={<ChevronRightIcon className="w-4 h-4" />}
-        >
-          Continue to Contact Details
-        </Button>
+        {/* Desktop: Side by side */}
+        <div className="hidden sm:flex justify-between items-center pt-6">
+          <Button
+            variant="outline"
+            onClick={previousStep}
+            leftIcon={<ChevronLeftIcon className="w-4 h-4" />}
+          >
+            Back to Vehicle Details
+          </Button>
+          
+          <Button
+            onClick={nextStep}
+            disabled={!canProceedToNextStep() || isLoading}
+            size="lg"
+            rightIcon={<ChevronRightIcon className="w-4 h-4" />}
+          >
+            Continue to Service Address
+          </Button>
+        </div>
       </div>
     </div>
   )

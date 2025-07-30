@@ -22,7 +22,7 @@ export function UserDetails() {
     canProceedToNextStep
   } = useBookingFlowStore()
 
-  const { isCurrentStep } = useBookingStep(2)
+  const { isCurrentStep } = useBookingStep(5)
   
   const [userForm, setUserForm] = useState({
     email: formData.user?.email || '',
@@ -309,26 +309,56 @@ export function UserDetails() {
 
       {/* Navigation */}
       <div className="flex justify-between items-center pt-6">
-        <Button
-          variant="outline"
-          onClick={previousStep}
-          leftIcon={<ChevronLeftIcon className="w-4 h-4" />}
-        >
-          Back to Schedule
-        </Button>
+        {/* Mobile: Stacked */}
+        <div className="sm:hidden space-y-3 pt-6">
+          <Button
+            onClick={handleNext}
+            disabled={!canProceedToNextStep() || 
+              (validationStatus === 'new' && !userForm.name) ||
+              validationStatus === 'checking' ||
+              validationStatus === 'idle'
+            }
+            size="lg"
+            fullWidth
+            rightIcon={<ChevronRightIcon className="w-4 h-4" />}
+            className="min-h-[48px]"
+          >
+            Continue to Confirmation
+          </Button>
+          <Button
+            variant="outline"
+            onClick={previousStep}
+            leftIcon={<ChevronLeftIcon className="w-4 h-4" />}
+            fullWidth
+            className="min-h-[48px]"
+          >
+            Back to Service Address
+          </Button>
+        </div>
         
-        <Button
-          onClick={handleNext}
-          disabled={!canProceedToNextStep() || 
-            (validationStatus === 'new' && !userForm.name) ||
-            validationStatus === 'checking' ||
-            validationStatus === 'idle'
-          }
-          size="lg"
-          rightIcon={<ChevronRightIcon className="w-4 h-4" />}
-        >
-          Continue to Vehicle Details
-        </Button>
+        {/* Desktop: Side by side */}
+        <div className="hidden sm:flex justify-between items-center pt-6">
+          <Button
+            variant="outline"
+            onClick={previousStep}
+            leftIcon={<ChevronLeftIcon className="w-4 h-4" />}
+          >
+            Back to Service Address
+          </Button>
+          
+          <Button
+            onClick={handleNext}
+            disabled={!canProceedToNextStep() || 
+              (validationStatus === 'new' && !userForm.name) ||
+              validationStatus === 'checking' ||
+              validationStatus === 'idle'
+            }
+            size="lg"
+            rightIcon={<ChevronRightIcon className="w-4 h-4" />}
+          >
+            Continue to Confirmation
+          </Button>
+        </div>
       </div>
     </div>
   )

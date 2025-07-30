@@ -5,9 +5,7 @@ import { authenticateAdmin } from '@/lib/api/auth-handler'
 
 export async function GET(request: NextRequest) {
   try {
-    // Use the new authentication handler with session refresh
     const authResult = await authenticateAdmin(request)
-    
     if (!authResult.success) {
       return authResult.error
     }
@@ -19,68 +17,23 @@ export async function GET(request: NextRequest) {
     const dateFilter = searchParams.get('date')
     const sortBy = searchParams.get('sort') || 'created_at'
 
-    // Build query with proper table joins instead of JSON fields
+    // Build optimized query for admin bookings
     let query = supabase
       .from('bookings')
       .select(`
         id,
         booking_reference,
+        customer_id,
+        service_id,
+        vehicle_id,
+        address_id,
         scheduled_date,
         scheduled_start_time,
         scheduled_end_time,
         status,
         total_price,
-        base_price,
-        vehicle_size_multiplier,
-        distance_surcharge,
-        distance_km,
-        pricing_breakdown,
         special_instructions,
-        admin_notes,
-        created_at,
-        updated_at,
-        confirmed_at,
-        confirmation_sent_at,
-        customer_id,
-        user_profiles!bookings_customer_id_fkey(
-          email,
-          first_name,
-          last_name,
-          phone
-        ),
-        customer_vehicles!vehicle_id(
-          make,
-          model,
-          year,
-          color,
-          license_plate,
-          vehicle_sizes!vehicle_size_id(
-            name,
-            price_multiplier
-          )
-        ),
-        customer_addresses!address_id(
-          address_line_1,
-          address_line_2,
-          city,
-          postal_code,
-          county,
-          country,
-          distance_from_business
-        ),
-        services!service_id(
-          name,
-          short_description,
-          service_categories!category_id(
-            name
-          )
-        ),
-        booking_services!booking_id(
-          id,
-          service_details,
-          price,
-          estimated_duration
-        )
+        created_at
       `)
 
     // Apply date filter if provided
@@ -99,34 +52,62 @@ export async function GET(request: NextRequest) {
     const { data: bookings, error: bookingsError } = await query
 
     if (bookingsError) {
-      console.error('Admin bookings error:', bookingsError)
-      return ApiResponseHandler.serverError('Failed to fetch bookings')
+      console.error('Admin bookings database error:', bookingsError)
+      return ApiResponseHandler.serverError('Failed to fetch bookings: ' + bookingsError.message)
     }
+
 
     if (!bookings || bookings.length === 0) {
       return ApiResponseHandler.success([])
     }
 
-    // Customer data is now included via database join
+    // Get additional data separately to avoid complex joins
+    
+    // Get customer profiles
+    const customerIds = [...new Set(bookings.map(b => b.customer_id).filter(Boolean))]
+    const { data: customers } = await supabase
+      .from('user_profiles')
+      .select('id, first_name, last_name, email, phone')
+      .in('id', customerIds)
 
-    // Transform the data for frontend consumption with proper relationships
+    // Get services
+    const serviceIds = [...new Set(bookings.map(b => b.service_id).filter(Boolean))]
+    const { data: services } = await supabase
+      .from('services')
+      .select('id, name, short_description')
+      .in('id', serviceIds)
+
+    // Get vehicles
+    const vehicleIds = [...new Set(bookings.map(b => b.vehicle_id).filter(Boolean))]
+    const { data: vehicles } = await supabase
+      .from('customer_vehicles')
+      .select('id, make, model, year, color')
+      .in('id', vehicleIds)
+
+    // Get addresses
+    const addressIds = [...new Set(bookings.map(b => b.address_id).filter(Boolean))]
+    const { data: addresses } = await supabase
+      .from('customer_addresses')
+      .select('id, address_line_1, city, postal_code')
+      .in('id', addressIds)
+
+
+    // Create lookup maps
+    const customerMap = new Map(customers?.map(c => [c.id, c]) || [])
+    const serviceMap = new Map(services?.map(s => [s.id, s]) || [])
+    const vehicleMap = new Map(vehicles?.map(v => [v.id, v]) || [])
+    const addressMap = new Map(addresses?.map(a => [a.id, a]) || [])
+
+    // Transform the data for frontend consumption
     const adminBookings = bookings.map((booking: any) => {
-      const customer = booking.user_profiles || { first_name: null, last_name: null, email: null, phone: null }
+      const customer = customerMap.get(booking.customer_id) || { first_name: '', last_name: '', email: '', phone: '' }
+      const service = serviceMap.get(booking.service_id) || { name: '', short_description: '' }
+      const vehicle = vehicleMap.get(booking.vehicle_id) || { make: '', model: '', year: null, color: '' }
+      const address = addressMap.get(booking.address_id) || { address_line_1: '', city: '', postal_code: '' }
+      
       const customerName = [customer.first_name, customer.last_name]
         .filter(Boolean)
         .join(' ') || 'Customer'
-      
-      // Service information from main service and booking services
-      const mainService = booking.services || null
-      const serviceDetails = booking.booking_services?.map((service: any) => ({
-        name: service.service_details?.name || mainService?.name || 'Service',
-        base_price: service.price || 0,
-        estimated_duration: service.estimated_duration || 0
-      })) || [{ 
-        name: mainService?.name || 'Vehicle Detailing Service', 
-        base_price: booking.total_price || 0,
-        estimated_duration: 0
-      }]
 
       return {
         id: booking.id,
@@ -136,56 +117,26 @@ export async function GET(request: NextRequest) {
         customer_email: customer.email || '',
         customer_phone: customer.phone || '',
         scheduled_date: booking.scheduled_date,
-        scheduled_start_time: booking.scheduled_start_time,
-        scheduled_end_time: booking.scheduled_end_time,
+        start_time: booking.scheduled_start_time,
         status: booking.status,
         total_price: booking.total_price || 0,
-        base_price: booking.base_price,
-        vehicle_size_multiplier: booking.vehicle_size_multiplier,
-        distance_surcharge: booking.distance_surcharge,
-        distance_km: booking.distance_km,
-        pricing_breakdown: booking.pricing_breakdown,
         special_instructions: booking.special_instructions,
-        admin_notes: booking.admin_notes,
-        confirmed_at: booking.confirmed_at,
-        confirmation_sent_at: booking.confirmation_sent_at,
-        
-        // Main service info
-        service: mainService ? {
-          name: mainService.name,
-          short_description: mainService.short_description,
-          category: mainService.service_categories?.[0]?.name || 'General'
-        } : null,
-        
-        // Detailed service breakdown
-        services: serviceDetails,
-        
-        // Vehicle information with size details
-        vehicle: booking.customer_vehicles?.[0] ? {
-          make: booking.customer_vehicles[0].make,
-          model: booking.customer_vehicles[0].model,
-          year: booking.customer_vehicles[0].year,
-          color: booking.customer_vehicles[0].color,
-          license_plate: booking.customer_vehicles[0].license_plate,
-          vehicle_size: {
-            name: booking.customer_vehicles[0].vehicle_sizes?.[0]?.name || 'Unknown',
-            price_multiplier: booking.customer_vehicles[0].vehicle_sizes?.[0]?.price_multiplier || 1
-          }
-        } : null,
-        
-        // Address information with distance
-        address: booking.customer_addresses?.[0] ? {
-          address_line_1: booking.customer_addresses[0].address_line_1,
-          address_line_2: booking.customer_addresses[0].address_line_2,
-          city: booking.customer_addresses[0].city,
-          postal_code: booking.customer_addresses[0].postal_code,
-          county: booking.customer_addresses[0].county,
-          country: booking.customer_addresses[0].country,
-          distance_from_business: booking.customer_addresses[0].distance_from_business
-        } : null,
-        
-        created_at: booking.created_at,
-        updated_at: booking.updated_at
+        services: [{
+          name: service.name || 'Vehicle Detailing Service',
+          base_price: booking.total_price || 0
+        }],
+        vehicle: {
+          make: vehicle.make || 'Unknown',
+          model: vehicle.model || 'Vehicle',
+          year: vehicle.year,
+          color: vehicle.color
+        },
+        address: {
+          address_line_1: address.address_line_1 || '',
+          city: address.city || 'Unknown',
+          postal_code: address.postal_code || ''
+        },
+        created_at: booking.created_at
       }
     })
 

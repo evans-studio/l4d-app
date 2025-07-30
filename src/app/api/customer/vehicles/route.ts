@@ -45,14 +45,12 @@ export async function GET(request: NextRequest) {
         updated_at,
         vehicle_sizes!vehicle_size_id (
           id,
-          size,
-          multiplier,
           name,
-          description
+          description,
+          price_multiplier
         )
       `)
       .eq('user_id', profile.id)
-      .eq('is_active', true)
       .order('is_default', { ascending: false })
       .order('is_primary', { ascending: false })
       .order('created_at', { ascending: false })
@@ -116,8 +114,11 @@ export async function GET(request: NextRequest) {
         license_plate: vehicle.license_plate,
         vehicle_size: {
           id: vehicleSize?.id,
-          size: vehicleSize?.size || 'M',
-          multiplier: vehicleSize?.multiplier || 1.3,
+          size: vehicleSize?.name === 'Small' ? 'S' : 
+                vehicleSize?.name === 'Medium' ? 'M' : 
+                vehicleSize?.name === 'Large' ? 'L' : 
+                vehicleSize?.name === 'Extra Large' ? 'XL' : 'M',
+          multiplier: vehicleSize?.price_multiplier || 1.3,
           name: vehicleSize?.name || 'Medium',
           description: vehicleSize?.description || ''
         },
@@ -187,7 +188,6 @@ export async function POST(request: NextRequest) {
       .from('customer_vehicles')
       .select('id')
       .eq('user_id', profile.id)
-      .eq('is_active', true)
 
     if (countError) {
       console.error('Count vehicles error:', countError)
@@ -224,10 +224,9 @@ export async function POST(request: NextRequest) {
         is_default,
         vehicle_sizes!vehicle_size_id (
           id,
-          size,
-          multiplier,
           name,
-          description
+          description,
+          price_multiplier
         )
       `)
       .single()
@@ -247,7 +246,6 @@ export async function POST(request: NextRequest) {
         .update({ is_default: false })
         .eq('user_id', profile.id)
         .neq('id', newVehicle.id)
-        .eq('is_active', true)
     }
 
     // Transform the response
@@ -264,8 +262,11 @@ export async function POST(request: NextRequest) {
       license_plate: newVehicle.license_plate,
       vehicle_size: {
         id: vehicleSize?.id,
-        size: vehicleSize?.size || 'M',
-        multiplier: vehicleSize?.multiplier || 1.3,
+        size: vehicleSize?.name === 'Small' ? 'S' : 
+              vehicleSize?.name === 'Medium' ? 'M' : 
+              vehicleSize?.name === 'Large' ? 'L' : 
+              vehicleSize?.name === 'Extra Large' ? 'XL' : 'M',
+        multiplier: vehicleSize?.price_multiplier || 1.3,
         name: vehicleSize?.name || 'Medium',
         description: vehicleSize?.description || ''
       },

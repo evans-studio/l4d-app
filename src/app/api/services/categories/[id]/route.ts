@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server'
 import { ServicesService } from '@/lib/services/services'
 import { ApiResponseHandler } from '@/lib/api/response'
 import { ApiValidation } from '@/lib/api/validation'
-import { ApiAuth } from '@/lib/api/auth'
+import { authenticateAdmin } from '@/lib/api/auth-handler'
 import { z } from 'zod'
 
 const updateCategorySchema = z.object({
@@ -47,9 +47,9 @@ export async function PUT(
   const params = await context.params
   try {
     // Require admin role for updating categories
-    const { auth, error: authError } = await ApiAuth.requireRole(['admin', 'super_admin'])
-    if (authError) {
-      return authError
+    const authResult = await authenticateAdmin(request)
+    if (!authResult.success) {
+      return authResult.error
     }
 
     const body = await request.json()
@@ -93,9 +93,9 @@ export async function DELETE(
   const params = await context.params
   try {
     // Require admin role for deleting categories
-    const { auth, error: authError } = await ApiAuth.requireRole(['admin', 'super_admin'])
-    if (authError) {
-      return authError
+    const authResult = await authenticateAdmin(request)
+    if (!authResult.success) {
+      return authResult.error
     }
 
     const servicesService = new ServicesService()

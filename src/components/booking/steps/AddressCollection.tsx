@@ -11,8 +11,11 @@ import {
   MapPinIcon,
   CheckIcon,
   PlusIcon,
-  HomeIcon
+  HomeIcon,
+  Calculator,
+  Clock
 } from 'lucide-react'
+import { validateUKPostcode, formatUKPostcode } from '@/lib/utils/postcode-distance'
 
 export function AddressCollection() {
   const {
@@ -21,37 +24,52 @@ export function AddressCollection() {
     isExistingUser,
     isLoading,
     error,
+    calculatedPrice,
     setAddressData,
+    calculatePrice,
     previousStep,
     nextStep,
     canProceedToNextStep
   } = useBookingFlowStore()
 
-  const { isCurrentStep } = useBookingStep(5)
+  const { isCurrentStep } = useBookingStep(4)
   
   const [showNewAddressForm, setShowNewAddressForm] = useState(!isExistingUser || userAddresses.length === 0)
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null)
   const [addressForm, setAddressForm] = useState({
-    street: formData.address?.street || '',
+    addressLine1: formData.address?.addressLine1 || '',
+    addressLine2: formData.address?.addressLine2 || '',
     city: formData.address?.city || '',
     state: formData.address?.state || '',
-    zipCode: formData.address?.zipCode || '',
+    postcode: formData.address?.postcode || '',
   })
+  const [postcodeError, setPostcodeError] = useState<string | null>(null)
 
   // Update form when store data changes
   useEffect(() => {
     if (formData.address) {
       setAddressForm({
-        street: formData.address.street,
+        addressLine1: formData.address.addressLine1,
+        addressLine2: formData.address.addressLine2 || '',
         city: formData.address.city,
-        state: formData.address.state,
-        zipCode: formData.address.zipCode,
+        state: formData.address.state || '',
+        postcode: formData.address.postcode,
       })
     }
   }, [formData.address])
 
   const handleFormChange = (field: string, value: string) => {
     setAddressForm(prev => ({ ...prev, [field]: value }))
+    
+    // Validate postcode as user types
+    if (field === 'postcode') {
+      const cleanPostcode = value.trim()
+      if (cleanPostcode && !validateUKPostcode(cleanPostcode)) {
+        setPostcodeError('Please enter a valid UK postcode')
+      } else {
+        setPostcodeError(null)
+      }
+    }
   }
 
   const handleExistingAddressSelect = (addressId: string) => {
@@ -59,10 +77,11 @@ export function AddressCollection() {
     if (address) {
       setSelectedAddressId(addressId)
       setAddressData({
-        street: address.address_line_1,
+        addressLine1: address.address_line_1,
+        addressLine2: address.address_line_2 || '',
         city: address.city,
-        state: address.county || 'UK',
-        zipCode: address.postal_code,
+        state: address.county || '',
+        postcode: address.postal_code,
         isExisting: true,
         addressId: address.id
       })
@@ -70,13 +89,24 @@ export function AddressCollection() {
     }
   }
 
-  const handleNewAddressSubmit = () => {
-    if (addressForm.street && addressForm.city && addressForm.zipCode) {
-      setAddressData({
+  const handleNewAddressSubmit = async () => {
+    if (addressForm.addressLine1 && addressForm.city && addressForm.postcode && !postcodeError) {
+      // Format postcode before saving
+      const formattedPostcode = formatUKPostcode(addressForm.postcode)
+      
+      const addressData = {
         ...addressForm,
+        postcode: formattedPostcode,
         isExisting: false
-      })
+      }
+      
+      setAddressData(addressData)
       setSelectedAddressId(null)
+      
+      // Trigger price calculation with new address
+      if (formData.service && formData.vehicle) {
+        await calculatePrice()
+      }
     }
   }
 
@@ -196,8 +226,8 @@ export function AddressCollection() {
                 Street Address *
               </label>
               <Input
-                value={addressForm.street}
-                onChange={(e) => handleFormChange('street', e.target.value)}
+                value={addressForm.addressLine1}
+                onChange={(e) => handleFormChange('addressLine1', e.target.value)}
                 placeholder="e.g., 123 Main Street"
                 required
               />
@@ -218,11 +248,11 @@ export function AddressCollection() {
               
               <div>
                 <label className="block text-sm font-medium text-text-primary mb-2">
-                  Postal Code *
+                  Postcode *
                 </label>
                 <Input
-                  value={addressForm.zipCode}
-                  onChange={(e) => handleFormChange('zipCode', e.target.value.toUpperCase())}
+                  value={addressForm.postcode}
+                  onChange={(e) => handleFormChange('postcode', e.target.value.toUpperCase())}
                   placeholder="e.g., SW1A 1AA"
                   required
                 />
@@ -251,11 +281,11 @@ export function AddressCollection() {
               )}
               <Button
                 onClick={handleNewAddressSubmit}
-                disabled={!addressForm.street || !addressForm.city || !addressForm.zipCode}
+                disabled={!addressForm.addressLine1 || !addressForm.city || !addressForm.postcode || !!postcodeError || isLoading}
                 className="flex-1"
                 rightIcon={<MapPinIcon className="w-4 h-4" />}
               >
-                Use This Address
+                {isLoading ? 'Calculating Price...' : 'Use This Address'}
               </Button>
             </div>
           </CardContent>
@@ -304,10 +334,15 @@ export function AddressCollection() {
                 <div>
                   <h4 className="font-semibold text-text-primary">Service Address</h4>
                   <p className="text-sm text-text-secondary">
-                    {formData.address.street}
+                    {formData.address.addressLine1}
                   </p>
+                  {formData.address.addressLine2 && (
+                    <p className="text-sm text-text-secondary">
+                      {formData.address.addressLine2}
+                    </p>
+                  )}
                   <p className="text-sm text-text-secondary">
-                    {formData.address.city}, {formData.address.state} {formData.address.zipCode}
+                    {formData.address.city}, {formData.address.postcode}
                   </p>
                 </div>
               </div>

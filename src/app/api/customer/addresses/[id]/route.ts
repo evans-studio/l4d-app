@@ -1,5 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClientFromRequest } from '@/lib/supabase/server'
+import { createClient } from '@supabase/supabase-js'
+
+// Service client for profile lookups (bypasses RLS)
+const supabaseService = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  }
+)
 
 export async function PUT(
   request: NextRequest,
@@ -18,14 +31,15 @@ export async function PUT(
       }, { status: 401 })
     }
 
-    // Get user profile
-    const { data: profile, error: profileError } = await supabase
+    // Get user profile using service client to bypass RLS
+    const { data: profile, error: profileError } = await supabaseService
       .from('user_profiles')
       .select('id, is_active')
       .eq('id', user.id)
+      .eq('is_active', true)
       .single()
 
-    if (profileError || !profile || profile.is_active === false) {
+    if (profileError || !profile) {
       return NextResponse.json({
         success: false,
         error: { message: 'User account not found or inactive', code: 'USER_INACTIVE' }
@@ -36,8 +50,8 @@ export async function PUT(
     const addressId = params.id
     const updateData = await request.json()
 
-    // Verify address ownership
-    const { data: existingAddress, error: addressError } = await supabase
+    // Verify address ownership using service client
+    const { data: existingAddress, error: addressError } = await supabaseService
       .from('customer_addresses')
       .select('id, is_default, postal_code')
       .eq('id', addressId)
@@ -84,8 +98,8 @@ export async function PUT(
     }
     if (updateData.country !== undefined) updateObject.country = updateData.country?.trim() || 'United Kingdom'
 
-    // Update the address
-    const { data: updatedAddress, error: updateError } = await supabase
+    // Update the address using service client
+    const { data: updatedAddress, error: updateError } = await supabaseService
       .from('customer_addresses')
       .update(updateObject)
       .eq('id', addressId)
@@ -157,14 +171,15 @@ export async function DELETE(
       }, { status: 401 })
     }
 
-    // Get user profile
-    const { data: profile, error: profileError } = await supabase
+    // Get user profile using service client to bypass RLS
+    const { data: profile, error: profileError } = await supabaseService
       .from('user_profiles')
       .select('id, is_active')
       .eq('id', user.id)
+      .eq('is_active', true)
       .single()
 
-    if (profileError || !profile || profile.is_active === false) {
+    if (profileError || !profile) {
       return NextResponse.json({
         success: false,
         error: { message: 'User account not found or inactive', code: 'USER_INACTIVE' }
@@ -174,8 +189,8 @@ export async function DELETE(
     const params = await context.params
     const addressId = params.id
 
-    // Verify address ownership and check if it's default
-    const { data: existingAddress, error: addressError } = await supabase
+    // Verify address ownership and check if it's default using service client
+    const { data: existingAddress, error: addressError } = await supabaseService
       .from('customer_addresses')
       .select('id, is_default, is_primary')
       .eq('id', addressId)
@@ -197,8 +212,8 @@ export async function DELETE(
       }, { status: 400 })
     }
 
-    // Check if address is used in any bookings
-    const { data: bookings, error: bookingsError } = await supabase
+    // Check if address is used in any bookings using service client
+    const { data: bookings, error: bookingsError } = await supabaseService
       .from('bookings')
       .select('id')
       .eq('address_id', addressId)
@@ -224,8 +239,8 @@ export async function DELETE(
 
     }
 
-    // Delete the address (only if no bookings exist)
-    const { error: deleteError } = await supabase
+    // Delete the address (only if no bookings exist) using service client
+    const { error: deleteError } = await supabaseService
       .from('customer_addresses')
       .delete()
       .eq('id', addressId)

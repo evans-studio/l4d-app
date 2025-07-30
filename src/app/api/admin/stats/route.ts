@@ -62,11 +62,11 @@ export async function GET(request: NextRequest) {
       console.error('Week bookings error:', weekError)
     }
 
-    // Get all pending/action-required bookings
+    // Get all pending bookings that require admin action
     const { data: actionBookings, error: actionError } = await supabase
       .from('bookings')
       .select('id, status, scheduled_date, booking_reference, customer_id')
-      .in('status', ['pending', 'confirmed']) // Bookings that need attention
+      .eq('status', 'pending') // Only pending bookings need admin action
       .order('scheduled_date', { ascending: true })
 
     if (actionError) {
@@ -90,10 +90,9 @@ export async function GET(request: NextRequest) {
     const weekUtilization = weekCapacity > 0 ? Math.round((weekTotal / weekCapacity) * 100) : 0
     const weekRevenue = weekBookings?.reduce((sum, booking) => sum + (booking.total_price || 0), 0) || 0
 
-    // Calculate action required stats
-    const pendingBookings = actionBookings?.filter(b => b.status === 'pending').length || 0
-    const toConfirmBookings = actionBookings?.filter(b => b.status === 'confirmed').length || 0
-    const totalActionRequired = pendingBookings + toConfirmBookings
+    // Calculate action required stats - only pending bookings need action
+    const pendingBookings = actionBookings?.length || 0
+    const totalActionRequired = pendingBookings
 
     const stats = {
       // Today's Schedule Widget
@@ -128,7 +127,7 @@ export async function GET(request: NextRequest) {
       requiresAction: {
         total: totalActionRequired,
         pending: pendingBookings,
-        toConfirm: toConfirmBookings,
+        toConfirm: 0, // No separate "to confirm" - confirmed bookings don't need action
         bookings: actionBookings?.slice(0, 5) || [] // Show top 5 that need attention
       }
     }

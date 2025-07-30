@@ -9,10 +9,12 @@ const statusBadgeVariants = cva(
     variants: {
       status: {
         pending: 'bg-yellow-100 text-yellow-800 border border-yellow-200',
-        confirmed: 'bg-blue-100 text-blue-800 border border-blue-200', 
+        confirmed: 'bg-blue-100 text-blue-800 border border-blue-200',
+        rescheduled: 'bg-purple-100 text-purple-800 border border-purple-200',
         in_progress: 'bg-orange-100 text-orange-800 border border-orange-200',
         completed: 'bg-green-100 text-green-800 border border-green-200',
         cancelled: 'bg-red-100 text-red-800 border border-red-200',
+        declined: 'bg-gray-100 text-gray-800 border border-gray-200',
         no_show: 'bg-gray-100 text-gray-800 border border-gray-200'
       },
       size: {
@@ -29,7 +31,7 @@ const statusBadgeVariants = cva(
 )
 
 export interface StatusBadgeProps extends VariantProps<typeof statusBadgeVariants> {
-  status: 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'no_show'
+  status: 'pending' | 'confirmed' | 'rescheduled' | 'in_progress' | 'completed' | 'cancelled' | 'declined' | 'no_show'
   showIcon?: boolean
   className?: string
 }
@@ -43,6 +45,10 @@ const statusConfig = {
     icon: CheckCircle,
     label: 'Confirmed'
   },
+  rescheduled: {
+    icon: Calendar,
+    label: 'Rescheduled'
+  },
   in_progress: {
     icon: PlayCircle,
     label: 'In Progress'
@@ -54,6 +60,10 @@ const statusConfig = {
   cancelled: {
     icon: XCircle,
     label: 'Cancelled'
+  },
+  declined: {
+    icon: XCircle,
+    label: 'Declined'
   },
   no_show: {
     icon: AlertCircle,

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useBookingFlowStore } from '@/lib/store/bookingFlowStore'
 import { Button } from '@/components/ui/primitives/Button'
 import { CustomerLayout } from '@/components/layout/templates/CustomerLayout'
 import { Container } from '@/components/layout/templates/PageLayout'
@@ -26,24 +27,26 @@ interface DashboardBooking {
   id: string
   booking_reference: string
   scheduled_date: string
-  start_time: string
+  scheduled_start_time: string
   status: 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled'
   total_price: number
-  services: Array<{
+  service: {
     name: string
-    base_price: number
-  }>
+    short_description?: string
+    category?: string
+  } | null
   vehicle: {
     make: string
     model: string
     year?: number
     color?: string
-  }
+  } | null
   address: {
     address_line_1: string
+    address_line_2?: string
     city: string
     postal_code: string
-  }
+  } | null
 }
 
 const statusConfig = {
@@ -86,10 +89,12 @@ const statusConfig = {
 
 export default function MyBookingsPage() {
   const router = useRouter()
+  const { initializeRebooking } = useBookingFlowStore()
   const [bookings, setBookings] = useState<DashboardBooking[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [activeFilter, setActiveFilter] = useState<'all' | 'upcoming' | 'completed' | 'cancelled'>('all')
   const [searchTerm, setSearchTerm] = useState('')
+  const [rebookingBookingId, setRebookingBookingId] = useState<string | null>(null)
 
   useEffect(() => {
     const fetchBookings = async () => {
@@ -110,7 +115,25 @@ export default function MyBookingsPage() {
     fetchBookings()
   }, [])
 
-  const formatTime = (time: string) => {
+  // Handle rebooking flow
+  const handleRebook = async (bookingId: string) => {
+    try {
+      setRebookingBookingId(bookingId)
+      await initializeRebooking(bookingId)
+      // Redirect to booking page with pre-populated data
+      router.push('/book')
+    } catch (error) {
+      console.error('Rebooking initialization failed:', error)
+      // Could show an error toast here
+      setRebookingBookingId(null)
+    }
+  }
+
+  const formatTime = (time: string | undefined | null) => {
+    if (!time) {
+      return 'Time TBD'
+    }
+    
     const [hours, minutes] = time.split(':')
     const hour = parseInt(hours || '0')
     const ampm = hour >= 12 ? 'PM' : 'AM'
@@ -146,8 +169,8 @@ export default function MyBookingsPage() {
     if (searchTerm) {
       filtered = filtered.filter(booking =>
         booking.booking_reference.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        booking.vehicle.make.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        booking.vehicle.model.toLowerCase().includes(searchTerm.toLowerCase())
+        (booking.vehicle?.make || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (booking.vehicle?.model || '').toLowerCase().includes(searchTerm.toLowerCase())
       )
     }
 
@@ -300,7 +323,7 @@ export default function MyBookingsPage() {
                                 {formatDate(booking.scheduled_date)}
                               </p>
                               <p className="text-text-primary text-sm">
-                                {formatTime(booking.start_time)}
+                                {formatTime(booking.scheduled_start_time)}
                               </p>
                             </div>
                           </div>
@@ -311,9 +334,9 @@ export default function MyBookingsPage() {
                             <div>
                               <p className="text-text-secondary text-xs">Vehicle</p>
                               <p className="text-text-primary font-medium">
-                                {booking.vehicle.make} {booking.vehicle.model}
+                                {booking.vehicle ? `${booking.vehicle.make} ${booking.vehicle.model}` : 'Vehicle details pending'}
                               </p>
-                              {booking.vehicle.year && (
+                              {booking.vehicle?.year && (
                                 <p className="text-text-secondary text-sm">
                                   {booking.vehicle.year}
                                 </p>
@@ -327,10 +350,10 @@ export default function MyBookingsPage() {
                             <div>
                               <p className="text-text-secondary text-xs">Location</p>
                               <p className="text-text-primary font-medium">
-                                {booking.address.city}
+                                {booking.address?.city || 'City pending'}
                               </p>
                               <p className="text-text-secondary text-sm">
-                                {booking.address.postal_code}
+                                {booking.address?.postal_code || 'Postcode pending'}
                               </p>
                             </div>
                           </div>
@@ -339,16 +362,9 @@ export default function MyBookingsPage() {
                           <div>
                             <p className="text-text-secondary text-xs mb-1">Services</p>
                             <div className="space-y-1">
-                              {booking.services.slice(0, 2).map((service, index) => (
-                                <p key={index} className="text-text-primary text-sm">
-                                  {service.name}
-                                </p>
-                              ))}
-                              {booking.services.length > 2 && (
-                                <p className="text-text-muted text-xs">
-                                  +{booking.services.length - 2} more
-                                </p>
-                              )}
+                              <p className="text-text-primary text-sm">
+                                {booking.service?.name || 'Service details pending'}
+                              </p>
                             </div>
                           </div>
                         </div>
@@ -373,6 +389,21 @@ export default function MyBookingsPage() {
                             leftIcon={<Edit className="w-4 h-4" />}
                           >
                             Reschedule
+                          </Button>
+                        )}
+                        
+                        {booking.status === 'completed' && (
+                          <Button
+                            onClick={() => handleRebook(booking.id)}
+                            variant="outline"
+                            size="sm"
+                            leftIcon={rebookingBookingId === booking.id ? 
+                              <div className="w-4 h-4 animate-spin rounded-full border-2 border-brand-400 border-t-transparent" /> :
+                              <Calendar className="w-4 h-4" />
+                            }
+                            disabled={rebookingBookingId === booking.id}
+                          >
+                            {rebookingBookingId === booking.id ? 'Loading...' : 'Book Again'}
                           </Button>
                         )}
                       </div>

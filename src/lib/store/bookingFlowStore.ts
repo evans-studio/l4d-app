@@ -2,6 +2,8 @@ import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import { BookingFlowData, PricingBreakdown, CustomerVehicle, CustomerAddress } from '@/lib/utils/booking-types'
 import { Database } from '@/lib/db/database.types'
+import { calculatePostcodeDistance } from '@/lib/utils/postcode-distance'
+import { calculateBookingPrice, PriceBreakdown as EnhancedPriceBreakdown } from '@/lib/pricing/calculator'
 
 // Type aliases for database types  
 type ServiceRow = Database['public']['Tables']['services']['Row']
@@ -31,7 +33,7 @@ export interface VehicleData {
   make: string
   model: string
   year: number
-  size: 'small' | 'medium' | 'large' | 'extra_large'
+  size: 'S' | 'M' | 'L' | 'XL' // Updated to match pricing calculator
   color?: string
   registration?: string
   notes?: string
@@ -45,10 +47,11 @@ export interface ServiceSelection {
 }
 
 export interface AddressData {
-  street: string
+  addressLine1: string
+  addressLine2?: string
   city: string
-  state: string
-  zipCode: string
+  state?: string
+  postcode: string // UK postcode for distance calculation
   isExisting?: boolean
   addressId?: string
 }
@@ -56,9 +59,13 @@ export interface AddressData {
 export interface PriceCalculation {
   basePrice: number
   sizeMultiplier: number
-  finalPrice: number
+  servicePrice: number // base price × size multiplier
+  travelDistance?: number
+  travelSurcharge: number
+  finalPrice: number // service price + travel surcharge
   currency: string
-  breakdown?: PricingBreakdown
+  breakdown?: EnhancedPriceBreakdown
+  withinFreeRadius?: boolean
 }
 
 // API response types following the PRD standard format
@@ -102,6 +109,7 @@ interface BookingFlowState {
   
   // User state
   isExistingUser: boolean
+  isRebooking: boolean
   
   // Loading states
   isLoading: boolean
@@ -116,6 +124,28 @@ interface BookingFlowState {
   userVehicles: CustomerVehicle[]
   userAddresses: CustomerAddress[]
   vehicleSizes: VehicleSizeRow[]
+  recentBookings: Array<{
+    id: string
+    booking_reference: string
+    scheduled_date: string
+    status: string
+    total_price: number
+    vehicle_details: any
+    service_address: any
+    services: {
+      id: string
+      name: string
+      short_description: string
+      category: string
+      base_price: number
+      estimated_duration: number
+    }
+    time_slots: {
+      id: string
+      start_time: string
+      end_time: string
+    }
+  }>
 }
 
 // Store actions interface
@@ -147,6 +177,9 @@ interface BookingFlowActions {
   loadVehicleSizes: () => Promise<void>
   loadAvailableServices: () => Promise<void>
   
+  // Rebooking
+  initializeRebooking: (bookingId: string) => Promise<void>
+  
   // Booking submission
   submitBooking: () => Promise<BookingResponse>
   
@@ -176,6 +209,7 @@ const initialState: BookingFlowState = {
   },
   calculatedPrice: null,
   isExistingUser: false,
+  isRebooking: false,
   isLoading: false,
   isSubmitting: false,
   error: null,
@@ -184,6 +218,7 @@ const initialState: BookingFlowState = {
   userVehicles: [],
   userAddresses: [],
   vehicleSizes: [],
+  recentBookings: [],
 }
 
 // API utility functions
@@ -286,7 +321,7 @@ export const useBookingFlowStore = create<BookingFlowStore>()(
         }))
       },
       
-      // Pricing calculation
+      // Pricing calculation with travel surcharge integration
       calculatePrice: async () => {
         const { formData, setLoading, setError } = get()
         
@@ -298,21 +333,67 @@ export const useBookingFlowStore = create<BookingFlowStore>()(
         setLoading(true)
         
         try {
-          const response = await apiCall<PriceCalculation>('/api/pricing/calculate', {
-            method: 'POST',
-            body: JSON.stringify({
-              serviceId: formData.service.serviceId,
-              vehicleSize: formData.vehicle.size,
-              // TODO: Add address for distance calculation if available
-            }),
-          })
-          
-          if (response.success && response.data) {
-            set({ calculatedPrice: response.data })
+          // If we have address data, use comprehensive pricing calculator
+          if (formData.address && formData.address.postcode) {
+            const serviceDetails = {
+              id: formData.service.serviceId,
+              name: formData.service.name,
+              basePrice: formData.service.basePrice,
+              duration: formData.service.duration
+            }
+            
+            const vehicleDetails = {
+              make: formData.vehicle.make,
+              model: formData.vehicle.model,
+              year: formData.vehicle.year,
+              size: formData.vehicle.size
+            }
+            
+            const addressDetails = {
+              addressLine1: formData.address.addressLine1,
+              addressLine2: formData.address.addressLine2,
+              city: formData.address.city,
+              postcode: formData.address.postcode
+            }
+            
+            const priceBreakdown = await calculateBookingPrice(
+              serviceDetails,
+              vehicleDetails,
+              addressDetails
+            )
+            
+            // Convert to store format
+            const calculatedPrice: PriceCalculation = {
+              basePrice: priceBreakdown.serviceBasePrice,
+              sizeMultiplier: priceBreakdown.vehicleSizeMultiplier,
+              servicePrice: priceBreakdown.servicePrice,
+              travelDistance: priceBreakdown.travelDistance,
+              travelSurcharge: priceBreakdown.travelSurcharge,
+              finalPrice: priceBreakdown.totalPrice,
+              currency: 'GBP',
+              breakdown: priceBreakdown,
+              withinFreeRadius: priceBreakdown.breakdown.travel.withinFreeRadius
+            }
+            
+            set({ calculatedPrice })
           } else {
-            setError(response.error?.message || 'Failed to calculate price')
+            // Fallback to basic service pricing without address
+            const response = await apiCall<PriceCalculation>('/api/pricing/calculate', {
+              method: 'POST',
+              body: JSON.stringify({
+                serviceId: formData.service.serviceId,
+                vehicleSize: formData.vehicle.size,
+              }),
+            })
+            
+            if (response.success && response.data) {
+              set({ calculatedPrice: response.data })
+            } else {
+              setError(response.error?.message || 'Failed to calculate price')
+            }
           }
         } catch (error) {
+          console.error('Price calculation error:', error)
           setError('Failed to calculate price')
         } finally {
           setLoading(false)
@@ -327,9 +408,36 @@ export const useBookingFlowStore = create<BookingFlowStore>()(
         try {
           const response = await apiCall<{
             isExistingUser: boolean
-            userId?: string
+            user?: {
+              id: string
+              email: string
+              name: string
+              phone: string
+            }
             vehicles?: CustomerVehicle[]
             addresses?: CustomerAddress[]
+            recentBookings?: Array<{
+              id: string
+              booking_reference: string
+              scheduled_date: string
+              status: string
+              total_price: number
+              vehicle_details: any
+              service_address: any
+              services: {
+                id: string
+                name: string
+                short_description: string
+                category: string
+                base_price: number
+                estimated_duration: number
+              }
+              time_slots: {
+                id: string
+                start_time: string
+                end_time: string
+              }
+            }>
           }>('/api/booking/validate-user', {
             method: 'POST',
             body: JSON.stringify({ email, phone }),
@@ -340,12 +448,110 @@ export const useBookingFlowStore = create<BookingFlowStore>()(
               isExistingUser: response.data.isExistingUser,
               userVehicles: response.data.vehicles || [],
               userAddresses: response.data.addresses || [],
+              recentBookings: response.data.recentBookings || [],
             })
           } else {
             setError(response.error?.message || 'Failed to validate user')
           }
         } catch (error) {
           setError('Failed to validate user')
+        } finally {
+          setLoading(false)
+        }
+      },
+
+      // Initialize rebooking from existing booking
+      initializeRebooking: async (bookingId: string) => {
+        const { setLoading, setError, resetFlow } = get()
+        setLoading(true)
+        
+        try {
+          // First reset the flow
+          resetFlow()
+          
+          // Fetch the specific booking details
+          const response = await apiCall<{
+            id: string
+            booking_reference: string
+            scheduled_date: string
+            total_price: number
+            vehicle_details: any
+            service_address: any
+            customer: {
+              id: string
+              email: string
+              first_name: string
+              last_name: string
+              phone: string
+            }
+            services: {
+              id: string
+              name: string
+              short_description: string
+              category: string
+              base_price: number
+              estimated_duration: number
+            }
+            time_slots: {
+              id: string
+              start_time: string
+              end_time: string
+            }
+          }>(`/api/customer/bookings/${bookingId}`)
+          
+          if (response.success && response.data) {
+            const booking = response.data
+            
+            // Pre-populate form data from previous booking
+            const rebookingData: Partial<BookingFlowState['formData']> = {
+              service: booking.services ? {
+                serviceId: booking.services.id,
+                name: booking.services.name,
+                basePrice: booking.services.base_price,
+                duration: booking.services.estimated_duration
+              } : undefined,
+              vehicle: booking.vehicle_details ? {
+                make: booking.vehicle_details.make,
+                model: booking.vehicle_details.model,
+                year: booking.vehicle_details.year,
+                size: booking.vehicle_details.size,
+                color: booking.vehicle_details.color,
+                registration: booking.vehicle_details.license_plate || ''
+              } : undefined,
+              address: booking.service_address ? {
+                addressLine1: booking.service_address.address_line_1,
+                addressLine2: booking.service_address.address_line_2 || '',
+                city: booking.service_address.city,
+                postcode: booking.service_address.postal_code,
+                state: booking.service_address.county || ''
+              } : undefined,
+              user: {
+                email: booking.customer.email,
+                name: `${booking.customer.first_name} ${booking.customer.last_name}`.trim(),
+                phone: booking.customer.phone,
+                isExistingUser: true
+              }
+              // Note: Don't pre-populate slot as they'll need to select a new time
+            }
+            
+            // Update the store with pre-populated data
+            set({
+              formData: { ...get().formData, ...rebookingData },
+              isExistingUser: true,
+              currentStep: 1, // Start from service step but data is pre-filled
+              isRebooking: true
+            })
+            
+            // Trigger price calculation if we have enough data
+            if (rebookingData.service && rebookingData.vehicle && rebookingData.address) {
+              get().calculatePrice()
+            }
+            
+          } else {
+            setError(response.error?.message || 'Failed to load booking details')
+          }
+        } catch (error) {
+          setError('Failed to initialize rebooking')
         } finally {
           setLoading(false)
         }
@@ -433,11 +639,11 @@ export const useBookingFlowStore = create<BookingFlowStore>()(
                 notes: formData.vehicle.notes
               },
               address: {
-                addressLine1: formData.address.street,
-                addressLine2: '',
+                addressLine1: formData.address.addressLine1,
+                addressLine2: formData.address.addressLine2 || '',
                 city: formData.address.city,
-                county: formData.address.state, // Map state to county for now
-                postalCode: formData.address.zipCode,
+                county: formData.address.state || '',
+                postalCode: formData.address.postcode,
                 country: 'United Kingdom'
               },
               services: [{
@@ -503,7 +709,7 @@ export const useBookingFlowStore = create<BookingFlowStore>()(
           case 4:
             return !!formData.service
           case 5:
-            return !!formData.address && !!formData.address.street && !!formData.address.city
+            return !!formData.address && !!formData.address.addressLine1 && !!formData.address.city && !!formData.address.postcode
           case 6:
             return !!formData.slot && !!formData.address && !!formData.user && !!formData.vehicle && !!formData.service
           default:

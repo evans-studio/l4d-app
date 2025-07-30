@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useBookingFlowStore, useBookingStep } from '@/lib/store/bookingFlowStore';
 import { Button } from '@/components/ui/primitives/Button';
 import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/composites/Card';
-import { CheckIcon, ChevronLeftIcon, ChevronRightIcon, Sparkles, Palette, Shield } from 'lucide-react';
+import { CheckIcon, ChevronLeftIcon, ChevronRightIcon, Sparkles, Palette, Shield, Clock, Star } from 'lucide-react';
 
 export function ServiceSelection(): React.JSX.Element {
   const {
@@ -19,22 +19,29 @@ export function ServiceSelection(): React.JSX.Element {
     canProceedToNextStep
   } = useBookingFlowStore()
   
-  const { isCurrentStep } = useBookingStep(4)
+  const { isCurrentStep } = useBookingStep(1)
   
   const [categories, setCategories] = useState<any[]>([])
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [selectedService, setSelectedService] = useState<string | null>(
     formData.service?.serviceId || null
   )
+  const [servicesWithPricing, setServicesWithPricing] = useState<any[]>([])
 
   // Load services and categories on component mount
   useEffect(() => {
     const loadData = async () => {
-      // Load services using the store
-      await loadAvailableServices()
-      
-      // Load categories separately
       try {
+        // Load services with pricing information
+        const servicesResponse = await fetch('/api/services')
+        if (servicesResponse.ok) {
+          const servicesData = await servicesResponse.json()
+          if (servicesData.success) {
+            setServicesWithPricing(servicesData.data || [])
+          }
+        }
+        
+        // Load categories separately
         const categoriesResponse = await fetch('/api/services/categories')
         if (categoriesResponse.ok) {
           const categoriesData = await categoriesResponse.json()
@@ -42,8 +49,11 @@ export function ServiceSelection(): React.JSX.Element {
             setCategories(categoriesData.data || [])
           }
         }
+        
+        // Also load available services for the store
+        await loadAvailableServices()
       } catch (error) {
-        console.error('Error loading categories:', error)
+        console.error('Error loading data:', error)
       }
     }
 
@@ -53,7 +63,7 @@ export function ServiceSelection(): React.JSX.Element {
   }, [isCurrentStep, loadAvailableServices])
 
   const handleServiceSelection = (serviceId: string): void => {
-    const service = availableServices.find(s => s.id === serviceId)
+    const service = servicesWithPricing.find(s => s.id === serviceId) || availableServices.find(s => s.id === serviceId)
     if (!service) return
     
     if (selectedService === serviceId) {
@@ -66,8 +76,8 @@ export function ServiceSelection(): React.JSX.Element {
       setServiceSelection({
         serviceId: service.id,
         name: service.name,
-        basePrice: service.base_price,
-        duration: service.duration_minutes
+        basePrice: service.priceRange?.min || 0,
+        duration: service.duration_minutes || service.estimated_duration
       })
     }
   }
@@ -90,10 +100,11 @@ export function ServiceSelection(): React.JSX.Element {
     return <Sparkles className="w-8 h-8" />;
   };
 
-  // Filter services by category
+  // Filter services by category - use servicesWithPricing if available, otherwise availableServices
+  const servicesToDisplay = servicesWithPricing.length > 0 ? servicesWithPricing : availableServices
   const filteredServices = selectedCategory === 'all' 
-    ? availableServices 
-    : availableServices.filter(service => service.category_id === selectedCategory)
+    ? servicesToDisplay 
+    : servicesToDisplay.filter(service => service.category_id === selectedCategory)
     
   // Don't render if not current step
   if (!isCurrentStep) {
@@ -242,9 +253,33 @@ export function ServiceSelection(): React.JSX.Element {
                   </CardHeader>
 
                   <CardContent className="p-4 sm:p-6 pt-0">
-                    <div className="text-center space-y-1 sm:space-y-2">
-                      <div className="text-2xl sm:text-3xl font-bold text-brand-400">£{service.base_price}</div>
-                      <div className="text-xs sm:text-sm text-text-muted">~{Math.round(service.duration_minutes / 60)} hours</div>
+                    <div className="text-center space-y-2">
+                      {/* Price Display */}
+                      {service.priceRange ? (
+                        <div className="space-y-1">
+                          <div className="text-lg sm:text-xl font-bold text-brand-400">
+                            £{service.priceRange.min} - £{service.priceRange.max}
+                          </div>
+                          <div className="text-xs text-text-muted">Based on vehicle size</div>
+                        </div>
+                      ) : (
+                        <div className="text-2xl sm:text-3xl font-bold text-brand-400">
+                          {service.priceRange?.min ? `£${service.priceRange.min}` : 'Price TBA'}
+                        </div>
+                      )}
+                      
+                      {/* Duration Display */}
+                      <div className="flex items-center justify-center gap-1 text-xs sm:text-sm text-text-muted">
+                        <Clock className="w-3 h-3" />
+                        <span>~{Math.round((service.duration_minutes || service.estimated_duration || 0) / 60)} hours</span>
+                      </div>
+                      
+                      {/* Category Badge */}
+                      {service.category && (
+                        <div className="inline-block px-2 py-1 bg-brand-600/10 text-brand-400 text-xs rounded-full">
+                          {service.category.name}
+                        </div>
+                      )}
                     </div>
                   </CardContent>
 
@@ -282,8 +317,14 @@ export function ServiceSelection(): React.JSX.Element {
                 </div>
                 <span className="text-brand-400 font-bold text-xl sm:text-2xl">£{formData.service.basePrice}</span>
               </div>
-              <div className="mt-4 text-sm text-text-secondary">
-                Final price will be calculated based on your vehicle size in the next step.
+              <div className="mt-4 text-sm text-text-secondary space-y-2">
+                <p>Final price will be calculated based on your vehicle size and service location.</p>
+                {formData.service && (
+                  <div className="flex items-center gap-2 text-xs text-text-muted">
+                    <Clock className="w-3 h-3" />
+                    <span>Estimated duration: {Math.round(formData.service.duration / 60)} hours</span>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>

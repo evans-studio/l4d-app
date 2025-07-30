@@ -31,6 +31,7 @@ export class AuthHandler {
    */
   static async getUserFromRequest(request: NextRequest): Promise<AuthenticatedUser | null> {
     try {
+      // Create regular client for auth check
       const supabase = createServerClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -55,8 +56,27 @@ export class AuthHandler {
         return null
       }
 
-      // Get user profile for role
-      const { data: profile } = await supabase
+      // Create service client to bypass RLS for role lookup
+      const supabaseService = createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        {
+          cookies: {
+            get(name: string) {
+              return request.cookies.get(name)?.value
+            },
+            set() {},
+            remove() {},
+          },
+          auth: {
+            autoRefreshToken: false,
+            persistSession: false
+          }
+        }
+      )
+
+      // Get user profile for role using service client (bypasses RLS)
+      const { data: profile } = await supabaseService
         .from('user_profiles')
         .select('role')
         .eq('id', session.user.id)

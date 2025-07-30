@@ -44,7 +44,6 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
         pricing_breakdown,
         special_instructions,
         created_at,
-        confirmation_sent_at,
         customer_vehicles!vehicle_id (
           make,
           model,
@@ -101,7 +100,6 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
       pricing_breakdown: booking.pricing_breakdown,
       special_instructions: booking.special_instructions,
       created_at: booking.created_at,
-      confirmation_sent_at: booking.confirmation_sent_at,
       
       // Service information from main service and booking services
       service: booking.services ? {

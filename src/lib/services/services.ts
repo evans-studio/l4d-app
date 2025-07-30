@@ -65,17 +65,56 @@ export class ServicesService extends BaseService {
         return { data: null, error: new Error('No vehicle sizes found') }
       }
 
-      // Calculate price ranges for each service
+      // Get service pricing data for all services
+      const { data: servicePricingData, error: pricingError } = await supabase
+        .from('service_pricing')
+        .select('service_id, small, medium, large, extra_large')
+
+      if (pricingError) {
+        console.error('Service pricing error:', pricingError)
+        return { data: null, error: pricingError }
+      }
+
+      // Create pricing lookup map
+      const pricingLookup: Record<string, { small?: number; medium?: number; large?: number; extra_large?: number }> = {}
+      servicePricingData?.forEach(pricing => {
+        pricingLookup[pricing.service_id] = {
+          small: pricing.small || undefined,
+          medium: pricing.medium || undefined,
+          large: pricing.large || undefined,
+          extra_large: pricing.extra_large || undefined
+        }
+      })
+
+      // Calculate price ranges for each service using actual pricing data
       const servicesWithPricing: ServiceWithPricing[] = services.map(service => {
         try {
-          const minMultiplier = vehicleSizes[0]?.price_multiplier || 1
-          const maxMultiplier = vehicleSizes[vehicleSizes.length - 1]?.price_multiplier || 1
+          const servicePricing = pricingLookup[service.id]
+          
+          if (!servicePricing) {
+            console.warn(`No pricing found for service: ${service.id}`)
+            return {
+              ...service,
+              priceRange: { min: 0, max: 0 },
+            }
+          }
+
+          // Get all prices from the service pricing
+          const prices = [
+            servicePricing.small,
+            servicePricing.medium,
+            servicePricing.large,
+            servicePricing.extra_large
+          ].filter((price): price is number => price !== undefined && price > 0)
+
+          const minPrice = prices.length > 0 ? Math.min(...prices) : 0
+          const maxPrice = prices.length > 0 ? Math.max(...prices) : 0
 
           return {
             ...service,
             priceRange: {
-              min: Math.round(service.base_price * minMultiplier),
-              max: Math.round(service.base_price * maxMultiplier),
+              min: Math.round(minPrice),
+              max: Math.round(maxPrice),
             },
           }
         } catch (error) {
@@ -112,14 +151,34 @@ export class ServicesService extends BaseService {
 
       if (sizesError) return { data: null, error: sizesError }
 
-      const minMultiplier = vehicleSizes[0]?.price_multiplier || 1
-      const maxMultiplier = vehicleSizes[vehicleSizes.length - 1]?.price_multiplier || 1
+      // Get service pricing data for this specific service
+      const { data: servicePricing, error: pricingError } = await supabase
+        .from('service_pricing')
+        .select('small, medium, large, extra_large')
+        .eq('service_id', id)
+        .single()
+
+      if (pricingError) {
+        console.error('Service pricing error:', pricingError)
+        return { data: null, error: pricingError }
+      }
+
+      // Calculate price range from actual pricing data
+      const prices = [
+        servicePricing.small,
+        servicePricing.medium,
+        servicePricing.large,
+        servicePricing.extra_large
+      ].filter((price): price is number => price !== undefined && price > 0)
+
+      const minPrice = prices.length > 0 ? Math.min(...prices) : 0
+      const maxPrice = prices.length > 0 ? Math.max(...prices) : 0
 
       const serviceWithPricing: ServiceWithPricing = {
         ...service,
         priceRange: {
-          min: Math.round(service.base_price * minMultiplier),
-          max: Math.round(service.base_price * maxMultiplier),
+          min: Math.round(minPrice),
+          max: Math.round(maxPrice),
         },
       }
 

@@ -42,6 +42,8 @@ export async function middleware(request: NextRequest) {
     '/api/admin/stats-debug',
     '/api/admin/stats',
     '/api/admin/bookings/recent',
+    '/api/admin/bookings/all',
+    '/api/admin/bookings',
     '/api/debug/auth-status'
   ]
 
@@ -77,7 +79,7 @@ export async function middleware(request: NextRequest) {
   // Get current user (more secure than getSession)
   const { data: { user }, error } = await supabase.auth.getUser()
   
-  // Create service client for profile lookup (bypasses RLS)
+  // Create service client for profile lookup (bypasses RLS completely)
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!serviceKey) {
     console.error('SUPABASE_SERVICE_ROLE_KEY is not defined in middleware!')
@@ -88,16 +90,14 @@ export async function middleware(request: NextRequest) {
     serviceKey!,
     {
       cookies: {
-        get(name: string) {
-          return request.cookies.get(name)?.value
-        },
-        set(name: string, value: string, options: any) {
-          response.cookies.set(name, value, options)
-        },
-        remove(name: string, options: any) {
-          response.cookies.set(name, '', { ...options, maxAge: 0 })
-        },
+        get: () => null,  // No cookies for service client
+        set: () => {},    // No cookie setting
+        remove: () => {}  // No cookie removal
       },
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
     }
   )
 
@@ -124,6 +124,14 @@ export async function middleware(request: NextRequest) {
         errorCode: profileError.code,
         errorMessage: profileError.message
       })
+      
+      // If we get infinite recursion error, return 500 to prevent further issues
+      if (profileError.code === '42P17') {
+        return NextResponse.json({
+          success: false, 
+          error: { message: 'Database configuration error - please contact administrator', code: 'DB_CONFIG_ERROR' }
+        }, { status: 500 })
+      }
     }
 
     // Add user context to response headers for API routes
@@ -152,6 +160,12 @@ export async function middleware(request: NextRequest) {
       errorCode: profileError.code,
       errorMessage: profileError.message
     })
+    
+    // If we get infinite recursion error, redirect to a safe page
+    if (profileError.code === '42P17') {
+      console.error('Database RLS recursion detected - redirecting to login for safety')
+      return NextResponse.redirect(new URL('/auth/login?error=db-config', request.url))
+    }
   }
 
   const userRole = profile?.role || 'customer'

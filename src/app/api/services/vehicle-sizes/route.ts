@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { ServicesService } from '@/lib/services/services'
 import { ApiResponseHandler } from '@/lib/api/response'
 import { ApiValidation } from '@/lib/api/validation'
-import { ApiAuth } from '@/lib/api/auth'
+import { authenticateAdmin } from '@/lib/api/auth-handler'
 import { z } from 'zod'
 
 const createVehicleSizeSchema = z.object({
@@ -44,9 +44,9 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     // Require admin role for creating vehicle sizes
-    const { auth, error: authError } = await ApiAuth.requireRole(['admin', 'super_admin'])
-    if (authError) {
-      return authError
+    const authResult = await authenticateAdmin(request)
+    if (!authResult.success) {
+      return authResult.error
     }
 
     const body = await request.json()

@@ -11,9 +11,9 @@ export interface EmailServiceConfig {
 }
 
 const defaultConfig: EmailServiceConfig = {
-  fromEmail: process.env.EMAIL_FROM || 'bookings@love4detailing.co.uk',
-  fromName: 'Love 4 Detailing',
-  adminEmail: process.env.ADMIN_EMAIL || 'admin@love4detailing.co.uk',
+  fromEmail: process.env.EMAIL_FROM || 'zell@love4detailing.com',
+  fromName: 'Love 4 Detailing - Zell',
+  adminEmail: process.env.ADMIN_EMAIL || 'zell@love4detailing.com',
   replyToEmail: process.env.EMAIL_REPLY_TO
 }
 
@@ -119,6 +119,39 @@ export class EmailService {
     }
   }
 
+  // Send booking decline notification email
+  async sendBookingDeclineNotification(
+    customerEmail: string,
+    customerName: string,
+    booking: Booking,
+    declineReason: string,
+    additionalNotes?: string
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      const { error } = await resend.emails.send({
+        from: `${this.config.fromName} <${this.config.fromEmail}>`,
+        to: [customerEmail],
+        replyTo: this.config.replyToEmail,
+        subject: `Booking Update - ${booking.booking_reference}: Declined`,
+        html: this.generateBookingDeclineHTML(customerName, booking, declineReason, additionalNotes),
+        text: this.generateBookingDeclineText(customerName, booking, declineReason, additionalNotes)
+      })
+
+      if (error) {
+        console.error('Booking decline email error:', error)
+        return { success: false, error: error.message }
+      }
+
+      return { success: true }
+    } catch (error) {
+      console.error('Booking decline email service error:', error)
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Unknown email error' 
+      }
+    }
+  }
+
   // Send booking status update email
   async sendBookingStatusUpdate(
     customerEmail: string,
@@ -154,6 +187,84 @@ export class EmailService {
       return { success: true }
     } catch (error) {
       console.error('Status update email service error:', error)
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Unknown email error' 
+      }
+    }
+  }
+
+  // Send admin notification about customer reschedule request
+  async sendAdminRescheduleRequestNotification(
+    booking: any,
+    customerName: string,
+    customerEmail: string,
+    requestedDate: string,
+    requestedTime: string,
+    reason?: string
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      const { error } = await resend.emails.send({
+        from: `${this.config.fromName} <${this.config.fromEmail}>`,
+        to: [this.config.adminEmail],
+        replyTo: customerEmail,
+        subject: `Reschedule Request - ${booking.booking_reference}`,
+        html: this.generateAdminRescheduleRequestHTML(booking, customerName, customerEmail, requestedDate, requestedTime, reason),
+        text: this.generateAdminRescheduleRequestText(booking, customerName, customerEmail, requestedDate, requestedTime, reason)
+      })
+
+      if (error) {
+        console.error('Admin reschedule request notification error:', error)
+        return { success: false, error: error.message }
+      }
+
+      return { success: true }
+    } catch (error) {
+      console.error('Admin reschedule request email service error:', error)
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Unknown email error' 
+      }
+    }
+  }
+
+  // Send customer notification about reschedule request response
+  async sendRescheduleRequestResponse(
+    customerEmail: string,
+    customerName: string,
+    booking: any,
+    rescheduleRequest: any,
+    action: string,
+    adminResponse?: string,
+    proposedDate?: string,
+    proposedTime?: string
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      const statusMessages = {
+        approve: 'Your reschedule request has been approved!',
+        reject: 'Your reschedule request has been declined',
+        propose: 'Alternative time proposed for your reschedule request'
+      }
+
+      const subject = `Reschedule Request Update - ${booking.booking_reference}: ${statusMessages[action as keyof typeof statusMessages] || 'Updated'}`
+
+      const { error } = await resend.emails.send({
+        from: `${this.config.fromName} <${this.config.fromEmail}>`,
+        to: [customerEmail],
+        replyTo: this.config.replyToEmail,
+        subject,
+        html: this.generateRescheduleResponseHTML(customerName, booking, rescheduleRequest, action, adminResponse, proposedDate, proposedTime),
+        text: this.generateRescheduleResponseText(customerName, booking, rescheduleRequest, action, adminResponse, proposedDate, proposedTime)
+      })
+
+      if (error) {
+        console.error('Reschedule response email error:', error)
+        return { success: false, error: error.message }
+      }
+
+      return { success: true }
+    } catch (error) {
+      console.error('Reschedule response email service error:', error)
       return { 
         success: false, 
         error: error instanceof Error ? error.message : 'Unknown email error' 
@@ -777,6 +888,477 @@ Love 4 Detailing - Professional Vehicle Detailing Services
 
 If you can't click the link above, copy and paste it into your browser:
 ${setupUrl}
+    `
+  }
+
+  private generateBookingDeclineHTML(customerName: string, booking: Booking, declineReason: string, additionalNotes?: string): string {
+    const formatDate = (dateStr: string) => {
+      return new Date(dateStr).toLocaleDateString('en-GB', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      })
+    }
+
+    const formatTime = (time: string) => {
+      const [hours, minutes] = time.split(':')
+      const hour = parseInt(hours || '0')
+      const ampm = hour >= 12 ? 'PM' : 'AM'
+      const displayHour = hour % 12 || 12
+      return `${displayHour}:${minutes || '00'} ${ampm}`
+    }
+
+    return `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <title>Booking Declined</title>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: #dc2626; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
+            .content { background: #f8fafc; padding: 30px; border-radius: 0 0 8px 8px; }
+            .booking-details { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #dc2626; }
+            .detail-row { display: flex; justify-content: space-between; margin: 10px 0; padding: 8px 0; border-bottom: 1px solid #e2e8f0; }
+            .detail-label { font-weight: bold; color: #64748b; }
+            .detail-value { color: #1e293b; }
+            .decline-reason { background: #fef2f2; padding: 15px; border-radius: 6px; margin: 15px 0; border-left: 4px solid #dc2626; }
+            .rebook-section { background: #dbeafe; padding: 15px; border-radius: 6px; margin: 15px 0; border-left: 4px solid #2563eb; }
+            .footer { text-align: center; margin-top: 30px; color: #64748b; font-size: 14px; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>Booking Update</h1>
+            <p>We're sorry, but we cannot accommodate your booking</p>
+          </div>
+          
+          <div class="content">
+            <p>Dear ${customerName},</p>
+            
+            <p>We regret to inform you that we are unable to fulfill your booking request. We sincerely apologize for any inconvenience this may cause.</p>
+            
+            <div class="booking-details">
+              <h3>Booking Reference: ${booking.booking_reference}</h3>
+              
+              <div class="detail-row">
+                <span class="detail-label">Date:</span>
+                <span class="detail-value">${formatDate(booking.scheduled_date)}</span>
+              </div>
+              
+              <div class="detail-row">
+                <span class="detail-label">Time:</span>
+                <span class="detail-value">${formatTime(booking.scheduled_start_time)}</span>
+              </div>
+              
+              <div class="detail-row">
+                <span class="detail-label">Vehicle:</span>
+                <span class="detail-value">${booking.vehicle_details?.make} ${booking.vehicle_details?.model}</span>
+              </div>
+              
+              <div class="detail-row">
+                <span class="detail-label">Status:</span>
+                <span class="detail-value">Declined</span>
+              </div>
+            </div>
+            
+            <div class="decline-reason">
+              <h4>Reason for Decline:</h4>
+              <p><strong>${declineReason}</strong></p>
+              ${additionalNotes ? `<p><strong>Additional Notes:</strong> ${additionalNotes}</p>` : ''}
+            </div>
+            
+            <div class="rebook-section">
+              <h4>We'd Love to Help You Reschedule! 🚗✨</h4>
+              <p>We understand this is disappointing, but we're committed to providing you with excellent service. Here's what you can do:</p>
+              <ul>
+                <li><strong>Try a different date/time:</strong> Visit our booking page to see alternative slots</li>
+                <li><strong>Contact us directly:</strong> Call or email us to discuss your options</li>
+                <li><strong>Join our waiting list:</strong> We'll notify you if a slot becomes available</li>
+              </ul>
+              <p><strong>Need immediate assistance?</strong> Reply to this email or contact us at ${this.config.adminEmail}</p>
+            </div>
+            
+            <p>We value your business and hope to serve you in the future. Thank you for considering Love 4 Detailing.</p>
+            
+            <p>Kind regards,<br>
+            The Love 4 Detailing Team</p>
+          </div>
+          
+          <div class="footer">
+            <p>Love 4 Detailing - Professional Vehicle Detailing Services</p>
+            <p>Visit our website to book a new appointment or contact us for assistance</p>
+          </div>
+        </body>
+      </html>
+    `
+  }
+
+  private generateBookingDeclineText(customerName: string, booking: Booking, declineReason: string, additionalNotes?: string): string {
+    const formatDate = (dateStr: string) => {
+      return new Date(dateStr).toLocaleDateString('en-GB', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      })
+    }
+
+    const formatTime = (time: string) => {
+      const [hours, minutes] = time.split(':')
+      const hour = parseInt(hours || '0')
+      const ampm = hour >= 12 ? 'PM' : 'AM'
+      const displayHour = hour % 12 || 12
+      return `${displayHour}:${minutes || '00'} ${ampm}`
+    }
+
+    return `
+BOOKING UPDATE - Love 4 Detailing
+
+Dear ${customerName},
+
+We regret to inform you that we are unable to fulfill your booking request. We sincerely apologize for any inconvenience this may cause.
+
+BOOKING DETAILS:
+Reference: ${booking.booking_reference}
+Date: ${formatDate(booking.scheduled_date)}
+Time: ${formatTime(booking.scheduled_start_time)}
+Vehicle: ${booking.vehicle_details?.make} ${booking.vehicle_details?.model}
+Status: Declined
+
+REASON FOR DECLINE:
+${declineReason}
+${additionalNotes ? `\nAdditional Notes: ${additionalNotes}` : ''}
+
+WE'D LOVE TO HELP YOU RESCHEDULE!
+We understand this is disappointing, but we're committed to providing you with excellent service. Here's what you can do:
+
+• Try a different date/time: Visit our booking page to see alternative slots
+• Contact us directly: Call or email us to discuss your options  
+• Join our waiting list: We'll notify you if a slot becomes available
+
+Need immediate assistance? Reply to this email or contact us at ${this.config.adminEmail}
+
+We value your business and hope to serve you in the future. Thank you for considering Love 4 Detailing.
+
+Kind regards,
+The Love 4 Detailing Team
+
+---
+Love 4 Detailing - Professional Vehicle Detailing Services
+Visit our website to book a new appointment or contact us for assistance
+    `
+  }
+
+  // Admin reschedule request notification templates
+  private generateAdminRescheduleRequestHTML(
+    booking: any,
+    customerName: string,
+    customerEmail: string,
+    requestedDate: string,
+    requestedTime: string,
+    reason?: string
+  ): string {
+    const formatDate = (dateStr: string) => {
+      return new Date(dateStr).toLocaleDateString('en-GB', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      })
+    }
+
+    const formatTime = (time: string) => {
+      const [hours, minutes] = time.split(':')
+      const hour = parseInt(hours || '0')
+      const ampm = hour >= 12 ? 'PM' : 'AM'
+      const displayHour = hour % 12 || 12
+      return `${displayHour}:${minutes || '00'} ${ampm}`
+    }
+
+    return `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <title>Reschedule Request</title>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: #dc2626; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
+            .content { background: #f8fafc; padding: 30px; border-radius: 0 0 8px 8px; }
+            .booking-details { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #dc2626; }
+            .detail-row { display: flex; justify-content: space-between; margin: 10px 0; padding: 8px 0; border-bottom: 1px solid #e2e8f0; }
+            .detail-label { font-weight: bold; color: #64748b; }
+            .detail-value { color: #1e293b; }
+            .highlight { background: #fef2f2; padding: 15px; border-radius: 6px; margin: 15px 0; border: 1px solid #fecaca; }
+            .footer { text-align: center; margin-top: 30px; color: #64748b; font-size: 14px; }
+            .cta-button { background: #dc2626; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin: 10px 0; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>🔄 Reschedule Request</h1>
+            <p>Customer requesting to reschedule booking</p>
+          </div>
+          
+          <div class="content">
+            <div class="highlight">
+              <strong>Action Required:</strong> A customer has requested to reschedule their booking.
+            </div>
+            
+            <div class="booking-details">
+              <h3>Booking Details</h3>
+              <div class="detail-row">
+                <span class="detail-label">Booking Reference:</span>
+                <span class="detail-value">${booking.booking_reference}</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Customer:</span>
+                <span class="detail-value">${customerName}</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Email:</span>
+                <span class="detail-value">${customerEmail}</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Current Date:</span>
+                <span class="detail-value">${formatDate(booking.scheduled_date)} at ${formatTime(booking.scheduled_start_time)}</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Requested Date:</span>
+                <span class="detail-value">${formatDate(requestedDate)} at ${formatTime(requestedTime)}</span>
+              </div>
+              ${reason ? `
+              <div class="detail-row">
+                <span class="detail-label">Reason:</span>
+                <span class="detail-value">${reason}</span>
+              </div>
+              ` : ''}
+            </div>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <p><strong>Please log into the admin dashboard to respond to this request.</strong></p>
+            </div>
+            
+            <div class="footer">
+              <p>This is an automated notification from Love 4 Detailing</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `
+  }
+
+  private generateAdminRescheduleRequestText(
+    booking: any,
+    customerName: string,
+    customerEmail: string,
+    requestedDate: string,
+    requestedTime: string,
+    reason?: string
+  ): string {
+    return `
+RESCHEDULE REQUEST - ACTION REQUIRED
+
+A customer has requested to reschedule their booking.
+
+BOOKING DETAILS:
+Booking Reference: ${booking.booking_reference}
+Customer: ${customerName}
+Email: ${customerEmail}
+Current Date: ${booking.scheduled_date} at ${booking.scheduled_start_time}
+Requested Date: ${requestedDate} at ${requestedTime}
+${reason ? `Reason: ${reason}` : ''}
+
+Please log into the admin dashboard to respond to this request.
+
+---
+Love 4 Detailing - Admin Notifications
+    `
+  }
+
+  // Customer reschedule response templates
+  private generateRescheduleResponseHTML(
+    customerName: string,
+    booking: any,
+    rescheduleRequest: any,
+    action: string,
+    adminResponse?: string,
+    proposedDate?: string,
+    proposedTime?: string
+  ): string {
+    const formatDate = (dateStr: string) => {
+      return new Date(dateStr).toLocaleDateString('en-GB', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      })
+    }
+
+    const formatTime = (time: string) => {
+      const [hours, minutes] = time.split(':')
+      const hour = parseInt(hours || '0')
+      const ampm = hour >= 12 ? 'PM' : 'AM'
+      const displayHour = hour % 12 || 12
+      return `${displayHour}:${minutes || '00'} ${ampm}`
+    }
+
+    const statusColors = {
+      approve: '#10b981',
+      reject: '#dc2626',
+      propose: '#f59e0b'
+    }
+
+    const statusMessages = {
+      approve: 'Your reschedule request has been approved!',
+      reject: 'Your reschedule request has been declined',
+      propose: 'Alternative time proposed'
+    }
+
+    const color = statusColors[action as keyof typeof statusColors] || '#6b7280'
+    const message = statusMessages[action as keyof typeof statusMessages] || 'Request updated'
+
+    return `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <title>Reschedule Request Update</title>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: ${color}; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
+            .content { background: #f8fafc; padding: 30px; border-radius: 0 0 8px 8px; }
+            .booking-details { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid ${color}; }
+            .detail-row { display: flex; justify-content: space-between; margin: 10px 0; padding: 8px 0; border-bottom: 1px solid #e2e8f0; }
+            .detail-label { font-weight: bold; color: #64748b; }
+            .detail-value { color: #1e293b; }
+            .highlight { background: #f0f9ff; padding: 15px; border-radius: 6px; margin: 15px 0; border: 1px solid #bae6fd; }
+            .footer { text-align: center; margin-top: 30px; color: #64748b; font-size: 14px; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>${action === 'approve' ? '✅' : action === 'reject' ? '❌' : '💭'} ${message}</h1>
+            <p>Booking ${booking.booking_reference}</p>
+          </div>
+          
+          <div class="content">
+            <p>Dear ${customerName},</p>
+            
+            ${action === 'approve' ? `
+            <div class="highlight">
+              <strong>Great news!</strong> Your reschedule request has been approved. Your booking has been updated with the new date and time.
+            </div>
+            ` : action === 'reject' ? `
+            <div class="highlight">
+              <strong>We're sorry,</strong> but we cannot accommodate your reschedule request at this time.
+            </div>
+            ` : `
+            <div class="highlight">
+              <strong>Alternative Option:</strong> We've proposed a different time that works better for our schedule.
+            </div>
+            `}
+            
+            <div class="booking-details">
+              <h3>Booking Update</h3>
+              <div class="detail-row">
+                <span class="detail-label">Booking Reference:</span>
+                <span class="detail-value">${booking.booking_reference}</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Original Date:</span>
+                <span class="detail-value">${formatDate(rescheduleRequest.original_date)} at ${formatTime(rescheduleRequest.original_time)}</span>
+              </div>
+              ${action === 'approve' ? `
+              <div class="detail-row">
+                <span class="detail-label">New Date:</span>
+                <span class="detail-value"><strong>${formatDate(rescheduleRequest.requested_date)} at ${formatTime(rescheduleRequest.requested_time)}</strong></span>
+              </div>
+              ` : action === 'propose' && proposedDate && proposedTime ? `
+              <div class="detail-row">
+                <span class="detail-label">Proposed Date:</span>
+                <span class="detail-value"><strong>${formatDate(proposedDate)} at ${formatTime(proposedTime)}</strong></span>
+              </div>
+              ` : ''}
+            </div>
+            
+            ${adminResponse ? `
+            <div class="booking-details">
+              <h3>Message from Love 4 Detailing</h3>
+              <p>${adminResponse}</p>
+            </div>
+            ` : ''}
+            
+            ${action === 'propose' ? `
+            <p>If this alternative time works for you, please contact us to confirm. If not, feel free to request another time.</p>
+            ` : action === 'reject' ? `
+            <p>You can try requesting a different date/time or contact us directly to discuss other options.</p>
+            ` : ''}
+            
+            <p>If you have any questions, please don't hesitate to contact us.</p>
+            
+            <p>Best regards,<br>The Love 4 Detailing Team</p>
+            
+            <div class="footer">
+              <p>Love 4 Detailing - Professional Vehicle Detailing Services</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `
+  }
+
+  private generateRescheduleResponseText(
+    customerName: string,
+    booking: any,
+    rescheduleRequest: any,
+    action: string,
+    adminResponse?: string,
+    proposedDate?: string,
+    proposedTime?: string
+  ): string {
+    const statusMessages = {
+      approve: 'APPROVED - Your reschedule request has been approved!',
+      reject: 'DECLINED - Your reschedule request has been declined',
+      propose: 'ALTERNATIVE PROPOSED - Different time suggested'
+    }
+
+    const message = statusMessages[action as keyof typeof statusMessages] || 'REQUEST UPDATED'
+
+    return `
+${message}
+Booking ${booking.booking_reference}
+
+Dear ${customerName},
+
+${action === 'approve' ? 
+`Great news! Your reschedule request has been approved. Your booking has been updated with the new date and time.` : 
+action === 'reject' ? 
+`We're sorry, but we cannot accommodate your reschedule request at this time.` : 
+`We've proposed a different time that works better for our schedule.`}
+
+BOOKING UPDATE:
+Booking Reference: ${booking.booking_reference}
+Original Date: ${rescheduleRequest.original_date} at ${rescheduleRequest.original_time}
+${action === 'approve' ? `New Date: ${rescheduleRequest.requested_date} at ${rescheduleRequest.requested_time}` : ''}
+${action === 'propose' && proposedDate && proposedTime ? `Proposed Date: ${proposedDate} at ${proposedTime}` : ''}
+
+${adminResponse ? `MESSAGE FROM LOVE 4 DETAILING:\n${adminResponse}\n` : ''}
+
+${action === 'propose' ? 
+`If this alternative time works for you, please contact us to confirm. If not, feel free to request another time.` : 
+action === 'reject' ? 
+`You can try requesting a different date/time or contact us directly to discuss other options.` : ''}
+
+If you have any questions, please don't hesitate to contact us.
+
+Best regards,
+The Love 4 Detailing Team
+
+---
+Love 4 Detailing - Professional Vehicle Detailing Services
     `
   }
 }

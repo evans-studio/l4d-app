@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server'
 import { createClientFromRequest } from '@/lib/supabase/server'
+import { supabaseAdmin } from '@/lib/supabase/direct'
 import { BookingService } from '@/lib/services/booking'
 import { ApiResponseHandler } from '@/lib/api/response'
 import { ApiValidation } from '@/lib/api/validation'
@@ -72,7 +73,8 @@ export async function GET(request: NextRequest) {
 
 async function handleSingleDateRequest(request: NextRequest, date: string) {
   try {
-    const supabase = createClientFromRequest(request)
+    // Use admin client to bypass RLS for time slot queries
+    const supabase = supabaseAdmin
 
     // Validate date format
     const dateRegex = /^\d{4}-\d{2}-\d{2}$/

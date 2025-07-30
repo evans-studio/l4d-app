@@ -80,11 +80,16 @@ function AdminCustomersPage() {
       setIsLoading(true)
       console.log('Loading customer data...')
       
-      // Use the simplified API that just returns customer profiles
-      const customersResponse = await fetch('/api/admin/customers/simple')
+      // Load customers and stats in parallel
+      const [customersResponse, statsResponse] = await Promise.all([
+        fetch('/api/admin/customers/simple'),
+        fetch('/api/admin/customers/stats')
+      ])
       
       console.log('Customers response status:', customersResponse.status)
+      console.log('Stats response status:', statsResponse.status)
 
+      // Handle customers data
       if (customersResponse.ok) {
         const customersData = await customersResponse.json()
         console.log('Customers data:', customersData)
@@ -96,7 +101,22 @@ function AdminCustomersPage() {
           console.error('API returned success: false', customersData.error)
         }
       } else {
-        console.error('API request failed:', customersResponse.status)
+        console.error('Customers API request failed:', customersResponse.status)
+      }
+
+      // Handle stats data
+      if (statsResponse.ok) {
+        const statsData = await statsResponse.json()
+        console.log('Stats data:', statsData)
+        
+        if (statsData.success) {
+          setStats(statsData.data)
+          console.log('Set stats:', statsData.data)
+        } else {
+          console.error('Stats API returned success: false', statsData.error)
+        }
+      } else {
+        console.error('Stats API request failed:', statsResponse.status)
       }
     } catch (error) {
       console.error('Failed to load customer data:', error)

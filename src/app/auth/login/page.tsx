@@ -23,14 +23,18 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
 
-  // Handle success messages from URL params
+  // Handle success messages and errors from URL params
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search)
     const message = urlParams.get('message')
+    const error = urlParams.get('error')
+    
     if (message === 'password-updated') {
       setSuccessMessage('Password updated successfully! You can now sign in with your new password.')
     } else if (message === 'email-verified') {
       setSuccessMessage('Email verified successfully! You can now sign in to your account.')
+    } else if (error === 'db-config') {
+      setError('System configuration issue detected. Please try again in a moment.')
     }
   }, [])
 
