@@ -149,35 +149,53 @@ export function BulkAddModal({ weekStart, onClose, onSuccess }: BulkAddModalProp
       const startDate = weekStart.toISOString().split('T')[0]!
       const endDate = weekEnd.toISOString().split('T')[0]!
       
+      // Validate dates
+      if (!startDate || !endDate) {
+        setError('Invalid date range')
+        return
+      }
+      
       // Convert time slots to the expected format
       const timeSlotsFormatted = timeSlots.map(slot => ({
         start_time: slot.time,
         duration_minutes: slot.duration
       }))
 
+      const requestData = {
+        start_date: startDate,
+        end_date: endDate,
+        days_of_week: daysOfWeek,
+        time_slots: timeSlotsFormatted,
+        exclude_dates: []
+      }
+      
+      console.log('Sending bulk request:', requestData)
+      
       // Send bulk create request using existing API format
       const response = await fetch('/api/admin/time-slots/bulk', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          start_date: startDate,
-          end_date: endDate,
-          days_of_week: daysOfWeek,
-          time_slots: timeSlotsFormatted,
-          exclude_dates: []
-        })
+        body: JSON.stringify(requestData)
       })
+      
+      console.log('Response status:', response.status)
+      console.log('Response ok:', response.ok)
 
       const data = await response.json()
 
       if (data.success) {
         onSuccess()
       } else {
+        console.error('Bulk creation failed:', data)
         setError(data.error?.message || 'Failed to create time slots')
       }
     } catch (error) {
       console.error('Error creating time slots:', error)
-      setError('Failed to create time slots. Please try again.')
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        setError('Network error. Please check your connection and try again.')
+      } else {
+        setError('Failed to create time slots. Please try again.')
+      }
     } finally {
       setIsLoading(false)
     }

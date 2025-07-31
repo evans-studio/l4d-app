@@ -54,6 +54,10 @@ export async function POST(request: NextRequest) {
       validatedData.days_of_week,
       validatedData.exclude_dates || []
     )
+    
+    if (dates.length === 0) {
+      return ApiResponseHandler.error('No valid dates found for the given criteria')
+    }
 
     // Create all time slots - duration stored in notes since schema doesn't have duration_minutes column
     const slotsToCreate = []
@@ -68,7 +72,7 @@ export async function POST(request: NextRequest) {
         })
       }
     }
-
+    
     // Batch create slots
     const result = await bookingService.createTimeSlotsBulk(slotsToCreate)
     
