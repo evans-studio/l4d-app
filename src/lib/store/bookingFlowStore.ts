@@ -563,17 +563,24 @@ export const useBookingFlowStore = create<BookingFlowStore>()(
         setLoading(true)
         
         try {
+          console.log(`BookingFlowStore: Loading slots for date ${date}`)
+          
           // Use the time-slots availability API
           const response = await apiCall<TimeSlotRow[]>(`/api/time-slots/availability?date=${date}`)
+          
+          console.log('BookingFlowStore: Availability API response:', response)
           
           if (response.success && response.data) {
             // Filter slots that are available
             const availableSlots = response.data.filter(slot => slot.is_available)
+            console.log(`BookingFlowStore: Found ${availableSlots.length} available slots out of ${response.data.length} total slots`)
             set({ availableSlots })
           } else {
+            console.error('BookingFlowStore: API error:', response.error)
             setError(response.error?.message || 'Failed to load available slots')
           }
         } catch (error) {
+          console.error('BookingFlowStore: Exception loading slots:', error)
           setError('Failed to load available slots')
         } finally {
           setLoading(false)

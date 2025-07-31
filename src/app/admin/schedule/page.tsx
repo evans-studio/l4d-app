@@ -59,13 +59,37 @@ function ScheduleCalendarContent() {
   const loadTimeSlots = async () => {
     try {
       setIsLoading(true)
-      const response = await fetch('/api/admin/time-slots')
+      
+      // Add date range to ensure we get recent slots
+      const today = new Date()
+      const pastDate = new Date(today)
+      pastDate.setDate(today.getDate() - 30) // 30 days ago
+      
+      const futureDate = new Date(today)
+      futureDate.setDate(today.getDate() + 60) // 60 days ahead
+      
+      const startDate = pastDate.toISOString().split('T')[0]
+      const endDate = futureDate.toISOString().split('T')[0]
+      
+      const url = `/api/admin/time-slots?start=${startDate}&end=${endDate}`
+      console.log('Fetching time slots from:', url)
+      
+      const response = await fetch(url)
       
       if (response.ok) {
         const data = await response.json()
+        console.log('Time slots API response:', data)
         if (data.success) {
+          console.log('Number of time slots loaded:', data.data?.length || 0)
+          if (data.data?.length > 0) {
+            console.log('Sample slot data:', data.data[0])
+          }
           setTimeSlots(data.data || [])
+        } else {
+          console.error('API returned error:', data.error)
         }
+      } else {
+        console.error('HTTP error:', response.status, response.statusText)
       }
     } catch (error) {
       console.error('Error loading time slots:', error)

@@ -93,6 +93,11 @@ export async function GET(request: NextRequest) {
       const bookingServices = booking?.booking_services || []
       const services = Array.isArray(bookingServices) ? bookingServices.map(bs => bs?.service).filter(Boolean) : []
       
+      // Debug log for first few slots
+      if (timeSlots.indexOf(slot) < 3) {
+        console.log(`Admin API: Slot ${slot.id} - Date: ${slot.slot_date}, Time: ${slot.start_time}, Available: ${slot.is_available}`)
+      }
+      
       return {
         id: slot.id,
         slot_date: slot.slot_date,
@@ -122,6 +127,8 @@ export async function GET(request: NextRequest) {
         } : null
       }
     }) || []
+
+    console.log(`Admin API: Returning ${transformedSlots.length} time slots for date range ${start || 'no-start'} to ${end || 'no-end'}`)
 
     return ApiResponseHandler.success(transformedSlots)
 

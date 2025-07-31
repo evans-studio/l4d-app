@@ -116,17 +116,34 @@ async function handleSingleDateRequest(request: NextRequest, date: string) {
       return ApiResponseHandler.serverError('Failed to fetch availability')
     }
 
-    // Transform data for frontend consumption
-    const transformedSlots = timeSlots?.map(slot => ({
-      id: slot.id,
-      date: slot.slot_date,
-      start_time: slot.start_time,
-      is_available: slot.is_available,
-      last_updated: slot.created_at,
-      notes: slot.notes,
-      booking_reference: slot.bookings?.[0]?.booking_reference || null,
-      booking_status: slot.bookings?.[0]?.status || null
-    })) || []
+    console.log(`Customer API: Fetching slots for date ${date}`)
+    console.log(`Customer API: Found ${timeSlots?.length || 0} raw time slots from database`)
+    
+    // Transform data to match admin API format for consistency
+    const transformedSlots = timeSlots?.map(slot => {
+      const booking = slot.bookings?.[0]
+      
+      // Debug log for first few slots
+      if (timeSlots.indexOf(slot) < 3) {
+        console.log(`Customer API: Slot ${slot.id} - Date: ${slot.slot_date}, Time: ${slot.start_time}, Available: ${slot.is_available}`)
+      }
+      
+      return {
+        id: slot.id,
+        slot_date: slot.slot_date, // Keep consistent with admin API
+        start_time: slot.start_time,
+        is_available: slot.is_available,
+        notes: slot.notes,
+        created_at: slot.created_at, // Keep consistent with admin API
+        booking: booking ? {
+          id: booking.id,
+          booking_reference: booking.booking_reference,
+          status: booking.status
+        } : null
+      }
+    }) || []
+
+    console.log(`Customer API: Returning ${transformedSlots.length} transformed time slots for ${date}`)
 
     return ApiResponseHandler.success(transformedSlots, `Found ${transformedSlots.length} time slots for ${date}`)
 

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Button } from '@/components/ui/primitives/Button'
 import { DayCard } from './DayCard'
 import { AddSlotModal } from './AddSlotModal'
@@ -61,6 +61,12 @@ interface ScheduleSwiperProps {
 }
 
 export function ScheduleSwiper({ timeSlots, onSlotsChange, isLoading }: ScheduleSwiperProps) {
+  // Debug: Log all unique dates in time slots
+  React.useEffect(() => {
+    const uniqueDates = [...new Set(timeSlots.map(slot => slot.slot_date))].sort()
+    console.log('ScheduleSwiper: All unique dates in time slots:', uniqueDates)
+    console.log('ScheduleSwiper: Sample slots:', timeSlots.slice(0, 3))
+  }, [timeSlots])
   const [currentWeekStart, setCurrentWeekStart] = useState<Date>(() => {
     const today = new Date()
     const dayOfWeek = today.getDay()
@@ -84,6 +90,9 @@ export function ScheduleSwiper({ timeSlots, onSlotsChange, isLoading }: Schedule
   const generateWeekDays = (): DaySchedule[] => {
     const days: DaySchedule[] = []
     
+    console.log('ScheduleSwiper: Generating week days from:', currentWeekStart)
+    console.log('ScheduleSwiper: Total time slots available:', timeSlots.length)
+    
     for (let i = 0; i < 7; i++) {
       const date = new Date(currentWeekStart)
       date.setDate(currentWeekStart.getDate() + i)
@@ -91,6 +100,8 @@ export function ScheduleSwiper({ timeSlots, onSlotsChange, isLoading }: Schedule
       
       // Get slots for this date
       const daySlots = timeSlots.filter(slot => slot.slot_date === dateStr)
+      
+      console.log(`ScheduleSwiper: Date ${dateStr} has ${daySlots.length} slots`)
       
       // Calculate stats based on booking status
       const availableSlots = daySlots.filter(slot => 
