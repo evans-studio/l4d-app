@@ -217,3 +217,79 @@ export async function POST(request: NextRequest) {
     return ApiResponseHandler.serverError('Internal server error')
   }
 }
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const supabase = createClientFromRequest(request)
+    
+    // Get the authenticated user using secure method
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    
+    if (userError || !user) {
+      return ApiResponseHandler.unauthorized('Authentication required')
+    }
+
+    // Get the user profile
+    const { data: profile, error: profileError } = await supabase
+      .from('user_profiles')
+      .select('*')
+      .eq('id', user.id)
+      .single()
+
+    if (profileError || !profile) {
+      return ApiResponseHandler.unauthorized('User profile not found')
+    }
+
+    // Check admin permissions
+    if (profile.role !== 'admin' && profile.role !== 'super_admin') {
+      return ApiResponseHandler.forbidden('Admin access required')
+    }
+
+    const { searchParams } = new URL(request.url)
+    const action = searchParams.get('action')
+
+    if (action === 'clear-unbooked') {
+      console.log('Admin API DELETE: Clearing all unbooked time slots')
+      
+      // First, get all time slot IDs that have bookings
+      const { data: bookedSlots, error: bookedError } = await supabaseAdmin
+        .from('bookings')
+        .select('time_slot_id')
+        .not('time_slot_id', 'is', null)
+
+      if (bookedError) {
+        console.error('Database error fetching booked slots:', bookedError)
+        return ApiResponseHandler.serverError('Failed to identify booked time slots')
+      }
+
+      const bookedSlotIds = bookedSlots?.map(b => b.time_slot_id).filter(Boolean) || []
+      console.log(`Admin API DELETE: Found ${bookedSlotIds.length} booked time slots to preserve`)
+
+      // Delete all time slots that are not in the booked list
+      const { data: deletedSlots, error } = await supabaseAdmin
+        .from('time_slots')
+        .delete()
+        .not('id', 'in', bookedSlotIds.length > 0 ? bookedSlotIds : ['']) // Handle empty array case
+        .select()
+
+      if (error) {
+        console.error('Database error:', error)
+        return ApiResponseHandler.serverError('Failed to delete unbooked time slots')
+      }
+
+      console.log(`Admin API DELETE: Removed ${deletedSlots?.length || 0} unbooked time slots`)
+
+      return ApiResponseHandler.success({
+        deleted_count: deletedSlots?.length || 0,
+        preserved_booked_slots: bookedSlotIds.length,
+        message: `Successfully removed ${deletedSlots?.length || 0} unbooked time slots (preserved ${bookedSlotIds.length} booked slots)`
+      })
+    }
+
+    return ApiResponseHandler.badRequest('Invalid action. Use ?action=clear-unbooked')
+
+  } catch (error) {
+    console.error('API error:', error)
+    return ApiResponseHandler.serverError('Internal server error')
+  }
+}
