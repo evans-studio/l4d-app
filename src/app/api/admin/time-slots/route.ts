@@ -39,6 +39,8 @@ export async function GET(request: NextRequest) {
     const start = searchParams.get('start')
     const end = searchParams.get('end')
 
+    console.log(`Admin API: Fetching time slots with date range: start=${start}, end=${end}`)
+    
     let query = supabaseAdmin
       .from('time_slots')
       .select(`
@@ -51,25 +53,9 @@ export async function GET(request: NextRequest) {
         bookings!time_slot_id (
           id,
           booking_reference,
-          customer_id,
           status,
-          scheduled_date,
-          scheduled_start_time,
-          scheduled_end_time,
           total_price,
-          special_instructions,
-          user_profiles!customer_id (
-            first_name,
-            last_name,
-            email,
-            phone
-          ),
-          booking_services (
-            service:services (
-              name,
-              short_description
-            )
-          )
+          special_instructions
         )
       `)
       .order('slot_date', { ascending: true })
@@ -86,16 +72,15 @@ export async function GET(request: NextRequest) {
       return ApiResponseHandler.serverError('Failed to fetch time slots')
     }
 
-    // Transform data to include enhanced booking information
+    console.log(`Admin API: Database returned ${timeSlots?.length || 0} time slots`)
+    
+    // Simplified transformation to avoid complex nested object issues
     const transformedSlots = timeSlots?.map(slot => {
       const booking = slot.bookings?.[0]
-      const userProfile = Array.isArray(booking?.user_profiles) ? booking.user_profiles[0] : booking?.user_profiles
-      const bookingServices = booking?.booking_services || []
-      const services = Array.isArray(bookingServices) ? bookingServices.map(bs => bs?.service).filter(Boolean) : []
       
       // Debug log for first few slots
       if (timeSlots.indexOf(slot) < 3) {
-        console.log(`Admin API: Slot ${slot.id} - Date: ${slot.slot_date}, Time: ${slot.start_time}, Available: ${slot.is_available}`)
+        console.log(`Admin API: Slot ${slot.id} - Date: ${slot.slot_date}, Time: ${slot.start_time}, Available: ${slot.is_available}, Booking: ${booking ? 'Yes' : 'No'}`)
       }
       
       return {
@@ -108,22 +93,9 @@ export async function GET(request: NextRequest) {
         booking: booking ? {
           id: booking.id,
           booking_reference: booking.booking_reference,
-          customer_id: booking.customer_id,
           status: booking.status,
-          scheduled_date: booking.scheduled_date,
-          scheduled_start_time: booking.scheduled_start_time,
-          scheduled_end_time: booking.scheduled_end_time,
           total_price: booking.total_price,
-          special_instructions: booking.special_instructions,
-          customer_name: userProfile 
-            ? `${userProfile.first_name} ${userProfile.last_name}`.trim()
-            : null,
-          customer_email: userProfile?.email || null,
-          customer_phone: userProfile?.phone || null,
-          services: services.map((service: any) => ({
-            name: service?.name || 'Unknown Service',
-            description: service?.short_description || null
-          }))
+          special_instructions: booking.special_instructions
         } : null
       }
     }) || []
@@ -193,14 +165,23 @@ export async function POST(request: NextRequest) {
     }]
 
     // Check for existing slots to avoid duplicates
-    const { data: existingSlots } = await supabaseAdmin
+    console.log(`Admin API POST: Checking for existing slots on ${slot_date} at time ${start_time}`)
+    
+    const { data: existingSlots, error: checkError } = await supabaseAdmin
       .from('time_slots')
       .select('slot_date, start_time')
       .eq('slot_date', slot_date)
       .in('start_time', slotsToCreate.map(s => s.start_time))
 
+    if (checkError) {
+      console.error('Error checking existing slots:', checkError)
+    } else {
+      console.log(`Admin API POST: Found ${existingSlots?.length || 0} existing slots`)
+    }
+
     if (existingSlots && existingSlots.length > 0) {
       const duplicates = existingSlots.map(s => s.start_time).join(', ')
+      console.log(`Admin API POST: Duplicate slots found for times: ${duplicates}`)
       return ApiResponseHandler.conflict(`Time slots already exist for: ${duplicates}`)
     }
 
