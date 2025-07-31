@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { cookies } from 'next/headers'
+import { createClientFromRequest } from '@/lib/supabase/server'
+import { ApiResponseHandler } from '@/lib/api/response'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -9,39 +10,29 @@ const supabaseAdmin = createClient(
 
 export async function GET(request: NextRequest) {
   try {
-    const cookieStore = await cookies()
-    const allCookies = cookieStore.getAll()
+    const supabase = createClientFromRequest(request)
     
-    // Check for authentication
-    const accessToken = allCookies.find(c => c.name.includes('access_token'))?.value
-    if (!accessToken) {
-      return NextResponse.json(
-        { success: false, error: { message: 'Authentication required' } },
-        { status: 401 }
-      )
-    }
-
-    // Get user from token
-    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(accessToken)
+    // Get the authenticated user using secure method
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    
     if (userError || !user) {
-      return NextResponse.json(
-        { success: false, error: { message: 'Invalid authentication' } },
-        { status: 401 }
-      )
+      return ApiResponseHandler.unauthorized('Authentication required')
     }
 
-    // Check if user is admin
-    const { data: profile } = await supabaseAdmin
+    // Get the user profile
+    const { data: profile, error: profileError } = await supabase
       .from('user_profiles')
-      .select('role')
+      .select('*')
       .eq('id', user.id)
       .single()
 
-    if (!profile || !['admin', 'super_admin'].includes(profile.role)) {
-      return NextResponse.json(
-        { success: false, error: { message: 'Admin access required' } },
-        { status: 403 }
-      )
+    if (profileError || !profile) {
+      return ApiResponseHandler.unauthorized('User profile not found')
+    }
+
+    // Check admin permissions
+    if (profile.role !== 'admin' && profile.role !== 'super_admin') {
+      return ApiResponseHandler.forbidden('Admin access required')
     }
 
     const { searchParams } = new URL(request.url)
@@ -92,10 +83,7 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       console.error('Database error:', error)
-      return NextResponse.json(
-        { success: false, error: { message: 'Failed to fetch time slots' } },
-        { status: 500 }
-      )
+      return ApiResponseHandler.serverError('Failed to fetch time slots')
     }
 
     // Transform data to include enhanced booking information
@@ -135,55 +123,39 @@ export async function GET(request: NextRequest) {
       }
     }) || []
 
-    return NextResponse.json({
-      success: true,
-      data: transformedSlots
-    })
+    return ApiResponseHandler.success(transformedSlots)
 
   } catch (error) {
     console.error('API error:', error)
-    return NextResponse.json(
-      { success: false, error: { message: 'Internal server error' } },
-      { status: 500 }
-    )
+    return ApiResponseHandler.serverError('Internal server error')
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const cookieStore = await cookies()
-    const allCookies = cookieStore.getAll()
+    const supabase = createClientFromRequest(request)
     
-    // Check for authentication
-    const accessToken = allCookies.find(c => c.name.includes('access_token'))?.value
-    if (!accessToken) {
-      return NextResponse.json(
-        { success: false, error: { message: 'Authentication required' } },
-        { status: 401 }
-      )
-    }
-
-    // Get user from token
-    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(accessToken)
+    // Get the authenticated user using secure method
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    
     if (userError || !user) {
-      return NextResponse.json(
-        { success: false, error: { message: 'Invalid authentication' } },
-        { status: 401 }
-      )
+      return ApiResponseHandler.unauthorized('Authentication required')
     }
 
-    // Check if user is admin
-    const { data: profile } = await supabaseAdmin
+    // Get the user profile
+    const { data: profile, error: profileError } = await supabase
       .from('user_profiles')
-      .select('role')
+      .select('*')
       .eq('id', user.id)
       .single()
 
-    if (!profile || !['admin', 'super_admin'].includes(profile.role)) {
-      return NextResponse.json(
-        { success: false, error: { message: 'Admin access required' } },
-        { status: 403 }
-      )
+    if (profileError || !profile) {
+      return ApiResponseHandler.unauthorized('User profile not found')
+    }
+
+    // Check admin permissions
+    if (profile.role !== 'admin' && profile.role !== 'super_admin') {
+      return ApiResponseHandler.forbidden('Admin access required')
     }
 
     const body = await request.json()
@@ -191,26 +163,17 @@ export async function POST(request: NextRequest) {
 
     // Validate required fields
     if (!slot_date || !start_time) {
-      return NextResponse.json(
-        { success: false, error: { message: 'Date and start time are required' } },
-        { status: 400 }
-      )
+      return ApiResponseHandler.badRequest('Date and start time are required')
     }
 
     // Validate date format (YYYY-MM-DD)
     if (!/^\d{4}-\d{2}-\d{2}$/.test(slot_date)) {
-      return NextResponse.json(
-        { success: false, error: { message: 'Invalid date format. Use YYYY-MM-DD' } },
-        { status: 400 }
-      )
+      return ApiResponseHandler.badRequest('Invalid date format. Use YYYY-MM-DD')
     }
 
     // Validate time format (HH:MM)
     if (!/^\d{2}:\d{2}$/.test(start_time)) {
-      return NextResponse.json(
-        { success: false, error: { message: 'Invalid time format. Use HH:MM' } },
-        { status: 400 }
-      )
+      return ApiResponseHandler.badRequest('Invalid time format. Use HH:MM')
     }
 
     // Create single slot
@@ -231,10 +194,7 @@ export async function POST(request: NextRequest) {
 
     if (existingSlots && existingSlots.length > 0) {
       const duplicates = existingSlots.map(s => s.start_time).join(', ')
-      return NextResponse.json(
-        { success: false, error: { message: `Time slots already exist for: ${duplicates}` } },
-        { status: 409 }
-      )
+      return ApiResponseHandler.conflict(`Time slots already exist for: ${duplicates}`)
     }
 
     // Insert the time slots
@@ -245,14 +205,10 @@ export async function POST(request: NextRequest) {
 
     if (error) {
       console.error('Database error:', error)
-      return NextResponse.json(
-        { success: false, error: { message: 'Failed to create time slots' } },
-        { status: 500 }
-      )
+      return ApiResponseHandler.serverError('Failed to create time slots')
     }
 
-    return NextResponse.json({
-      success: true,
+    return ApiResponseHandler.success({
       data: createdSlots,
       metadata: {
         created_count: createdSlots?.length || 0
@@ -261,9 +217,6 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('API error:', error)
-    return NextResponse.json(
-      { success: false, error: { message: 'Internal server error' } },
-      { status: 500 }
-    )
+    return ApiResponseHandler.serverError('Internal server error')
   }
 }
