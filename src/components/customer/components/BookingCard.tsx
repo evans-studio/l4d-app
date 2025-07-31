@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { useBookingFlowStore } from '@/lib/store/bookingFlowStore'
+import { useOverlay } from '@/lib/overlay/context'
 import { Button } from '@/components/ui/primitives/Button'
 import { Badge } from '@/components/ui/primitives/Badge'
 import { Card, CardContent } from '@/components/ui/composites/Card'
@@ -92,6 +93,7 @@ export function BookingCard({
 }: BookingCardProps) {
   const router = useRouter()
   const { initializeRebooking } = useBookingFlowStore()
+  const { openOverlay } = useOverlay()
   const config = statusConfig[booking.status]
   const StatusIcon = config.icon
 
@@ -141,13 +143,44 @@ export function BookingCard({
     }
   }
 
+  const handleViewDetails = () => {
+    openOverlay({
+      type: 'booking-view',
+      data: { bookingId: booking.id, booking }
+    })
+  }
+
+  const handleReschedule = () => {
+    openOverlay({
+      type: 'booking-reschedule',
+      data: { bookingId: booking.id, booking },
+      onConfirm: async (result) => {
+        // Refresh booking data or show success message
+        console.log('Reschedule confirmed:', result)
+        // You could trigger a refresh here
+      }
+    })
+  }
+
+  const handleCancel = () => {
+    openOverlay({
+      type: 'booking-cancel',
+      data: { bookingId: booking.id, booking },
+      onConfirm: async (result) => {
+        // Refresh booking data or show success message
+        console.log('Booking cancelled:', result)
+        // You could trigger a refresh here
+      }
+    })
+  }
+
   const dateInfo = formatDate(booking.scheduled_date)
 
   if (variant === 'compact') {
     return (
       <Card 
         className="cursor-pointer hover:shadow-md transition-shadow"
-        onClick={() => router.push(`/dashboard/bookings/${booking.id}`)}
+        onClick={handleViewDetails}
       >
         <CardContent className="p-4">
           <div className="flex items-center gap-3">
@@ -268,7 +301,7 @@ export function BookingCard({
           {showActions && (
             <div className="flex flex-row lg:flex-col gap-2 lg:min-w-[140px]">
               <Button
-                onClick={() => router.push(`/dashboard/bookings/${booking.id}`)}
+                onClick={handleViewDetails}
                 variant="outline"
                 size="sm"
                 leftIcon={<Eye className="w-4 h-4" />}
@@ -280,23 +313,23 @@ export function BookingCard({
               
               {booking.status === 'pending' && (
                 <Button
-                  onClick={() => router.push(`/dashboard/bookings/${booking.id}`)}
+                  onClick={handleCancel}
                   variant="outline"
                   size="sm"
-                  leftIcon={<Edit className="w-4 h-4" />}
+                  leftIcon={<X className="w-4 h-4" />}
                   className="flex-1 lg:w-full"
                 >
-                  <span className="lg:hidden">Edit</span>
-                  <span className="hidden lg:inline">Manage</span>
+                  <span className="lg:hidden">Cancel</span>
+                  <span className="hidden lg:inline">Cancel</span>
                 </Button>
               )}
               
               {['pending', 'confirmed'].includes(booking.status) && (
                 <Button
-                  onClick={() => router.push(`/dashboard/bookings/${booking.id}/reschedule`)}
+                  onClick={handleReschedule}
                   variant="outline"
                   size="sm"
-                  leftIcon={<Edit className="w-4 h-4" />}
+                  leftIcon={<RefreshCw className="w-4 h-4" />}
                   className="flex-1 lg:w-full"
                 >
                   <span className="lg:hidden">Reschedule</span>

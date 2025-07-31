@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useBookingFlowStore } from '@/lib/store/bookingFlowStore'
+import { useOverlay } from '@/lib/overlay/context'
 import { Button } from '@/components/ui/primitives/Button'
 import { CustomerLayout } from '@/components/layout/templates/CustomerLayout'
 import { Container } from '@/components/layout/templates/PageLayout'
@@ -89,6 +90,7 @@ const statusConfig = {
 
 export default function MyBookingsPage() {
   const router = useRouter()
+  const { openOverlay } = useOverlay()
   const { initializeRebooking } = useBookingFlowStore()
   const [bookings, setBookings] = useState<DashboardBooking[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -373,7 +375,10 @@ export default function MyBookingsPage() {
                       {/* Actions */}
                       <div className="flex flex-row lg:flex-col gap-2">
                         <Button
-                          onClick={() => router.push(`/booking/${booking.id}`)}
+                          onClick={() => openOverlay({
+                            type: 'booking-view',
+                            data: { bookingId: booking.id, booking }
+                          })}
                           variant="outline"
                           size="sm"
                           leftIcon={<Eye className="w-4 h-4" />}
@@ -383,7 +388,10 @@ export default function MyBookingsPage() {
                         
                         {['pending', 'confirmed'].includes(booking.status) && (
                           <Button
-                            onClick={() => router.push(`/dashboard/bookings/${booking.id}/reschedule`)}
+                            onClick={() => openOverlay({
+                              type: 'booking-reschedule',
+                              data: { bookingId: booking.id, booking }
+                            })}
                             variant="outline"
                             size="sm"
                             leftIcon={<Edit className="w-4 h-4" />}

@@ -1,6 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
+import { useOverlay } from '@/lib/overlay/context'
 import { Button } from '@/components/ui/primitives/Button'
 import { 
   CheckCircleIcon,
@@ -98,6 +99,7 @@ export function BookingCard({
   variant = 'full'
 }: BookingCardProps) {
   const router = useRouter()
+  const { openOverlay } = useOverlay()
   const statusInfo = statusConfig[booking.status]
   const StatusIcon = statusInfo.icon
 
@@ -176,7 +178,10 @@ export function BookingCard({
         {showActions && (
           <div className="mt-3 pt-3 border-t border-border-secondary">
             <Button
-              onClick={() => router.push(`/admin/bookings/${booking.id}`)}
+              onClick={() => openOverlay({
+              type: 'booking-view',
+              data: { bookingId: booking.id, booking }
+            })}
               variant="outline"
               size="sm"
               className="w-full text-xs"
@@ -302,7 +307,10 @@ export function BookingCard({
       {showActions && (
         <div className="p-4 border-t border-border-secondary space-y-2">
           <Button
-            onClick={() => router.push(`/admin/bookings/${booking.id}`)}
+            onClick={() => openOverlay({
+              type: 'booking-view',
+              data: { bookingId: booking.id, booking }
+            })}
             variant="outline"
             size="sm"
             className="w-full flex items-center justify-center gap-2"

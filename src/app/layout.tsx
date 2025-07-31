@@ -4,6 +4,8 @@ import './globals.css'
 import { env } from '@/lib/config/environment'
 import { AuthProvider } from '@/lib/auth-compat'
 import { ZustandAuthInitializer } from '@/providers/AuthProvider'
+import { OverlayProvider } from '@/lib/overlay/context'
+import { OverlayManager } from '@/components/ui/overlays/OverlayManager'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -49,7 +51,10 @@ export default function RootLayout({
       <body className={inter.className}>
         <ZustandAuthInitializer>
           <AuthProvider>
-            {children}
+            <OverlayProvider>
+              {children}
+              <OverlayManager />
+            </OverlayProvider>
           </AuthProvider>
         </ZustandAuthInitializer>
       </body>

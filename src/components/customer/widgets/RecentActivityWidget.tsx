@@ -1,6 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
+import { useOverlay } from '@/lib/overlay/context'
 import { Button } from '@/components/ui/primitives/Button'
 import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/composites/Card'
 import { Badge } from '@/components/ui/primitives/Badge'
@@ -66,6 +67,7 @@ const statusConfig = {
 
 export function RecentActivityWidget({ recentBookings }: RecentActivityWidgetProps) {
   const router = useRouter()
+  const { openOverlay } = useOverlay()
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
@@ -142,7 +144,10 @@ export function RecentActivityWidget({ recentBookings }: RecentActivityWidgetPro
             <div
               key={booking.id}
               className="flex items-center gap-3 p-3 rounded-lg bg-surface-tertiary hover:bg-surface-secondary transition-colors cursor-pointer"
-              onClick={() => router.push(`/dashboard/bookings/${booking.id}`)}
+              onClick={() => openOverlay({
+                type: 'booking-view',
+                data: { bookingId: booking.id, booking }
+              })}
             >
               {/* Status Icon */}
               <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${

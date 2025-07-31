@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useOverlay } from '@/lib/overlay/context'
 import { Button } from '@/components/ui/primitives/Button'
 import { Card, CardHeader, CardContent } from '@/components/ui/composites/Card'
 import { 
@@ -44,6 +45,7 @@ interface NextBookingWidgetProps {
 
 export function NextBookingWidget({ booking }: NextBookingWidgetProps) {
   const router = useRouter()
+  const { openOverlay } = useOverlay()
   const [timeUntil, setTimeUntil] = useState<string>('')
 
   useEffect(() => {
@@ -128,7 +130,10 @@ export function NextBookingWidget({ booking }: NextBookingWidgetProps) {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => router.push(`/dashboard/bookings/${booking.id}`)}
+            onClick={() => openOverlay({
+              type: 'booking-view',
+              data: { bookingId: booking.id, booking }
+            })}
           >
             <ChevronRight className="w-4 h-4" />
           </Button>
@@ -193,7 +198,10 @@ export function NextBookingWidget({ booking }: NextBookingWidgetProps) {
               variant="outline"
               size="sm"
               className="flex-1"
-              onClick={() => router.push(`/dashboard/bookings/${booking.id}/reschedule`)}
+              onClick={() => openOverlay({
+                type: 'booking-reschedule',
+                data: { bookingId: booking.id, booking }
+              })}
               leftIcon={<Edit className="w-4 h-4" />}
             >
               Reschedule
@@ -203,7 +211,10 @@ export function NextBookingWidget({ booking }: NextBookingWidgetProps) {
             variant="outline"
             size="sm"
             className="flex-1"
-            onClick={() => router.push(`/dashboard/bookings/${booking.id}/cancel`)}
+            onClick={() => openOverlay({
+              type: 'booking-cancel',
+              data: { bookingId: booking.id, booking }
+            })}
             leftIcon={<X className="w-4 h-4" />}
           >
             Cancel
