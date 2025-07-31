@@ -109,9 +109,9 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
     <>
       {/* Desktop Sidebar */}
       <div className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0">
-        <div className="flex flex-col flex-grow bg-[var(--bg-secondary)] border-r border-[var(--border-primary)] overflow-y-auto">
+        <div className="flex flex-col flex-grow bg-surface-secondary border-r border-border-secondary overflow-y-auto">
           {/* Logo */}
-          <div className="flex items-center gap-3 px-6 py-6 border-b border-[var(--border-secondary)]">
+          <div className="flex items-center gap-3 px-6 py-6 border-b border-border-secondary">
             <Image
               src="/logo.png"
               alt="Love 4 Detailing"
@@ -120,18 +120,18 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
               className="rounded-lg"
             />
             <div>
-              <h2 className="text-lg font-bold text-[var(--text-primary)]">
+              <h2 className="text-lg font-bold text-text-primary">
                 Love 4 Detailing
               </h2>
-              <p className="text-xs text-[var(--text-secondary)]">
+              <p className="text-xs text-text-secondary">
                 Admin Portal
               </p>
             </div>
           </div>
 
           {/* Quick Actions */}
-          <div className="px-4 py-4 border-b border-[var(--border-secondary)]">
-            <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-3">
+          <div className="px-4 py-4 border-b border-border-secondary">
+            <p className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-3">
               Quick Actions
             </p>
             <div className="space-y-2">
@@ -142,7 +142,7 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
                   <Link
                     key={action.name}
                     href={action.href}
-                    className="flex items-center gap-3 px-3 py-2 text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] rounded-lg transition-colors"
+                    className="flex items-center gap-3 px-3 py-2 text-text-secondary hover:bg-surface-hover hover:text-text-primary rounded-lg transition-colors"
                   >
                     <Icon className={`w-4 h-4 ${action.color}`} />
                     <span className="text-sm">{action.name}</span>
@@ -154,7 +154,7 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
 
           {/* Main Navigation */}
           <nav className="flex-1 px-4 py-6 space-y-2">
-            <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-3">
+            <p className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-3">
               Management
             </p>
             
@@ -169,8 +169,8 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
                   className={`
                     group flex items-center justify-between px-3 py-3 rounded-lg transition-all duration-200
                     ${isActive 
-                      ? 'bg-[var(--primary)] text-white shadow-lg' 
-                      : 'text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]'
+                      ? 'bg-brand-600 text-white' 
+                      : 'text-text-secondary hover:bg-surface-hover hover:text-text-primary'
                     }
                   `}
                 >
@@ -182,7 +182,7 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
                       </p>
                       <p className={`
                         text-xs mt-0.5
-                        ${isActive ? 'text-white text-opacity-80' : 'text-[var(--text-muted)]'}
+                        ${isActive ? 'text-white text-opacity-80' : 'text-text-muted'}
                       `}>
                         {item.description}
                       </p>
@@ -193,8 +193,8 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
                     <div className={`
                       px-2 py-1 text-xs font-medium rounded-full
                       ${item.badge.type === 'pending' 
-                        ? 'bg-[var(--warning-bg)] text-[var(--warning)]' 
-                        : 'bg-[var(--info-bg)] text-[var(--info)]'
+                        ? 'bg-yellow-100 text-yellow-800' 
+                        : 'bg-blue-100 text-blue-800'
                       }
                       ${isActive ? 'bg-white bg-opacity-20 text-white' : ''}
                     `}>
@@ -207,21 +207,21 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
           </nav>
 
           {/* Help & Logout */}
-          <div className="px-4 py-6 border-t border-[var(--border-secondary)] space-y-2">
+          <div className="px-4 py-6 border-t border-border-secondary space-y-2">
             <Link
               href="/admin/help"
-              className="flex items-center gap-3 px-3 py-3 text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] rounded-lg transition-colors"
+              className="flex items-center gap-3 px-3 py-3 text-text-secondary hover:bg-surface-hover hover:text-text-primary rounded-lg transition-colors"
             >
               <HelpCircleIcon className="w-5 h-5" />
               <div>
                 <p className="text-sm font-medium">Help & Support</p>
-                <p className="text-xs text-[var(--text-muted)]">Get assistance</p>
+                <p className="text-xs text-text-muted">Get assistance</p>
               </div>
             </Link>
             
             <button
               onClick={handleLogout}
-              className="w-full flex items-center gap-3 px-3 py-3 text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] rounded-lg transition-colors"
+              className="w-full flex items-center gap-3 px-3 py-3 text-text-secondary hover:bg-surface-hover hover:text-text-primary rounded-lg transition-colors"
             >
               <LogOutIcon className="w-5 h-5" />
               <span className="text-sm font-medium">Sign Out</span>
@@ -232,12 +232,12 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
 
       {/* Mobile Sidebar */}
       <div className={`
-        fixed inset-y-0 left-0 z-50 w-64 bg-[var(--bg-secondary)] border-r border-[var(--border-primary)] shadow-xl transform transition-transform duration-300 ease-in-out lg:hidden
+        fixed inset-y-0 left-0 z-50 w-64 bg-surface-secondary border-r border-border-secondary shadow-xl transform transition-transform duration-300 ease-in-out lg:hidden
         ${isOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
         <div className="flex flex-col h-full">
           {/* Mobile Header */}
-          <div className="flex items-center justify-between px-4 py-4 border-b border-[var(--border-secondary)] bg-[var(--bg-secondary)]">
+          <div className="flex items-center justify-between px-4 py-4 border-b border-border-secondary bg-surface-secondary">
             <div className="flex items-center gap-3">
               <Image
                 src="/logo.png"
@@ -247,17 +247,17 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
                 className="rounded-lg"
               />
               <div>
-                <h2 className="text-base font-bold text-[var(--text-primary)]">
+                <h2 className="text-base font-bold text-text-primary">
                   Love 4 Detailing
                 </h2>
-                <p className="text-xs text-[var(--text-secondary)]">
+                <p className="text-xs text-text-secondary">
                   Admin Portal
                 </p>
               </div>
             </div>
             <button
               onClick={onClose}
-              className="p-2 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors rounded-lg hover:bg-[var(--surface-hover)] min-h-[44px] min-w-[44px] flex items-center justify-center"
+              className="p-2 text-text-secondary hover:text-text-primary transition-colors rounded-lg hover:bg-surface-hover min-h-[44px] min-w-[44px] flex items-center justify-center"
               aria-label="Close sidebar"
             >
               <XIcon className="w-5 h-5" />
@@ -265,8 +265,8 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
           </div>
 
           {/* Mobile Quick Actions */}
-          <div className="px-4 py-4 border-b border-[var(--border-secondary)]">
-            <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-3">
+          <div className="px-4 py-4 border-b border-border-secondary">
+            <p className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-3">
               Quick Actions
             </p>
             <div className="space-y-2">
@@ -278,7 +278,7 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
                     key={action.name}
                     href={action.href}
                     onClick={onClose}
-                    className="flex items-center gap-3 px-3 py-2.5 text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] rounded-lg transition-colors min-h-[44px]"
+                    className="flex items-center gap-3 px-3 py-2.5 text-text-secondary hover:bg-surface-hover hover:text-text-primary rounded-lg transition-colors min-h-[44px]"
                   >
                     <Icon className={`w-4 h-4 ${action.color}`} />
                     <span className="text-sm">{action.name}</span>
@@ -289,8 +289,8 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
           </div>
 
           {/* Mobile Navigation */}
-          <nav className="flex-1 px-4 py-4 space-y-2 overflow-y-auto bg-[var(--bg-secondary)]">
-            <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-3">
+          <nav className="flex-1 px-4 py-4 space-y-2 overflow-y-auto bg-surface-secondary">
+            <p className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-3">
               Management
             </p>
             
@@ -306,8 +306,8 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
                   className={`
                     group flex items-center justify-between px-3 py-3 rounded-lg transition-all duration-200 min-h-[44px]
                     ${isActive 
-                      ? 'bg-[var(--primary)] text-white shadow-lg' 
-                      : 'text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]'
+                      ? 'bg-brand-600 text-white' 
+                      : 'text-text-secondary hover:bg-surface-hover hover:text-text-primary'
                     }
                   `}
                 >
@@ -319,7 +319,7 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
                       </p>
                       <p className={`
                         text-xs mt-0.5
-                        ${isActive ? 'text-white text-opacity-80' : 'text-[var(--text-muted)]'}
+                        ${isActive ? 'text-white text-opacity-80' : 'text-text-muted'}
                       `}>
                         {item.description}
                       </p>
@@ -330,8 +330,8 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
                     <div className={`
                       px-2 py-1 text-xs font-medium rounded-full
                       ${item.badge.type === 'pending' 
-                        ? 'bg-[var(--warning-bg)] text-[var(--warning)]' 
-                        : 'bg-[var(--info-bg)] text-[var(--info)]'
+                        ? 'bg-yellow-100 text-yellow-800' 
+                        : 'bg-blue-100 text-blue-800'
                       }
                       ${isActive ? 'bg-white bg-opacity-20 text-white' : ''}
                     `}>
@@ -344,11 +344,11 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
           </nav>
 
           {/* Mobile Help & Logout */}
-          <div className="px-4 py-4 border-t border-[var(--border-secondary)] space-y-2 bg-[var(--bg-secondary)]">
+          <div className="px-4 py-4 border-t border-border-secondary space-y-2 bg-surface-secondary">
             <Link
               href="/admin/help"
               onClick={onClose}
-              className="flex items-center gap-3 px-3 py-3 text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] rounded-lg transition-colors min-h-[44px]"
+              className="flex items-center gap-3 px-3 py-3 text-text-secondary hover:bg-surface-hover hover:text-text-primary rounded-lg transition-colors min-h-[44px]"
             >
               <HelpCircleIcon className="w-5 h-5" />
               <span className="text-sm font-medium">Help & Support</span>
@@ -359,7 +359,7 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
                 handleLogout()
                 onClose()
               }}
-              className="w-full flex items-center gap-3 px-3 py-3 text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] rounded-lg transition-colors min-h-[44px]"
+              className="w-full flex items-center gap-3 px-3 py-3 text-text-secondary hover:bg-surface-hover hover:text-text-primary rounded-lg transition-colors min-h-[44px]"
             >
               <LogOutIcon className="w-5 h-5" />
               <span className="text-sm font-medium">Sign Out</span>

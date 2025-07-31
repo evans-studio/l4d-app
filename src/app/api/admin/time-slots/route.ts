@@ -56,16 +56,28 @@ export async function GET(request: NextRequest) {
         start_time,
         is_available,
         notes,
+        created_at,
         bookings!time_slot_id (
           id,
           booking_reference,
           customer_id,
+          status,
+          scheduled_date,
+          scheduled_start_time,
+          scheduled_end_time,
+          total_price,
+          special_instructions,
           user_profiles!customer_id (
             first_name,
-            last_name
+            last_name,
+            email,
+            phone
           ),
-          services (
-            name
+          booking_services (
+            service:services (
+              name,
+              short_description
+            )
           )
         )
       `)
@@ -86,11 +98,12 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Transform data to include booking information
+    // Transform data to include enhanced booking information
     const transformedSlots = timeSlots?.map(slot => {
       const booking = slot.bookings?.[0]
       const userProfile = Array.isArray(booking?.user_profiles) ? booking.user_profiles[0] : booking?.user_profiles
-      const service = Array.isArray(booking?.services) ? booking.services[0] : booking?.services
+      const bookingServices = booking?.booking_services || []
+      const services = Array.isArray(bookingServices) ? bookingServices.map(bs => bs?.service).filter(Boolean) : []
       
       return {
         id: slot.id,
@@ -98,11 +111,27 @@ export async function GET(request: NextRequest) {
         start_time: slot.start_time,
         is_available: slot.is_available,
         notes: slot.notes,
-        booking_id: booking?.id || null,
-        customer_name: userProfile 
-          ? `${userProfile.first_name} ${userProfile.last_name}`
-          : null,
-        service_name: service?.name || null
+        created_at: slot.created_at,
+        booking: booking ? {
+          id: booking.id,
+          booking_reference: booking.booking_reference,
+          customer_id: booking.customer_id,
+          status: booking.status,
+          scheduled_date: booking.scheduled_date,
+          scheduled_start_time: booking.scheduled_start_time,
+          scheduled_end_time: booking.scheduled_end_time,
+          total_price: booking.total_price,
+          special_instructions: booking.special_instructions,
+          customer_name: userProfile 
+            ? `${userProfile.first_name} ${userProfile.last_name}`.trim()
+            : null,
+          customer_email: userProfile?.email || null,
+          customer_phone: userProfile?.phone || null,
+          services: services.map((service: any) => ({
+            name: service?.name || 'Unknown Service',
+            description: service?.short_description || null
+          }))
+        } : null
       }
     }) || []
 

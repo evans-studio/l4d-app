@@ -21,19 +21,25 @@ interface TimeSlotData {
   slot_date: string
   start_time: string
   is_available: boolean
-  created_by: string | null
   notes: string | null
   created_at: string
   booking?: {
     id: string
-    customer_name: string
-    service_name: string
-    vehicle_details: string
-    price: number
+    booking_reference: string
+    customer_id: string
     status: string
-    contact_email: string
-    contact_phone: string
-    address: string
+    scheduled_date: string
+    scheduled_start_time: string
+    scheduled_end_time: string
+    total_price: number
+    special_instructions: string | null
+    customer_name: string | null
+    customer_email: string | null
+    customer_phone: string | null
+    services: Array<{
+      name: string
+      description: string | null
+    }>
   }
 }
 
@@ -60,13 +66,45 @@ export function TimeSlot({ slot, onClick, onUpdate, onDelete, isPast }: TimeSlot
 
   const getStatusInfo = () => {
     if (slot.booking) {
-      return {
-        icon: UserIcon,
-        text: 'Booked',
-        bgColor: 'bg-blue-50',
-        borderColor: 'border-blue-200',
-        textColor: 'text-blue-800',
-        iconColor: 'text-blue-600'
+      const status = slot.booking.status
+      switch (status) {
+        case 'completed':
+          return {
+            icon: CheckCircleIcon,
+            text: 'Completed',
+            bgColor: 'bg-purple-50',
+            borderColor: 'border-purple-200',
+            textColor: 'text-purple-800',
+            iconColor: 'text-purple-600'
+          }
+        case 'cancelled':
+          return {
+            icon: XIcon,
+            text: 'Cancelled',
+            bgColor: 'bg-red-50',
+            borderColor: 'border-red-200',
+            textColor: 'text-red-800',
+            iconColor: 'text-red-600'
+          }
+        case 'confirmed':
+        case 'in_progress':
+          return {
+            icon: UserIcon,
+            text: status === 'in_progress' ? 'In Progress' : 'Confirmed',
+            bgColor: 'bg-blue-50',
+            borderColor: 'border-blue-200',
+            textColor: 'text-blue-800',
+            iconColor: 'text-blue-600'
+          }
+        default: // pending, draft
+          return {
+            icon: ClockIcon,
+            text: 'Pending',
+            bgColor: 'bg-yellow-50',
+            borderColor: 'border-yellow-200',
+            textColor: 'text-yellow-800',
+            iconColor: 'text-yellow-600'
+          }
       }
     } else if (slot.is_available) {
       return {
@@ -240,11 +278,13 @@ export function TimeSlot({ slot, onClick, onUpdate, onDelete, isPast }: TimeSlot
 
         {/* Booking Preview */}
         {slot.booking && (
-          <div className="mt-3 pt-3 border-t border-blue-200">
-            <div className="text-sm text-blue-700">
-              <div className="font-medium">{slot.booking.service_name}</div>
-              <div>{slot.booking.vehicle_details}</div>
-              <div className="font-medium">£{slot.booking.price}</div>
+          <div className={`mt-3 pt-3 border-t ${statusInfo.borderColor}`}>
+            <div className={`text-sm ${statusInfo.textColor}`}>
+              <div className="font-medium">{slot.booking.booking_reference}</div>
+              {slot.booking.services.length > 0 && (
+                <div>{slot.booking.services.map(s => s.name).join(', ')}</div>
+              )}
+              <div className="font-medium">£{slot.booking.total_price}</div>
             </div>
           </div>
         )}

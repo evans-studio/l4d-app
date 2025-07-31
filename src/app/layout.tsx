@@ -18,6 +18,19 @@ export const metadata: Metadata = {
   keywords: ['car detailing', 'mobile car wash', 'paint correction', 'ceramic coating', 'interior cleaning'],
   authors: [{ name: env.business.name }],
   creator: env.business.name,
+  manifest: '/manifest.json',
+  themeColor: '#7c3aed',
+  viewport: {
+    width: 'device-width',
+    initialScale: 1,
+    maximumScale: 1,
+    userScalable: false,
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: env.business.name,
+  },
   openGraph: {
     type: 'website',
     locale: 'en_GB',

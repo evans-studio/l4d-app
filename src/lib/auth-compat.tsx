@@ -15,7 +15,7 @@ interface LegacyAuthContextType {
   error: string | null
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>
   register: (email: string, password: string, firstName: string, lastName: string, phone?: string) => Promise<{ success: boolean; error?: string; redirectTo?: string }>
-  logout: () => Promise<void>
+  logout: () => Promise<{ success: boolean; error?: string }>
   refreshProfile: () => Promise<void>
 }
 

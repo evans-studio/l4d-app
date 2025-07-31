@@ -15,7 +15,11 @@ import {
   PhoneIcon,
   BellIcon,
   ShieldIcon,
-  DatabaseIcon
+  DatabaseIcon,
+  LockIcon,
+  EyeIcon,
+  EyeOffIcon,
+  LoaderIcon
 } from 'lucide-react'
 
 interface BusinessSettings {
@@ -86,6 +90,21 @@ function SettingsPage() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [activeTab, setActiveTab] = useState('business')
+
+  // Password change state
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  })
+  const [showPasswords, setShowPasswords] = useState({
+    current: false,
+    new: false,
+    confirm: false
+  })
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false)
+  const [passwordError, setPasswordError] = useState('')
+  const [passwordSuccess, setPasswordSuccess] = useState('')
 
   const loadSettings = useCallback(async () => {
     try {
@@ -169,11 +188,56 @@ function SettingsPage() {
     })
   }
 
+  const handlePasswordUpdate = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsUpdatingPassword(true)
+    setPasswordError('')
+    setPasswordSuccess('')
+
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      setPasswordError('New passwords do not match')
+      setIsUpdatingPassword(false)
+      return
+    }
+
+    if (passwordData.newPassword.length < 8) {
+      setPasswordError('Password must be at least 8 characters long')
+      setIsUpdatingPassword(false)
+      return
+    }
+
+    try {
+      const response = await fetch('/api/admin/password', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          currentPassword: passwordData.currentPassword,
+          newPassword: passwordData.newPassword
+        })
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        setPasswordSuccess('Password updated successfully!')
+        setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' })
+        setTimeout(() => setPasswordSuccess(''), 5000)
+      } else {
+        setPasswordError(data.error?.message || 'Failed to update password')
+      }
+    } catch (error) {
+      setPasswordError('Network error occurred')
+    } finally {
+      setIsUpdatingPassword(false)
+    }
+  }
+
   const tabs = [
     { id: 'business', label: 'Business Info', icon: SettingsIcon },
     { id: 'hours', label: 'Operating Hours', icon: ClockIcon },
     { id: 'booking', label: 'Booking Rules', icon: MapPinIcon },
     { id: 'notifications', label: 'Notifications', icon: BellIcon },
+    { id: 'password', label: 'Password', icon: LockIcon },
     { id: 'system', label: 'System', icon: DatabaseIcon }
   ]
 
@@ -463,6 +527,118 @@ function SettingsPage() {
                 </CardContent>
               </Card>
             </div>
+          )}
+
+          {/* Password Tab */}
+          {activeTab === 'password' && (
+            <Card>
+              <CardHeader>
+                <h2 className="text-lg font-semibold text-text-primary">Change Password</h2>
+              </CardHeader>
+              <CardContent>
+                {passwordError && (
+                  <div className="p-4 mb-6 bg-red-50 border border-red-200 rounded-lg text-red-800">
+                    {passwordError}
+                  </div>
+                )}
+
+                {passwordSuccess && (
+                  <div className="p-4 mb-6 bg-green-50 border border-green-200 rounded-lg text-green-800">
+                    {passwordSuccess}
+                  </div>
+                )}
+
+                <form onSubmit={handlePasswordUpdate} className="space-y-6 max-w-md">
+                  <div>
+                    <label className="block text-sm font-medium text-text-primary mb-2">
+                      Current Password
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showPasswords.current ? 'text' : 'password'}
+                        required
+                        value={passwordData.currentPassword}
+                        onChange={(e) => setPasswordData(prev => ({ ...prev, currentPassword: e.target.value }))}
+                        className="w-full px-4 py-3 pr-12 bg-surface-primary border border-border-primary rounded-lg focus:ring-2 focus:ring-brand-purple/20 focus:border-brand-purple text-text-primary"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPasswords(prev => ({ ...prev, current: !prev.current }))}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary hover:text-text-primary transition-colors"
+                      >
+                        {showPasswords.current ? <EyeOffIcon className="w-5 h-5" /> : <EyeIcon className="w-5 h-5" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-text-primary mb-2">
+                      New Password
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showPasswords.new ? 'text' : 'password'}
+                        required
+                        value={passwordData.newPassword}
+                        onChange={(e) => setPasswordData(prev => ({ ...prev, newPassword: e.target.value }))}
+                        className="w-full px-4 py-3 pr-12 bg-surface-primary border border-border-primary rounded-lg focus:ring-2 focus:ring-brand-purple/20 focus:border-brand-purple text-text-primary"
+                        minLength={8}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPasswords(prev => ({ ...prev, new: !prev.new }))}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary hover:text-text-primary transition-colors"
+                      >
+                        {showPasswords.new ? <EyeOffIcon className="w-5 h-5" /> : <EyeIcon className="w-5 h-5" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-text-primary mb-2">
+                      Confirm New Password
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showPasswords.confirm ? 'text' : 'password'}
+                        required
+                        value={passwordData.confirmPassword}
+                        onChange={(e) => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                        className="w-full px-4 py-3 pr-12 bg-surface-primary border border-border-primary rounded-lg focus:ring-2 focus:ring-brand-purple/20 focus:border-brand-purple text-text-primary"
+                        minLength={8}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPasswords(prev => ({ ...prev, confirm: !prev.confirm }))}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary hover:text-text-primary transition-colors"
+                      >
+                        {showPasswords.confirm ? <EyeOffIcon className="w-5 h-5" /> : <EyeIcon className="w-5 h-5" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="pt-4">
+                    <Button
+                      type="submit"
+                      disabled={isUpdatingPassword}
+                      className="px-6"
+                    >
+                      {isUpdatingPassword ? (
+                        <>
+                          <LoaderIcon className="w-4 h-4 mr-2 animate-spin" />
+                          Updating...
+                        </>
+                      ) : (
+                        <>
+                          <LockIcon className="w-4 h-4 mr-2" />
+                          Update Password
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </form>
+              </CardContent>
+            </Card>
           )}
 
           {/* System Tab */}

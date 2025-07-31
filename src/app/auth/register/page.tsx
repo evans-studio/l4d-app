@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth-compat'
 import { Button } from '@/components/ui/primitives/Button'
 import { ResponsiveLogo } from '@/components/ui/primitives/Logo'
@@ -9,6 +10,7 @@ import { Mail, Lock, User, Phone, AlertCircle, CheckCircle } from 'lucide-react'
 import Link from 'next/link'
 
 export default function RegisterPage() {
+  const router = useRouter()
   const { register } = useAuth()
   const [formData, setFormData] = useState({
     email: '',
@@ -44,7 +46,7 @@ export default function RegisterPage() {
       if (result.redirectTo) {
         // Registration complete with auto-login, redirect based on role
         console.log('Registration successful, redirecting to:', result.redirectTo)
-        window.location.href = result.redirectTo
+        router.push(result.redirectTo)
       } else if (result.error) {
         // Registration successful but needs email confirmation
         setSuccess(true)

@@ -17,19 +17,25 @@ interface TimeSlotData {
   slot_date: string
   start_time: string
   is_available: boolean
-  created_by: string | null
   notes: string | null
   created_at: string
   booking?: {
     id: string
-    customer_name: string
-    service_name: string
-    vehicle_details: string
-    price: number
+    booking_reference: string
+    customer_id: string
     status: string
-    contact_email: string
-    contact_phone: string
-    address: string
+    scheduled_date: string
+    scheduled_start_time: string
+    scheduled_end_time: string
+    total_price: number
+    special_instructions: string | null
+    customer_name: string | null
+    customer_email: string | null
+    customer_phone: string | null
+    services: Array<{
+      name: string
+      description: string | null
+    }>
   }
 }
 
@@ -42,6 +48,8 @@ interface DaySchedule {
     total: number
     booked: number
     available: number
+    completed: number
+    cancelled: number
   }
 }
 
@@ -140,6 +148,12 @@ export function DayCard({ day, isToday, onAddSlot, onSlotUpdate }: DayCardProps)
               <UsersIcon className="w-4 h-4" />
               {day.stats.booked} booked
             </span>
+            {day.stats.completed > 0 && (
+              <span className="flex items-center gap-1">
+                <CheckCircleIcon className="w-4 h-4" />
+                {day.stats.completed} done
+              </span>
+            )}
           </div>
         </div>
 
@@ -191,24 +205,30 @@ export function DayCard({ day, isToday, onAddSlot, onSlotUpdate }: DayCardProps)
         {/* Day Summary */}
         {day.slots.length > 0 && (
           <div className="mt-6 pt-4 border-t border-[var(--border-secondary)]">
-            <div className="grid grid-cols-3 gap-4 text-center">
+            <div className="grid grid-cols-4 gap-3 text-center">
               <div className="space-y-1">
-                <div className="text-2xl font-bold text-[var(--text-primary)]">
+                <div className="text-xl font-bold text-[var(--text-primary)]">
                   {day.stats.total}
                 </div>
                 <div className="text-xs text-[var(--text-secondary)]">Total</div>
               </div>
               <div className="space-y-1">
-                <div className="text-2xl font-bold text-green-600">
+                <div className="text-xl font-bold text-green-600">
                   {day.stats.available}
                 </div>
                 <div className="text-xs text-[var(--text-secondary)]">Available</div>
               </div>
               <div className="space-y-1">
-                <div className="text-2xl font-bold text-blue-600">
+                <div className="text-xl font-bold text-blue-600">
                   {day.stats.booked}
                 </div>
-                <div className="text-xs text-[var(--text-secondary)]">Booked</div>
+                <div className="text-xs text-[var(--text-secondary)]">Active</div>
+              </div>
+              <div className="space-y-1">
+                <div className="text-xl font-bold text-purple-600">
+                  {day.stats.completed}
+                </div>
+                <div className="text-xs text-[var(--text-secondary)]">Done</div>
               </div>
             </div>
           </div>

@@ -72,7 +72,7 @@ export default function AccountSettingsPage() {
     smsNotifications: false
   })
 
-  // Load profile data on mount
+  // Load profile data and notification settings on mount
   useEffect(() => {
     if (profile) {
       setProfileData({
@@ -83,6 +83,26 @@ export default function AccountSettingsPage() {
       })
     }
   }, [profile])
+
+  // Load notification settings
+  useEffect(() => {
+    const loadNotificationSettings = async () => {
+      try {
+        const response = await fetch('/api/customer/notifications')
+        const data = await response.json()
+        
+        if (data.success) {
+          setNotifications(data.data.settings)
+        }
+      } catch (error) {
+        console.error('Failed to load notification settings:', error)
+      }
+    }
+
+    if (user) {
+      loadNotificationSettings()
+    }
+  }, [user])
 
   const clearMessage = () => {
     setTimeout(() => setMessage(null), 5000)
@@ -178,6 +198,69 @@ export default function AccountSettingsPage() {
         setMessage({ type: 'success', text: 'Notification settings updated!' })
       } else {
         setMessage({ type: 'error', text: data.error?.message || 'Failed to update notifications' })
+      }
+    } catch (error) {
+      setMessage({ type: 'error', text: 'Network error occurred' })
+    } finally {
+      setIsLoading(false)
+      clearMessage()
+    }
+  }
+
+  const handleDataExport = async () => {
+    try {
+      setIsLoading(true)
+      const response = await fetch('/api/customer/data-export')
+      
+      if (response.ok) {
+        const blob = await response.blob()
+        const url = window.URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `love4detailing-data-export-${new Date().toISOString().split('T')[0]}.json`
+        document.body.appendChild(a)
+        a.click()
+        window.URL.revokeObjectURL(url)
+        document.body.removeChild(a)
+        setMessage({ type: 'success', text: 'Data export downloaded successfully!' })
+      } else {
+        setMessage({ type: 'error', text: 'Failed to export data' })
+      }
+    } catch (error) {
+      setMessage({ type: 'error', text: 'Network error occurred' })
+    } finally {
+      setIsLoading(false)
+      clearMessage()
+    }
+  }
+
+  const handleAccountDeletion = async () => {
+    const confirmationText = prompt(
+      'To delete your account, please type "DELETE MY ACCOUNT" exactly (without quotes):'
+    )
+    
+    if (!confirmationText) return
+
+    const reason = prompt('Please tell us why you\'re deleting your account (optional):')
+
+    try {
+      setIsLoading(true)
+      const response = await fetch('/api/customer/account-deletion', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          confirmationText,
+          reason: reason || undefined
+        })
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        setMessage({ type: 'success', text: data.data.message })
+        alert(data.data.details)
+      } else {
+        setMessage({ type: 'error', text: data.error?.message || 'Failed to process deletion request' })
       }
     } catch (error) {
       setMessage({ type: 'error', text: 'Network error occurred' })
@@ -527,8 +610,13 @@ export default function AccountSettingsPage() {
                       <p className="text-sm text-text-secondary mb-4">
                         Download a copy of all your account data including bookings, vehicles, and addresses.
                       </p>
-                      <Button variant="outline" size="sm">
-                        Request Data Export
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={handleDataExport}
+                        disabled={isLoading}
+                      >
+                        {isLoading ? 'Preparing Export...' : 'Request Data Export'}
                       </Button>
                     </div>
 
@@ -537,8 +625,13 @@ export default function AccountSettingsPage() {
                       <p className="text-sm text-text-secondary mb-4">
                         Permanently delete your account and all associated data. This action cannot be undone.
                       </p>
-                      <Button variant="destructive" size="sm">
-                        Delete Account
+                      <Button 
+                        variant="destructive" 
+                        size="sm"
+                        onClick={handleAccountDeletion}
+                        disabled={isLoading}
+                      >
+                        {isLoading ? 'Processing...' : 'Delete Account'}
                       </Button>
                     </div>
 

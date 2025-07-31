@@ -143,7 +143,9 @@ export async function middleware(request: NextRequest) {
 
   // Handle page routes - redirect to login if not authenticated
   if (!user) {
-    return NextResponse.redirect(new URL('/auth/login', request.url))
+    const loginUrl = new URL('/auth/login', request.url)
+    loginUrl.searchParams.set('redirect', request.nextUrl.pathname + request.nextUrl.search)
+    return NextResponse.redirect(loginUrl)
   }
 
   // Get user profile for role-based routing using service client (bypasses RLS)

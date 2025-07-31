@@ -19,10 +19,10 @@ export async function POST(request: NextRequest) {
   try {
     const supabase = createClientFromRequest(request)
     
-    // Get the current session
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    // Get the authenticated user using secure method
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
     
-    if (sessionError || !session?.user) {
+    if (userError || !user) {
       return ApiResponseHandler.unauthorized('Authentication required')
     }
 
@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
     const { data: profile, error: profileError } = await supabase
       .from('user_profiles')
       .select('*')
-      .eq('id', session.user.id)
+      .eq('id', user.id)
       .single()
 
     if (profileError || !profile) {
@@ -55,16 +55,16 @@ export async function POST(request: NextRequest) {
       validatedData.exclude_dates || []
     )
 
-    // Create all time slots
+    // Create all time slots - duration stored in notes since schema doesn't have duration_minutes column
     const slotsToCreate = []
     for (const date of dates) {
       for (const timeSlot of validatedData.time_slots) {
         slotsToCreate.push({
           slot_date: date,
           start_time: timeSlot.start_time,
-          duration_minutes: timeSlot.duration_minutes,
           is_available: true,
-          created_by: session.user.id
+          created_by: user.id,
+          notes: `Duration: ${timeSlot.duration_minutes} minutes`
         })
       }
     }

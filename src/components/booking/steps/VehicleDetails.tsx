@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/primitives/Input'
 import { Select } from '@/components/ui/primitives/Select'
 import { ChevronLeftIcon, ChevronRightIcon, PlusIcon, CarIcon, CheckIcon, Clock } from 'lucide-react'
 import { getVehicleSizeDescription, PRICING_CONFIG } from '@/lib/pricing/calculator'
+import vehicleData from '@/data/vehicle-size-data.json'
 
 export function VehicleDetails() {
   const {
@@ -39,6 +40,31 @@ export function VehicleDetails() {
     notes: formData.vehicle?.notes || '',
   })
 
+  // Get available makes from vehicle data
+  const availableMakes = vehicleData.vehicles.map(v => v.make).sort()
+
+  // Get available models for selected make
+  const availableModels = vehicleForm.make 
+    ? vehicleData.vehicles.find(v => v.make === vehicleForm.make)?.models || []
+    : []
+
+  // Get available years for selected make/model
+  const availableYears = vehicleForm.make && vehicleForm.model
+    ? availableModels.find(m => m.model === vehicleForm.model)?.years || []
+    : []
+
+  // Get size for selected make/model (auto-detection on model selection)
+  const getVehicleSize = (make: string, model: string): 'S' | 'M' | 'L' | 'XL' => {
+    const vehicleMake = vehicleData.vehicles.find(v => v.make === make)
+    if (vehicleMake) {
+      const vehicleModel = vehicleMake.models.find(m => m.model === model)
+      if (vehicleModel) {
+        return vehicleModel.size as 'S' | 'M' | 'L' | 'XL'
+      }
+    }
+    return 'M' // Default fallback
+  }
+
   // Load vehicle sizes when component mounts
   useEffect(() => {
     if (isCurrentStep && vehicleSizes.length === 0) {
@@ -62,7 +88,27 @@ export function VehicleDetails() {
   }, [formData.vehicle])
 
   const handleFormChange = (field: string, value: any) => {
-    setVehicleForm(prev => ({ ...prev, [field]: value }))
+    setVehicleForm(prev => {
+      const newForm = { ...prev, [field]: value }
+      
+      // Reset dependent fields when make changes
+      if (field === 'make') {
+        newForm.model = ''
+        newForm.year = new Date().getFullYear()
+        newForm.size = 'M' // Reset to default
+      }
+      
+      // Auto-detect size and reset year when model changes
+      if (field === 'model') {
+        newForm.year = new Date().getFullYear()
+        // Auto-detect size based on make/model selection
+        if (newForm.make && value) {
+          newForm.size = getVehicleSize(newForm.make, value)
+        }
+      }
+      
+      return newForm
+    })
   }
 
   const handleExistingVehicleSelect = (vehicleId: string) => {
@@ -83,7 +129,7 @@ export function VehicleDetails() {
   }
 
   const handleNewVehicleSubmit = () => {
-    if (vehicleForm.make && vehicleForm.model && vehicleForm.size) {
+    if (vehicleForm.make && vehicleForm.model && vehicleForm.registration && vehicleForm.size) {
       setVehicleData(vehicleForm)
       setSelectedVehicleId(null)
     }
@@ -220,61 +266,79 @@ export function VehicleDetails() {
                 <label className="block text-sm font-medium text-text-primary mb-2">
                   Make *
                 </label>
-                <Input
+                <Select
                   value={vehicleForm.make}
                   onChange={(e) => handleFormChange('make', e.target.value)}
-                  placeholder="e.g., BMW, Mercedes, Ford"
-                  required
-                />
+                  placeholder="Select make"
+                >
+                  <option value="">Select make</option>
+                  {availableMakes.map((make) => (
+                    <option key={make} value={make}>
+                      {make}
+                    </option>
+                  ))}
+                </Select>
               </div>
               
               <div>
                 <label className="block text-sm font-medium text-text-primary mb-2">
                   Model *
                 </label>
-                <Input
+                <Select
                   value={vehicleForm.model}
                   onChange={(e) => handleFormChange('model', e.target.value)}
-                  placeholder="e.g., 320i, C-Class, Focus"
-                  required
-                />
+                  placeholder="Select model"
+                  disabled={!vehicleForm.make}
+                >
+                  <option value="">Select model</option>
+                  {availableModels.map((model) => (
+                    <option key={model.model} value={model.model}>
+                      {model.model}
+                    </option>
+                  ))}
+                </Select>
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm font-medium text-text-primary mb-2">
-                  Year *
-                </label>
-                <Input
-                  type="number"
-                  value={vehicleForm.year}
-                  onChange={(e) => handleFormChange('year', parseInt(e.target.value))}
-                  min="1980"
-                  max={new Date().getFullYear() + 1}
-                  required
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-text-primary mb-2">
-                  Color
-                </label>
-                <Input
-                  value={vehicleForm.color}
-                  onChange={(e) => handleFormChange('color', e.target.value)}
-                  placeholder="e.g., White, Black, Silver"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-text-primary mb-2">
-                  Registration
+                  Registration *
                 </label>
                 <Input
                   value={vehicleForm.registration}
                   onChange={(e) => handleFormChange('registration', e.target.value.toUpperCase())}
                   placeholder="e.g., AB12 CDE"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-text-primary mb-2">
+                  Year <span className="text-text-muted">(optional)</span>
+                </label>
+                <Select
+                  value={vehicleForm.year.toString()}
+                  onChange={(e) => handleFormChange('year', parseInt(e.target.value))}
+                  placeholder="Select year"
+                  disabled={!vehicleForm.make || !vehicleForm.model}
+                >
+                  <option value="">Select year</option>
+                  {availableYears.sort((a, b) => b - a).map((year) => (
+                    <option key={year} value={year.toString()}>
+                      {year}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-text-primary mb-2">
+                  Color <span className="text-text-muted">(optional)</span>
+                </label>
+                <Input
+                  value={vehicleForm.color}
+                  onChange={(e) => handleFormChange('color', e.target.value)}
+                  placeholder="e.g., White, Black, Silver"
                 />
               </div>
             </div>
@@ -285,88 +349,31 @@ export function VehicleDetails() {
                 Vehicle Size *
               </label>
               <p className="text-sm text-text-secondary mb-4">
-                This affects the service pricing. Choose the size that best matches your vehicle.
+                {vehicleForm.make && vehicleForm.model 
+                  ? `Size automatically determined for ${vehicleForm.make} ${vehicleForm.model}. This affects service pricing.`
+                  : 'This affects the service pricing. Select your vehicle make and model for automatic size detection.'
+                }
               </p>
               
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                {vehicleSizes.length > 0 ? vehicleSizes.map((vehicleSize) => {
-                  const sizeKey = vehicleSize.name.toLowerCase().replace(/\s+/g, '_')
-                  const isSelected = vehicleForm.size === sizeKey
-                  
-                  return (
-                    <Card
-                      key={vehicleSize.id}
-                      className={`cursor-pointer transition-all duration-200 ${
-                        isSelected
-                          ? 'border-brand-500 bg-brand-600/5 shadow-purple-lg'
-                          : 'hover:border-brand-400 hover:shadow-purple'
-                      }`}
-                      onClick={() => handleFormChange('size', sizeKey)}
-                    >
-                      <CardContent className="p-4 text-center">
-                        <div className={`w-8 h-8 rounded-full mx-auto mb-2 flex items-center justify-center ${
-                          isSelected ? 'bg-brand-600 text-white' : 'bg-brand-600/10 text-brand-400'
-                        }`}>
-                          <CarIcon className="w-4 h-4" />
-                        </div>
-                        <h4 className="font-semibold text-text-primary mb-1">
-                          {vehicleSize.name}
-                        </h4>
-                        <p className="text-xs text-text-secondary mb-1">
-                          {vehicleSize.description || 'Vehicle size'}
-                        </p>
-                        <p className="text-xs font-medium text-brand-400">
-                          Price: {vehicleSize.price_multiplier}x
-                        </p>
-                        {vehicleSize.examples && vehicleSize.examples.length > 0 && (
-                          <p className="text-xs text-text-tertiary mt-1">
-                            {vehicleSize.examples.join(', ')}
-                          </p>
-                        )}
-                        {isSelected && (
-                          <CheckIcon className="w-4 h-4 text-brand-600 mx-auto mt-2" />
-                        )}
-                      </CardContent>
-                    </Card>
-                  )
-                }) : (
-                  // Use new size system
-                  (['S', 'M', 'L', 'XL'] as const).map((size) => {
-                    const sizeInfo = getSizeInfo(size)
-                    const isSelected = vehicleForm.size === size
-                    
-                    return (
-                      <Card
-                        key={size}
-                        className={`cursor-pointer transition-all duration-200 ${
-                          isSelected
-                            ? 'border-brand-500 bg-brand-600/5 shadow-purple-lg'
-                            : 'hover:border-brand-400 hover:shadow-purple'
-                        }`}
-                        onClick={() => handleFormChange('size', size)}
-                      >
-                        <CardContent className="p-4 text-center">
-                          <div className={`w-8 h-8 rounded-full mx-auto mb-2 flex items-center justify-center ${
-                            isSelected ? 'bg-brand-600 text-white' : 'bg-brand-600/10 text-brand-400'
-                          }`}>
-                            <CarIcon className="w-4 h-4" />
-                          </div>
-                          <h4 className="font-semibold text-text-primary mb-1">
-                            {sizeInfo.label}
-                          </h4>
-                          <p className="text-xs text-text-secondary mb-1">
-                            {sizeInfo.description}
-                          </p>
-                          <p className="text-xs font-medium text-brand-400">
-                            Price: {sizeInfo.multiplier}
-                          </p>
-                          {isSelected && (
-                            <CheckIcon className="w-4 h-4 text-brand-600 mx-auto mt-2" />
-                          )}
-                        </CardContent>
-                      </Card>
-                    )
-                  })
+              {/* Simple size display */}
+              <div className="bg-surface-secondary rounded-lg p-4 border border-border-secondary">
+                <div>
+                  <h4 className="font-medium text-text-primary">
+                    {getSizeInfo(vehicleForm.size).label}
+                  </h4>
+                </div>
+                
+                {vehicleForm.make && vehicleForm.model && (
+                  <div className="mt-3 flex items-center gap-2 text-sm text-brand-600">
+                    <CheckIcon className="w-4 h-4" />
+                    <span>Auto-detected from vehicle selection</span>
+                  </div>
+                )}
+                
+                {!vehicleForm.make || !vehicleForm.model && (
+                  <div className="mt-3 text-sm text-text-muted">
+                    Select make and model above for automatic size detection
+                  </div>
                 )}
               </div>
             </div>
@@ -398,7 +405,7 @@ export function VehicleDetails() {
               )}
               <Button
                 onClick={handleNewVehicleSubmit}
-                disabled={!vehicleForm.make || !vehicleForm.model || !vehicleForm.size}
+                disabled={!vehicleForm.make || !vehicleForm.model || !vehicleForm.registration || !vehicleForm.size}
                 className="flex-1"
               >
                 Continue with This Vehicle
@@ -424,28 +431,20 @@ export function VehicleDetails() {
             <h3 className="text-lg font-semibold text-text-primary">Selected Vehicle</h3>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center justify-between bg-surface-tertiary rounded-lg p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-brand-600 flex items-center justify-center">
-                  <CarIcon className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <h4 className="font-semibold text-text-primary">
-                    {formData.vehicle.year} {formData.vehicle.make} {formData.vehicle.model}
-                  </h4>
-                  <p className="text-sm text-text-secondary">
-                    {getSizeInfo(formData.vehicle.size).label} Vehicle • {formData.vehicle.color}
-                  </p>
-                  {formData.vehicle.registration && (
-                    <p className="text-sm text-text-muted">Reg: {formData.vehicle.registration}</p>
-                  )}
-                </div>
+            <div className="flex items-center gap-3 bg-surface-tertiary rounded-lg p-4">
+              <div className="w-12 h-12 rounded-full bg-brand-600 flex items-center justify-center">
+                <CarIcon className="w-6 h-6 text-white" />
               </div>
-              <div className="text-right">
-                <p className="text-sm text-text-secondary">Price Multiplier</p>
-                <p className="text-lg font-bold text-brand-400">
-                  {getSizeInfo(formData.vehicle.size).multiplier}
+              <div>
+                <h4 className="font-semibold text-text-primary">
+                  {formData.vehicle.year} {formData.vehicle.make} {formData.vehicle.model}
+                </h4>
+                <p className="text-sm text-text-secondary">
+                  {getSizeInfo(formData.vehicle.size).label} Vehicle • {formData.vehicle.color}
                 </p>
+                {formData.vehicle.registration && (
+                  <p className="text-sm text-text-muted">Reg: {formData.vehicle.registration}</p>
+                )}
               </div>
             </div>
           </CardContent>

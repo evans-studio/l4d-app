@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth-compat';
 import { 
   LayoutDashboard, 
@@ -10,15 +10,13 @@ import {
   Car, 
   MapPin, 
   User, 
-  Plus,
+  Settings,
   Menu,
   X,
-  LogOut,
-  Settings
+  Plus
 } from 'lucide-react';
 import { Button } from '@/components/ui/primitives/Button';
-import { ResponsiveLogo } from '@/components/ui/primitives/Logo';
-import { Container } from '@/components/layout/templates/PageLayout';
+import { MinimalHeader } from '@/components/navigation/MinimalHeader';
 import { cn } from '@/lib/utils';
 
 interface CustomerLayoutProps {
@@ -29,112 +27,139 @@ const navigationItems = [
   {
     name: 'Dashboard',
     href: '/dashboard',
-    icon: LayoutDashboard
+    icon: LayoutDashboard,
   },
   {
     name: 'My Bookings',
     href: '/dashboard/bookings',
-    icon: Calendar
-  },
-  {
-    name: 'Book Service',
-    href: '/book',
-    icon: Plus
+    icon: Calendar,
   },
   {
     name: 'My Vehicles',
     href: '/dashboard/vehicles',
-    icon: Car
+    icon: Car,
   },
   {
     name: 'My Addresses',
     href: '/dashboard/addresses',
-    icon: MapPin
+    icon: MapPin,
   },
   {
-    name: 'Account Settings',
+    name: 'Settings',
     href: '/dashboard/settings',
-    icon: Settings
-  }
+    icon: Settings,
+  },
 ];
 
 export const CustomerLayout: React.FC<CustomerLayoutProps> = ({ children }) => {
-  const [sidebarOpen, setSidebarOpen] = React.useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const pathname = usePathname();
-  const router = useRouter();
-  const { logout } = useAuth();
-
-  // Prevent body scroll when mobile sidebar is open
-  useEffect(() => {
-    if (sidebarOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
-    }
-    
-    return () => {
-      document.body.style.overflow = 'unset';
-    };
-  }, [sidebarOpen]);
-
-  // Handle escape key to close sidebar
-  useEffect(() => {
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && sidebarOpen) {
-        setSidebarOpen(false);
-      }
-    };
-
-    document.addEventListener('keydown', handleEscape);
-    return () => document.removeEventListener('keydown', handleEscape);
-  }, [sidebarOpen]);
-
-  const handleLogout = async () => {
-    try {
-      await logout();
-      // Router push handled by logout method
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
-  };
 
   return (
-    <div className="min-h-screen bg-surface-primary">
-      {/* Mobile sidebar backdrop */}
-      {sidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden transition-opacity duration-300 backdrop-blur-sm"
-          onClick={() => setSidebarOpen(false)}
-          onTouchStart={() => setSidebarOpen(false)}
-          aria-hidden="true"
-          role="button"
-          tabIndex={-1}
-        />
-      )}
+    <div className="min-h-screen bg-surface-primary flex flex-col">
+      {/* Global Header - No mobile menu hamburger since sidebar handles navigation */}
+      <MinimalHeader showMobileMenu={false} />
+      
+      <div className="flex flex-1">
+        {/* Mobile sidebar backdrop */}
+        {sidebarOpen && (
+          <div 
+            className="fixed inset-0 bg-black/50 z-40 lg:hidden transition-opacity duration-300 backdrop-blur-sm"
+            onClick={() => setSidebarOpen(false)}
+            aria-hidden="true"
+          />
+        )}
 
-      {/* Sidebar */}
-      <div className={cn(
-        "fixed inset-y-0 left-0 z-50 w-64 bg-surface-secondary border-r border-border-secondary shadow-xl transform transition-transform duration-300 ease-in-out lg:translate-x-0",
-        sidebarOpen ? "translate-x-0" : "-translate-x-full"
-      )}>
-        <div className="flex flex-col h-full">
-          {/* Sidebar header */}
-          <div className="flex items-center justify-between p-4 border-b border-border-secondary bg-surface-secondary">
-            <ResponsiveLogo href="/dashboard" className="text-brand-400" />
+        {/* Sidebar */}
+        <div className={cn(
+          "fixed inset-y-0 left-0 z-50 w-64 bg-surface-secondary border-r border-border-secondary shadow-xl transform transition-transform duration-300 ease-in-out lg:transform-none lg:static lg:shadow-none lg:flex-shrink-0",
+          "top-16 lg:top-0", // Account for header height on mobile only
+          sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+        )}>
+          <div className="flex flex-col h-full">
+            {/* Mobile Header */}
+            <div className="flex items-center justify-between p-4 border-b border-border-secondary lg:hidden">
+              <span className="font-medium text-lg text-text-primary">Navigation</span>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setSidebarOpen(false)}
+                className="min-h-[44px] min-w-[44px]"
+              >
+                <X className="w-5 h-5" />
+              </Button>
+            </div>
+
+            {/* Navigation */}
+            <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
+              {navigationItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = pathname === item.href || 
+                  (item.href !== '/dashboard' && pathname.startsWith(item.href));
+
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={cn(
+                      "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors min-h-[44px]",
+                      isActive
+                        ? "bg-brand-600 text-white"
+                        : "text-text-secondary hover:bg-surface-hover hover:text-text-primary"
+                    )}
+                    onClick={() => setSidebarOpen(false)}
+                  >
+                    <Icon className="w-5 h-5" />
+                    {item.name}
+                  </Link>
+                );
+              })}
+            </nav>
+
+            {/* Quick Action - Book Service */}
+            <div className="p-4 border-t border-border-secondary">
+              <Link href="/book">
+                <Button
+                  variant="primary"
+                  fullWidth
+                  leftIcon={<Plus className="w-4 h-4" />}
+                  className="min-h-[44px]"
+                  onClick={() => setSidebarOpen(false)}
+                >
+                  Book Service
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+
+        {/* Main Content */}
+        <div className="flex-1 flex flex-col">
+          {/* Mobile Menu Button */}
+          <div className="lg:hidden bg-surface-primary border-b border-border-secondary px-4 py-3">
             <Button
               variant="ghost"
-              size="icon"
-              className="lg:hidden min-h-[44px] min-w-[44px]"
-              onClick={() => setSidebarOpen(false)}
-              aria-label="Close sidebar"
+              size="sm"
+              onClick={() => setSidebarOpen(true)}
+              leftIcon={<Menu className="w-4 h-4" />}
+              className="text-text-secondary hover:text-text-primary"
             >
-              <X className="w-5 h-5" />
+              Menu
             </Button>
           </div>
 
-          {/* Navigation */}
-          <nav className="flex-1 p-4 space-y-2 bg-surface-secondary overflow-y-auto">
-            {navigationItems.map((item) => {
+          {/* Page Content */}
+          <main className="flex-1 p-4 sm:p-6">
+            {children}
+          </main>
+        </div>
+      </div>
+      
+      {/* PWA Bottom Navigation - Enhanced for mobile-first thumb access */}
+      <div className="lg:hidden bg-surface-secondary/95 backdrop-blur-md border-t border-border-secondary/50 sticky bottom-0 z-40">
+        <div className="safe-area-inset-bottom">
+          <div className="flex items-center justify-around py-1">
+            {navigationItems.slice(0, 4).map((item) => {
               const Icon = item.icon;
               const isActive = pathname === item.href || 
                 (item.href !== '/dashboard' && pathname.startsWith(item.href));
@@ -144,79 +169,46 @@ export const CustomerLayout: React.FC<CustomerLayoutProps> = ({ children }) => {
                   key={item.href}
                   href={item.href}
                   className={cn(
-                    "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors min-h-[44px]",
+                    "flex flex-col items-center gap-1 px-2 py-2 text-xs font-medium transition-all duration-200 min-h-[56px] justify-center rounded-lg mx-1 relative overflow-hidden touch-manipulation",
+                    "active:scale-95 active:bg-surface-hover/50",
                     isActive
-                      ? "bg-brand-600 text-white"
-                      : "text-text-secondary hover:text-text-primary hover:bg-surface-primary"
+                      ? "text-brand-600 bg-brand-600/10"
+                      : "text-text-secondary hover:text-text-primary hover:bg-surface-hover/30"
                   )}
-                  onClick={() => setSidebarOpen(false)}
                 >
-                  <Icon className="w-5 h-5" />
-                  {item.name}
+                  {/* Active indicator */}
+                  {isActive && (
+                    <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-8 h-1 bg-brand-600 rounded-full" />
+                  )}
+                  <Icon className={cn(
+                    "w-5 h-5 transition-transform duration-200",
+                    isActive ? "scale-110" : "scale-100"
+                  )} />
+                  <span className="text-[10px] leading-tight font-medium">
+                    {item.name.replace('My ', '')}
+                  </span>
                 </Link>
               );
             })}
-          </nav>
-
-          {/* Sidebar footer */}
-          <div className="p-4 border-t border-border-secondary bg-surface-secondary">
-            <Button
-              variant="ghost"
-              className="w-full justify-start text-text-secondary hover:text-error-400 min-h-[44px]"
-              leftIcon={<LogOut className="w-5 h-5" />}
-              onClick={() => {
-                handleLogout();
-                setSidebarOpen(false);
-              }}
+            
+            {/* Enhanced Book Button */}
+            <Link
+              href="/book"
+              className={cn(
+                "flex flex-col items-center gap-1 px-2 py-2 text-xs font-medium min-h-[56px] justify-center rounded-lg mx-1 relative overflow-hidden touch-manipulation",
+                "bg-brand-600 text-white shadow-lg shadow-brand-600/25 active:scale-95 active:shadow-brand-600/40 transition-all duration-200",
+                pathname === '/book' && "bg-brand-700 shadow-brand-600/40"
+              )}
             >
-              Logout
-            </Button>
+              <div className="relative">
+                <Plus className="w-5 h-5" />
+                {/* Pulse animation for book button */}
+                <div className="absolute inset-0 rounded-full bg-white/20 animate-ping" />
+              </div>
+              <span className="text-[10px] leading-tight font-bold">Book</span>
+            </Link>
           </div>
         </div>
-      </div>
-
-      {/* Main content area */}
-      <div className="lg:pl-64">
-        {/* Top header */}
-        <header className="sticky top-0 z-30 bg-surface-primary/95 backdrop-blur-sm border-b border-border-secondary">
-          <Container>
-            <div className="flex items-center justify-between py-4">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="lg:hidden min-h-[44px] min-w-[44px]"
-                onClick={() => setSidebarOpen(true)}
-                aria-label="Open sidebar"
-              >
-                <Menu className="w-5 h-5" />
-              </Button>
-
-              <div className="flex items-center gap-4">
-                <Button
-                  variant="primary"
-                  onClick={() => router.push('/book')}
-                  leftIcon={<Plus className="w-4 h-4" />}
-                  className="hidden sm:flex"
-                >
-                  Book Service
-                </Button>
-                <Button
-                  variant="primary"
-                  size="icon"
-                  onClick={() => router.push('/book')}
-                  className="sm:hidden"
-                >
-                  <Plus className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
-          </Container>
-        </header>
-
-        {/* Page content */}
-        <main className="flex-1">
-          {children}
-        </main>
       </div>
     </div>
   );

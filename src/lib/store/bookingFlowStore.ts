@@ -700,17 +700,17 @@ export const useBookingFlowStore = create<BookingFlowStore>()(
         const { currentStep, formData } = get()
         
         switch (currentStep) {
-          case 1:
-            return !!formData.slot && !!formData.slot.slotId && !!formData.slot.date
-          case 2:
-            return !!formData.user && !!formData.user.email && !!formData.user.phone && !!formData.user.name
-          case 3:
-            return !!formData.vehicle && !!formData.vehicle.make && !!formData.vehicle.model && !!formData.vehicle.size
-          case 4:
+          case 1: // ServiceSelection
             return !!formData.service
-          case 5:
+          case 2: // VehicleDetails
+            return !!formData.vehicle && !!formData.vehicle.make && !!formData.vehicle.model && !!formData.vehicle.size
+          case 3: // TimeSlotSelection
+            return !!formData.slot && !!formData.slot.slotId && !!formData.slot.date
+          case 4: // AddressCollection
             return !!formData.address && !!formData.address.addressLine1 && !!formData.address.city && !!formData.address.postcode
-          case 6:
+          case 5: // UserDetails
+            return !!formData.user && !!formData.user.email && !!formData.user.phone && !!formData.user.name
+          case 6: // PricingConfirmation
             return !!formData.slot && !!formData.address && !!formData.user && !!formData.vehicle && !!formData.service
           default:
             return false

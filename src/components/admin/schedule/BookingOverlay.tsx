@@ -23,19 +23,25 @@ interface TimeSlotData {
   slot_date: string
   start_time: string
   is_available: boolean
-  created_by: string | null
   notes: string | null
   created_at: string
   booking?: {
     id: string
-    customer_name: string
-    service_name: string
-    vehicle_details: string
-    price: number
+    booking_reference: string
+    customer_id: string
     status: string
-    contact_email: string
-    contact_phone: string
-    address: string
+    scheduled_date: string
+    scheduled_start_time: string
+    scheduled_end_time: string
+    total_price: number
+    special_instructions: string | null
+    customer_name: string | null
+    customer_email: string | null
+    customer_phone: string | null
+    services: Array<{
+      name: string
+      description: string | null
+    }>
   }
 }
 
@@ -106,14 +112,14 @@ export function BookingOverlay({ slot, onClose, onUpdate }: BookingOverlayProps)
   }
 
   const handleContactCustomer = () => {
-    if (slot.booking?.contact_email) {
-      window.open(`mailto:${slot.booking.contact_email}`)
+    if (slot.booking?.customer_email) {
+      window.open(`mailto:${slot.booking.customer_email}`)
     }
   }
 
   const handleCallCustomer = () => {
-    if (slot.booking?.contact_phone) {
-      window.open(`tel:${slot.booking.contact_phone}`)
+    if (slot.booking?.customer_phone) {
+      window.open(`tel:${slot.booking.customer_phone}`)
     }
   }
 
@@ -185,7 +191,7 @@ export function BookingOverlay({ slot, onClose, onUpdate }: BookingOverlayProps)
                 <ClockIcon className="w-5 h-5 text-gray-400 mt-0.5" />
                 <div>
                   <div className="font-semibold text-gray-900">
-                    {slot.booking.service_name}
+                    {slot.booking.services.map(s => s.name).join(', ') || 'No services'}
                   </div>
                   <div className="text-sm text-gray-600">Service</div>
                 </div>
@@ -196,7 +202,7 @@ export function BookingOverlay({ slot, onClose, onUpdate }: BookingOverlayProps)
                 <CarIcon className="w-5 h-5 text-gray-400 mt-0.5" />
                 <div>
                   <div className="font-semibold text-gray-900">
-                    {slot.booking.vehicle_details}
+                    {slot.booking.booking_reference}
                   </div>
                   <div className="text-sm text-gray-600">Vehicle</div>
                 </div>
@@ -207,7 +213,7 @@ export function BookingOverlay({ slot, onClose, onUpdate }: BookingOverlayProps)
                 <PoundSterlingIcon className="w-5 h-5 text-gray-400 mt-0.5" />
                 <div>
                   <div className="font-semibold text-gray-900 text-lg">
-                    £{slot.booking.price}
+                    £{slot.booking.total_price}
                   </div>
                   <div className="text-sm text-gray-600">Total Price</div>
                 </div>
@@ -234,7 +240,7 @@ export function BookingOverlay({ slot, onClose, onUpdate }: BookingOverlayProps)
                     onClick={handleContactCustomer}
                     className="text-blue-600 hover:text-blue-800 text-sm"
                   >
-                    {slot.booking.contact_email}
+                    {slot.booking.customer_email || 'No email'}
                   </button>
                 </div>
 
@@ -244,14 +250,14 @@ export function BookingOverlay({ slot, onClose, onUpdate }: BookingOverlayProps)
                     onClick={handleCallCustomer}
                     className="text-blue-600 hover:text-blue-800 text-sm"
                   >
-                    {slot.booking.contact_phone}
+                    {slot.booking.customer_phone || 'No phone'}
                   </button>
                 </div>
 
                 <div className="flex items-start gap-3">
                   <MapPinIcon className="w-4 h-4 text-gray-400 mt-0.5" />
                   <div className="text-sm text-gray-600">
-                    {slot.booking.address}
+                    {slot.booking.special_instructions || 'No special instructions'}
                   </div>
                 </div>
               </div>

@@ -27,8 +27,9 @@ export function ServiceSelection(): React.JSX.Element {
     formData.service?.serviceId || null
   )
   const [servicesWithPricing, setServicesWithPricing] = useState<any[]>([])
+  const [vehicleSizes, setVehicleSizes] = useState<any[]>([])
 
-  // Load services and categories on component mount
+  // Load services, categories, and vehicle sizes on component mount
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -47,6 +48,15 @@ export function ServiceSelection(): React.JSX.Element {
           const categoriesData = await categoriesResponse.json()
           if (categoriesData.success) {
             setCategories(categoriesData.data || [])
+          }
+        }
+
+        // Load vehicle sizes for price range calculation
+        const sizesResponse = await fetch('/api/vehicle-sizes')
+        if (sizesResponse.ok) {
+          const sizesData = await sizesResponse.json()
+          if (sizesData.success) {
+            setVehicleSizes(sizesData.data || [])
           }
         }
         
@@ -77,7 +87,7 @@ export function ServiceSelection(): React.JSX.Element {
         serviceId: service.id,
         name: service.name,
         basePrice: service.priceRange?.min || 0,
-        duration: service.duration_minutes || service.estimated_duration
+        duration: service.duration_minutes || service.estimated_duration || 0
       })
     }
   }
@@ -105,6 +115,7 @@ export function ServiceSelection(): React.JSX.Element {
   const filteredServices = selectedCategory === 'all' 
     ? servicesToDisplay 
     : servicesToDisplay.filter(service => service.category_id === selectedCategory)
+  
     
   // Don't render if not current step
   if (!isCurrentStep) {
@@ -197,23 +208,36 @@ export function ServiceSelection(): React.JSX.Element {
               </Card>
             ))}
           </div>
+        ) : filteredServices.length === 0 ? (
+          <div className="text-center py-8">
+            <p className="text-text-secondary">
+              {isLoading ? 'Loading services...' : 'No services available for the selected category.'}
+            </p>
+          </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {filteredServices.map((service) => {
               const isSelected = selectedService === service.id;
               const serviceName = service.name.toLowerCase();
               const isPremium = serviceName.includes('full') || serviceName.includes('complete') || serviceName.includes('premium');
+              const hasValidPricing = service.priceRange && service.priceRange.min && service.priceRange.max;
               
               return (
                 <Card
                   key={service.id}
                   variant={isSelected ? 'interactive' : 'default'}
-                  className={`cursor-pointer transition-all duration-300 relative touch-manipulation ${
-                    isSelected
+                  className={`transition-all duration-300 relative touch-manipulation ${
+                    !hasValidPricing 
+                      ? 'cursor-not-allowed opacity-60 bg-surface-secondary border-border-secondary' 
+                      : 'cursor-pointer'
+                  } ${
+                    isSelected && hasValidPricing
                       ? 'border-brand-500 bg-brand-600/5 shadow-purple-lg'
-                      : 'hover:border-brand-400 hover:shadow-purple'
-                  } ${isPremium ? 'border-brand-500/50 bg-gradient-to-br from-brand-600/5 to-brand-800/10' : ''}`}
-                  onClick={() => handleServiceSelection(service.id)}
+                      : hasValidPricing 
+                        ? 'hover:border-brand-400 hover:shadow-purple'
+                        : ''
+                  } ${isPremium && hasValidPricing ? 'border-brand-500/50 bg-gradient-to-br from-brand-600/5 to-brand-800/10' : ''}`}
+                  onClick={() => hasValidPricing && handleServiceSelection(service.id)}
                 >
                   {isPremium && (
                     <div className="absolute -top-2 sm:-top-3 left-1/2 -translate-x-1/2 bg-brand-600 text-white px-3 sm:px-4 py-1 rounded-full text-xs sm:text-sm font-bold shadow-lg">
@@ -254,17 +278,33 @@ export function ServiceSelection(): React.JSX.Element {
 
                   <CardContent className="p-4 sm:p-6 pt-0">
                     <div className="text-center space-y-2">
-                      {/* Price Display */}
-                      {service.priceRange ? (
-                        <div className="space-y-1">
-                          <div className="text-lg sm:text-xl font-bold text-brand-400">
-                            £{service.priceRange.min} - £{service.priceRange.max}
+                      {/* Dynamic Price Display */}
+                      {service.priceRange && service.priceRange.min && service.priceRange.max ? (
+                        service.priceRange.min !== service.priceRange.max ? (
+                          <div className="space-y-1">
+                            <div className="text-lg sm:text-xl font-bold text-brand-400">
+                              From £{service.priceRange.min} - £{service.priceRange.max}
+                            </div>
+                            <div className="text-xs text-text-muted">Based on vehicle size</div>
                           </div>
-                          <div className="text-xs text-text-muted">Based on vehicle size</div>
-                        </div>
+                        ) : (
+                          <div className="space-y-1">
+                            <div className="text-xl sm:text-2xl font-bold text-brand-400">
+                              £{service.priceRange.min}
+                            </div>
+                            <div className="text-xs text-text-muted">Fixed price</div>
+                          </div>
+                        )
                       ) : (
-                        <div className="text-2xl sm:text-3xl font-bold text-brand-400">
-                          {service.priceRange?.min ? `£${service.priceRange.min}` : 'Price TBA'}
+                        <div className="space-y-1">
+                          <div className="text-lg text-text-secondary">
+                            Contact for pricing
+                          </div>
+                          {!hasValidPricing && (
+                            <div className="text-xs text-orange-400 font-medium">
+                              Pricing not configured
+                            </div>
+                          )}
                         </div>
                       )}
                       
@@ -285,12 +325,18 @@ export function ServiceSelection(): React.JSX.Element {
 
                   <CardFooter className="p-4 sm:p-6 pt-0">
                     <Button
-                      variant={isSelected ? 'primary' : 'outline'}
+                      variant={isSelected && hasValidPricing ? 'primary' : 'outline'}
                       fullWidth
                       size="sm"
-                      className={`${isSelected ? 'animate-purple-pulse' : ''} touch-manipulation min-h-[44px]`}
+                      disabled={!hasValidPricing}
+                      className={`${isSelected && hasValidPricing ? 'animate-purple-pulse' : ''} touch-manipulation min-h-[44px]`}
                     >
-                      {isSelected ? 'Selected' : 'Select Service'}
+                      {!hasValidPricing 
+                        ? 'Pricing Required' 
+                        : isSelected 
+                          ? 'Selected' 
+                          : 'Select Service'
+                      }
                     </Button>
                   </CardFooter>
                 </Card>
@@ -310,22 +356,40 @@ export function ServiceSelection(): React.JSX.Element {
               </h3>
             </CardHeader>
             <CardContent className="p-4 sm:p-6 pt-0">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-surface-tertiary rounded-lg p-4 gap-3 sm:gap-0">
-                <div className="flex-1">
-                  <span className="text-text-primary font-medium text-base sm:text-lg">{formData.service.name}</span>
-                  <div className="text-sm text-text-muted mt-1">~{Math.round(formData.service.duration / 60)} hours</div>
-                </div>
-                <span className="text-brand-400 font-bold text-xl sm:text-2xl">£{formData.service.basePrice}</span>
-              </div>
-              <div className="mt-4 text-sm text-text-secondary space-y-2">
-                <p>Final price will be calculated based on your vehicle size and service location.</p>
-                {formData.service && (
-                  <div className="flex items-center gap-2 text-xs text-text-muted">
-                    <Clock className="w-3 h-3" />
-                    <span>Estimated duration: {Math.round(formData.service.duration / 60)} hours</span>
-                  </div>
-                )}
-              </div>
+              {(() => {
+                const selectedServiceData = servicesWithPricing.find(s => s.id === selectedService) || availableServices.find(s => s.id === selectedService)
+                return (
+                  <>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-surface-tertiary rounded-lg p-4 gap-3 sm:gap-0">
+                      <div className="flex-1">
+                        <span className="text-text-primary font-medium text-base sm:text-lg">{formData.service.name}</span>
+                        <div className="text-sm text-text-muted mt-1">~{Math.round(formData.service.duration / 60)} hours</div>
+                      </div>
+                      <div className="text-right">
+                        {selectedServiceData?.priceRange && selectedServiceData.priceRange.min !== selectedServiceData.priceRange.max ? (
+                          <div>
+                            <span className="text-brand-400 font-bold text-lg sm:text-xl">£{selectedServiceData.priceRange.min} - £{selectedServiceData.priceRange.max}</span>
+                            <div className="text-xs text-text-muted">Based on vehicle size</div>
+                          </div>
+                        ) : selectedServiceData?.priceRange?.min ? (
+                          <span className="text-brand-400 font-bold text-xl sm:text-2xl">£{selectedServiceData.priceRange.min}</span>
+                        ) : (
+                          <span className="text-text-secondary text-sm">Contact for pricing</span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="mt-4 text-sm text-text-secondary space-y-2">
+                      <p>Final price will be calculated based on your vehicle size and service location.</p>
+                      {formData.service && (
+                        <div className="flex items-center gap-2 text-xs text-text-muted">
+                          <Clock className="w-3 h-3" />
+                          <span>Estimated duration: {Math.round(formData.service.duration / 60)} hours</span>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )
+              })()}
             </CardContent>
           </Card>
         </div>

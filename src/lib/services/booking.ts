@@ -202,9 +202,9 @@ export class BookingService extends BaseService {
   async createTimeSlotsBulk(slots: Array<{
     slot_date: string
     start_time: string
-    duration_minutes: number
     is_available: boolean
     created_by: string
+    notes?: string
   }>): Promise<ServiceResponse<TimeSlot[]>> {
     return this.executeQuery(async () => {
       const supabase = this.supabase
@@ -235,10 +235,19 @@ export class BookingService extends BaseService {
         }
       }
       
+      // Transform slots to match database schema (remove duration_minutes, add notes)
+      const dbSlots = uniqueSlots.map(slot => ({
+        slot_date: slot.slot_date,
+        start_time: slot.start_time,
+        is_available: slot.is_available,
+        created_by: slot.created_by,
+        notes: slot.notes || null
+      }))
+      
       // Insert unique slots
       return supabase
         .from('time_slots')
-        .insert(uniqueSlots)
+        .insert(dbSlots)
         .select()
     }, 'Failed to create time slots in bulk')
   }

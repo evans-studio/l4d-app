@@ -48,7 +48,7 @@ interface AuthState {
   // Auth operations
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>
   register: (email: string, password: string, firstName: string, lastName: string, phone?: string) => Promise<{ success: boolean; error?: string; redirectTo?: string }>
-  logout: () => Promise<void>
+  logout: () => Promise<{ success: boolean; error?: string }>
   
   // Profile operations
   fetchProfile: (userId: string) => Promise<UserProfile | null>
@@ -300,9 +300,17 @@ export const useAuthStore = create<AuthState>()(
         try {
           await supabase.auth.signOut()
           set({ user: null, profile: null, error: null })
+          
+          // Redirect to homepage after successful logout
+          if (typeof window !== 'undefined') {
+            window.location.href = '/'
+          }
+          
+          return { success: true }
         } catch (error) {
           console.error('Logout error:', error)
           set({ error: 'Failed to logout' })
+          return { success: false, error: 'Failed to logout' }
         }
       },
       

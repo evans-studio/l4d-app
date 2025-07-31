@@ -2,6 +2,19 @@ import { NextRequest } from 'next/server'
 import { createClientFromRequest } from '@/lib/supabase/server'
 import { ApiResponseHandler } from '@/lib/api/response'
 
+// Helper function to calculate end time
+function calculateEndTime(startTime: string, durationMinutes: number): string {
+  const [hoursStr, minutesStr] = startTime.split(':')
+  const hours = parseInt(hoursStr || '0', 10)
+  const minutes = parseInt(minutesStr || '0', 10)
+  
+  const startDate = new Date()
+  startDate.setHours(hours, minutes, 0, 0)
+  
+  const endDate = new Date(startDate.getTime() + durationMinutes * 60000)
+  return `${endDate.getHours().toString().padStart(2, '0')}:${endDate.getMinutes().toString().padStart(2, '0')}`
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -53,17 +66,14 @@ export async function GET(
     const maxDate = new Date()
     maxDate.setDate(maxDate.getDate() + 90) // 90 days maximum advance
 
-    // Get all available time slots that can accommodate this service
-    const serviceDuration = booking.service?.estimated_duration || 120 // Default 2 hours
-
+    // Get all available time slots - use correct field names from database schema
     const { data: availableSlots, error: slotsError } = await supabase
       .from('time_slots')
-      .select('*')
+      .select('id, slot_date, start_time, is_available')
       .eq('is_available', true)
-      .gte('date', minDate.toISOString().split('T')[0])
-      .lte('date', maxDate.toISOString().split('T')[0])
-      .gte('duration_minutes', serviceDuration)
-      .order('date', { ascending: true })
+      .gte('slot_date', minDate.toISOString().split('T')[0])
+      .lte('slot_date', maxDate.toISOString().split('T')[0])
+      .order('slot_date', { ascending: true })
       .order('start_time', { ascending: true })
 
     if (slotsError) {
@@ -76,10 +86,19 @@ export async function GET(
     
     if (availableSlots) {
       availableSlots.forEach(slot => {
-        if (!slotsByDate[slot.date]) {
-          slotsByDate[slot.date] = []
+        const date = slot.slot_date
+        if (!slotsByDate[date]) {
+          slotsByDate[date] = []
         }
-        slotsByDate[slot.date]?.push(slot)
+        // Transform slot to match expected format
+        slotsByDate[date]?.push({
+          id: slot.id,
+          date: slot.slot_date,
+          start_time: slot.start_time,
+          end_time: calculateEndTime(slot.start_time, booking.service?.duration_minutes || 120),
+          duration_minutes: booking.service?.duration_minutes || 120,
+          is_available: slot.is_available
+        })
       })
     }
 
@@ -89,7 +108,7 @@ export async function GET(
         currentDate: booking.scheduled_date,
         currentTime: booking.scheduled_start_time,
         serviceName: booking.service?.name,
-        serviceDuration: serviceDuration
+        serviceDuration: booking.service?.duration_minutes || 120
       },
       availableSlots: slotsByDate,
       restrictions: {

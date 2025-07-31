@@ -41,7 +41,8 @@ export default function LoginPage() {
   // Redirect if already authenticated
   useEffect(() => {
     if (isAuthenticated) {
-      const redirectTo = isAdmin ? '/admin' : '/dashboard'
+      const urlParams = new URLSearchParams(window.location.search)
+      const redirectTo = urlParams.get('redirect') || (isAdmin ? '/admin' : '/dashboard')
       router.replace(redirectTo)
     }
   }, [isAuthenticated, isAdmin, router])

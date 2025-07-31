@@ -17,19 +17,25 @@ interface TimeSlot {
   slot_date: string
   start_time: string
   is_available: boolean
-  created_by: string | null
   notes: string | null
   created_at: string
   booking?: {
     id: string
-    customer_name: string
-    service_name: string
-    vehicle_details: string
-    price: number
+    booking_reference: string
+    customer_id: string
     status: string
-    contact_email: string
-    contact_phone: string
-    address: string
+    scheduled_date: string
+    scheduled_start_time: string
+    scheduled_end_time: string
+    total_price: number
+    special_instructions: string | null
+    customer_name: string | null
+    customer_email: string | null
+    customer_phone: string | null
+    services: Array<{
+      name: string
+      description: string | null
+    }>
   }
 }
 

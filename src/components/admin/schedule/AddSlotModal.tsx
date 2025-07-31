@@ -2,8 +2,8 @@
 
 import { useState } from 'react'
 import { Button } from '@/components/ui/primitives/Button'
+import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from '@/components/ui/composites/Modal'
 import { 
-  XIcon,
   ClockIcon,
   CalendarIcon,
   PlusIcon,
@@ -97,134 +97,118 @@ export function AddSlotModal({ date, onClose, onSuccess }: AddSlotModalProps) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg w-full max-w-md">
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">Add Time Slot</h2>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-          >
-            <XIcon className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="p-4 space-y-6">
-          {/* Date Display */}
-          <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-            <CalendarIcon className="w-5 h-5 text-gray-400" />
-            <div>
-              <div className="font-semibold text-gray-900">
-                {formatDate(date)}
-              </div>
-              <div className="text-sm text-gray-600">Selected date</div>
-            </div>
-          </div>
-
-          {/* Start Time */}
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-700">
-              Start Time
-            </label>
-            <select
-              value={startTime}
-              onChange={(e) => setStartTime(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              required
-            >
-              {timeSlots.map(time => (
-                <option key={time} value={time}>
-                  {formatTime(time)}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Duration */}
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-700">
-              Duration
-            </label>
-            <select
-              value={duration}
-              onChange={(e) => setDuration(Number(e.target.value))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              {durationOptions.map(option => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Time Preview */}
-          <div className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-            <ClockIcon className="w-5 h-5 text-blue-600" />
-            <div>
-              <div className="font-semibold text-blue-900">
-                {formatTime(startTime)} - {formatTime(getEndTime(startTime, duration))}
-              </div>
-              <div className="text-sm text-blue-700">
-                {duration} minutes duration
+    <Modal open={true} onClose={onClose}>
+      <ModalContent size="md" mobile="drawer" onClose={onClose}>
+        <ModalHeader 
+          title="Add Time Slot"
+          subtitle="Create a new available booking slot"
+        />
+        
+        <form onSubmit={handleSubmit}>
+          <ModalBody className="space-y-6">
+            {/* Date Display */}
+            <div className="flex items-center gap-3 p-4 bg-[var(--surface-secondary)] border border-[var(--border-secondary)] rounded-lg">
+              <CalendarIcon className="w-5 h-5 text-[var(--text-muted)]" />
+              <div>
+                <div className="font-semibold text-[var(--text-primary)]">
+                  {formatDate(date)}
+                </div>
+                <div className="text-sm text-[var(--text-secondary)]">Selected date</div>
               </div>
             </div>
-          </div>
 
-          {/* Notes */}
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-700">
-              Notes (optional)
-            </label>
-            <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Add any notes about this time slot..."
-              rows={3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            />
-          </div>
-
-          {/* Error Message */}
-          {error && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-sm text-red-700">{error}</p>
+            {/* Start Time */}
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-[var(--text-primary)]">
+                Start Time
+              </label>
+              <select
+                value={startTime}
+                onChange={(e) => setStartTime(e.target.value)}
+                className="w-full px-3 py-2 border border-[var(--border-secondary)] rounded-lg bg-[var(--surface-primary)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-[var(--primary)]"
+                required
+              >
+                {timeSlots.map(time => (
+                  <option key={time} value={time}>
+                    {formatTime(time)}
+                  </option>
+                ))}
+              </select>
             </div>
-          )}
 
-          {/* Actions */}
-          <div className="flex gap-3 pt-4">
+            {/* Duration */}
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-[var(--text-primary)]">
+                Duration
+              </label>
+              <select
+                value={duration}
+                onChange={(e) => setDuration(Number(e.target.value))}
+                className="w-full px-3 py-2 border border-[var(--border-secondary)] rounded-lg bg-[var(--surface-primary)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-[var(--primary)]"
+              >
+                {durationOptions.map(option => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Time Preview */}
+            <div className="flex items-center gap-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <ClockIcon className="w-5 h-5 text-blue-600" />
+              <div>
+                <div className="font-semibold text-blue-900">
+                  {formatTime(startTime)} - {formatTime(getEndTime(startTime, duration))}
+                </div>
+                <div className="text-sm text-blue-700">
+                  {duration} minutes duration
+                </div>
+              </div>
+            </div>
+
+            {/* Notes */}
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-[var(--text-primary)]">
+                Notes (optional)
+              </label>
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Add any notes about this time slot..."
+                rows={3}
+                className="w-full px-3 py-2 border border-[var(--border-secondary)] rounded-lg bg-[var(--surface-primary)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-[var(--primary)] placeholder:text-[var(--text-muted)]"
+              />
+            </div>
+
+            {/* Error Message */}
+            {error && (
+              <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-sm text-red-700">{error}</p>
+              </div>
+            )}
+          </ModalBody>
+
+          <ModalFooter>
             <Button
               type="button"
               variant="outline"
               onClick={onClose}
-              className="flex-1"
               disabled={isLoading}
             >
               Cancel
             </Button>
             <Button
               type="submit"
-              className="flex-1"
               disabled={isLoading}
+              loading={isLoading}
+              leftIcon={isLoading ? <LoaderIcon className="w-4 h-4 animate-spin" /> : <PlusIcon className="w-4 h-4" />}
             >
-              {isLoading ? (
-                <>
-                  <LoaderIcon className="w-4 h-4 mr-2 animate-spin" />
-                  Adding...
-                </>
-              ) : (
-                <>
-                  <PlusIcon className="w-4 h-4 mr-2" />
-                  Add Slot
-                </>
-              )}
+              {isLoading ? 'Adding...' : 'Add Slot'}
             </Button>
-          </div>
+          </ModalFooter>
         </form>
-      </div>
-    </div>
+      </ModalContent>
+    </Modal>
   )
 }

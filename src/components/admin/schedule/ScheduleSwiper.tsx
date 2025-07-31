@@ -18,19 +18,25 @@ interface TimeSlot {
   slot_date: string
   start_time: string
   is_available: boolean
-  created_by: string | null
   notes: string | null
   created_at: string
   booking?: {
     id: string
-    customer_name: string
-    service_name: string
-    vehicle_details: string
-    price: number
+    booking_reference: string
+    customer_id: string
     status: string
-    contact_email: string
-    contact_phone: string
-    address: string
+    scheduled_date: string
+    scheduled_start_time: string
+    scheduled_end_time: string
+    total_price: number
+    special_instructions: string | null
+    customer_name: string | null
+    customer_email: string | null
+    customer_phone: string | null
+    services: Array<{
+      name: string
+      description: string | null
+    }>
   }
 }
 
@@ -43,6 +49,8 @@ interface DaySchedule {
     total: number
     booked: number
     available: number
+    completed: number
+    cancelled: number
   }
 }
 
@@ -84,9 +92,19 @@ export function ScheduleSwiper({ timeSlots, onSlotsChange, isLoading }: Schedule
       // Get slots for this date
       const daySlots = timeSlots.filter(slot => slot.slot_date === dateStr)
       
-      // Calculate stats
-      const bookedSlots = daySlots.filter(slot => !slot.is_available)
-      const availableSlots = daySlots.filter(slot => slot.is_available)
+      // Calculate stats based on booking status
+      const availableSlots = daySlots.filter(slot => 
+        slot.is_available && !slot.booking
+      )
+      const bookedSlots = daySlots.filter(slot => 
+        slot.booking && !['cancelled'].includes(slot.booking.status)
+      )
+      const completedSlots = daySlots.filter(slot =>
+        slot.booking?.status === 'completed'
+      )
+      const cancelledSlots = daySlots.filter(slot =>
+        slot.booking?.status === 'cancelled'
+      )
       
       days.push({
         date: dateStr,
@@ -100,7 +118,9 @@ export function ScheduleSwiper({ timeSlots, onSlotsChange, isLoading }: Schedule
         stats: {
           total: daySlots.length,
           booked: bookedSlots.length,
-          available: availableSlots.length
+          available: availableSlots.length,
+          completed: completedSlots.length,
+          cancelled: cancelledSlots.length
         }
       })
     }

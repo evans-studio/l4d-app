@@ -26,4 +26,30 @@
   .shadow-glow {
     box-shadow: 0 0 20px rgba(151, 71, 255, 0.3);
   }
+
+  /* PWA Safe Area Support */
+  .safe-area-inset-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  
+  .safe-area-inset-top {
+    padding-top: env(safe-area-inset-top);
+  }
+  
+  /* Enhanced touch targets for mobile */
+  .touch-manipulation {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  /* Smooth scrolling for PWA */
+  html {
+    scroll-behavior: smooth;
+  }
+  
+  /* PWA navigation blur backdrop */
+  .backdrop-blur-md {
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
 }

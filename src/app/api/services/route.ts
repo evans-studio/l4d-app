@@ -73,16 +73,54 @@ export async function GET(request: NextRequest) {
       return ApiResponseHandler.serverError('Failed to fetch vehicle sizes')
     }
 
-    // For now, return services without price range calculation
-    // Price ranges will be determined from service_pricing table
-    const servicesWithPricing = services.map(service => ({
-      ...service,
-      priceRange: {
-        min: 0, // Will be calculated from service_pricing table
-        max: 0, // Will be calculated from service_pricing table
-      },
-    }))
+    // Calculate price ranges from service_pricing table
+    const servicesWithPricing = await Promise.all(
+      services.map(async (service) => {
+        // Get pricing for this service (single row with all vehicle size columns)
+        const { data: pricingData, error: pricingError } = await supabase
+          .from('service_pricing')
+          .select('small, medium, large, extra_large')
+          .eq('service_id', service.id)
+          .single()
 
+        if (pricingError || !pricingData) {
+          // No pricing data available
+          return {
+            ...service,
+            priceRange: null,
+          }
+        }
+
+        // Extract prices from the columns, filtering out null/zero values
+        const prices = [
+          pricingData.small,
+          pricingData.medium, 
+          pricingData.large,
+          pricingData.extra_large
+        ].filter(price => price && price > 0)
+
+        if (prices.length === 0) {
+          return {
+            ...service,
+            priceRange: null,
+          }
+        }
+
+        // Calculate min and max prices
+        const minPrice = Math.min(...prices)
+        const maxPrice = Math.max(...prices)
+
+        return {
+          ...service,
+          priceRange: {
+            min: minPrice,
+            max: maxPrice,
+          },
+        }
+      })
+    )
+
+    // Return all services, but mark those without pricing
     return ApiResponseHandler.success(servicesWithPricing, {
       pagination: {
         page: 1,
@@ -120,7 +158,7 @@ export async function POST(request: NextRequest) {
       full_description: validation.data.longDescription, // Correct: full_description
       duration_minutes: validation.data.estimatedDuration, // Correct: duration_minutes
       is_active: validation.data.isActive,
-      base_price: 0, // Default value since we use service_pricing table for actual pricing
+      base_price: 0, // Legacy field - actual pricing comes from service_pricing table
       slug: validation.data.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') // Generate slug from name
     }
 

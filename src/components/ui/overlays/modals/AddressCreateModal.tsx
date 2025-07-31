@@ -1,24 +1,10 @@
 'use client'
 
 import React from 'react'
-import { BaseModal } from '../BaseModal'
 import { BaseOverlayProps } from '@/lib/overlay/types'
+import { AddressEditModal } from './AddressEditModal'
 
-export const AddressCreateModal: React.FC<BaseOverlayProps> = ({
-  isOpen,
-  onClose,
-  data
-}) => {
-  return (
-    <BaseModal
-      isOpen={isOpen}
-      onClose={onClose}
-      title="Add Address"
-      size="md"
-    >
-      <div className="py-8 text-center text-text-secondary">
-        <p>Address create modal - coming soon</p>
-      </div>
-    </BaseModal>
-  )
+export const AddressCreateModal: React.FC<BaseOverlayProps> = (props) => {
+  // Reuse the AddressEditModal without an addressId to create a new address
+  return <AddressEditModal {...props} data={{ ...props.data, addressId: undefined }} />
 }
