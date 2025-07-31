@@ -155,6 +155,15 @@ export async function POST(request: NextRequest) {
       return ApiResponseHandler.badRequest('Invalid time format. Use HH:MM')
     }
 
+    // Check if the slot time is in the past
+    const slotDateTime = new Date(`${slot_date}T${start_time}`)
+    const now = new Date()
+    
+    if (slotDateTime <= now) {
+      console.log(`Admin API POST: Rejecting past slot - ${slot_date}T${start_time} is before ${now.toISOString()}`)
+      return ApiResponseHandler.badRequest('Cannot create time slots for past dates and times')
+    }
+
     // Create single slot
     const slotsToCreate = [{
       slot_date,

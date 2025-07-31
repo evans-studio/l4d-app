@@ -119,7 +119,11 @@ export function DayCard({ day, isToday, onAddSlot, onSlotUpdate }: DayCardProps)
   const isSlotPast = (dateStr: string, timeStr: string) => {
     const now = new Date()
     const slotDateTime = new Date(`${dateStr}T${timeStr}`)
-    return slotDateTime < now
+    
+    // Add 5-minute buffer to consider slots "past" slightly before their actual time
+    // This prevents clicking on slots that are about to start
+    const bufferTime = 5 * 60 * 1000 // 5 minutes in milliseconds
+    return slotDateTime.getTime() <= (now.getTime() + bufferTime)
   }
 
   return (

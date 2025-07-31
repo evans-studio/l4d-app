@@ -228,15 +228,34 @@ export class BookingService extends BaseService {
         !existingSlots.has(`${slot.slot_date}-${slot.start_time}`)
       )
       
-      if (uniqueSlots.length === 0) {
+      // Filter out past time slots
+      const now = new Date()
+      const futureSlots = uniqueSlots.filter(slot => {
+        const slotDateTime = new Date(`${slot.slot_date}T${slot.start_time}`)
+        return slotDateTime > now
+      })
+      
+      const pastSlotsCount = uniqueSlots.length - futureSlots.length
+      if (pastSlotsCount > 0) {
+        console.log(`BookingService: Filtered out ${pastSlotsCount} past time slots`)
+      }
+      
+      if (futureSlots.length === 0) {
+        const duplicateCount = slots.length - uniqueSlots.length
+        const errorMessage = duplicateCount > 0 && pastSlotsCount > 0
+          ? `All time slots are either duplicates (${duplicateCount}) or in the past (${pastSlotsCount})`
+          : duplicateCount > 0
+          ? 'All specified time slots already exist'
+          : 'All specified time slots are in the past'
+        
         return { 
           data: [], 
-          error: { message: 'All specified time slots already exist' } 
+          error: { message: errorMessage } 
         }
       }
       
       // Transform slots to match database schema (remove duration_minutes, add notes)
-      const dbSlots = uniqueSlots.map(slot => ({
+      const dbSlots = futureSlots.map(slot => ({
         slot_date: slot.slot_date,
         start_time: slot.start_time,
         is_available: slot.is_available,

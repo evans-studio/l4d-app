@@ -163,10 +163,12 @@ export function TimeSlot({ slot, onClick, onUpdate, onDelete, isPast }: TimeSlot
 
   return (
     <div 
-      className={`relative rounded-lg border transition-all duration-200 cursor-pointer hover:shadow-sm ${
-        statusInfo.bgColor
-      } ${statusInfo.borderColor} ${isPast ? 'opacity-50' : ''}`}
-      onClick={onClick}
+      className={`relative rounded-lg border transition-all duration-200 ${
+        isPast 
+          ? 'cursor-not-allowed opacity-60' 
+          : 'cursor-pointer hover:shadow-sm'
+      } ${statusInfo.bgColor} ${statusInfo.borderColor}`}
+      onClick={isPast ? undefined : onClick}
     >
       <div className="p-4">
         <div className="flex items-center justify-between">
@@ -216,6 +218,11 @@ export function TimeSlot({ slot, onClick, onUpdate, onDelete, isPast }: TimeSlot
 
           {/* Status Badge */}
           <div className="flex items-center gap-2">
+            {isPast && (
+              <span className="text-xs font-bold bg-gray-100 text-gray-600 px-2 py-1 rounded uppercase">
+                Past
+              </span>
+            )}
             <span className={`text-sm font-medium ${statusInfo.textColor}`}>
               {statusInfo.text}
             </span>
@@ -290,9 +297,11 @@ export function TimeSlot({ slot, onClick, onUpdate, onDelete, isPast }: TimeSlot
         )}
 
         {/* Click hint */}
-        <div className="mt-2 text-xs text-gray-500 text-center">
-          Tap for details
-        </div>
+        {!isPast && (
+          <div className="mt-2 text-xs text-gray-500 text-center">
+            Tap for details
+          </div>
+        )}
       </div>
 
       {/* Click overlay to close actions */}
