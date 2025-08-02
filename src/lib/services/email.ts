@@ -1,5 +1,6 @@
 import { Resend } from 'resend'
 import { Booking } from '@/lib/utils/booking-types'
+import { formatDateForEmail, formatTimeForEmail } from '@/lib/utils/date-formatting'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
@@ -274,22 +275,6 @@ export class EmailService {
 
   // HTML Email Templates
   private generateBookingConfirmationHTML(customerName: string, booking: Booking): string {
-    const formatDate = (dateStr: string) => {
-      return new Date(dateStr).toLocaleDateString('en-GB', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      })
-    }
-
-    const formatTime = (time: string) => {
-      const [hours, minutes] = time.split(':')
-      const hour = parseInt(hours || '0')
-      const ampm = hour >= 12 ? 'PM' : 'AM'
-      const displayHour = hour % 12 || 12
-      return `${displayHour}:${minutes || '00'} ${ampm}`
-    }
 
     return `
       <!DOCTYPE html>
@@ -367,7 +352,7 @@ export class EmailService {
                     <div class="detail-icon">📅</div>
                     <div class="detail-content">
                       <div class="detail-label">Scheduled Date</div>
-                      <div class="detail-value">${formatDate(booking.scheduled_date)}</div>
+                      <div class="detail-value">${formatDateForEmail(booking.scheduled_date)}</div>
                     </div>
                   </div>
                   
@@ -375,7 +360,7 @@ export class EmailService {
                     <div class="detail-icon">⏰</div>
                     <div class="detail-content">
                       <div class="detail-label">Scheduled Time</div>
-                      <div class="detail-value">${formatTime(booking.scheduled_start_time)}</div>
+                      <div class="detail-value">${formatTimeForEmail(booking.scheduled_start_time)}</div>
                     </div>
                   </div>
                   
@@ -447,23 +432,6 @@ export class EmailService {
   }
 
   private generateBookingConfirmationText(customerName: string, booking: Booking): string {
-    const formatDate = (dateStr: string) => {
-      return new Date(dateStr).toLocaleDateString('en-GB', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      })
-    }
-
-    const formatTime = (time: string) => {
-      const [hours, minutes] = time.split(':')
-      const hour = parseInt(hours || '0')
-      const ampm = hour >= 12 ? 'PM' : 'AM'
-      const displayHour = hour % 12 || 12
-      return `${displayHour}:${minutes || '00'} ${ampm}`
-    }
-
     return `
 BOOKING CONFIRMATION - Love 4 Detailing
 
@@ -472,8 +440,8 @@ Dear ${customerName},
 Your booking has been received and is being processed. Here are your booking details:
 
 Booking Reference: ${booking.booking_reference}
-Date: ${formatDate(booking.scheduled_date)}
-Time: ${formatTime(booking.scheduled_start_time)}
+Date: ${formatDateForEmail(booking.scheduled_date)}
+Time: ${formatTimeForEmail(booking.scheduled_start_time)}
 Vehicle: ${booking.vehicle_details?.make} ${booking.vehicle_details?.model}
 Service Address: ${booking.service_address?.address_line_1}, ${booking.service_address?.city}, ${booking.service_address?.postcode}
 Total Price: £${booking.total_price}
@@ -499,22 +467,6 @@ This is an automated email. Please do not reply directly to this email.
   }
 
   private generateAdminNotificationHTML(booking: Booking, customerEmail: string, customerName: string): string {
-    const formatDate = (dateStr: string) => {
-      return new Date(dateStr).toLocaleDateString('en-GB', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      })
-    }
-
-    const formatTime = (time: string) => {
-      const [hours, minutes] = time.split(':')
-      const hour = parseInt(hours || '0')
-      const ampm = hour >= 12 ? 'PM' : 'AM'
-      const displayHour = hour % 12 || 12
-      return `${displayHour}:${minutes || '00'} ${ampm}`
-    }
 
     return `
       <!DOCTYPE html>
@@ -613,7 +565,7 @@ This is an automated email. Please do not reply directly to this email.
                       <div class="detail-icon">📅</div>
                       <div class="detail-content">
                         <div class="detail-label">Service Date</div>
-                        <div class="detail-value">${formatDate(booking.scheduled_date)}</div>
+                        <div class="detail-value">${formatDateForEmail(booking.scheduled_date)}</div>
                       </div>
                     </div>
                     
@@ -621,7 +573,7 @@ This is an automated email. Please do not reply directly to this email.
                       <div class="detail-icon">⏰</div>
                       <div class="detail-content">
                         <div class="detail-label">Service Time</div>
-                        <div class="detail-value">${formatTime(booking.scheduled_start_time)} (${booking.estimated_duration} min duration)</div>
+                        <div class="detail-value">${formatTimeForEmail(booking.scheduled_start_time)} (${booking.estimated_duration} min duration)</div>
                       </div>
                     </div>
                     
@@ -1009,22 +961,6 @@ ${setupUrl}
   }
 
   private generateBookingDeclineHTML(customerName: string, booking: Booking, declineReason: string, additionalNotes?: string): string {
-    const formatDate = (dateStr: string) => {
-      return new Date(dateStr).toLocaleDateString('en-GB', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      })
-    }
-
-    const formatTime = (time: string) => {
-      const [hours, minutes] = time.split(':')
-      const hour = parseInt(hours || '0')
-      const ampm = hour >= 12 ? 'PM' : 'AM'
-      const displayHour = hour % 12 || 12
-      return `${displayHour}:${minutes || '00'} ${ampm}`
-    }
 
     return `
       <!DOCTYPE html>
@@ -1062,12 +998,12 @@ ${setupUrl}
               
               <div class="detail-row">
                 <span class="detail-label">Date:</span>
-                <span class="detail-value">${formatDate(booking.scheduled_date)}</span>
+                <span class="detail-value">${formatDateForEmail(booking.scheduled_date)}</span>
               </div>
               
               <div class="detail-row">
                 <span class="detail-label">Time:</span>
-                <span class="detail-value">${formatTime(booking.scheduled_start_time)}</span>
+                <span class="detail-value">${formatTimeForEmail(booking.scheduled_start_time)}</span>
               </div>
               
               <div class="detail-row">

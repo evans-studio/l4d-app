@@ -173,9 +173,9 @@ export const CancelModal: React.FC<CancelModalProps> = ({
           </Button>
         </div>
       ) : booking && policy ? (
-        <form onSubmit={handleCancel} className="space-y-6">
+        <form onSubmit={handleCancel} className="space-y-4 sm:space-y-6">
           {/* Cancellation Policy Alert */}
-          <div className={`rounded-lg p-4 border ${
+          <div className={`rounded-lg p-3 sm:p-4 border ${
             policy.canCancelFree 
               ? 'bg-green-50 border-green-200' 
               : policy.refundPercentage > 0 
@@ -208,12 +208,12 @@ export const CancelModal: React.FC<CancelModalProps> = ({
           </div>
 
           {/* Booking Details */}
-          <div className="bg-surface-secondary rounded-lg p-4 border border-border-secondary">
+          <div className="bg-surface-secondary rounded-lg p-3 sm:p-4 border border-border-secondary">
             <h3 className="font-medium text-text-primary mb-3">Booking Details</h3>
             <div className="space-y-2 text-sm">
               <div className="flex items-center justify-between">
                 <span className="text-text-secondary">Reference:</span>
-                <span className="font-medium">{booking.booking_reference}</span>
+                <span className="font-medium text-xs sm:text-sm">{booking.booking_reference}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-text-secondary">Service:</span>
@@ -244,14 +244,14 @@ export const CancelModal: React.FC<CancelModalProps> = ({
               onChange={(e) => setReason(e.target.value)}
               placeholder="Please tell us why you need to cancel..."
               rows={3}
-              className="w-full px-3 py-2 border border-border-secondary rounded-lg resize-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600"
+              className="w-full px-3 py-2 border border-border-secondary rounded-lg resize-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600 min-h-[80px] touch-manipulation"
               required
             />
           </div>
 
           {/* Refund Information */}
           {policy.refundPercentage > 0 && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4">
               <div className="flex items-start gap-3">
                 <CheckCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
                 <div className="text-sm text-blue-800">
@@ -275,13 +275,13 @@ export const CancelModal: React.FC<CancelModalProps> = ({
             </div>
           )}
 
-          {/* Actions */}
-          <div className="flex gap-3 pt-4 border-t border-border-secondary">
+          {/* Actions - Mobile optimized */}
+          <div className="flex gap-3 pt-4 border-t border-border-secondary sticky bottom-0 bg-surface-primary">
             <Button
               type="button"
               variant="outline"
               onClick={onClose}
-              className="flex-1"
+              className="flex-1 min-h-[44px] sm:min-h-[40px]"
               disabled={isSubmitting}
             >
               Keep Booking
@@ -289,7 +289,7 @@ export const CancelModal: React.FC<CancelModalProps> = ({
             <Button
               type="submit"
               variant="destructive"
-              className="flex-1"
+              className="flex-1 min-h-[44px] sm:min-h-[40px]"
               disabled={!reason.trim() || isSubmitting}
             >
               {isSubmitting ? 'Cancelling...' : 'Confirm Cancellation'}

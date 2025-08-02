@@ -43,6 +43,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
+    
     const validatedData = bulkTimeSlotSchema.parse(body)
 
     const bookingService = new BookingService()
@@ -91,7 +92,6 @@ export async function POST(request: NextRequest) {
       return ApiResponseHandler.badRequest('Invalid request data', error.issues)
     }
     
-    console.error('Bulk time slot creation error:', error)
     return ApiResponseHandler.serverError('Failed to create time slots')
   }
 }

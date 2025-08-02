@@ -248,7 +248,7 @@ export interface BookingFlowData {
 export interface CreateBookingRequest {
   services: string[] // Service IDs
   vehicle: {
-    size_id: string
+    size: 'S' | 'M' | 'L' | 'XL'
     make: string
     model: string
     year?: number

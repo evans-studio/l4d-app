@@ -74,35 +74,33 @@ const VEHICLE_SIZE_MULTIPLIERS: Record<VehicleSize, number> = {
 }
 
 /**
- * Get pricing from database for specific service and vehicle size
+ * Get pricing from service_pricing table for specific service and vehicle size
  */
 export async function getServicePricing(serviceId: string, vehicleSize: VehicleSize): Promise<number | null> {
   try {
-    // First get vehicle size ID from size letter
-    const vehicleSizesResponse = await fetch('/api/vehicle-sizes')
-    if (!vehicleSizesResponse.ok) return null
+    // Map vehicle size to service_pricing column
+    const sizeColumnMap: Record<VehicleSize, string> = {
+      'S': 'small',
+      'M': 'medium', 
+      'L': 'large',
+      'XL': 'extra_large'
+    }
     
-    const vehicleSizesData = await vehicleSizesResponse.json()
-    if (!vehicleSizesData.success) return null
+    const sizeColumn = sizeColumnMap[vehicleSize]
+    if (!sizeColumn) {
+      console.error('Invalid vehicle size for pricing:', vehicleSize)
+      return null
+    }
     
-    const vehicleSizeRecord = vehicleSizesData.data.find((vs: any) => {
-      const sizeLetter = vs.name === 'Small' ? 'S' : 
-                        vs.name === 'Medium' ? 'M' : 
-                        vs.name === 'Large' ? 'L' : 
-                        vs.name === 'Extra Large' ? 'XL' : null
-      return sizeLetter === vehicleSize
-    })
-    
-    if (!vehicleSizeRecord) return null
-    
-    // Get pricing from database
-    const pricingResponse = await fetch(`/api/pricing/service-pricing?serviceId=${serviceId}&vehicleSizeId=${vehicleSizeRecord.id}`)
+    // Get pricing directly from service_pricing table
+    const pricingResponse = await fetch(`/api/pricing/service-pricing?service_id=${serviceId}&size=${sizeColumn}`)
     if (!pricingResponse.ok) return null
     
     const pricingData = await pricingResponse.json()
-    if (!pricingData.success || !pricingData.data.length) return null
+    if (!pricingData.success || !pricingData.data) return null
     
-    return pricingData.data[0].price
+    // Return the price for the specific vehicle size
+    return pricingData.data[sizeColumn] as number
   } catch (error) {
     console.error('Error fetching service pricing:', error)
     return null
@@ -117,16 +115,17 @@ export function getVehicleSizeMultiplier(size: VehicleSize): number {
 }
 
 /**
- * Calculate service price - first try database, then fallback to calculation
+ * Calculate service price - first try service_pricing table, then fallback to calculation
  */
 export async function calculateServicePrice(serviceId: string, basePrice: number, vehicleSize: VehicleSize): Promise<number> {
-  // Try to get price from database first
+  // Try to get price from service_pricing table first
   const databasePrice = await getServicePricing(serviceId, vehicleSize)
-  if (databasePrice !== null) {
+  if (databasePrice !== null && databasePrice > 0) {
     return databasePrice
   }
   
-  // Fallback to calculated pricing
+  // Fallback to calculated pricing (deprecated - should not be used in production)
+  console.warn('Falling back to calculated pricing - service_pricing table should be used instead')
   const multiplier = getVehicleSizeMultiplier(vehicleSize)
   return Math.round(basePrice * multiplier * 100) / 100 // Round to 2 decimal places
 }

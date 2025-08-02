@@ -8,11 +8,16 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { requestedDate, requestedTime, reason, customerNotes } = await request.json()
+    const body = await request.json()
+    const { requestedDate, requestedTime, reason, customerNotes } = body
     const { id } = await params
     
-    if (!requestedDate || !requestedTime) {
-      return ApiResponseHandler.badRequest('Requested date and time are required')
+    console.log('Reschedule request body:', body)
+    console.log('Parsed values:', { requestedDate, requestedTime, reason })
+    
+    if (!requestedDate || !requestedTime || requestedDate.trim() === '' || requestedTime.trim() === '') {
+      console.log('Validation failed - missing or empty date/time:', { requestedDate, requestedTime })
+      return ApiResponseHandler.badRequest(`Requested date and time are required. Received: date="${requestedDate}", time="${requestedTime}"`)
     }
 
     const supabase = createClientFromRequest(request)

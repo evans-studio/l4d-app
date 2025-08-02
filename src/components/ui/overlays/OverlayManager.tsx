@@ -18,6 +18,7 @@ import { ProfileEditModal } from './modals/ProfileEditModal'
 import { CustomerDetailsModal } from './modals/CustomerDetailsModal'
 import { ServiceEditModal } from './modals/ServiceEditModal'
 import { ConfirmDeleteModal } from './modals/ConfirmDeleteModal'
+import { RescheduleActionModal } from './modals/RescheduleActionModal'
 
 // Registry of all overlay components
 const overlayComponents: Record<OverlayType, React.ComponentType<any>> = {
@@ -47,6 +48,8 @@ const overlayComponents: Record<OverlayType, React.ComponentType<any>> = {
   'service-create': ServiceEditModal, // Reuse the same component
   'time-slot-edit': ServiceEditModal, // Placeholder for now
   'time-slot-block': ServiceEditModal, // Placeholder for now
+  'reschedule-approve': RescheduleActionModal,
+  'reschedule-decline': RescheduleActionModal,
   
   // Generic overlays
   'confirm-delete': ConfirmDeleteModal,
@@ -80,6 +83,7 @@ export const OverlayManager: React.FC = () => {
             onClose={handleClose}
             data={overlay.data}
             onConfirm={overlay.onConfirm}
+            overlayType={overlay.type}
           />
         )
       })}

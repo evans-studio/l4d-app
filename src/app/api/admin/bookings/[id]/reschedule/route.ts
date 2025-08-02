@@ -45,15 +45,31 @@ export async function POST(
 
     const oldDate = booking.scheduled_date
     const oldTime = booking.scheduled_start_time
+    let newTimeSlot: any = null
 
-    // Update booking with new date and time and set status to rescheduled
+    // Find the new time slot that matches the requested date and time
+    const { data: foundTimeSlot, error: slotError } = await supabase
+      .from('time_slots')
+      .select('id, is_available')
+      .eq('slot_date', newDate)
+      .eq('start_time', newTime)
+      .eq('is_available', true)
+      .single()
+
+    if (slotError || !foundTimeSlot) {
+      return ApiResponseHandler.badRequest('Selected time slot is not available or does not exist')
+    }
+
+    newTimeSlot = foundTimeSlot
+
+    // Update booking with new date, time, and link to new time slot
     const { error: updateError } = await supabase
       .from('bookings')
       .update({
         scheduled_date: newDate,
         scheduled_start_time: newTime,
         status: 'rescheduled',
-        time_slot_id: null, // Clear existing time slot link
+        time_slot_id: newTimeSlot.id, // Link to new time slot
         updated_at: new Date().toISOString()
       })
       .eq('id', id)
@@ -61,6 +77,30 @@ export async function POST(
     if (updateError) {
       console.error('Error rescheduling booking:', updateError)
       return ApiResponseHandler.serverError('Failed to reschedule booking')
+    }
+
+    // Mark the new time slot as unavailable
+    const { error: markSlotError } = await supabase
+      .from('time_slots')
+      .update({
+        is_available: false
+      })
+      .eq('id', newTimeSlot.id)
+
+    if (markSlotError) {
+      console.error('Error marking new time slot as unavailable:', markSlotError)
+      // Rollback booking update
+      await supabase
+        .from('bookings')
+        .update({
+          scheduled_date: oldDate,
+          scheduled_start_time: oldTime,
+          status: booking.status,
+          time_slot_id: booking.time_slot_id
+        })
+        .eq('id', id)
+      
+      return ApiResponseHandler.serverError('Failed to book new time slot')
     }
 
     // Verify the update was successful by fetching the updated booking
@@ -76,18 +116,34 @@ export async function POST(
       console.log('Updated booking confirmed:', updatedBooking)
     }
 
-    // Free up the old time slot if it was linked
+    // Free up the old time slot if it was linked (do this after successful booking update)
     if (booking.time_slot_id) {
-      const { error: slotError } = await supabase
+      const { error: freeSlotError } = await supabase
         .from('time_slots')
         .update({
           is_available: true
         })
         .eq('id', booking.time_slot_id)
 
-      if (slotError) {
-        console.error('Error freeing old time slot:', slotError)
-        // Don't fail the request, but log the error
+      if (freeSlotError) {
+        console.error('Error freeing old time slot:', freeSlotError)
+        // Rollback the entire reschedule operation
+        await supabase
+          .from('bookings')
+          .update({
+            scheduled_date: oldDate,
+            scheduled_start_time: oldTime,
+            status: booking.status,
+            time_slot_id: booking.time_slot_id
+          })
+          .eq('id', id)
+        
+        await supabase
+          .from('time_slots')
+          .update({ is_available: true })
+          .eq('id', newTimeSlot.id)
+        
+        return ApiResponseHandler.serverError('Failed to free old time slot')
       }
     }
 

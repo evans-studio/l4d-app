@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { Calendar, Clock, MapPin, Car, User, Phone, Mail, CheckCircle, AlertCircle, XCircle, Clock as PendingIcon } from 'lucide-react'
+import { Calendar, Clock, MapPin, Car, User, Phone, Mail, CheckCircle, AlertCircle, XCircle, Clock as PendingIcon, FileText, RefreshCw, DollarSign, UserX } from 'lucide-react'
 import { BaseModal } from '../BaseModal'
 import { BaseOverlayProps } from '@/lib/overlay/types'
 import { Button } from '@/components/ui/primitives/Button'
@@ -14,7 +14,7 @@ interface BookingDetails {
   scheduled_start_time: string
   estimated_duration: number
   total_price: number
-  status: 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled'
+  status: 'draft' | 'pending' | 'confirmed' | 'rescheduled' | 'in_progress' | 'completed' | 'paid' | 'cancelled' | 'no_show'
   created_at: string
   service: {
     name: string
@@ -45,6 +45,13 @@ interface BookingDetails {
 }
 
 const statusConfig = {
+  draft: {
+    label: 'Draft',
+    icon: FileText,
+    color: 'secondary',
+    bgColor: 'bg-gray-600/10',
+    textColor: 'text-gray-600'
+  },
   pending: {
     label: 'Pending',
     icon: PendingIcon,
@@ -55,9 +62,16 @@ const statusConfig = {
   confirmed: {
     label: 'Confirmed',
     icon: CheckCircle,
-    color: 'success',
-    bgColor: 'bg-success-600/10',
-    textColor: 'text-success-600'
+    color: 'secondary',
+    bgColor: 'bg-success-600/5',
+    textColor: 'text-success-700'
+  },
+  rescheduled: {
+    label: 'Rescheduled',
+    icon: RefreshCw,
+    color: 'brand',
+    bgColor: 'bg-brand-600/10',
+    textColor: 'text-brand-600'
   },
   in_progress: {
     label: 'In Progress',
@@ -69,13 +83,27 @@ const statusConfig = {
   completed: {
     label: 'Completed',
     icon: CheckCircle,
-    color: 'success',
-    bgColor: 'bg-success-600/10',
-    textColor: 'text-success-600'
+    color: 'secondary',
+    bgColor: 'bg-success-600/5',
+    textColor: 'text-success-700'
+  },
+  paid: {
+    label: 'Paid',
+    icon: DollarSign,
+    color: 'secondary',
+    bgColor: 'bg-success-600/5',
+    textColor: 'text-success-700'
   },
   cancelled: {
     label: 'Cancelled',
     icon: XCircle,
+    color: 'error',
+    bgColor: 'bg-error-600/10',
+    textColor: 'text-error-600'
+  },
+  no_show: {
+    label: 'No Show',
+    icon: UserX,
     color: 'error',
     bgColor: 'bg-error-600/10',
     textColor: 'text-error-600'
@@ -197,7 +225,7 @@ export const BookingDetailsModal: React.FC<BaseOverlayProps> = ({
     )
   }
 
-  const config = statusConfig[booking.status]
+  const config = statusConfig[booking.status] || statusConfig.pending
   const StatusIcon = config.icon
 
   return (
@@ -213,7 +241,7 @@ export const BookingDetailsModal: React.FC<BaseOverlayProps> = ({
           <div>
             <div className="flex items-center gap-3 mb-2">
               <h3 className="text-xl font-semibold text-text-primary">
-                {booking.service.name}
+                {booking.service?.name || 'Service Details'}
               </h3>
               <Badge variant={config.color as any}>
                 <StatusIcon className="w-3 h-3 mr-1" />
@@ -233,12 +261,12 @@ export const BookingDetailsModal: React.FC<BaseOverlayProps> = ({
         </div>
 
         {/* Service Details */}
-        <div className="bg-surface-secondary rounded-lg p-4 border border-border-secondary">
+        <div className="bg-surface-secondary rounded-lg p-3 sm:p-4 border border-border-secondary">
           <h4 className="font-medium text-text-primary mb-3 flex items-center gap-2">
             <Calendar className="w-4 h-4" />
             Appointment Details
           </h4>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div>
               <p className="text-sm text-text-secondary mb-1">Date</p>
               <p className="font-medium text-text-primary">{formatDate(booking.scheduled_date)}</p>
@@ -249,41 +277,41 @@ export const BookingDetailsModal: React.FC<BaseOverlayProps> = ({
             </div>
             <div>
               <p className="text-sm text-text-secondary mb-1">Duration</p>
-              <p className="font-medium text-text-primary">{formatDuration(booking.estimated_duration)}</p>
+              <p className="font-medium text-text-primary">{formatDuration(booking.estimated_duration || booking.service?.estimated_duration || 120)}</p>
             </div>
             <div>
               <p className="text-sm text-text-secondary mb-1">Service</p>
-              <p className="font-medium text-text-primary">{booking.service.name}</p>
+              <p className="font-medium text-text-primary">{booking.service?.name || 'Service Details'}</p>
             </div>
           </div>
-          {booking.service.description && (
+          {(booking.service?.description) && (
             <div className="mt-4 pt-4 border-t border-border-primary">
               <p className="text-sm text-text-secondary mb-1">Service Description</p>
-              <p className="text-sm text-text-primary">{booking.service.description}</p>
+              <p className="text-sm text-text-primary">{booking.service?.description}</p>
             </div>
           )}
         </div>
 
         {/* Vehicle Details */}
-        <div className="bg-surface-secondary rounded-lg p-4 border border-border-secondary">
+        <div className="bg-surface-secondary rounded-lg p-3 sm:p-4 border border-border-secondary">
           <h4 className="font-medium text-text-primary mb-3 flex items-center gap-2">
             <Car className="w-4 h-4" />
             Vehicle Details
           </h4>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div>
               <p className="text-sm text-text-secondary mb-1">Vehicle</p>
               <p className="font-medium text-text-primary">
-                {booking.vehicle.year} {booking.vehicle.make} {booking.vehicle.model}
+                {booking.vehicle?.year || ''} {booking.vehicle?.make || ''} {booking.vehicle?.model || 'Vehicle Details'}
               </p>
             </div>
-            {booking.vehicle.color && (
+            {booking.vehicle?.color && (
               <div>
                 <p className="text-sm text-text-secondary mb-1">Color</p>
                 <p className="font-medium text-text-primary">{booking.vehicle.color}</p>
               </div>
             )}
-            {booking.vehicle.registration && (
+            {booking.vehicle?.registration && (
               <div>
                 <p className="text-sm text-text-secondary mb-1">Registration</p>
                 <p className="font-medium text-text-primary">{booking.vehicle.registration}</p>
@@ -293,18 +321,18 @@ export const BookingDetailsModal: React.FC<BaseOverlayProps> = ({
         </div>
 
         {/* Location Details */}
-        <div className="bg-surface-secondary rounded-lg p-4 border border-border-secondary">
+        <div className="bg-surface-secondary rounded-lg p-3 sm:p-4 border border-border-secondary">
           <h4 className="font-medium text-text-primary mb-3 flex items-center gap-2">
             <MapPin className="w-4 h-4" />
             Service Location
           </h4>
           <div className="space-y-2">
-            <p className="font-medium text-text-primary">{booking.address.address_line_1}</p>
-            {booking.address.address_line_2 && (
+            <p className="font-medium text-text-primary">{booking.address?.address_line_1 || 'Address not available'}</p>
+            {booking.address?.address_line_2 && (
               <p className="text-text-primary">{booking.address.address_line_2}</p>
             )}
-            <p className="text-text-primary">{booking.address.city}, {booking.address.postal_code}</p>
-            {booking.address.special_instructions && (
+            <p className="text-text-primary">{booking.address?.city || ''}{booking.address?.postal_code ? `, ${booking.address.postal_code}` : ''}</p>
+            {booking.address?.special_instructions && (
               <div className="mt-3 pt-3 border-t border-border-primary">
                 <p className="text-sm text-text-secondary mb-1">Special Instructions</p>
                 <p className="text-sm text-text-primary">{booking.address.special_instructions}</p>
@@ -314,31 +342,31 @@ export const BookingDetailsModal: React.FC<BaseOverlayProps> = ({
         </div>
 
         {/* Customer Details */}
-        <div className="bg-surface-secondary rounded-lg p-4 border border-border-secondary">
+        <div className="bg-surface-secondary rounded-lg p-3 sm:p-4 border border-border-secondary">
           <h4 className="font-medium text-text-primary mb-3 flex items-center gap-2">
             <User className="w-4 h-4" />
             Customer Details
           </h4>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div>
               <p className="text-sm text-text-secondary mb-1">Name</p>
               <p className="font-medium text-text-primary">
-                {booking.customer.first_name} {booking.customer.last_name}
+                {booking.customer?.first_name || 'Customer'} {booking.customer?.last_name || ''}
               </p>
             </div>
             <div>
               <p className="text-sm text-text-secondary mb-1">Email</p>
               <p className="font-medium text-text-primary flex items-center gap-2">
                 <Mail className="w-3 h-3" />
-                {booking.customer.email}
+                {booking.customer?.email || 'Not available'}
               </p>
             </div>
-            {booking.customer.phone && (
+            {booking.customer?.phone && (
               <div className="sm:col-span-2">
                 <p className="text-sm text-text-secondary mb-1">Phone</p>
                 <p className="font-medium text-text-primary flex items-center gap-2">
                   <Phone className="w-3 h-3" />
-                  {booking.customer.phone}
+                  {booking.customer?.phone}
                 </p>
               </div>
             )}
@@ -347,18 +375,18 @@ export const BookingDetailsModal: React.FC<BaseOverlayProps> = ({
 
         {/* Additional Notes */}
         {booking.notes && (
-          <div className="bg-surface-secondary rounded-lg p-4 border border-border-secondary">
+          <div className="bg-surface-secondary rounded-lg p-3 sm:p-4 border border-border-secondary">
             <h4 className="font-medium text-text-primary mb-3">Additional Notes</h4>
             <p className="text-sm text-text-primary">{booking.notes}</p>
           </div>
         )}
 
-        {/* Actions */}
-        <div className="flex gap-3 pt-4 border-t border-border-secondary">
+        {/* Actions - Mobile optimized */}
+        <div className="flex gap-3 pt-4 border-t border-border-secondary sticky bottom-0 bg-surface-primary">
           <Button
             onClick={onClose}
             variant="outline"
-            className="flex-1"
+            className="flex-1 min-h-[44px] sm:min-h-[40px]"
           >
             Close
           </Button>

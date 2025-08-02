@@ -1,4 +1,5 @@
 // Enhanced email notification system with templates and scheduling
+import { formatDateForEmail, formatTimeForEmail } from '@/lib/utils/date-formatting'
 
 interface EmailTemplate {
   subject: string
@@ -287,7 +288,7 @@ function getBookingConfirmationTemplate(data: NotificationData): EmailTemplate {
           <h3>Booking Details</h3>
           <p><strong>Reference:</strong> ${data.bookingReference}</p>
           <p><strong>Service:</strong> ${data.serviceName}</p>
-          <p><strong>Date:</strong> ${new Date(data.scheduledDate).toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+          <p><strong>Date:</strong> ${formatDateForEmail(data.scheduledDate)}</p>
           <p><strong>Time:</strong> ${data.scheduledTime}</p>
           <p><strong>Address:</strong> ${data.address}</p>
           <p><strong>Vehicle:</strong> ${data.vehicleDetails}</p>

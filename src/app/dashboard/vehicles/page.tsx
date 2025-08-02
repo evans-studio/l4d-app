@@ -2,11 +2,13 @@
 
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/primitives/Button'
+import { Input } from '@/components/ui/primitives/Input'
+import { Checkbox } from '@/components/ui/primitives/Checkbox'
 import { Card, CardContent } from '@/components/ui/composites/Card'
 import { VehicleCard } from '@/components/customer/components/VehicleCard'
 import { CustomerLayout } from '@/components/layout/templates/CustomerLayout'
 import { CustomerRoute } from '@/components/ProtectedRoute'
-import { Plus, Car, AlertCircle } from 'lucide-react'
+import { Plus, Car, AlertCircle, Calendar, Palette, Hash } from 'lucide-react'
 
 interface Vehicle {
   id: string
@@ -30,17 +32,9 @@ interface Vehicle {
   updated_at: string
 }
 
-interface VehicleSize {
-  id: string
-  size: 'S' | 'M' | 'L' | 'XL'
-  name: string
-  multiplier: number
-  description: string
-}
 
 export default function VehiclesPage() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([])
-  const [vehicleSizes, setVehicleSizes] = useState<VehicleSize[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showAddForm, setShowAddForm] = useState(false)
@@ -53,17 +47,13 @@ export default function VehiclesPage() {
     year: new Date().getFullYear(),
     color: '',
     license_plate: '',
-    vehicle_size_id: '',
     set_as_default: false
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // Fetch vehicles and vehicle sizes
+  // Fetch vehicles
   useEffect(() => {
-    Promise.all([
-      fetchVehicles(),
-      fetchVehicleSizes()
-    ]).finally(() => setIsLoading(false))
+    fetchVehicles().finally(() => setIsLoading(false))
   }, [])
 
   const fetchVehicles = async () => {
@@ -81,18 +71,6 @@ export default function VehiclesPage() {
     }
   }
 
-  const fetchVehicleSizes = async () => {
-    try {
-      const response = await fetch('/api/vehicle-sizes')
-      const result = await response.json()
-      
-      if (result.success) {
-        setVehicleSizes(result.data)
-      }
-    } catch (err) {
-      console.error('Failed to load vehicle sizes:', err)
-    }
-  }
 
   const handleAddVehicle = () => {
     setEditingVehicle(null)
@@ -102,7 +80,6 @@ export default function VehiclesPage() {
       year: new Date().getFullYear(),
       color: '',
       license_plate: '',
-      vehicle_size_id: vehicleSizes[0]?.id || '',
       set_as_default: vehicles.length === 0
     })
     setShowAddForm(true)
@@ -116,7 +93,6 @@ export default function VehiclesPage() {
       year: vehicle.year,
       color: vehicle.color,
       license_plate: vehicle.license_plate || '',
-      vehicle_size_id: vehicle.vehicle_size.id,
       set_as_default: vehicle.is_default
     })
     setShowAddForm(true)
@@ -189,7 +165,6 @@ export default function VehiclesPage() {
           year: vehicle.year,
           color: vehicle.color,
           license_plate: vehicle.license_plate,
-          vehicle_size_id: vehicle.vehicle_size.id,
           set_as_default: true
         })
       })
@@ -283,118 +258,73 @@ export default function VehiclesPage() {
               <form onSubmit={handleSubmitVehicle} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Make */}
-                  <div>
-                    <label className="block text-sm font-medium text-text-primary mb-2">
-                      Make *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={formData.make}
-                      onChange={(e) => setFormData(prev => ({ ...prev, make: e.target.value }))}
-                      className="w-full px-3 py-2 bg-surface-secondary border border-surface-tertiary rounded-lg focus:ring-2 focus:ring-brand-400 focus:border-transparent text-text-primary"
-                      placeholder="e.g., Toyota, BMW, Ford"
-                    />
-                  </div>
+                  <Input
+                    label="Make"
+                    required
+                    value={formData.make}
+                    onChange={(e) => setFormData(prev => ({ ...prev, make: e.target.value }))}
+                    placeholder="e.g., Toyota, BMW, Ford"
+                    leftIcon={<Car className="w-4 h-4" />}
+                    helperText="Vehicle manufacturer"
+                  />
 
                   {/* Model */}
-                  <div>
-                    <label className="block text-sm font-medium text-text-primary mb-2">
-                      Model *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={formData.model}
-                      onChange={(e) => setFormData(prev => ({ ...prev, model: e.target.value }))}
-                      className="w-full px-3 py-2 bg-surface-secondary border border-surface-tertiary rounded-lg focus:ring-2 focus:ring-brand-400 focus:border-transparent text-text-primary"
-                      placeholder="e.g., Corolla, 3 Series, Focus"
-                    />
-                  </div>
+                  <Input
+                    label="Model"
+                    required
+                    value={formData.model}
+                    onChange={(e) => setFormData(prev => ({ ...prev, model: e.target.value }))}
+                    placeholder="e.g., Corolla, 3 Series, Focus"
+                    leftIcon={<Car className="w-4 h-4" />}
+                    helperText="Vehicle model name"
+                  />
 
                   {/* Year */}
-                  <div>
-                    <label className="block text-sm font-medium text-text-primary mb-2">
-                      Year *
-                    </label>
-                    <input
-                      type="number"
-                      required
-                      min="1900"
-                      max={new Date().getFullYear() + 1}
-                      value={formData.year}
-                      onChange={(e) => setFormData(prev => ({ ...prev, year: parseInt(e.target.value) }))}
-                      className="w-full px-3 py-2 bg-surface-secondary border border-surface-tertiary rounded-lg focus:ring-2 focus:ring-brand-400 focus:border-transparent text-text-primary"
-                    />
-                  </div>
+                  <Input
+                    label="Year"
+                    type="number"
+                    required
+                    min={1900}
+                    max={new Date().getFullYear() + 1}
+                    value={formData.year.toString()}
+                    onChange={(e) => setFormData(prev => ({ ...prev, year: parseInt(e.target.value) || new Date().getFullYear() }))}
+                    leftIcon={<Calendar className="w-4 h-4" />}
+                    helperText="Manufacturing year"
+                  />
 
                   {/* Color */}
-                  <div>
-                    <label className="block text-sm font-medium text-text-primary mb-2">
-                      Color *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={formData.color}
-                      onChange={(e) => setFormData(prev => ({ ...prev, color: e.target.value }))}
-                      className="w-full px-3 py-2 bg-surface-secondary border border-surface-tertiary rounded-lg focus:ring-2 focus:ring-brand-400 focus:border-transparent text-text-primary"
-                      placeholder="e.g., Black, White, Silver"
-                    />
-                  </div>
+                  <Input
+                    label="Color"
+                    required
+                    value={formData.color}
+                    onChange={(e) => setFormData(prev => ({ ...prev, color: e.target.value }))}
+                    placeholder="e.g., Black, White, Silver"
+                    leftIcon={<Palette className="w-4 h-4" />}
+                    helperText="Primary vehicle color"
+                  />
 
                   {/* License Plate */}
-                  <div>
-                    <label className="block text-sm font-medium text-text-primary mb-2">
-                      License Plate
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.license_plate}
-                      onChange={(e) => setFormData(prev => ({ ...prev, license_plate: e.target.value }))}
-                      className="w-full px-3 py-2 bg-surface-secondary border border-surface-tertiary rounded-lg focus:ring-2 focus:ring-brand-400 focus:border-transparent text-text-primary font-mono"
-                      placeholder="e.g., AB12 CDE"
-                    />
-                  </div>
+                  <Input
+                    label="License Plate"
+                    optional
+                    value={formData.license_plate}
+                    onChange={(e) => setFormData(prev => ({ ...prev, license_plate: e.target.value }))}
+                    placeholder="e.g., AB12 CDE"
+                    leftIcon={<Hash className="w-4 h-4" />}
+                    helperText="Vehicle registration number"
+                    className="font-mono"
+                  />
 
-                  {/* Vehicle Size */}
-                  <div>
-                    <label className="block text-sm font-medium text-text-primary mb-2">
-                      Vehicle Size *
-                    </label>
-                    <select
-                      required
-                      value={formData.vehicle_size_id}
-                      onChange={(e) => setFormData(prev => ({ ...prev, vehicle_size_id: e.target.value }))}
-                      className="w-full px-3 py-2 bg-surface-secondary border border-surface-tertiary rounded-lg focus:ring-2 focus:ring-brand-400 focus:border-transparent text-text-primary"
-                    >
-                      <option value="">Select vehicle size</option>
-                      {vehicleSizes.map(size => (
-                        <option key={size.id} value={size.id}>
-                          {size.name} ({size.size}) - {size.multiplier}x price
-                        </option>
-                      ))}
-                    </select>
-                    <p className="text-xs text-text-muted mt-1">
-                      Size affects service pricing. Choose the category that best fits your vehicle.
-                    </p>
-                  </div>
                 </div>
 
                 {/* Set as Default */}
                 {!editingVehicle && vehicles.length > 0 && (
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="checkbox"
-                      id="set_as_default"
-                      checked={formData.set_as_default}
-                      onChange={(e) => setFormData(prev => ({ ...prev, set_as_default: e.target.checked }))}
-                      className="w-4 h-4 text-brand-400 bg-surface-secondary border-surface-tertiary rounded focus:ring-brand-400"
-                    />
-                    <label htmlFor="set_as_default" className="text-sm text-text-primary">
-                      Set as default vehicle for bookings
-                    </label>
-                  </div>
+                  <Checkbox
+                    label="Set as default vehicle for bookings"
+                    description="This vehicle will be pre-selected when creating new bookings"
+                    checked={formData.set_as_default}
+                    onCheckedChange={(checked) => setFormData(prev => ({ ...prev, set_as_default: checked }))}
+                  />
                 )}
 
                 {/* Form Actions */}

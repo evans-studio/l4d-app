@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 
 interface TimeSlot {
   id: string
-  date: string
+  slot_date: string
   start_time: string
   end_time: string
   is_available: boolean
@@ -128,7 +128,7 @@ export function useRealTimeAvailability({
           break
         
         case 'slot_created':
-          if (slotIndex === -1 && update.slot.date === date) {
+          if (slotIndex === -1 && update.slot.slot_date === date) {
             updatedSlots.push(update.slot)
             updatedSlots.sort((a, b) => a.start_time.localeCompare(b.start_time))
           }

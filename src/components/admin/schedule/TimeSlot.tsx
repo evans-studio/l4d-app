@@ -288,7 +288,7 @@ export function TimeSlot({ slot, onClick, onUpdate, onDelete, isPast }: TimeSlot
           <div className={`mt-3 pt-3 border-t ${statusInfo.borderColor}`}>
             <div className={`text-sm ${statusInfo.textColor}`}>
               <div className="font-medium">{slot.booking.booking_reference}</div>
-              {slot.booking.services.length > 0 && (
+              {slot.booking.services && slot.booking.services.length > 0 && (
                 <div>{slot.booking.services.map(s => s.name).join(', ')}</div>
               )}
               <div className="font-medium">£{slot.booking.total_price}</div>

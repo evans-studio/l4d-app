@@ -13,7 +13,6 @@ import {
   Clock, 
   MapPin, 
   Car, 
-  Plus,
   Eye,
   Edit,
   X,
@@ -208,23 +207,13 @@ export default function MyBookingsPage() {
       <CustomerLayout>
         <Container>
           {/* Header */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8">
-            <div>
-              <h1 className="text-3xl font-bold text-text-primary">
-                My Bookings
-              </h1>
-              <p className="text-text-secondary">
-                Manage your car detailing appointments
-              </p>
-            </div>
-            
-            <Button
-              variant="primary"
-              onClick={() => router.push('/book')}
-              leftIcon={<Plus className="w-4 h-4" />}
-            >
-              New Booking
-            </Button>
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-text-primary">
+              My Bookings
+            </h1>
+            <p className="text-text-secondary">
+              Manage your car detailing appointments
+            </p>
           </div>
 
           {/* Search and Filters */}
@@ -270,20 +259,11 @@ export default function MyBookingsPage() {
                    activeFilter === 'all' ? 'No bookings yet' : 
                    `No ${activeFilter} bookings`}
                 </h3>
-                <p className="text-text-secondary text-sm mb-6">
+                <p className="text-text-secondary text-sm">
                   {searchTerm ? 'Try adjusting your search terms.' :
-                   activeFilter === 'all' ? "You haven&apos;t made any bookings yet. Book your first detailing service!" :
-                   `You don&apos;t have any ${activeFilter} bookings.`}
+                   activeFilter === 'all' ? "You haven't made any bookings yet. Use the + button below to book your first detailing service!" :
+                   `You don't have any ${activeFilter} bookings.`}
                 </p>
-                {!searchTerm && activeFilter === 'all' && (
-                  <Button
-                    variant="primary"
-                    onClick={() => router.push('/book')}
-                    leftIcon={<Plus className="w-4 h-4" />}
-                  >
-                    Book Now
-                  </Button>
-                )}
               </div>
             </div>
           ) : (

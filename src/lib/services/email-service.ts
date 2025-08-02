@@ -1,3 +1,5 @@
+import { formatDateForEmail, formatTimeForEmail } from '@/lib/utils/date-formatting'
+
 interface EmailTemplate {
   subject: string
   html: string
@@ -29,23 +31,6 @@ interface BookingEmailData {
 }
 
 export class EmailService {
-  private static formatTime(time: string): string {
-    const [hours, minutes] = time.split(':')
-    const hour = parseInt(hours || '0')
-    const ampm = hour >= 12 ? 'PM' : 'AM'
-    const displayHour = hour % 12 || 12
-    return `${displayHour}:${minutes || '00'} ${ampm}`
-  }
-
-  private static formatDate(dateStr: string): string {
-    const date = new Date(dateStr)
-    return date.toLocaleDateString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    })
-  }
 
   // Booking Confirmation Email
   static generateBookingConfirmation(data: BookingEmailData): EmailTemplate {
@@ -87,7 +72,7 @@ export class EmailService {
             
             <div style="margin-bottom: 15px;">
               <strong style="color: #9747FF;">Date & Time:</strong>
-              <span style="color: #ffffff; margin-left: 10px;">${this.formatDate(data.scheduledDate)} at ${this.formatTime(data.startTime)}</span>
+              <span style="color: #ffffff; margin-left: 10px;">${formatDateForEmail(data.scheduledDate)} at ${formatTimeForEmail(data.startTime)}</span>
             </div>
             
             <div style="margin-bottom: 15px;">
@@ -175,7 +160,7 @@ Your vehicle detailing appointment has been confirmed!
 Booking Reference: ${data.bookingReference}
 
 APPOINTMENT DETAILS:
-Date & Time: ${this.formatDate(data.scheduledDate)} at ${this.formatTime(data.startTime)}
+Date & Time: ${formatDateForEmail(data.scheduledDate)} at ${formatTimeForEmail(data.startTime)}
 Vehicle: ${data.vehicle.year ? data.vehicle.year + ' ' : ''}${data.vehicle.make} ${data.vehicle.model}
 Location: ${data.address.address_line_1}, ${data.address.city}, ${data.address.postal_code}
 
@@ -292,7 +277,7 @@ Hi ${data.customerName},
 ${message}
 
 Booking Reference: ${data.bookingReference}
-Scheduled: ${this.formatDate(data.scheduledDate)} at ${this.formatTime(data.startTime)}
+Scheduled: ${formatDateForEmail(data.scheduledDate)} at ${formatTimeForEmail(data.startTime)}
 
 ${data.status === 'completed' ? 'Thank you for choosing Love 4 Detailing! We hope you love your freshly detailed vehicle.' : ''}
 

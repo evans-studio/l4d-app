@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase/direct'
 import { BookingFormData, ApiResponse } from '@/types/booking'
 import { EmailService } from '@/lib/services/email'
+import { Database } from '@/lib/db/database.types'
+import { calculatePostcodeDistance } from '@/lib/utils/postcode-distance'
 
 // Admin emails that should get admin role
 const ADMIN_EMAILS = [
@@ -21,29 +23,23 @@ function generatePasswordSetupToken(): string {
 
 // Calculate distance surcharge based on distance from business
 function calculateDistanceSurcharge(distanceKm: number): number {
-  if (distanceKm <= 10) return 0
-  if (distanceKm <= 20) return 5
-  if (distanceKm <= 30) return 10
-  return 15
+  // Convert km to miles for the calculation
+  const distanceMiles = distanceKm * 0.621371
+  const FREE_RADIUS_MILES = 17.5
+  
+  if (distanceMiles <= FREE_RADIUS_MILES) return 0
+  
+  // Beyond free radius, charge per mile
+  const excessMiles = distanceMiles - FREE_RADIUS_MILES
+  const surcharge = excessMiles * 0.50 // £0.50 per mile
+  
+  // Apply minimum and maximum limits
+  if (surcharge < 5) return 5 // Minimum £5
+  if (surcharge > 25) return 25 // Maximum £25
+  
+  return Math.round(surcharge * 100) / 100
 }
 
-// Mock geocoding function - replace with real implementation
-async function geocodeAddress(address: any): Promise<{ latitude: number, longitude: number }> {
-  // For now, return mock coordinates
-  return { latitude: 51.5074, longitude: -0.1278 }
-}
-
-// Calculate distance between two points (Haversine formula)
-function calculateDistance(point1: { lat: number, lng: number }, point2: { latitude: number, longitude: number }): number {
-  const R = 6371 // Earth's radius in km
-  const dLat = (point2.latitude - point1.lat) * Math.PI / 180
-  const dLon = (point2.longitude - point1.lng) * Math.PI / 180
-  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-    Math.cos(point1.lat * Math.PI / 180) * Math.cos(point2.latitude * Math.PI / 180) *
-    Math.sin(dLon/2) * Math.sin(dLon/2)
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))
-  return R * c
-}
 
 export async function POST(request: NextRequest): Promise<NextResponse<ApiResponse>> {
   try {
@@ -187,16 +183,18 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
         })
     }
 
-    // Step 2: Get vehicle size for pricing
-    const { data: vehicleSize, error: vehicleSizeError } = await supabaseAdmin
-      .from('vehicle_sizes')
-      .select('id, name, price_multiplier')
-      .eq('name', bookingData.vehicle.vehicleSize)
-      .eq('is_active', true)
-      .single()
-
-    if (vehicleSizeError || !vehicleSize) {
-      console.error('Vehicle size error:', vehicleSizeError)
+    // Step 2: Map vehicle size for pricing
+    // Now using direct size mapping instead of database lookup
+    const sizeMapping: Record<string, { name: string, multiplier: number }> = {
+      'S': { name: 'Small', multiplier: 1.0 },
+      'M': { name: 'Medium', multiplier: 1.2 },
+      'L': { name: 'Large', multiplier: 1.4 },
+      'XL': { name: 'Extra Large', multiplier: 1.6 }
+    }
+    
+    const vehicleSizeInfo = sizeMapping[bookingData.vehicle.vehicleSize]
+    if (!vehicleSizeInfo) {
+      console.error('Invalid vehicle size:', bookingData.vehicle.vehicleSize)
       return NextResponse.json({
         success: false,
         error: { message: 'Invalid vehicle size', code: 'INVALID_VEHICLE_SIZE' }
@@ -222,7 +220,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
         .update({
           color: bookingData.vehicle.color,
           license_plate: bookingData.vehicle.licenseNumber,
-          vehicle_size_id: vehicleSize.id,
+          vehicle_size_id: null, // No longer using vehicle_sizes table
           notes: bookingData.vehicle.notes,
           updated_at: new Date().toISOString()
         })
@@ -233,7 +231,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
         .from('customer_vehicles')
         .insert({
           user_id: userId, // FK to user_profiles.id
-          vehicle_size_id: vehicleSize.id, // FK to vehicle_sizes.id
+          vehicle_size_id: null, // No longer using vehicle_sizes table // FK to vehicle_sizes.id
           make: bookingData.vehicle.make,
           model: bookingData.vehicle.model,
           year: bookingData.vehicle.year,
@@ -260,9 +258,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
     }
 
     // Step 4: Create or get address with distance calculation
-    const businessLocation = { lat: 51.5074, lng: -0.1278 } // Replace with actual business coordinates
-    const customerLocation = await geocodeAddress(bookingData.address)
-    const distanceKm = calculateDistance(businessLocation, customerLocation)
+    const distanceResult = await calculatePostcodeDistance(bookingData.address.postalCode)
+    const distanceKm = distanceResult.distanceKm
     
     // Convert country name to 2-letter code if needed
     const getCountryCode = (countryName: string): string => {
@@ -298,8 +295,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
           address_line_2: bookingData.address.addressLine2,
           county: bookingData.address.county,
           country: getCountryCode(bookingData.address.country || 'United Kingdom'),
-          latitude: customerLocation.latitude,
-          longitude: customerLocation.longitude,
+          latitude: null, // Will be populated by postcode API in production
+          longitude: null,
           distance_from_business: distanceKm,
           updated_at: new Date().toISOString()
         })
@@ -316,8 +313,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
           postal_code: bookingData.address.postalCode,
           county: bookingData.address.county,
           country: getCountryCode(bookingData.address.country || 'United Kingdom'),
-          latitude: customerLocation.latitude,
-          longitude: customerLocation.longitude,
+          latitude: null, // Will be populated by postcode API in production
+          longitude: null,
           distance_from_business: distanceKm,
           is_primary: false,
           is_default: false,
@@ -337,8 +334,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
           postal_code: bookingData.address.postalCode,
           county: bookingData.address.county,
           country: bookingData.address.country,
-          latitude: customerLocation.latitude,
-          longitude: customerLocation.longitude,
+          latitude: null, // Will be populated by postcode API in production
+          longitude: null,
           distance_from_business: distanceKm
         })
         return NextResponse.json({
@@ -354,11 +351,11 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
       addressId = newAddress.id
     }
 
-    // Step 5: Get service details with category
+    // Step 5: Get service details with category and pricing
     const { data: service, error: serviceError } = await supabaseAdmin
       .from('services')
       .select(`
-        id, name, base_price, duration_minutes,
+        id, name, duration_minutes,
         service_categories!category_id (name)
       `)
       .eq('id', bookingData.services[0]!.serviceId)
@@ -372,22 +369,63 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
         error: { message: 'Invalid service', code: 'INVALID_SERVICE' }
       }, { status: 400 })
     }
+    
+    // Get service pricing for the specific size
+    const { data: servicePricing, error: pricingError } = await supabaseAdmin
+      .from('service_pricing')
+      .select('small, medium, large, extra_large')
+      .eq('service_id', service.id)
+      .single()
+    
+    if (pricingError || !servicePricing) {
+      console.error('Service pricing error:', pricingError)
+      return NextResponse.json({
+        success: false,
+        error: { message: 'Service pricing not found', code: 'PRICING_NOT_FOUND' }
+      }, { status: 400 })
+    }
 
     // Step 6: Calculate comprehensive pricing
-    const basePrice = service.base_price
-    const sizeMultiplier = vehicleSize.price_multiplier
+    // Get the price for the specific vehicle size from service_pricing
+    const sizePriceMap: Record<string, keyof typeof servicePricing> = {
+      'S': 'small',
+      'M': 'medium',
+      'L': 'large',
+      'XL': 'extra_large'
+    }
+    
+    const priceColumn = sizePriceMap[bookingData.vehicle.vehicleSize]
+    if (!priceColumn) {
+      console.error('Invalid vehicle size for pricing:', bookingData.vehicle.vehicleSize)
+      return NextResponse.json({
+        success: false,
+        error: { message: 'Invalid vehicle size for pricing', code: 'INVALID_SIZE_PRICING' }
+      }, { status: 400 })
+    }
+    
+    const servicePrice = servicePricing[priceColumn] as number
+    
+    if (!servicePrice || servicePrice <= 0) {
+      console.error('No price found for service and vehicle size:', { serviceId: service.id, vehicleSize: bookingData.vehicle.vehicleSize })
+      return NextResponse.json({
+        success: false,
+        error: { message: 'Service pricing not configured for this vehicle size', code: 'PRICING_NOT_CONFIGURED' }
+      }, { status: 400 })
+    }
+    
     const distanceSurcharge = calculateDistanceSurcharge(distanceKm)
-    const totalPrice = (basePrice * sizeMultiplier) + distanceSurcharge
+    const totalPrice = servicePrice + distanceSurcharge
 
     const pricingBreakdown = {
-      basePrice: basePrice,
-      vehicleSize: vehicleSize.name,
-      sizeMultiplier: sizeMultiplier,
-      subtotal: basePrice * sizeMultiplier,
+      basePrice: servicePrice, // Using the actual service price for this vehicle size
+      vehicleSize: vehicleSizeInfo.name,
+      sizeMultiplier: vehicleSizeInfo.multiplier,
+      servicePrice: servicePrice,
+      subtotal: servicePrice,
       distanceKm: distanceKm,
       distanceSurcharge: distanceSurcharge,
       totalPrice: totalPrice,
-      calculation: `(£${basePrice} × ${sizeMultiplier}) + £${distanceSurcharge} = £${totalPrice}`
+      calculation: `£${servicePrice} + £${distanceSurcharge} = £${totalPrice}`
     }
 
     // Step 7: Create booking record
@@ -404,24 +442,58 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
         time_slot_id: bookingData.timeSlot.slotId, // FK to time_slots.id
         
         // Pricing breakdown
-        base_price: basePrice,
-        vehicle_size_multiplier: sizeMultiplier,
+        base_price: servicePrice, // Now using the size-specific price
+        vehicle_size_multiplier: 1.0, // No longer using multipliers
         distance_surcharge: distanceSurcharge,
         total_price: totalPrice,
         pricing_breakdown: pricingBreakdown,
+        distance_km: distanceKm,
         
         // Scheduling
         scheduled_date: bookingData.timeSlot.date,
         scheduled_start_time: bookingData.timeSlot.startTime,
-        scheduled_end_time: bookingData.timeSlot.endTime,
+        scheduled_end_time: (() => {
+          // Calculate end time based on start time + service duration
+          const timeParts = bookingData.timeSlot.startTime.split(':')
+          const hours = parseInt(timeParts[0] || '0', 10)
+          const minutes = parseInt(timeParts[1] || '0', 10)
+          const startDate = new Date()
+          startDate.setHours(hours, minutes, 0, 0)
+          
+          // Add service duration in minutes
+          const endDate = new Date(startDate.getTime() + service.duration_minutes * 60 * 1000)
+          
+          // Format as HH:MM
+          const endHours = endDate.getHours().toString().padStart(2, '0')
+          const endMinutes = endDate.getMinutes().toString().padStart(2, '0')
+          return `${endHours}:${endMinutes}`
+        })(),
         estimated_duration: service.duration_minutes,
         
         // Status
-        status: 'confirmed',
+        status: 'confirmed' as Database["public"]["Enums"]["booking_status"],
         payment_status: 'pending',
         
         // Notes
         special_instructions: bookingData.specialRequests,
+        
+        // Store vehicle and address details as JSON for snapshot
+        vehicle_details: {
+          make: bookingData.vehicle.make,
+          model: bookingData.vehicle.model,
+          year: bookingData.vehicle.year,
+          color: bookingData.vehicle.color,
+          registration: bookingData.vehicle.licenseNumber,
+          size: vehicleSizeInfo.name
+        },
+        service_address: {
+          address_line_1: bookingData.address.addressLine1,
+          address_line_2: bookingData.address.addressLine2,
+          city: bookingData.address.city,
+          postal_code: bookingData.address.postalCode,
+          county: bookingData.address.county,
+          country: getCountryCode(bookingData.address.country || 'United Kingdom')
+        },
         
         // Timestamps
         created_at: new Date().toISOString(),
@@ -447,10 +519,10 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
         service_details: {
           name: service.name,
           category: service.service_categories?.[0]?.name || 'General',
-          originalBasePrice: service.base_price,
-          appliedPrice: basePrice * sizeMultiplier
+          originalBasePrice: servicePrice, // Using the actual service price
+          appliedPrice: servicePrice
         },
-        price: basePrice * sizeMultiplier,
+        price: servicePrice,
         estimated_duration: service.duration_minutes,
         created_at: new Date().toISOString()
       })
@@ -461,8 +533,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
         .from('time_slots')
         .update({ 
           is_available: false,
-          booking_reference: bookingReference,
-          booking_status: 'pending'
+          booking_reference: bookingReference
         })
         .eq('id', bookingData.timeSlot.slotId)
     }
@@ -506,12 +577,12 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
     // Create booking object for email template (used for both customer and admin emails)
     const bookingForEmail = {
         booking_reference: bookingReference,
-        scheduled_date: bookingData.timeSlot.date,
+        scheduled_date: bookingData.timeSlot.slot_date,
         scheduled_start_time: bookingData.timeSlot.startTime,
-        status: 'pending',
+        status: 'pending' as Database["public"]["Enums"]["booking_status"],
         total_price: totalPrice,
-        base_price: basePrice,
-        vehicle_size_multiplier: sizeMultiplier,
+        base_price: servicePrice,
+        vehicle_size_multiplier: 1.0,
         distance_surcharge: distanceSurcharge,
         distance_km: distanceKm,
         estimated_duration: service.duration_minutes,

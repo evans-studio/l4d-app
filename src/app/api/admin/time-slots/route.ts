@@ -41,6 +41,11 @@ export async function GET(request: NextRequest) {
 
     console.log(`Admin API: Fetching time slots with date range: start=${start}, end=${end}`)
     
+    // Get current date and time for filtering
+    const now = new Date()
+    const currentDate = now.toISOString().split('T')[0]
+    const currentTime = now.toTimeString().slice(0, 5) // HH:MM format
+    
     let query = supabaseAdmin
       .from('time_slots')
       .select(`
@@ -55,7 +60,13 @@ export async function GET(request: NextRequest) {
           booking_reference,
           status,
           total_price,
-          special_instructions
+          special_instructions,
+          booking_services (
+            service:services (
+              name,
+              short_description
+            )
+          )
         )
       `)
       .order('slot_date', { ascending: true })
@@ -63,6 +74,12 @@ export async function GET(request: NextRequest) {
 
     if (start && end) {
       query = query.gte('slot_date', start).lte('slot_date', end)
+    }
+
+    // Filter out past slots - admin can see all slots by default
+    // To filter past slots, add ?excludePast=true to the request
+    if (searchParams.get('excludePast') === 'true') {
+      query = query.or(`slot_date.gt.${currentDate},and(slot_date.eq.${currentDate},start_time.gt.${currentTime})`)
     }
 
     const { data: timeSlots, error } = await query
@@ -95,7 +112,11 @@ export async function GET(request: NextRequest) {
           booking_reference: booking.booking_reference,
           status: booking.status,
           total_price: booking.total_price,
-          special_instructions: booking.special_instructions
+          special_instructions: booking.special_instructions,
+          services: booking.booking_services?.map((bs: any) => ({
+            name: bs.service?.name || 'Unknown Service',
+            description: bs.service?.short_description || null
+          })) || []
         } : null
       }
     }) || []

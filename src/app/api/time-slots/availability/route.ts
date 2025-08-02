@@ -5,6 +5,7 @@ import { BookingService } from '@/lib/services/booking'
 import { ApiResponseHandler } from '@/lib/api/response'
 import { ApiValidation } from '@/lib/api/validation'
 import { z } from 'zod'
+import { BOOKING_BUFFER_MINUTES, isTimeSlotPast, getPastSlotFilter } from '@/lib/utils/time-validation'
 
 const availabilityQuerySchema = z.object({
   date_from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format'),
@@ -91,8 +92,11 @@ async function handleSingleDateRequest(request: NextRequest, date: string) {
       return ApiResponseHandler.badRequest('Cannot fetch availability for past dates')
     }
 
+    // Get filter for past slots with buffer time
+    const pastSlotFilter = getPastSlotFilter(BOOKING_BUFFER_MINUTES)
+
     // Fetch available time slots for the date
-    const { data: timeSlots, error } = await supabase
+    let query = supabase
       .from('time_slots')
       .select(`
         id,
@@ -110,6 +114,13 @@ async function handleSingleDateRequest(request: NextRequest, date: string) {
       `)
       .eq('slot_date', date)
       .order('start_time', { ascending: true })
+
+    // If requesting today's slots, filter out past times with buffer
+    if (date === pastSlotFilter.date) {
+      query = query.gt('start_time', pastSlotFilter.time)
+    }
+
+    const { data: timeSlots, error } = await query
 
     if (error) {
       console.error('Error fetching time slots:', error)

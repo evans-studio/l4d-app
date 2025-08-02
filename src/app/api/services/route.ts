@@ -61,17 +61,7 @@ export async function GET(request: NextRequest) {
       return ApiResponseHandler.serverError('Failed to fetch services')
     }
 
-    // Get vehicle sizes for price calculation
-    const { data: vehicleSizes, error: sizesError } = await supabase
-      .from('vehicle_sizes')
-      .select('*')
-      .eq('is_active', true)
-      .order('price_multiplier')
-
-    if (sizesError) {
-      console.error('Vehicle sizes error:', sizesError)
-      return ApiResponseHandler.serverError('Failed to fetch vehicle sizes')
-    }
+    // Vehicle sizes table no longer exists - using service_pricing directly
 
     // Calculate price ranges from service_pricing table
     const servicesWithPricing = await Promise.all(

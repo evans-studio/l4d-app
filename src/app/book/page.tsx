@@ -11,18 +11,37 @@ import { ServiceSelection } from '@/components/booking/steps/ServiceSelection';
 import { VehicleDetails } from '@/components/booking/steps/VehicleDetails';
 import { TimeSlotSelection } from '@/components/booking/steps/TimeSlotSelection';
 import { AddressCollection } from '@/components/booking/steps/AddressCollection';
-import { UserDetails } from '@/components/booking/steps/UserDetails';
 import { PricingConfirmation } from '@/components/booking/steps/PricingConfirmation';
 import { ArrowLeft, Phone, User, LogIn } from 'lucide-react';
 
 export default function BookingPage(): React.JSX.Element {
   const router = useRouter();
-  const { currentStep, previousStep, isRebooking, resetFlow } = useBookingFlowStore();
+  const { 
+    currentStep, 
+    previousStep, 
+    isRebooking, 
+    resetFlow, 
+    formData 
+  } = useBookingFlowStore();
   
   // Auth state (still needed for header display)
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [profile, setProfile] = useState<{ first_name?: string } | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
+  
+  // State to track if user has made a choice about continuing
+  const [userChoiceMade, setUserChoiceMade] = useState(false);
+
+  // Check if there's existing booking data from a previous session
+  const hasExistingBookingData = React.useMemo(() => {
+    return !isRebooking && !userChoiceMade && (
+      !!formData.service || 
+      !!formData.vehicle || 
+      !!formData.address || 
+      !!formData.slot ||
+      currentStep > 1
+    );
+  }, [isRebooking, userChoiceMade, formData, currentStep]);
 
   // Check authentication status
   useEffect(() => {
@@ -61,8 +80,6 @@ export default function BookingPage(): React.JSX.Element {
       case 4:
         return <AddressCollection />;
       case 5:
-        return <UserDetails />;
-      case 6:
         return <PricingConfirmation />;
       default:
         return null;
@@ -229,6 +246,48 @@ export default function BookingPage(): React.JSX.Element {
               >
                 Start Fresh
               </Button>
+            </div>
+          </Container>
+        </Section>
+      )}
+
+      {/* Previous Session Notice */}
+      {hasExistingBookingData && (
+        <Section background="muted" padding="sm">
+          <Container>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 bg-brand-600/10 border border-brand-400/30 rounded-lg">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-brand-600 flex items-center justify-center">
+                  <User className="w-4 h-4 text-white" />
+                </div>
+                <div>
+                  <h3 className="font-medium text-brand-800">Continue Previous Booking?</h3>
+                  <p className="text-sm text-brand-700">We found booking details from your previous session. You can continue where you left off or start fresh.</p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    resetFlow()
+                    window.location.reload()
+                  }}
+                  className="text-brand-700 border-brand-400/30 hover:bg-brand-50"
+                >
+                  Start Fresh
+                </Button>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => {
+                    // User chooses to continue with existing data
+                    setUserChoiceMade(true);
+                  }}
+                >
+                  Continue
+                </Button>
+              </div>
             </div>
           </Container>
         </Section>

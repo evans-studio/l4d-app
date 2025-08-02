@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
 import { env } from '@/lib/config/environment'
@@ -8,6 +8,14 @@ import { OverlayProvider } from '@/lib/overlay/context'
 import { OverlayManager } from '@/components/ui/overlays/OverlayManager'
 
 const inter = Inter({ subsets: ['latin'] })
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  themeColor: '#7c3aed',
+}
 
 export const metadata: Metadata = {
   title: {
@@ -19,13 +27,6 @@ export const metadata: Metadata = {
   authors: [{ name: env.business.name }],
   creator: env.business.name,
   manifest: '/manifest.json',
-  themeColor: '#7c3aed',
-  viewport: {
-    width: 'device-width',
-    initialScale: 1,
-    maximumScale: 1,
-    userScalable: false,
-  },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
@@ -60,7 +61,7 @@ export default function RootLayout({
   children: React.ReactNode
 }): React.ReactElement {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" className="dark" data-scroll-behavior="smooth">
       <body className={inter.className}>
         <ZustandAuthInitializer>
           <AuthProvider>

@@ -7,15 +7,25 @@ import { calculateBookingPrice, PriceBreakdown as EnhancedPriceBreakdown } from 
 
 // Type aliases for database types  
 type ServiceRow = Database['public']['Tables']['services']['Row']
-type VehicleSizeRow = Database['public']['Tables']['vehicle_sizes']['Row']
 type TimeSlotRow = Database['public']['Tables']['time_slots']['Row']
 
+// Vehicle size is no longer from database, using hardcoded type
+type VehicleSizeRow = {
+  id: string
+  name: string
+  price_multiplier: number
+  description?: string | null
+  examples?: string[] | null
+  display_order?: number | null
+  is_active?: boolean | null
+}
+
 // Booking flow step types
-export type BookingStep = 1 | 2 | 3 | 4 | 5 | 6
+export type BookingStep = 1 | 2 | 3 | 4 | 5
 
 export interface SlotSelection {
   slotId: string
-  date: string
+  slot_date: string
   startTime: string
   endTime: string
   duration: number
@@ -177,6 +187,9 @@ interface BookingFlowActions {
   loadVehicleSizes: () => Promise<void>
   loadAvailableServices: () => Promise<void>
   
+  // Utility functions
+  getVehicleSizeId: (sizeLetter: 'S' | 'M' | 'L' | 'XL') => string | null
+  
   // Rebooking
   initializeRebooking: (bookingId: string) => Promise<void>
   
@@ -261,7 +274,7 @@ export const useBookingFlowStore = create<BookingFlowStore>()(
       
       nextStep: () => {
         const { currentStep, canProceedToNextStep } = get()
-        if (canProceedToNextStep() && currentStep < 6) {
+        if (canProceedToNextStep() && currentStep < 5) {
           set({ currentStep: (currentStep + 1) as BookingStep, error: null })
         }
       },
@@ -382,7 +395,7 @@ export const useBookingFlowStore = create<BookingFlowStore>()(
               method: 'POST',
               body: JSON.stringify({
                 serviceId: formData.service.serviceId,
-                vehicleSize: formData.vehicle.size,
+                vehicleSize: formData.vehicle.size, // Now sending size letter directly
               }),
             })
             
@@ -587,7 +600,13 @@ export const useBookingFlowStore = create<BookingFlowStore>()(
         }
       },
       
-      // Load vehicle sizes
+      // Helper function - now deprecated but kept for compatibility
+      getVehicleSizeId: (sizeLetter: 'S' | 'M' | 'L' | 'XL'): string | null => {
+        // No longer using vehicle_sizes table, just return the size letter
+        return sizeLetter
+      },
+
+      // Load vehicle sizes - now returns hardcoded categories (vehicle_sizes table removed)
       loadVehicleSizes: async () => {
         try {
           const response = await apiCall<VehicleSizeRow[]>('/api/vehicle-sizes')
@@ -596,8 +615,8 @@ export const useBookingFlowStore = create<BookingFlowStore>()(
             set({ vehicleSizes: response.data })
           }
         } catch (error) {
-          console.error('Failed to load vehicle sizes:', error)
-          // Silent fail for vehicle sizes as they might be cached
+          // Silent fail for vehicle sizes as they're now hardcoded
+          console.warn('Vehicle sizes API unavailable, using defaults')
         }
       },
       
@@ -657,11 +676,11 @@ export const useBookingFlowStore = create<BookingFlowStore>()(
                 serviceId: formData.service.serviceId,
                 serviceName: formData.service.name,
                 duration: formData.service.duration,
-                basePrice: formData.service.basePrice,
-                vehicleSizeMultiplier: 1 // This will be calculated by the API
+                basePrice: formData.service.basePrice
+                // Vehicle size multiplier calculated dynamically by API based on service pricing
               }],
               timeSlot: {
-                date: formData.slot.date,
+                date: formData.slot.slot_date,
                 startTime: formData.slot.startTime,
                 endTime: formData.slot.endTime,
                 slotId: formData.slot.slotId
@@ -712,13 +731,11 @@ export const useBookingFlowStore = create<BookingFlowStore>()(
           case 2: // VehicleDetails
             return !!formData.vehicle && !!formData.vehicle.make && !!formData.vehicle.model && !!formData.vehicle.size
           case 3: // TimeSlotSelection
-            return !!formData.slot && !!formData.slot.slotId && !!formData.slot.date
+            return !!formData.slot && !!formData.slot.slotId && !!formData.slot.slot_date
           case 4: // AddressCollection
             return !!formData.address && !!formData.address.addressLine1 && !!formData.address.city && !!formData.address.postcode
-          case 5: // UserDetails
-            return !!formData.user && !!formData.user.email && !!formData.user.phone && !!formData.user.name
-          case 6: // PricingConfirmation
-            return !!formData.slot && !!formData.address && !!formData.user && !!formData.vehicle && !!formData.service
+          case 5: // PricingConfirmation - No validation needed, just display summary
+            return !!formData.slot && !!formData.address && !!formData.vehicle && !!formData.service
           default:
             return false
         }

@@ -1,3 +1,5 @@
+@import '../styles/brand-colors.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -14,6 +16,44 @@
   }
 }
 
+@layer base {
+  /* Purple Animation Keyframes */
+  @keyframes purple-glow {
+    0% {
+      box-shadow: 0 0 20px rgba(151, 71, 255, 0.4);
+    }
+    100% {
+      box-shadow: 0 0 30px rgba(151, 71, 255, 0.6);
+    }
+  }
+  
+  @keyframes purple-pulse {
+    0%, 100% {
+      opacity: 1;
+      box-shadow: 0 0 20px rgba(151, 71, 255, 0.4);
+    }
+    50% {
+      opacity: 0.8;
+      box-shadow: 0 0 30px rgba(151, 71, 255, 0.6);
+    }
+  }
+  
+  @keyframes purple-bounce {
+    0%, 20%, 53%, 80%, 100% {
+      transform: translate3d(0, 0, 0);
+    }
+    40%, 43% {
+      transform: translate3d(0, -8px, 0);
+    }
+    70% {
+      transform: translate3d(0, -4px, 0);
+    }
+    90% {
+      transform: translate3d(0, -2px, 0);
+    }
+  }
+}
+
 @layer utilities {
   .text-gradient {
     background: linear-gradient(to right, #9747FF, #B66AFF);
@@ -23,8 +63,67 @@
     color: transparent;
   }
   
+  /* Purple Shadow System */
   .shadow-glow {
     box-shadow: 0 0 20px rgba(151, 71, 255, 0.3);
+  }
+  
+  .shadow-purple {
+    box-shadow: 0 4px 14px 0 rgba(151, 71, 255, 0.15);
+  }
+  
+  .shadow-purple-lg {
+    box-shadow: 0 10px 25px -3px rgba(151, 71, 255, 0.2), 0 4px 6px -2px rgba(151, 71, 255, 0.1);
+  }
+  
+  .shadow-purple-xl {
+    box-shadow: 0 20px 40px -12px rgba(151, 71, 255, 0.25);
+  }
+  
+  /* Purple Glow Animations */
+  .animate-purple-glow {
+    animation: purple-glow 2s ease-in-out infinite alternate;
+  }
+  
+  .animate-purple-pulse {
+    animation: purple-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+  
+  .animate-purple-bounce {
+    animation: purple-bounce 1s infinite;
+  }
+  
+  /* Purple Background Gradients */
+  .bg-purple-gradient {
+    background: linear-gradient(135deg, #9747FF 0%, #B66AFF 100%);
+  }
+  
+  .bg-purple-gradient-subtle {
+    background: linear-gradient(135deg, rgba(151, 71, 255, 0.1) 0%, rgba(182, 106, 255, 0.1) 100%);
+  }
+  
+  /* Purple Border Gradients */
+  .border-purple-gradient {
+    border: 1px solid transparent;
+    background: linear-gradient(#000000, #000000) padding-box,
+                linear-gradient(135deg, #9747FF, #B66AFF) border-box;
+  }
+  
+  /* Purple Selection States */
+  .selected-purple {
+    background: rgba(151, 71, 255, 0.1);
+    border-color: #9747FF;
+    box-shadow: 0 0 0 1px rgba(151, 71, 255, 0.3);
+  }
+  
+  /* Purple Hover Glow Effect */
+  .hover-purple-glow {
+    transition: all 0.3s ease;
+  }
+  
+  .hover-purple-glow:hover {
+    box-shadow: 0 0 30px rgba(151, 71, 255, 0.4);
+    border-color: #9747FF;
   }
 
   /* PWA Safe Area Support */

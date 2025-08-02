@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
       }, { status: 401 })
     }
 
-    // Fetch customer vehicles with vehicle size information
+    // Fetch customer vehicles (vehicle_sizes table no longer exists)
     const { data: vehicles, error: vehiclesError } = await supabase
       .from('customer_vehicles')
       .select(`
@@ -39,16 +39,11 @@ export async function GET(request: NextRequest) {
         year,
         color,
         license_plate,
+        registration,
         is_primary,
         is_default,
         created_at,
-        updated_at,
-        vehicle_sizes!vehicle_size_id (
-          id,
-          name,
-          description,
-          price_multiplier
-        )
+        updated_at
       `)
       .eq('user_id', profile.id)
       .order('is_default', { ascending: false })
@@ -99,37 +94,22 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Transform the data for frontend consumption
-    const transformedVehicles = vehicles?.map(vehicle => {
-      const vehicleSize = Array.isArray(vehicle.vehicle_sizes) 
-        ? vehicle.vehicle_sizes[0] 
-        : vehicle.vehicle_sizes
-
-      return {
-        id: vehicle.id,
-        make: vehicle.make,
-        model: vehicle.model,
-        year: vehicle.year,
-        color: vehicle.color,
-        license_plate: vehicle.license_plate,
-        vehicle_size: {
-          id: vehicleSize?.id,
-          size: vehicleSize?.name === 'Small' ? 'S' : 
-                vehicleSize?.name === 'Medium' ? 'M' : 
-                vehicleSize?.name === 'Large' ? 'L' : 
-                vehicleSize?.name === 'Extra Large' ? 'XL' : 'M',
-          multiplier: vehicleSize?.price_multiplier || 1.3,
-          name: vehicleSize?.name || 'Medium',
-          description: vehicleSize?.description || ''
-        },
-        is_primary: vehicle.is_primary,
-        is_default: vehicle.is_default,
-        last_used: vehicleStats[vehicle.id]?.last_used || null,
-        booking_count: vehicleStats[vehicle.id]?.booking_count || 0,
-        created_at: vehicle.created_at,
-        updated_at: vehicle.updated_at
-      }
-    }) || []
+    // Transform the data for frontend consumption (no longer using vehicle_sizes)
+    const transformedVehicles = vehicles?.map(vehicle => ({
+      id: vehicle.id,
+      make: vehicle.make,
+      model: vehicle.model,
+      year: vehicle.year,
+      color: vehicle.color,
+      license_plate: vehicle.license_plate || vehicle.registration,
+      registration: vehicle.registration || vehicle.license_plate,
+      is_primary: vehicle.is_primary,
+      is_default: vehicle.is_default,
+      last_used: vehicleStats[vehicle.id]?.last_used || null,
+      booking_count: vehicleStats[vehicle.id]?.booking_count || 0,
+      created_at: vehicle.created_at,
+      updated_at: vehicle.updated_at
+    })) || []
 
     return NextResponse.json({
       success: true,
@@ -175,8 +155,8 @@ export async function POST(request: NextRequest) {
 
     const vehicleData = await request.json()
 
-    // Validate required fields
-    if (!vehicleData.make || !vehicleData.model || !vehicleData.year || !vehicleData.color || !vehicleData.vehicle_size_id) {
+    // Validate required fields (no longer requiring vehicle_size_id)
+    if (!vehicleData.make || !vehicleData.model || !vehicleData.year || !vehicleData.color) {
       return NextResponse.json({
         success: false,
         error: { message: 'Missing required fields', code: 'VALIDATION_ERROR' }
@@ -199,7 +179,7 @@ export async function POST(request: NextRequest) {
 
     const isFirstVehicle = !existingVehicles || existingVehicles.length === 0
 
-    // Insert new vehicle
+    // Insert new vehicle (no longer using vehicle_size_id)
     const { data: newVehicle, error: insertError } = await supabase
       .from('customer_vehicles')
       .insert({
@@ -209,7 +189,8 @@ export async function POST(request: NextRequest) {
         year: parseInt(vehicleData.year),
         color: vehicleData.color.trim(),
         license_plate: vehicleData.license_plate?.trim() || null,
-        vehicle_size_id: vehicleData.vehicle_size_id,
+        registration: vehicleData.registration?.trim() || vehicleData.license_plate?.trim() || null,
+        vehicle_size_id: null, // No longer using vehicle_sizes table
         is_primary: isFirstVehicle,
         is_default: isFirstVehicle || vehicleData.set_as_default === true,
       })
@@ -220,14 +201,9 @@ export async function POST(request: NextRequest) {
         year,
         color,
         license_plate,
+        registration,
         is_primary,
-        is_default,
-        vehicle_sizes!vehicle_size_id (
-          id,
-          name,
-          description,
-          price_multiplier
-        )
+        is_default
       `)
       .single()
 
@@ -248,28 +224,15 @@ export async function POST(request: NextRequest) {
         .neq('id', newVehicle.id)
     }
 
-    // Transform the response
-    const vehicleSize = Array.isArray(newVehicle.vehicle_sizes) 
-      ? newVehicle.vehicle_sizes[0] 
-      : newVehicle.vehicle_sizes
-
+    // Transform the response (no longer using vehicle_sizes)
     const transformedVehicle = {
       id: newVehicle.id,
       make: newVehicle.make,
       model: newVehicle.model,
       year: newVehicle.year,
       color: newVehicle.color,
-      license_plate: newVehicle.license_plate,
-      vehicle_size: {
-        id: vehicleSize?.id,
-        size: vehicleSize?.name === 'Small' ? 'S' : 
-              vehicleSize?.name === 'Medium' ? 'M' : 
-              vehicleSize?.name === 'Large' ? 'L' : 
-              vehicleSize?.name === 'Extra Large' ? 'XL' : 'M',
-        multiplier: vehicleSize?.price_multiplier || 1.3,
-        name: vehicleSize?.name || 'Medium',
-        description: vehicleSize?.description || ''
-      },
+      license_plate: newVehicle.license_plate || newVehicle.registration,
+      registration: newVehicle.registration || newVehicle.license_plate,
       is_primary: newVehicle.is_primary,
       is_default: newVehicle.is_default,
       last_used: null,

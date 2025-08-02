@@ -67,11 +67,7 @@ export async function GET(
           year,
           color,
           license_plate,
-          vehicle_sizes!vehicle_size_id (
-            id,
-            size,
-            multiplier
-          )
+          registration
         ),
         customer_addresses!address_id (
           address_line_1,
@@ -92,8 +88,7 @@ export async function GET(
         ),
         time_slots!time_slot_id (
           id,
-          start_time,
-          end_time
+          start_time
         ),
         booking_services!booking_id (
           service_details,
@@ -140,7 +135,7 @@ export async function GET(
         make: booking.customer_vehicles[0].make,
         model: booking.customer_vehicles[0].model,
         year: booking.customer_vehicles[0].year,
-        size: booking.customer_vehicles[0].vehicle_sizes?.[0]?.size || 'M',
+        size: 'M', // Default size since vehicle_sizes table no longer exists
         color: booking.customer_vehicles[0].color,
         license_plate: booking.customer_vehicles[0].license_plate
       } : null),
@@ -169,7 +164,7 @@ export async function GET(
       time_slots: booking.time_slots?.[0] ? {
         id: booking.time_slots[0].id,
         start_time: booking.time_slots[0].start_time,
-        end_time: booking.time_slots[0].end_time
+        end_time: booking.scheduled_end_time // Use booking's end time since time_slots doesn't have end_time
       } : null,
       
       // Keep original fields for backwards compatibility

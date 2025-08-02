@@ -2,10 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { useBookingFlowStore, useBookingStep } from '@/lib/store/bookingFlowStore'
-import { useRealTimeAvailability } from '@/hooks/useRealTimeAvailability'
 import { Button } from '@/components/ui/primitives/Button'
 import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/composites/Card'
-import { RealTimeAvailability } from '@/components/booking/RealTimeAvailability'
 import { ChevronLeftIcon, ChevronRightIcon, CalendarIcon, ClockIcon, CheckCircleIcon, AlertCircleIcon } from 'lucide-react'
 import { addDays, format, startOfWeek, endOfWeek, isSameDay, isAfter, startOfDay } from 'date-fns'
 
@@ -25,34 +23,47 @@ export function TimeSlotSelection() {
   const { isCurrentStep } = useBookingStep(3)
   
   const [selectedDate, setSelectedDate] = useState<string>(
-    formData.slot?.date || format(addDays(new Date(), 1), 'yyyy-MM-dd')
+    formData.slot?.slot_date || format(addDays(new Date(), 1), 'yyyy-MM-dd')
   )
   
   const [currentWeekStart, setCurrentWeekStart] = useState<Date>(
     startOfWeek(new Date(), { weekStartsOn: 1 }) // Monday start
   )
 
-  const [showRealTimeView, setShowRealTimeView] = useState(false)
+  const [timeSlots, setTimeSlots] = useState<any[]>([])
+  const [slotsLoading, setSlotsLoading] = useState(false)
+  const [slotsError, setSlotsError] = useState<string | null>(null)
 
-  // Real-time availability for selected date
-  const {
-    timeSlots,
-    isLoading: slotsLoading,
-    error: slotsError,
-    refreshAvailability,
-    bookSlot
-  } = useRealTimeAvailability({
-    date: selectedDate,
-    pollInterval: 30000,
-    enableRealTimeUpdates: true
-  })
-
-  // Load available slots when date changes
-  useEffect(() => {
-    if (isCurrentStep && formData.service && selectedDate) {
-      loadAvailableSlots(selectedDate, formData.service.serviceId, formData.service.duration)
+  // Fetch time slots for a specific date
+  const fetchTimeSlots = async (date: string) => {
+    try {
+      setSlotsLoading(true)
+      setSlotsError(null)
+      
+      const response = await fetch(`/api/time-slots/availability?date=${date}`)
+      const result = await response.json()
+      
+      if (result.success) {
+        setTimeSlots(result.data || [])
+      } else {
+        setSlotsError(result.error?.message || 'Failed to load time slots')
+        setTimeSlots([])
+      }
+    } catch (error) {
+      setSlotsError('Failed to load time slots')
+      setTimeSlots([])
+      console.error('Error fetching time slots:', error)
+    } finally {
+      setSlotsLoading(false)
     }
-  }, [isCurrentStep, selectedDate, formData.service, loadAvailableSlots])
+  }
+
+  // Load time slots when date changes
+  useEffect(() => {
+    if (isCurrentStep && selectedDate) {
+      fetchTimeSlots(selectedDate)
+    }
+  }, [isCurrentStep, selectedDate])
 
   // Generate calendar weeks
   const generateCalendarWeeks = () => {
@@ -86,43 +97,69 @@ export function TimeSlotSelection() {
 
   const handleDateSelect = (dateString: string) => {
     setSelectedDate(dateString)
-    setShowRealTimeView(false) // Reset to calendar view when date changes
   }
 
   const handleSlotSelect = async (slotId: string) => {
     const slot = timeSlots.find(s => s.id === slotId)
     if (!slot) return
+    
+    // Check if slot is already booked
+    if (!slot.is_available) {
+      console.error('Attempted to select unavailable slot')
+      return
+    }
 
-    try {
-      // Book the slot using real-time availability
-      const success = await bookSlot(slotId, `booking-${Date.now()}`)
-      if (success) {
-        setSlotSelection({
-          slotId: slot.id,
-          date: selectedDate,
-          startTime: slot.start_time,
-          endTime: slot.end_time,
-          duration: formData.service?.duration || 60
-        })
-        
-        // Auto-proceed to next step after successful slot selection
-        setTimeout(() => {
-          if (canProceedToNextStep()) {
-            nextStep()
-          }
-        }, 1000)
-      }
-    } catch (error) {
-      console.error('Failed to book slot:', error)
+    // Calculate end time (assuming slots have a consistent duration based on service)
+    const startTime = slot.start_time
+    const serviceDuration = formData.service?.duration || 60 // duration in minutes
+    const endTime = calculateEndTime(startTime, serviceDuration)
+
+    // Select the slot for booking (actual booking happens on form submission)
+    setSlotSelection({
+      slotId: slot.id,
+      slot_date: selectedDate,
+      startTime: startTime,
+      endTime: endTime,
+      duration: serviceDuration
+    })
+    
+    // Proceed to next step immediately after selection
+    if (canProceedToNextStep()) {
+      nextStep()
     }
   }
 
+  // Helper function to calculate end time
+  const calculateEndTime = (startTime: string, durationMinutes: number) => {
+    const [hours, minutes] = startTime.split(':').map(Number)
+    const startDate = new Date()
+    startDate.setHours(hours || 0, minutes || 0, 0, 0)
+    
+    const endDate = new Date(startDate.getTime() + (durationMinutes * 60000))
+    return `${endDate.getHours().toString().padStart(2, '0')}:${endDate.getMinutes().toString().padStart(2, '0')}`
+  }
+
   const formatTime = (timeString: string) => {
-    return new Date(`2000-01-01T${timeString}`).toLocaleTimeString('en-GB', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false
-    })
+    try {
+      const [hours, minutes] = timeString.split(':')
+      if (!hours || !minutes) return timeString
+      
+      return new Date(`2000-01-01T${timeString}`).toLocaleTimeString('en-GB', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      })
+    } catch {
+      return timeString
+    }
+  }
+
+  const isSlotInPast = (slotDate: string, slotTime: string) => {
+    const now = new Date()
+    const slotDateTime = new Date(`${slotDate}T${slotTime}`)
+    // Add 30-minute buffer for booking notice
+    const bufferTime = 30 * 60 * 1000 // 30 minutes in milliseconds
+    return slotDateTime.getTime() < (now.getTime() + bufferTime)
   }
 
   const formatDate = (date: Date) => {
@@ -177,28 +214,17 @@ export function TimeSlotSelection() {
         </Card>
       )}
 
-      {/* Toggle between Calendar and Real-time view */}
-      <div className="flex justify-center gap-2">
-        <Button
-          variant={!showRealTimeView ? 'primary' : 'outline'}
-          onClick={() => setShowRealTimeView(false)}
-          size="sm"
-          leftIcon={<CalendarIcon className="w-4 h-4" />}
-        >
-          Calendar View
-        </Button>
-        <Button
-          variant={showRealTimeView ? 'primary' : 'outline'}
-          onClick={() => setShowRealTimeView(true)}
-          size="sm"
-          leftIcon={<ClockIcon className="w-4 h-4" />}
-        >
-          Real-Time Slots
-        </Button>
+      {/* Booking Notice */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+        <div className="flex items-start gap-2">
+          <AlertCircleIcon className="w-4 h-4 text-blue-600 mt-0.5" />
+          <p className="text-sm text-blue-800">
+            Bookings require at least 30 minutes advance notice. Slots starting within the next 30 minutes cannot be booked.
+          </p>
+        </div>
       </div>
 
       {/* Calendar View */}
-      {!showRealTimeView && (
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -290,22 +316,31 @@ export function TimeSlotSelection() {
               <div className="mt-6">
                 <h4 className="font-semibold text-text-primary mb-4">Available Times</h4>
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                  {timeSlots.filter(slot => slot.is_available).map((slot) => (
-                    <Button
-                      key={slot.id}
-                      variant={formData.slot?.slotId === slot.id ? 'primary' : 'outline'}
-                      onClick={() => handleSlotSelect(slot.id)}
-                      className="flex flex-col items-center p-4 h-auto"
-                    >
-                      <ClockIcon className="w-4 h-4 mb-1" />
-                      <span className="text-sm font-medium">
-                        {formatTime(slot.start_time)}
-                      </span>
-                      <span className="text-xs opacity-75">
-                        {formatTime(slot.end_time)}
-                      </span>
-                    </Button>
-                  ))}
+                  {timeSlots.map((slot) => {
+                    const isPast = isSlotInPast(selectedDate, slot.start_time)
+                    const isAvailable = slot.is_available && !isPast
+                    const isSelected = formData.slot?.slotId === slot.id
+                    
+                    return (
+                      <Button
+                        key={slot.id}
+                        variant={isSelected ? 'primary' : 'outline'}
+                        onClick={() => isAvailable && handleSlotSelect(slot.id)}
+                        disabled={!isAvailable}
+                        className={`flex flex-col items-center p-4 h-auto transition-all ${
+                          !isAvailable ? 'opacity-50 cursor-not-allowed' : ''
+                        }`}
+                      >
+                        <ClockIcon className={`w-4 h-4 mb-1 ${!isAvailable ? 'text-text-muted' : ''}`} />
+                        <span className="text-sm font-medium">
+                          {formatTime(slot.start_time)}
+                        </span>
+                        <span className="text-xs opacity-75">
+                          {isPast ? 'Expired' : !slot.is_available ? 'Booked' : formatTime(slot.end_time)}
+                        </span>
+                      </Button>
+                    )
+                  })}
                 </div>
               </div>
             )}
@@ -320,16 +355,6 @@ export function TimeSlotSelection() {
             )}
           </CardContent>
         </Card>
-      )}
-
-      {/* Real-Time Availability View */}
-      {showRealTimeView && (
-        <RealTimeAvailability
-          selectedDate={selectedDate}
-          onSlotSelect={handleSlotSelect}
-          showDebugInfo={false}
-        />
-      )}
 
       {/* Loading State */}
       {slotsLoading && (
@@ -365,7 +390,7 @@ export function TimeSlotSelection() {
                 <CheckCircleIcon className="w-6 h-6 text-green-600" />
                 <div>
                   <p className="font-semibold text-text-primary">
-                    {formatDate(new Date(formData.slot.date))}
+                    {formatDate(new Date(formData.slot.slot_date))}
                   </p>
                   <p className="text-sm text-text-secondary">
                     {formatTime(formData.slot.startTime)} - {formatTime(formData.slot.endTime)}

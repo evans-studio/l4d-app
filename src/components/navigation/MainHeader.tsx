@@ -1,15 +1,18 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/primitives/Button'
-import { MenuIcon, XIcon, PhoneIcon, MailIcon } from 'lucide-react'
+import { MenuIcon, XIcon, PhoneIcon, MailIcon, User, Settings, LogOut, Home } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
 
 export function MainHeader() {
   const router = useRouter()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [profile, setProfile] = useState<{ first_name?: string, role?: string } | null>(null)
+  const [authLoading, setAuthLoading] = useState(true)
 
   const navigation = [
     { name: 'Home', href: '/' },
@@ -18,6 +21,32 @@ export function MainHeader() {
     { name: 'About', href: '/about' },
     { name: 'Contact', href: '/contact' },
   ]
+
+  // Check authentication status
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const response = await fetch('/api/auth/user')
+        const data = await response.json()
+        
+        if (data.success && data.data?.authenticated) {
+          setIsAuthenticated(true)
+          setProfile(data.data.user)
+        } else {
+          setIsAuthenticated(false)
+          setProfile(null)
+        }
+      } catch (error) {
+        console.error('Auth check failed:', error)
+        setIsAuthenticated(false)
+        setProfile(null)
+      } finally {
+        setAuthLoading(false)
+      }
+    }
+
+    checkAuth()
+  }, [])
 
   return (
     <header className="bg-[var(--bg-secondary)] border-b border-[var(--border-primary)] sticky top-0 z-50">
@@ -73,38 +102,70 @@ export function MainHeader() {
                 className="flex items-center gap-1 text-[var(--text-secondary)] hover:text-[var(--primary)] transition-colors"
               >
                 <MailIcon className="w-4 h-4" />
-                <span className="hidden xl:inline">Book Now</span>
+                <span className="hidden xl:inline">Contact</span>
               </a>
             </div>
 
             {/* Auth Buttons */}
-            <div className="flex items-center gap-3">
-              <Button
-                onClick={() => router.push('/auth/login')}
-                variant="outline"
-                size="sm"
-              >
-                Login
-              </Button>
+            {!authLoading && (
+              <div className="flex items-center gap-3">
+                {isAuthenticated && profile ? (
+                  // Authenticated user - show Dashboard and user menu
+                  <>
+                    <Button
+                      onClick={() => router.push(profile.role === 'admin' || profile.role === 'super_admin' ? '/admin' : '/dashboard')}
+                      variant="outline"
+                      size="sm"
+                    >
+                      Dashboard
+                    </Button>
+                    <div className="flex items-center gap-2 text-[var(--text-secondary)]">
+                      <User className="w-4 h-4 text-[var(--primary)]" />
+                      <span className="text-sm">Hi, {profile?.first_name || 'User'}</span>
+                    </div>
+                  </>
+                ) : (
+                  // Unauthenticated user - show login and book buttons
+                  <>
+                    <Button
+                      onClick={() => router.push('/auth/login')}
+                      variant="outline"
+                      size="sm"
+                    >
+                      Login
+                    </Button>
+                    <Button
+                      onClick={() => router.push('/book')}
+                      size="sm"
+                      className="bg-[var(--primary)] hover:bg-[var(--primary-dark)]"
+                    >
+                      Book Service
+                    </Button>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Mobile CTA */}
+          <div className="md:hidden flex items-center gap-2">
+            {!authLoading && !isAuthenticated && (
               <Button
                 onClick={() => router.push('/book')}
                 size="sm"
                 className="bg-[var(--primary)] hover:bg-[var(--primary-dark)]"
               >
-                Book Service
+                Book Now
               </Button>
-            </div>
-          </div>
-
-          {/* Mobile CTA */}
-          <div className="md:hidden flex items-center gap-2">
-            <Button
-              onClick={() => router.push('/book')}
-              size="sm"
-              className="bg-[var(--primary)] hover:bg-[var(--primary-dark)]"
-            >
-              Book Now
-            </Button>
+            )}
+            
+            {!authLoading && isAuthenticated && profile && (
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-[var(--primary)] text-white flex items-center justify-center text-sm font-medium">
+                  {profile?.first_name?.[0]?.toUpperCase() || 'U'}
+                </div>
+              </div>
+            )}
             
             {/* Mobile Menu Button */}
             <button
@@ -137,13 +198,35 @@ export function MainHeader() {
               
               {/* Mobile Auth Links */}
               <div className="flex flex-col gap-2 pt-4 border-t border-[var(--border-secondary)]">
-                <Link
-                  href="/auth/login"
-                  className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors font-medium px-2"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  Login / Register
-                </Link>
+                {!authLoading && (
+                  <>
+                    {isAuthenticated && profile ? (
+                      // Authenticated mobile menu
+                      <>
+                        <Link
+                          href={profile.role === 'admin' || profile.role === 'super_admin' ? '/admin' : '/dashboard'}
+                          className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors font-medium px-2"
+                          onClick={() => setIsMenuOpen(false)}
+                        >
+                          Dashboard
+                        </Link>
+                        <div className="px-2 pt-2">
+                          <p className="text-xs text-[var(--text-muted)] mb-2">Signed in as:</p>
+                          <p className="text-sm text-[var(--text-primary)]">{profile?.first_name || 'User'}</p>
+                        </div>
+                      </>
+                    ) : (
+                      // Unauthenticated mobile menu
+                      <Link
+                        href="/auth/login"
+                        className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors font-medium px-2"
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        Login / Register
+                      </Link>
+                    )}
+                  </>
+                )}
                 
                 {/* Mobile Contact */}
                 <div className="px-2 pt-2">

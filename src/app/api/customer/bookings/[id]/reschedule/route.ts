@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { ApiResponseHandler } from '@/lib/api/response'
+import { EmailService } from '@/lib/services/email'
 
 export async function POST(
   request: NextRequest,
@@ -18,11 +19,11 @@ export async function POST(
       return ApiResponseHandler.unauthorized('Authentication required')
     }
 
-    // Parse request body
-    const { new_date, new_start_time, new_end_time, time_slot_id, reason } = await request.json()
+    // Parse request body - using different field names to match the frontend
+    const { date, time, reason } = await request.json()
 
-    if (!new_date || !new_start_time || !time_slot_id || !reason) {
-      return ApiResponseHandler.badRequest('Missing required fields')
+    if (!date || !time || !reason) {
+      return ApiResponseHandler.badRequest('Missing required fields: date, time, and reason are required')
     }
 
     // Verify booking belongs to user and can be rescheduled
@@ -34,102 +35,130 @@ export async function POST(
       .single()
 
     if (bookingError || !booking) {
-      return ApiResponseHandler.notFound('Booking not found')
+      return ApiResponseHandler.notFound('Booking not found or you do not have access to it')
     }
 
     // Check if booking can be rescheduled
     if (!['pending', 'confirmed'].includes(booking.status)) {
-      return ApiResponseHandler.badRequest('Booking cannot be rescheduled')
+      return ApiResponseHandler.badRequest(`Booking cannot be rescheduled. Current status: ${booking.status}`)
     }
 
-    // Check if the new time slot is still available
+    // Check if there's already a pending reschedule request for this booking
+    const { data: existingRequest, error: existingError } = await supabase
+      .from('booking_reschedule_requests')
+      .select('id, status')
+      .eq('booking_id', bookingId)
+      .eq('status', 'pending')
+      .single()
+
+    if (existingRequest) {
+      return ApiResponseHandler.badRequest('There is already a pending reschedule request for this booking')
+    }
+
+    // Verify the requested time slot is available
     const { data: timeSlot, error: timeSlotError } = await supabase
       .from('time_slots')
-      .select('id, start_time, end_time, date, is_available')
-      .eq('id', time_slot_id)
+      .select('id, start_time, end_time, slot_date, is_available')
+      .eq('slot_date', date)
+      .eq('start_time', time)
       .eq('is_available', true)
       .single()
 
     if (timeSlotError || !timeSlot) {
-      return ApiResponseHandler.badRequest('Selected time slot is no longer available')
+      return ApiResponseHandler.badRequest('The requested time slot is not available. Please choose a different time.')
     }
 
-    // Verify the time slot matches the provided data
-    if (timeSlot.date !== new_date || timeSlot.start_time !== new_start_time) {
-      return ApiResponseHandler.badRequest('Time slot data mismatch')
+    // Create reschedule request instead of immediately rescheduling
+    const { data: rescheduleRequest, error: createRequestError } = await supabase
+      .from('booking_reschedule_requests')
+      .insert({
+        booking_id: bookingId,
+        customer_id: user.id,
+        requested_date: date,
+        requested_time: time,
+        requested_end_time: timeSlot.end_time,
+        time_slot_id: timeSlot.id,
+        reason: reason,
+        status: 'pending',
+        created_at: new Date().toISOString()
+      })
+      .select('id')
+      .single()
+
+    if (createRequestError) {
+      console.error('Error creating reschedule request:', createRequestError)
+      return ApiResponseHandler.serverError('Failed to submit reschedule request')
     }
 
-    // Begin transaction: Update booking and mark old/new time slots
-    const { error: updateError } = await supabase.rpc('reschedule_booking', {
-      p_booking_id: bookingId,
-      p_new_date: new_date,
-      p_new_start_time: new_start_time,
-      p_new_end_time: new_end_time || timeSlot.end_time,
-      p_new_time_slot_id: time_slot_id,
-      p_reschedule_reason: reason,
-      p_old_date: booking.scheduled_date,
-      p_old_start_time: booking.scheduled_start_time
-    })
+    // Get customer profile for email notification
+    const { data: customerProfile, error: profileError } = await supabase
+      .from('user_profiles')
+      .select('first_name, last_name, email')
+      .eq('id', user.id)
+      .single()
 
-    if (updateError) {
-      console.error('Error rescheduling booking:', updateError)
-      return ApiResponseHandler.serverError('Failed to reschedule booking')
-    }
-
-    // Log the reschedule action
+    // Log the reschedule request action
     const { error: logError } = await supabase
       .from('booking_history')
       .insert({
         booking_id: bookingId,
-        action: 'rescheduled',
+        action: 'reschedule_requested',
         details: {
           old_date: booking.scheduled_date,
           old_start_time: booking.scheduled_start_time,
-          new_date: new_date,
-          new_start_time: new_start_time,
-          reason: reason
+          requested_date: date,
+          requested_time: time,
+          reason: reason,
+          request_id: rescheduleRequest.id
         },
         created_by: user.id,
         created_at: new Date().toISOString()
       })
 
     if (logError) {
-      console.error('Error logging reschedule action:', logError)
+      console.error('Error logging reschedule request action:', logError)
       // Don't fail the request if logging fails
     }
 
-    // Send notification email (optional - implement based on your email service)
-    try {
-      await fetch('/api/email/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          to: user.email,
-          template: 'booking_rescheduled',
-          data: {
-            booking_reference: booking.booking_reference,
-            old_date: booking.scheduled_date,
-            old_time: booking.scheduled_start_time,
-            new_date: new_date,
-            new_time: new_start_time,
-            reason: reason
-          }
-        })
-      })
-    } catch (emailError) {
-      console.error('Failed to send reschedule notification:', emailError)
-      // Don't fail the request if email fails
+    // Send confirmation email to customer
+    if (customerProfile) {
+      try {
+        const emailService = new EmailService()
+        const customerName = `${customerProfile.first_name} ${customerProfile.last_name}`
+        
+        // Send customer confirmation email
+        await emailService.sendBookingStatusUpdate(
+          customerProfile.email,
+          customerName,
+          {
+            ...booking,
+            booking_reference: booking.booking_reference
+          } as any,
+          'reschedule_requested',
+          `We've received your reschedule request for ${date} at ${time}. Our team will review your request and get back to you within 24 hours.`
+        )
+
+        // TODO: Send notification to admin about new reschedule request
+        // This could be implemented later as part of admin notification system
+        
+      } catch (emailError) {
+        console.error('Failed to send reschedule request confirmation:', emailError)
+        // Don't fail the request if email fails
+      }
     }
 
     return ApiResponseHandler.success({
-      message: 'Booking rescheduled successfully',
+      message: 'Reschedule request submitted successfully',
+      request_id: rescheduleRequest.id,
       booking_id: bookingId,
-      new_date: new_date,
-      new_start_time: new_start_time
+      requested_date: date,
+      requested_time: time,
+      status: 'pending',
+      note: 'Your reschedule request has been submitted and is pending admin approval. You will receive an email notification once it has been reviewed.'
     })
 
   } catch (error) {
-    console.error('Reschedule booking error:', error)
-    return ApiResponseHandler.serverError('Failed to reschedule booking')
+    console.error('Submit reschedule request error:', error)
+    return ApiResponseHandler.serverError('Failed to submit reschedule request')
   }
 }

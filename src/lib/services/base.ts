@@ -43,13 +43,11 @@ export abstract class BaseService {
       const { data, error } = await queryFn()
 
       if (error) {
-        console.error('Database error:', error)
         return this.handleError(errorMessage, 'DATABASE_ERROR', error) as ServiceResponse<T>
       }
 
       return this.handleSuccess(data as T)
     } catch (error) {
-      console.error('Service error:', error)
       return this.handleError(errorMessage, 'SERVICE_ERROR', error) as ServiceResponse<T>
     }
   }

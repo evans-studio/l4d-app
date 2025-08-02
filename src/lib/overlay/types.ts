@@ -34,6 +34,8 @@ export type OverlayType =
   | 'service-create'
   | 'time-slot-edit'
   | 'time-slot-block'
+  | 'reschedule-approve'
+  | 'reschedule-decline'
   
   // Generic overlays
   | 'confirm-delete'

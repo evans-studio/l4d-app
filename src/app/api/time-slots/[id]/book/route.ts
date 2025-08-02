@@ -47,7 +47,7 @@ export async function PUT(
     }
 
     // Check if slot is in the past
-    const slotDateTime = new Date(`${slot.date}T${slot.start_time}`)
+    const slotDateTime = new Date(`${slot.slot_date}T${slot.start_time}`)
     const now = new Date()
     
     if (slotDateTime <= now) {
@@ -59,8 +59,7 @@ export async function PUT(
       .from('time_slots')
       .update({
         is_available: false,
-        booking_id: booking_id,
-        updated_at: new Date().toISOString()
+        booking_reference: booking_id
       })
       .eq('id', slotId)
       .eq('is_available', true) // Ensure it's still available (race condition protection)
@@ -110,7 +109,7 @@ export async function PUT(
             customerEmail: customer.email,
             bookingReference: booking.booking_reference,
             serviceName: booking.booking_services?.[0]?.service_details?.name || 'Vehicle Detailing',
-            scheduledDate: slot.date,
+            scheduledDate: slot.slot_date,
             scheduledTime: slot.start_time,
             totalPrice: booking.total_price,
             address: booking.service_address?.address_line_1 || '',
@@ -140,7 +139,7 @@ export async function PUT(
           action: 'slot_booked',
           details: {
             slot_id: slotId,
-            slot_date: slot.date,
+            slot_date: slot.slot_date,
             slot_time: slot.start_time,
             booked_by: session.user.id
           },

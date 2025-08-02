@@ -98,10 +98,7 @@ export class BookingService extends BaseService {
       const supabase = this.supabase
       return supabase
         .from('customer_vehicles')
-        .select(`
-          *,
-          vehicle_size:vehicle_sizes(*)
-        `)
+        .select('*')
         .eq('user_id', userId)
         .order('is_primary', { ascending: false })
         .order('created_at', { ascending: false })
@@ -113,10 +110,7 @@ export class BookingService extends BaseService {
       const supabase = this.supabase
       return supabase
         .from('customer_vehicles')
-        .select(`
-          *,
-          vehicle_size:vehicle_sizes(*)
-        `)
+        .select('*')
         .eq('id', vehicleId)
         .eq('user_id', userId)
         .single()
@@ -141,10 +135,7 @@ export class BookingService extends BaseService {
           ...vehicleData,
           user_id: userId,
         })
-        .select(`
-          *,
-          vehicle_size:vehicle_sizes(*)
-        `)
+        .select('*')
         .single()
     }, 'Failed to create customer vehicle')
   }
@@ -166,10 +157,7 @@ export class BookingService extends BaseService {
         .update(vehicleData)
         .eq('id', vehicleId)
         .eq('user_id', userId)
-        .select(`
-          *,
-          vehicle_size:vehicle_sizes(*)
-        `)
+        .select('*')
         .single()
     }, 'Failed to update customer vehicle')
   }
@@ -209,6 +197,7 @@ export class BookingService extends BaseService {
     return this.executeQuery(async () => {
       const supabase = this.supabase
       
+      
       // Check for duplicate slots (same date and time)
       const duplicateCheck = await supabase
         .from('time_slots')
@@ -228,25 +217,28 @@ export class BookingService extends BaseService {
         !existingSlots.has(`${slot.slot_date}-${slot.start_time}`)
       )
       
-      // Filter out past time slots
+      // Filter out past time slots - for admin operations, allow a small buffer (5 minutes)
+      // This is more lenient than customer booking restrictions
       const now = new Date()
+      const adminBufferMinutes = 5 // Only exclude slots that started more than 5 minutes ago
+      const bufferTime = adminBufferMinutes * 60 * 1000
+      
       const futureSlots = uniqueSlots.filter(slot => {
         const slotDateTime = new Date(`${slot.slot_date}T${slot.start_time}`)
-        return slotDateTime > now
+        return slotDateTime.getTime() > (now.getTime() - bufferTime)
       })
       
       const pastSlotsCount = uniqueSlots.length - futureSlots.length
-      if (pastSlotsCount > 0) {
-        console.log(`BookingService: Filtered out ${pastSlotsCount} past time slots`)
-      }
       
       if (futureSlots.length === 0) {
         const duplicateCount = slots.length - uniqueSlots.length
         const errorMessage = duplicateCount > 0 && pastSlotsCount > 0
-          ? `All time slots are either duplicates (${duplicateCount}) or in the past (${pastSlotsCount})`
+          ? `All time slots are either duplicates (${duplicateCount}) or in the past (${pastSlotsCount} slots started more than ${adminBufferMinutes} minutes ago)`
           : duplicateCount > 0
           ? 'All specified time slots already exist'
-          : 'All specified time slots are in the past'
+          : pastSlotsCount > 0
+          ? `All specified time slots are in the past (${pastSlotsCount} slots started more than ${adminBufferMinutes} minutes ago)`
+          : 'No valid time slots to create'
         
         return { 
           data: [], 
@@ -446,7 +438,7 @@ export class BookingService extends BaseService {
       const pricingService = new PricingService()
       const pricingResult = await pricingService.calculateMultipleServices(
         bookingData.services,
-        bookingData.vehicle.size_id,
+        bookingData.vehicle.size,
         undefined, // Will calculate distance from postcode
         bookingData.address.postcode
       )
@@ -465,14 +457,14 @@ export class BookingService extends BaseService {
       const distanceSurcharge = calculations[0]?.distanceSurcharge || 0
       const distanceKm = calculations[0]?.distanceKm || 0
 
-      // Get vehicle size info
-      const { data: vehicleSize, error: sizeError } = await supabase
-        .from('vehicle_sizes')
-        .select('name, price_multiplier')
-        .eq('id', bookingData.vehicle.size_id)
-        .single()
-
-      if (sizeError) return { data: null, error: sizeError }
+      // Map vehicle size letter to display name
+      const sizeMapping = {
+        'S': 'Small',
+        'M': 'Medium',
+        'L': 'Large',
+        'XL': 'Extra Large'
+      }
+      const vehicleSizeName = sizeMapping[bookingData.vehicle.size] || 'Medium'
 
       // Calculate end time based on duration
       const startTime = new Date(`${timeSlot.slot_date}T${timeSlot.start_time}`)
@@ -488,8 +480,8 @@ export class BookingService extends BaseService {
           time_slot_id: bookingData.time_slot_id,
           vehicle_details: {
             ...bookingData.vehicle,
-            size_name: vehicleSize.name,
-            size_multiplier: vehicleSize.price_multiplier,
+            size_name: vehicleSizeName,
+            size_multiplier: 1, // No longer using multipliers with direct pricing
           },
           service_address: bookingData.address,
           distance_km: distanceKm,
@@ -499,7 +491,7 @@ export class BookingService extends BaseService {
           scheduled_end_time: endTimeStr,
           // Pricing
           base_price: totalPrice - distanceSurcharge,
-          vehicle_size_multiplier: vehicleSize.price_multiplier,
+          vehicle_size_multiplier: 1, // No longer using multipliers
           distance_surcharge: distanceSurcharge,
           total_price: totalPrice,
           estimated_duration: totalDuration,
@@ -512,7 +504,7 @@ export class BookingService extends BaseService {
               final_price: calc.totalPrice - calc.distanceSurcharge,
             })),
             subtotal: totalPrice - distanceSurcharge,
-            vehicle_multiplier: vehicleSize.price_multiplier,
+            vehicle_multiplier: 1, // No longer using multipliers
             distance_surcharge: distanceSurcharge,
             total: totalPrice,
           },

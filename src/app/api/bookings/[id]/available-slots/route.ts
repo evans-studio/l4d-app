@@ -66,8 +66,13 @@ export async function GET(
     const maxDate = new Date()
     maxDate.setDate(maxDate.getDate() + 90) // 90 days maximum advance
 
+    // Get current time for filtering today's slots
+    const now = new Date()
+    const currentDate = now.toISOString().split('T')[0]
+    const currentTime = now.toTimeString().slice(0, 5) // HH:MM format
+
     // Get all available time slots - use correct field names from database schema
-    const { data: availableSlots, error: slotsError } = await supabase
+    let query = supabase
       .from('time_slots')
       .select('id, slot_date, start_time, is_available')
       .eq('is_available', true)
@@ -75,6 +80,15 @@ export async function GET(
       .lte('slot_date', maxDate.toISOString().split('T')[0])
       .order('slot_date', { ascending: true })
       .order('start_time', { ascending: true })
+
+    // Filter out past times for minimum date if it's today
+    const minDateStr = minDate.toISOString().split('T')[0]
+    if (minDateStr === currentDate) {
+      const minTime = minDate.toTimeString().slice(0, 5)
+      query = query.or(`slot_date.gt.${minDateStr},and(slot_date.eq.${minDateStr},start_time.gt.${minTime})`)
+    }
+
+    const { data: availableSlots, error: slotsError } = await query
 
     if (slotsError) {
       console.error('Error fetching available slots:', slotsError)

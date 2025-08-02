@@ -75,15 +75,9 @@ export async function PUT(
         year,
         color,
         license_plate,
+        registration,
         is_primary,
-        is_default,
-        vehicle_sizes!vehicle_size_id (
-          id,
-          size,
-          multiplier,
-          name,
-          description
-        )
+        is_default
       `)
       .single()
 
@@ -95,25 +89,15 @@ export async function PUT(
       }, { status: 500 })
     }
 
-    // Transform the response
-    const vehicleSize = Array.isArray(updatedVehicle.vehicle_sizes) 
-      ? updatedVehicle.vehicle_sizes[0] 
-      : updatedVehicle.vehicle_sizes
-
+    // Transform the response (no longer using vehicle_sizes)
     const transformedVehicle = {
       id: updatedVehicle.id,
       make: updatedVehicle.make,
       model: updatedVehicle.model,
       year: updatedVehicle.year,
       color: updatedVehicle.color,
-      license_plate: updatedVehicle.license_plate,
-      vehicle_size: {
-        id: vehicleSize?.id,
-        size: vehicleSize?.size || 'M',
-        multiplier: vehicleSize?.multiplier || 1.3,
-        name: vehicleSize?.name || 'Medium',
-        description: vehicleSize?.description || ''
-      },
+      license_plate: updatedVehicle.license_plate || updatedVehicle.registration,
+      registration: updatedVehicle.registration || updatedVehicle.license_plate,
       is_primary: updatedVehicle.is_primary,
       is_default: updatedVehicle.is_default
     }

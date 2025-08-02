@@ -77,13 +77,9 @@ export async function POST(request: NextRequest) {
         year,
         color,
         license_plate,
+        registration,
         is_primary,
-        is_default,
-        vehicle_sizes!inner(
-          id,
-          size,
-          multiplier
-        )
+        is_default
       `)
       .eq('user_id', userProfile.id)
       .eq('is_active', true)

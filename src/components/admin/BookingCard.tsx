@@ -12,7 +12,9 @@ import {
   UsersIcon,
   PhoneIcon,
   MailIcon,
-  AlertCircleIcon
+  AlertCircleIcon,
+  CalendarCheckIcon,
+  CalendarXIcon
 } from 'lucide-react'
 
 interface BookingCardProps {
@@ -41,6 +43,14 @@ interface BookingCardProps {
       postal_code: string
     }
     special_instructions?: string
+    has_pending_reschedule?: boolean
+    reschedule_request?: {
+      id: string
+      requested_date: string
+      requested_time: string
+      reason: string
+      created_at: string
+    } | null
   }
   onStatusUpdate?: (bookingId: string, newStatus: string) => Promise<void>
   showActions?: boolean
@@ -202,9 +212,17 @@ export function BookingCard({
       <div className="p-4 border-b border-border-secondary">
         <div className="flex items-start justify-between mb-3">
           <div className="flex-1 min-w-0">
-            <h3 className="text-lg font-semibold text-text-primary mb-1 truncate">
-              #{booking.booking_reference}
-            </h3>
+            <div className="flex items-center gap-2 mb-1">
+              <h3 className="text-lg font-semibold text-text-primary truncate">
+                #{booking.booking_reference}
+              </h3>
+              {booking.has_pending_reschedule && (
+                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-yellow-50 border border-yellow-200 text-yellow-700">
+                  <CalendarIcon className="w-3 h-3" />
+                  Reschedule Request
+                </span>
+              )}
+            </div>
             <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm border ${statusInfo.bgColor} ${statusInfo.borderColor}`}>
               <StatusIcon className={`w-4 h-4 ${statusInfo.color}`} />
               <span className={statusInfo.color}>{statusInfo.label}</span>
@@ -301,6 +319,42 @@ export function BookingCard({
             <p className="text-text-primary text-sm">{booking.special_instructions}</p>
           </div>
         )}
+
+        {/* Reschedule Request Details */}
+        {booking.has_pending_reschedule && booking.reschedule_request && (
+          <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
+            <div className="flex items-start justify-between mb-2">
+              <p className="text-yellow-800 text-xs font-medium mb-1">Pending Reschedule Request</p>
+              <span className="text-yellow-600 text-xs">
+                {new Date(booking.reschedule_request.created_at).toLocaleDateString()}
+              </span>
+            </div>
+            <div className="space-y-1">
+              <div className="flex items-center gap-4 text-sm">
+                <div className="flex items-center gap-1">
+                  <CalendarIcon className="w-3 h-3 text-yellow-600" />
+                  <span className="text-yellow-800">
+                    {new Date(booking.reschedule_request.requested_date).toLocaleDateString('en-GB', {
+                      day: 'numeric',
+                      month: 'short'
+                    })}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <ClockIcon className="w-3 h-3 text-yellow-600" />
+                  <span className="text-yellow-800">
+                    {formatTime(booking.reschedule_request.requested_time)}
+                  </span>
+                </div>
+              </div>
+              {booking.reschedule_request.reason && (
+                <p className="text-yellow-700 text-xs italic">
+                  "{booking.reschedule_request.reason}"
+                </p>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Actions Footer */}
@@ -319,7 +373,45 @@ export function BookingCard({
             View Details
           </Button>
 
-          {booking.status === 'pending' && onStatusUpdate && (
+          {/* Reschedule Request Actions - Priority */}
+          {booking.has_pending_reschedule && booking.reschedule_request && (
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                onClick={() => openOverlay({
+                  type: 'reschedule-approve',
+                  data: { 
+                    bookingId: booking.id, 
+                    booking,
+                    rescheduleRequest: booking.reschedule_request 
+                  }
+                })}
+                size="sm"
+                className="flex items-center justify-center gap-1 bg-green-600 hover:bg-green-700 text-white"
+              >
+                <CalendarCheckIcon className="w-3 h-3" />
+                Approve
+              </Button>
+              <Button
+                onClick={() => openOverlay({
+                  type: 'reschedule-decline',
+                  data: { 
+                    bookingId: booking.id, 
+                    booking,
+                    rescheduleRequest: booking.reschedule_request 
+                  }
+                })}
+                variant="outline"
+                size="sm"
+                className="flex items-center justify-center gap-1 text-red-600 border-red-200 hover:bg-red-50"
+              >
+                <CalendarXIcon className="w-3 h-3" />
+                Decline
+              </Button>
+            </div>
+          )}
+
+          {/* Regular Status Actions */}
+          {!booking.has_pending_reschedule && booking.status === 'pending' && onStatusUpdate && (
             <div className="grid grid-cols-2 gap-2">
               <Button
                 onClick={() => handleStatusUpdate('confirmed')}

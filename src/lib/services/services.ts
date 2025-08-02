@@ -48,22 +48,7 @@ export class ServicesService extends BaseService {
 
       if (error) return { data: null, error }
 
-      // Get vehicle sizes for price calculation
-      const { data: vehicleSizes, error: sizesError } = await supabase
-        .from('vehicle_sizes')
-        .select('*')
-        .eq('is_active', true)
-        .order('price_multiplier')
-
-      if (sizesError) {
-        console.error('Vehicle sizes error:', sizesError)
-        return { data: null, error: sizesError }
-      }
-
-      if (!vehicleSizes || vehicleSizes.length === 0) {
-        console.error('No vehicle sizes found')
-        return { data: null, error: new Error('No vehicle sizes found') }
-      }
+      // Vehicle sizes table no longer exists - using service_pricing directly
 
       // Get service pricing data for all services
       const { data: servicePricingData, error: pricingError } = await supabase
@@ -142,14 +127,7 @@ export class ServicesService extends BaseService {
 
       if (error) return { data: null, error }
 
-      // Get vehicle sizes for price calculation
-      const { data: vehicleSizes, error: sizesError } = await supabase
-        .from('vehicle_sizes')
-        .select('*')
-        .eq('is_active', true)
-        .order('price_multiplier')
-
-      if (sizesError) return { data: null, error: sizesError }
+      // Vehicle sizes table no longer exists - using service_pricing directly
 
       // Get service pricing data for this specific service
       const { data: servicePricing, error: pricingError } = await supabase
@@ -198,14 +176,16 @@ export class ServicesService extends BaseService {
   }
 
   async getVehicleSizes(): Promise<ServiceResponse<VehicleSize[]>> {
-    return this.executeQuery(async () => {
-      const supabase = this.supabase
-      return supabase
-        .from('vehicle_sizes')
-        .select('*')
-        .eq('is_active', true)
-        .order('display_order')
-    }, 'Failed to fetch vehicle sizes')
+    // Vehicle sizes table no longer exists - return hardcoded categories
+    return {
+      success: true,
+      data: [
+        { id: 'small', name: 'Small', display_order: 1, is_active: true, price_multiplier: 1.0 },
+        { id: 'medium', name: 'Medium', display_order: 2, is_active: true, price_multiplier: 1.0 },
+        { id: 'large', name: 'Large', display_order: 3, is_active: true, price_multiplier: 1.0 },
+        { id: 'extra_large', name: 'Extra Large', display_order: 4, is_active: true, price_multiplier: 1.0 }
+      ] as VehicleSize[]
+    }
   }
 
   async createService(serviceData: Partial<Service>): Promise<ServiceResponse<Service>> {
@@ -288,50 +268,47 @@ export class ServicesService extends BaseService {
     }, 'Failed to delete service category')
   }
 
-  // Vehicle Size CRUD Methods
+  // Vehicle Size CRUD Methods - These now work with hardcoded data
   async getVehicleSizeById(id: string): Promise<ServiceResponse<VehicleSize>> {
-    return this.executeQuery(async () => {
-      const supabase = this.supabase
-      return supabase
-        .from('vehicle_sizes')
-        .select('*')
-        .eq('id', id)
-        .single()
-    }, 'Failed to fetch vehicle size')
+    const sizes = [
+      { id: 'small', name: 'Small', display_order: 1, is_active: true, price_multiplier: 1.0 },
+      { id: 'medium', name: 'Medium', display_order: 2, is_active: true, price_multiplier: 1.0 },
+      { id: 'large', name: 'Large', display_order: 3, is_active: true, price_multiplier: 1.0 },
+      { id: 'extra_large', name: 'Extra Large', display_order: 4, is_active: true, price_multiplier: 1.0 }
+    ] as VehicleSize[]
+    
+    const size = sizes.find(s => s.id === id)
+    if (size) {
+      return { success: true, data: size }
+    } else {
+      return { 
+        success: false, 
+        error: { message: 'Vehicle size not found' }
+      }
+    }
   }
 
   async createVehicleSize(vehicleSizeData: Partial<VehicleSize>): Promise<ServiceResponse<VehicleSize>> {
-    return this.executeQuery(async () => {
-      const supabase = this.supabase
-      return supabase
-        .from('vehicle_sizes')
-        .insert(vehicleSizeData)
-        .select()
-        .single()
-    }, 'Failed to create vehicle size')
+    // Vehicle sizes table no longer exists - return error
+    return {
+      success: false,
+      error: { message: 'Vehicle sizes table no longer exists - use service_pricing instead' }
+    }
   }
 
   async updateVehicleSize(id: string, vehicleSizeData: Partial<VehicleSize>): Promise<ServiceResponse<VehicleSize>> {
-    return this.executeQuery(async () => {
-      const supabase = this.supabase
-      return supabase
-        .from('vehicle_sizes')
-        .update(vehicleSizeData)
-        .eq('id', id)
-        .select()
-        .single()
-    }, 'Failed to update vehicle size')
+    // Vehicle sizes table no longer exists - return error
+    return {
+      success: false,
+      error: { message: 'Vehicle sizes table no longer exists - use service_pricing instead' }
+    }
   }
 
   async deleteVehicleSize(id: string): Promise<ServiceResponse<void>> {
-    return this.executeQuery(async () => {
-      const supabase = this.supabase
-      // Soft delete by setting is_active to false
-      const result = await supabase
-        .from('vehicle_sizes')
-        .update({ is_active: false })
-        .eq('id', id)
-      return { data: undefined, error: result.error }
-    }, 'Failed to delete vehicle size')
+    // Vehicle sizes table no longer exists - return error
+    return {
+      success: false,
+      error: { message: 'Vehicle sizes table no longer exists - use service_pricing instead' }
+    }
   }
 }

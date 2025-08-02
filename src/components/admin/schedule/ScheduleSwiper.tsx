@@ -103,13 +103,26 @@ export function ScheduleSwiper({ timeSlots, onSlotsChange, isLoading }: Schedule
       
       console.log(`ScheduleSwiper: Date ${dateStr} has ${daySlots.length} slots`)
       
-      // Calculate stats based on booking status
-      const availableSlots = daySlots.filter(slot => 
-        slot.is_available && !slot.booking
-      )
-      const bookedSlots = daySlots.filter(slot => 
-        slot.booking && !['cancelled'].includes(slot.booking.status)
-      )
+      // Calculate stats based on database availability and booking status
+      const availableSlots = daySlots.filter(slot => {
+        // A slot is available if:
+        // 1. Database says it's available (is_available = true)
+        // 2. AND no active booking exists (or booking is cancelled/completed)
+        return slot.is_available && (
+          !slot.booking || 
+          ['cancelled', 'completed'].includes(slot.booking.status)
+        )
+      })
+      
+      const bookedSlots = daySlots.filter(slot => {
+        // A slot is booked if:
+        // 1. Database says it's unavailable (is_available = false)
+        // 2. OR there's an active booking (any status except cancelled/completed)
+        return !slot.is_available || (
+          slot.booking && !['cancelled', 'completed'].includes(slot.booking.status)
+        )
+      })
+      
       const completedSlots = daySlots.filter(slot =>
         slot.booking?.status === 'completed'
       )

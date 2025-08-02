@@ -91,12 +91,21 @@ export async function GET(request: NextRequest) {
       .select('id, address_line_1, city, postal_code')
       .in('id', addressIds)
 
+    // Get pending reschedule requests for these bookings
+    const bookingIds = bookings.map(b => b.id)
+    const { data: rescheduleRequests } = await supabase
+      .from('booking_reschedule_requests')
+      .select('id, booking_id, requested_date, requested_time, reason, created_at')
+      .in('booking_id', bookingIds)
+      .eq('status', 'pending')
+
 
     // Create lookup maps
     const customerMap = new Map(customers?.map(c => [c.id, c]) || [])
     const serviceMap = new Map(services?.map(s => [s.id, s]) || [])
     const vehicleMap = new Map(vehicles?.map(v => [v.id, v]) || [])
     const addressMap = new Map(addresses?.map(a => [a.id, a]) || [])
+    const rescheduleMap = new Map(rescheduleRequests?.map(r => [r.booking_id, r]) || [])
 
     // Transform the data for frontend consumption
     const adminBookings = bookings.map((booking: any) => {
@@ -104,6 +113,7 @@ export async function GET(request: NextRequest) {
       const service = serviceMap.get(booking.service_id) || { name: '', short_description: '' }
       const vehicle = vehicleMap.get(booking.vehicle_id) || { make: '', model: '', year: null, color: '' }
       const address = addressMap.get(booking.address_id) || { address_line_1: '', city: '', postal_code: '' }
+      const rescheduleRequest = rescheduleMap.get(booking.id)
       
       const customerName = [customer.first_name, customer.last_name]
         .filter(Boolean)
@@ -136,7 +146,16 @@ export async function GET(request: NextRequest) {
           city: address.city || 'Unknown',
           postal_code: address.postal_code || ''
         },
-        created_at: booking.created_at
+        created_at: booking.created_at,
+        // Reschedule request data
+        has_pending_reschedule: !!rescheduleRequest,
+        reschedule_request: rescheduleRequest ? {
+          id: rescheduleRequest.id,
+          requested_date: rescheduleRequest.requested_date,
+          requested_time: rescheduleRequest.requested_time,
+          reason: rescheduleRequest.reason,
+          created_at: rescheduleRequest.created_at
+        } : null
       }
     })
 

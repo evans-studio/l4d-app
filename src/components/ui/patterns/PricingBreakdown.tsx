@@ -5,10 +5,11 @@ import { Calculator, Car, MapPin } from 'lucide-react'
 
 interface PricingBreakdownProps {
   breakdown: {
-    basePrice: number
+    basePrice?: number // Legacy field - now using servicePrice
+    servicePrice: number // Actual price from service_pricing table
     vehicleSize: string
-    sizeMultiplier: number
-    subtotal: number
+    sizeMultiplier?: number // Legacy field - no longer used
+    subtotal?: number // Legacy field - now calculated from servicePrice
     distanceKm?: number
     distanceSurcharge: number
     totalPrice: number
@@ -38,24 +39,16 @@ export function PricingBreakdown({
         )}
 
         <div className="space-y-3">
-          {/* Base Service Price */}
-          <div className="flex justify-between items-center">
-            <span className="text-text-secondary">Base service price</span>
-            <span className="text-text-primary font-medium">
-              £{breakdown.basePrice.toFixed(2)}
-            </span>
-          </div>
-
-          {/* Vehicle Size Multiplier */}
+          {/* Service Price for Vehicle Size */}
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-2">
               <Car className="w-4 h-4 text-text-tertiary" />
               <span className="text-text-secondary">
-                {breakdown.vehicleSize} ({breakdown.sizeMultiplier}x)
+                Service price ({breakdown.vehicleSize})
               </span>
             </div>
-            <span className="text-text-primary">
-              £{(breakdown.basePrice * breakdown.sizeMultiplier).toFixed(2)}
+            <span className="text-text-primary font-medium">
+              £{breakdown.servicePrice.toFixed(2)}
             </span>
           </div>
 
@@ -104,19 +97,17 @@ export function PricingBreakdown({
 
 // Simplified version for inline display
 export function InlinePricingPreview({ 
-  basePrice, 
-  sizeMultiplier, 
+  servicePrice, 
   distanceSurcharge = 0, 
   vehicleSize,
   className = ''
 }: {
-  basePrice: number
-  sizeMultiplier: number
+  servicePrice: number
   distanceSurcharge?: number
   vehicleSize: string
   className?: string
 }) {
-  const total = (basePrice * sizeMultiplier) + distanceSurcharge
+  const total = servicePrice + distanceSurcharge
 
   return (
     <div className={`flex items-center justify-between p-3 bg-brand-50 rounded-lg border border-brand-200 ${className}`}>

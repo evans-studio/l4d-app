@@ -73,6 +73,17 @@ export async function GET(request: NextRequest) {
       console.error('Action bookings error:', actionError)
     }
 
+    // Get all pending reschedule requests that require admin action
+    const { data: rescheduleRequests, error: rescheduleError } = await supabase
+      .from('booking_reschedule_requests')
+      .select('id, booking_id, requested_date, requested_time, reason, created_at')
+      .eq('status', 'pending')
+      .order('created_at', { ascending: true })
+
+    if (rescheduleError) {
+      console.error('Reschedule requests error:', rescheduleError)
+    }
+
     // Calculate today's schedule stats
     const todayTotal = todayBookings?.length || 0
     const todayCapacity = 8 // Assume 8-slot daily capacity (can be configurable)
@@ -90,9 +101,10 @@ export async function GET(request: NextRequest) {
     const weekUtilization = weekCapacity > 0 ? Math.round((weekTotal / weekCapacity) * 100) : 0
     const weekRevenue = weekBookings?.reduce((sum, booking) => sum + (booking.total_price || 0), 0) || 0
 
-    // Calculate action required stats - only pending bookings need action
+    // Calculate action required stats - pending bookings AND reschedule requests need action
     const pendingBookings = actionBookings?.length || 0
-    const totalActionRequired = pendingBookings
+    const pendingRescheduleRequests = rescheduleRequests?.length || 0
+    const totalActionRequired = pendingBookings + pendingRescheduleRequests
 
     const stats = {
       // Today's Schedule Widget
@@ -127,8 +139,10 @@ export async function GET(request: NextRequest) {
       requiresAction: {
         total: totalActionRequired,
         pending: pendingBookings,
+        rescheduleRequests: pendingRescheduleRequests,
         toConfirm: 0, // No separate "to confirm" - confirmed bookings don't need action
-        bookings: actionBookings?.slice(0, 5) || [] // Show top 5 that need attention
+        bookings: actionBookings?.slice(0, 5) || [], // Show top 5 bookings that need attention
+        reschedules: rescheduleRequests?.slice(0, 5) || [] // Show top 5 reschedule requests
       }
     }
 

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/primitives/Button'
 import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from '@/components/ui/composites/Modal'
 import { 
@@ -8,7 +8,8 @@ import {
   CalendarIcon,
   PlusIcon,
   LoaderIcon,
-  TrashIcon
+  TrashIcon,
+  Settings2Icon
 } from 'lucide-react'
 
 interface BulkAddModalProps {
@@ -23,16 +24,68 @@ interface TimeSlotTemplate {
   duration: number
 }
 
+interface DatabaseTemplate {
+  id: string
+  name: string
+  description: string
+  slots: Array<{
+    start_time: string
+    duration_minutes: number
+  }>
+}
+
 export function BulkAddModal({ weekStart, onClose, onSuccess }: BulkAddModalProps) {
   const [selectedDays, setSelectedDays] = useState<string[]>(['monday', 'tuesday', 'wednesday', 'thursday', 'friday'])
-  const [timeSlots, setTimeSlots] = useState<TimeSlotTemplate[]>([
-    { id: '1', time: '09:00', duration: 90 },
-    { id: '2', time: '10:30', duration: 90 },
-    { id: '3', time: '14:00', duration: 90 },
-    { id: '4', time: '15:30', duration: 90 }
-  ])
+  const [timeSlots, setTimeSlots] = useState<TimeSlotTemplate[]>([])
+  const [templates, setTemplates] = useState<DatabaseTemplate[]>([])
+  const [selectedTemplate, setSelectedTemplate] = useState<string>('')
   const [isLoading, setIsLoading] = useState(false)
+  const [isLoadingTemplates, setIsLoadingTemplates] = useState(true)
   const [error, setError] = useState('')
+
+  // Fetch templates from database on mount
+  useEffect(() => {
+    const fetchTemplates = async () => {
+      try {
+        const response = await fetch('/api/admin/time-templates')
+        const data = await response.json()
+        
+        if (data.success && data.data) {
+          setTemplates(data.data)
+          // Set default template (first one) and load its slots
+          if (data.data.length > 0) {
+            const defaultTemplate = data.data[0]
+            setSelectedTemplate(defaultTemplate.id)
+            loadTemplateSlots(defaultTemplate)
+          }
+        } else {
+          // Fallback to hardcoded defaults if API fails
+          const fallbackSlots = [
+            { id: '1', time: '10:00', duration: 90 },
+            { id: '2', time: '12:00', duration: 90 },
+            { id: '3', time: '14:00', duration: 90 },
+            { id: '4', time: '16:00', duration: 90 },
+            { id: '5', time: '18:00', duration: 90 }
+          ]
+          setTimeSlots(fallbackSlots)
+        }
+      } catch (error) {
+        // On error, use fallback defaults
+        const fallbackSlots = [
+          { id: '1', time: '10:00', duration: 90 },
+          { id: '2', time: '12:00', duration: 90 },
+          { id: '3', time: '14:00', duration: 90 },
+          { id: '4', time: '16:00', duration: 90 },
+          { id: '5', time: '18:00', duration: 90 }
+        ]
+        setTimeSlots(fallbackSlots)
+      } finally {
+        setIsLoadingTemplates(false)
+      }
+    }
+
+    fetchTemplates()
+  }, [])
 
   const dayOptions = [
     { key: 'monday', label: 'Mon', fullLabel: 'Monday' },
@@ -43,6 +96,23 @@ export function BulkAddModal({ weekStart, onClose, onSuccess }: BulkAddModalProp
     { key: 'saturday', label: 'Sat', fullLabel: 'Saturday' },
     { key: 'sunday', label: 'Sun', fullLabel: 'Sunday' }
   ]
+
+  const loadTemplateSlots = (template: DatabaseTemplate) => {
+    const slots = template.slots.map((slot, index) => ({
+      id: `${template.id}-${index}`,
+      time: slot.start_time,
+      duration: slot.duration_minutes
+    }))
+    setTimeSlots(slots)
+  }
+
+  const handleTemplateChange = (templateId: string) => {
+    setSelectedTemplate(templateId)
+    const template = templates.find(t => t.id === templateId)
+    if (template) {
+      loadTemplateSlots(template)
+    }
+  }
 
   const formatTime = (timeStr: string) => {
     const [hours, minutes] = timeStr.split(':')
@@ -169,8 +239,6 @@ export function BulkAddModal({ weekStart, onClose, onSuccess }: BulkAddModalProp
         exclude_dates: []
       }
       
-      console.log('Sending bulk request:', requestData)
-      
       // Send bulk create request using existing API format
       const response = await fetch('/api/admin/time-slots/bulk', {
         method: 'POST',
@@ -178,19 +246,14 @@ export function BulkAddModal({ weekStart, onClose, onSuccess }: BulkAddModalProp
         body: JSON.stringify(requestData)
       })
       
-      console.log('Response status:', response.status)
-      console.log('Response ok:', response.ok)
-
       const data = await response.json()
 
       if (data.success) {
         onSuccess()
       } else {
-        console.error('Bulk creation failed:', data)
         setError(data.error?.message || 'Failed to create time slots')
       }
     } catch (error) {
-      console.error('Error creating time slots:', error)
       if (error instanceof TypeError && error.message.includes('fetch')) {
         setError('Network error. Please check your connection and try again.')
       } else {
@@ -211,8 +274,17 @@ export function BulkAddModal({ weekStart, onClose, onSuccess }: BulkAddModalProp
         
         <form onSubmit={handleSubmit}>
           <ModalBody className="space-y-6" scrollable maxHeight="70vh">
-            {/* Week Display */}
-            <div className="flex items-center gap-3 p-4 bg-[var(--surface-secondary)] border border-[var(--border-secondary)] rounded-lg">
+            {isLoadingTemplates && (
+              <div className="flex items-center justify-center py-8">
+                <LoaderIcon className="w-6 h-6 animate-spin text-[var(--primary)]" />
+                <span className="ml-2 text-[var(--text-secondary)]">Loading templates...</span>
+              </div>
+            )}
+            
+            {!isLoadingTemplates && (
+              <>
+                {/* Week Display */}
+                <div className="flex items-center gap-3 p-4 bg-[var(--surface-secondary)] border border-[var(--border-secondary)] rounded-lg">
               <CalendarIcon className="w-5 h-5 text-[var(--text-muted)]" />
               <div>
                 <div className="font-semibold text-[var(--text-primary)]">
@@ -223,6 +295,30 @@ export function BulkAddModal({ weekStart, onClose, onSuccess }: BulkAddModalProp
                 </div>
               </div>
             </div>
+
+            {/* Template Selection */}
+            {!isLoadingTemplates && templates.length > 0 && (
+              <div className="space-y-3">
+                <label className="block text-sm font-medium text-[var(--text-primary)]">
+                  <Settings2Icon className="inline w-4 h-4 mr-2" />
+                  Time Slot Template
+                </label>
+                <select
+                  value={selectedTemplate}
+                  onChange={(e) => handleTemplateChange(e.target.value)}
+                  className="w-full px-3 py-2 border border-[var(--border-secondary)] rounded-lg bg-[var(--surface-primary)] text-[var(--text-primary)] focus:border-[var(--primary)] focus:outline-none"
+                >
+                  {templates.map(template => (
+                    <option key={template.id} value={template.id}>
+                      {template.name} - {template.description}
+                    </option>
+                  ))}
+                </select>
+                <div className="text-xs text-[var(--text-secondary)]">
+                  Templates are loaded from your admin settings and can be customized.
+                </div>
+              </div>
+            )}
 
             {/* Day Selection */}
             <div className="space-y-3">
@@ -330,6 +426,8 @@ export function BulkAddModal({ weekStart, onClose, onSuccess }: BulkAddModalProp
                 <p className="text-sm text-red-700">{error}</p>
               </div>
             )}
+              </>
+            )} {/* Close the isLoadingTemplates conditional */}
           </ModalBody>
 
           <ModalFooter>

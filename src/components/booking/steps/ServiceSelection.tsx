@@ -19,6 +19,9 @@ export function ServiceSelection(): React.JSX.Element {
     canProceedToNextStep
   } = useBookingFlowStore()
   
+  // Track hydration to prevent SSR/client mismatches
+  const [isHydrated, setIsHydrated] = useState(false)
+  
   const { isCurrentStep } = useBookingStep(1)
   
   const [categories, setCategories] = useState<any[]>([])
@@ -28,6 +31,11 @@ export function ServiceSelection(): React.JSX.Element {
   )
   const [servicesWithPricing, setServicesWithPricing] = useState<any[]>([])
   const [vehicleSizes, setVehicleSizes] = useState<any[]>([])
+
+  // Set hydration flag after component mounts
+  useEffect(() => {
+    setIsHydrated(true)
+  }, [])
 
   // Load services, categories, and vehicle sizes on component mount
   useEffect(() => {
@@ -410,7 +418,7 @@ export function ServiceSelection(): React.JSX.Element {
         <div className="sm:hidden space-y-3 pt-6">
           <Button
             onClick={handleNext}
-            disabled={!canProceedToNextStep()}
+            disabled={isHydrated ? !canProceedToNextStep() : true}
             size="lg"
             fullWidth
             rightIcon={<ChevronRightIcon className="w-4 h-4" />}
@@ -441,7 +449,7 @@ export function ServiceSelection(): React.JSX.Element {
           
           <Button
             onClick={handleNext}
-            disabled={!canProceedToNextStep()}
+            disabled={isHydrated ? !canProceedToNextStep() : true}
             size="lg"
             rightIcon={<ChevronRightIcon className="w-4 h-4" />}
           >

@@ -50,8 +50,10 @@ interface AdminStats {
   requiresAction: {
     total: number
     pending: number
+    rescheduleRequests: number
     toConfirm: number
     bookings: any[]
+    reschedules: any[]
   }
   // Legacy fields for backward compatibility
   pendingBookings?: number
@@ -203,8 +205,13 @@ function MobileWidgetCarousel({ stats, router }: MobileWidgetCarouselProps) {
             </div>
             <div className="space-y-2">
               <div className="text-sm">
-                <span className="text-orange-600 font-medium">{stats.requiresAction.pending} pending</span>
+                <span className="text-orange-600 font-medium">{stats.requiresAction.pending} pending bookings</span>
               </div>
+              {stats.requiresAction.rescheduleRequests > 0 && (
+                <div className="text-sm">
+                  <span className="text-purple-600 font-medium">{stats.requiresAction.rescheduleRequests} reschedule requests</span>
+                </div>
+              )}
               {stats.requiresAction.toConfirm > 0 && (
                 <div className="text-sm">
                   <span className="text-blue-600 font-medium">{stats.requiresAction.toConfirm} to confirm</span>
@@ -610,8 +617,13 @@ function AdminDashboard() {
                   </div>
                   <div className="space-y-2">
                     <div className="text-sm">
-                      <span className="text-orange-600 font-medium">{stats.requiresAction.pending} pending</span>
+                      <span className="text-orange-600 font-medium">{stats.requiresAction.pending} pending bookings</span>
                     </div>
+                    {stats.requiresAction.rescheduleRequests > 0 && (
+                      <div className="text-sm">
+                        <span className="text-purple-600 font-medium">{stats.requiresAction.rescheduleRequests} reschedule requests</span>
+                      </div>
+                    )}
                     {stats.requiresAction.toConfirm > 0 && (
                       <div className="text-sm">
                         <span className="text-blue-600 font-medium">{stats.requiresAction.toConfirm} to confirm</span>
@@ -845,14 +857,26 @@ function AdminDashboard() {
                   </div>
                 </div>
               )}
-              <div className="flex items-start p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                <CheckCircleIcon className="w-5 h-5 text-blue-600 mr-3 flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-sm font-medium text-blue-800">
-                    All systems operational
-                  </p>
+              {stats && stats.requiresAction.rescheduleRequests > 0 && (
+                <div className="flex items-start p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                  <ClockIcon className="w-5 h-5 text-purple-600 mr-3 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-purple-800">
+                      {stats.requiresAction.rescheduleRequests} reschedule request{stats.requiresAction.rescheduleRequests > 1 ? 's' : ''} awaiting response
+                    </p>
+                  </div>
                 </div>
-              </div>
+              )}
+              {(!stats || (stats.requiresAction.pending === 0 && stats.requiresAction.rescheduleRequests === 0)) && (
+                <div className="flex items-start p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <CheckCircleIcon className="w-5 h-5 text-blue-600 mr-3 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-blue-800">
+                      All systems operational
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 

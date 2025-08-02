@@ -20,7 +20,9 @@ import {
   ArrowLeftIcon,
   EditIcon,
   AlertCircleIcon,
-  CheckCircleIcon
+  CheckCircleIcon,
+  CalendarCheckIcon,
+  CalendarXIcon
 } from 'lucide-react'
 
 interface BookingDetails {
@@ -58,6 +60,15 @@ interface BookingDetails {
   }
   created_at: string
   updated_at: string
+  // Reschedule request fields
+  has_pending_reschedule?: boolean
+  reschedule_request?: {
+    id: string
+    requested_date: string
+    requested_time: string
+    reason: string
+    created_at: string
+  }
 }
 
 const statusConfig = {
@@ -168,6 +179,69 @@ function AdminBookingDetailsPage() {
       }
     } catch (error) {
       console.error('Failed to update admin notes:', error)
+    }
+  }
+
+  const handleApproveReschedule = async (rescheduleRequest: NonNullable<BookingDetails['reschedule_request']>) => {
+    if (!booking) return
+    
+    setIsUpdating(true)
+    try {
+      const response = await fetch(`/api/admin/bookings/${booking.id}/reschedule/approve`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reschedule_request_id: rescheduleRequest.id,
+          new_date: rescheduleRequest.requested_date,
+          new_time: rescheduleRequest.requested_time
+        })
+      })
+
+      const data = await response.json()
+      if (data.success) {
+        // Refresh booking data to show updated status
+        window.location.reload()
+      } else {
+        console.error('Failed to approve reschedule:', data.error)
+        alert('Failed to approve reschedule request: ' + (data.error?.message || 'Unknown error'))
+      }
+    } catch (error) {
+      console.error('Failed to approve reschedule:', error)
+      alert('Failed to approve reschedule request')
+    } finally {
+      setIsUpdating(false)
+    }
+  }
+
+  const handleDeclineReschedule = async (rescheduleRequest: NonNullable<BookingDetails['reschedule_request']>) => {
+    if (!booking) return
+    
+    const declineReason = window.prompt('Optional: Provide a reason for declining this reschedule request:')
+    
+    setIsUpdating(true)
+    try {
+      const response = await fetch(`/api/admin/bookings/${booking.id}/reschedule/decline`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reschedule_request_id: rescheduleRequest.id,
+          decline_reason: declineReason || undefined
+        })
+      })
+
+      const data = await response.json()
+      if (data.success) {
+        // Refresh booking data to show updated status
+        window.location.reload()
+      } else {
+        console.error('Failed to decline reschedule:', data.error)
+        alert('Failed to decline reschedule request: ' + (data.error?.message || 'Unknown error'))
+      }
+    } catch (error) {
+      console.error('Failed to decline reschedule:', error)
+      alert('Failed to decline reschedule request')
+    } finally {
+      setIsUpdating(false)
     }
   }
 
@@ -404,6 +478,76 @@ function AdminBookingDetailsPage() {
                   Customer Instructions
                 </h2>
                 <p className="text-[var(--text-primary)]">{booking.special_instructions}</p>
+              </div>
+            )}
+
+            {/* Reschedule Request */}
+            {booking.has_pending_reschedule && booking.reschedule_request && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+                <h2 className="text-xl font-semibold text-orange-900 mb-4 flex items-center gap-2">
+                  <CalendarIcon className="w-5 h-5" />
+                  Pending Reschedule Request
+                </h2>
+                
+                <div className="space-y-4">
+                  {/* Request Details */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-orange-700 text-sm mb-1">Requested Date</p>
+                      <p className="text-orange-900 font-medium">
+                        {formatDate(booking.reschedule_request.requested_date)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-orange-700 text-sm mb-1">Requested Time</p>
+                      <p className="text-orange-900 font-medium flex items-center gap-2">
+                        <ClockIcon className="w-4 h-4" />
+                        {formatTime(booking.reschedule_request.requested_time)}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Customer Reason */}
+                  <div>
+                    <p className="text-orange-700 text-sm mb-1">Customer's Reason</p>
+                    <p className="text-orange-900 italic bg-yellow-100 p-3 rounded border border-yellow-200">
+                      "{booking.reschedule_request.reason}"
+                    </p>
+                  </div>
+
+                  {/* Request Date */}
+                  <div>
+                    <p className="text-orange-700 text-sm">
+                      Requested on {new Date(booking.reschedule_request.created_at).toLocaleDateString('en-US', {
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                      })}
+                    </p>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex gap-3 pt-4 border-t border-yellow-300">
+                    <Button
+                      onClick={() => handleApproveReschedule(booking.reschedule_request!)}
+                      disabled={isUpdating}
+                      className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white"
+                    >
+                      <CalendarCheckIcon className="w-4 h-4" />
+                      Approve Request
+                    </Button>
+                    <Button
+                      onClick={() => handleDeclineReschedule(booking.reschedule_request!)}
+                      disabled={isUpdating}
+                      variant="outline"
+                      className="flex items-center gap-2 text-red-600 border-red-200 hover:bg-red-50"
+                    >
+                      <CalendarXIcon className="w-4 h-4" />
+                      Decline Request
+                    </Button>
+                  </div>
+                </div>
               </div>
             )}
           </div>

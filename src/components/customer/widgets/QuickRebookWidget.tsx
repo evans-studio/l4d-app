@@ -74,16 +74,9 @@ export function QuickRebookWidget({ lastBooking }: QuickRebookWidgetProps) {
             <RefreshCw className="w-6 h-6 text-text-muted" />
           </div>
           <h4 className="font-medium text-text-primary mb-2">No previous bookings</h4>
-          <p className="text-sm text-text-secondary mb-6">
-            Complete your first booking to enable quick rebooking
+          <p className="text-sm text-text-secondary">
+            Complete your first booking to enable quick rebooking here
           </p>
-          <Button
-            onClick={() => router.push('/book')}
-            size="sm"
-            className="w-full"
-          >
-            Book First Service
-          </Button>
         </CardContent>
       </Card>
     )

@@ -21,10 +21,11 @@ interface VehicleCardProps {
     year: number
     color: string
     license_plate?: string
-    vehicle_size: {
+    vehicle_size?: {
       size: 'S' | 'M' | 'L' | 'XL'
       multiplier: number
     }
+    vehicle_size_id?: string
     is_primary: boolean
     is_default: boolean
     last_used?: string
@@ -55,7 +56,9 @@ export function VehicleCard({
   const [isDeleting, setIsDeleting] = useState(false)
   const [isSettingDefault, setIsSettingDefault] = useState(false)
   
-  const sizeInfo = sizeConfig[vehicle.vehicle_size.size]
+  // Handle cases where vehicle_size might be undefined (after vehicle_sizes table removal)
+  const vehicleSize = vehicle.vehicle_size?.size || 'M' // Default to Medium if no size info
+  const sizeInfo = sizeConfig[vehicleSize]
 
   const formatLastUsed = (dateString?: string) => {
     if (!dateString) return 'Never used'
@@ -124,7 +127,7 @@ export function VehicleCard({
                 )}
               </div>
               <div className="flex items-center gap-2 text-xs text-text-secondary">
-                <span className={sizeInfo.color}>Size {vehicle.vehicle_size.size}</span>
+                <span className={sizeInfo.color}>Size {vehicleSize}</span>
                 <span>•</span>
                 <span>{vehicle.color}</span>
                 {vehicle.license_plate && (
@@ -194,10 +197,10 @@ export function VehicleCard({
                 </div>
                 <div>
                   <p className="font-medium text-text-primary">
-                    {sizeInfo.label} ({vehicle.vehicle_size.size})
+                    {sizeInfo.label} ({vehicleSize})
                   </p>
                   <p className="text-sm text-text-secondary">
-                    {vehicle.vehicle_size.multiplier}x price multiplier
+                    {vehicle.vehicle_size?.multiplier || 1.0}x price multiplier
                   </p>
                 </div>
               </div>

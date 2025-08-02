@@ -6,6 +6,7 @@ import { BaseModal } from '../BaseModal'
 import { BaseOverlayProps } from '@/lib/overlay/types'
 import { Button } from '@/components/ui/primitives/Button'
 import { Input } from '@/components/ui/primitives/Input'
+import { Select } from '@/components/ui/primitives/Select'
 
 interface Vehicle {
   id: string
@@ -14,7 +15,6 @@ interface Vehicle {
   year: number
   color?: string
   registration?: string
-  vehicle_size_id: string
 }
 
 interface VehicleEditModalProps extends BaseOverlayProps {
@@ -35,50 +35,31 @@ export const VehicleEditModal: React.FC<VehicleEditModalProps> = ({
     model: '',
     year: new Date().getFullYear(),
     color: '',
-    registration: '',
-    vehicle_size_id: ''
+    registration: ''
   })
   const [isLoading, setIsLoading] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
-  const [vehicleSizes, setVehicleSizes] = useState<Array<{id: string, name: string}>>([])
+  // Removed vehicle sizes - using service pricing instead
 
   useEffect(() => {
-    if (isOpen) {
-      loadVehicleSizes()
-      if (data?.vehicle) {
-        setFormData({
-          make: data.vehicle.make || '',
-          model: data.vehicle.model || '',
-          year: data.vehicle.year || new Date().getFullYear(),
-          color: data.vehicle.color || '',
-          registration: data.vehicle.registration || '',
-          vehicle_size_id: data.vehicle.vehicle_size_id || ''
-        })
-      }
+    if (isOpen && data?.vehicle) {
+      setFormData({
+        make: data.vehicle.make || '',
+        model: data.vehicle.model || '',
+        year: data.vehicle.year || new Date().getFullYear(),
+        color: data.vehicle.color || '',
+        registration: data.vehicle.registration || ''
+      })
     }
   }, [isOpen, data?.vehicle])
 
-  const loadVehicleSizes = async () => {
-    try {
-      setIsLoading(true)
-      const response = await fetch('/api/vehicle-sizes')
-      const result = await response.json()
-      
-      if (result.success) {
-        setVehicleSizes(result.data)
-      }
-    } catch (error) {
-      console.error('Failed to load vehicle sizes')
-    } finally {
-      setIsLoading(false)
-    }
-  }
+  // Vehicle sizes functionality removed - using service pricing instead
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!formData.make.trim() || !formData.model.trim() || !formData.vehicle_size_id) {
+    if (!formData.make.trim() || !formData.model.trim()) {
       setError('Please fill in all required fields')
       return
     }
@@ -154,7 +135,7 @@ export const VehicleEditModal: React.FC<VehicleEditModalProps> = ({
       size="md"
     >
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
           <div>
             <label className="block text-sm font-medium text-text-primary mb-2">
               Make *
@@ -180,7 +161,7 @@ export const VehicleEditModal: React.FC<VehicleEditModalProps> = ({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
           <div>
             <label className="block text-sm font-medium text-text-primary mb-2">
               Year
@@ -217,24 +198,7 @@ export const VehicleEditModal: React.FC<VehicleEditModalProps> = ({
           />
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-text-primary mb-2">
-            Vehicle Size *
-          </label>
-          <select
-            value={formData.vehicle_size_id}
-            onChange={(e) => setFormData(prev => ({ ...prev, vehicle_size_id: e.target.value }))}
-            className="w-full px-3 py-2 border border-border-secondary rounded-lg focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600"
-            required
-          >
-            <option value="">Select vehicle size</option>
-            {vehicleSizes.map((size) => (
-              <option key={size.id} value={size.id}>
-                {size.name}
-              </option>
-            ))}
-          </select>
-        </div>
+        {/* Vehicle size removed - pricing now determined by service selection */}
 
         {error && (
           <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-800 text-sm">
@@ -242,7 +206,8 @@ export const VehicleEditModal: React.FC<VehicleEditModalProps> = ({
           </div>
         )}
 
-        <div className="flex gap-3 pt-4 border-t border-border-secondary">
+        {/* Actions - Mobile optimized */}
+        <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-border-secondary">
           {data?.vehicleId && (
             <Button
               type="button"
@@ -250,27 +215,32 @@ export const VehicleEditModal: React.FC<VehicleEditModalProps> = ({
               onClick={handleDelete}
               disabled={isSubmitting}
               leftIcon={<Trash2 className="w-4 h-4" />}
+              className="min-h-[44px] sm:min-h-[40px] order-3 sm:order-1"
             >
               Delete
             </Button>
           )}
           <div className="flex-1" />
-          <Button
-            type="button"
-            variant="outline"
-            onClick={onClose}
-            disabled={isSubmitting}
-          >
-            Cancel
-          </Button>
-          <Button
-            type="submit"
-            variant="primary"
-            disabled={isSubmitting || isLoading}
-            leftIcon={<Car className="w-4 h-4" />}
-          >
-            {isSubmitting ? 'Saving...' : data?.vehicleId ? 'Update Vehicle' : 'Add Vehicle'}
-          </Button>
+          <div className="flex gap-3 order-1 sm:order-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onClose}
+              disabled={isSubmitting}
+              className="flex-1 sm:flex-none min-h-[44px] sm:min-h-[40px]"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              variant="primary"
+              disabled={isSubmitting}
+              leftIcon={<Car className="w-4 h-4" />}
+              className="flex-1 sm:flex-none min-h-[44px] sm:min-h-[40px]"
+            >
+              {isSubmitting ? 'Saving...' : data?.vehicleId ? 'Update Vehicle' : 'Add Vehicle'}
+            </Button>
+          </div>
         </div>
       </form>
     </BaseModal>

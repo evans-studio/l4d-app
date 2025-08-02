@@ -1,11 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useBookingFlowStore, useBookingStep } from '@/lib/store/bookingFlowStore'
 import { Button } from '@/components/ui/primitives/Button'
 import { Card, CardHeader, CardContent } from '@/components/ui/composites/Card'
 import { PasswordSetupModal } from '@/components/auth/PasswordSetupModal'
+import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from '@/components/ui/composites/Modal'
 import { 
   ChevronLeftIcon, 
   CheckCircleIcon, 
@@ -22,7 +23,7 @@ import {
   Calculator,
   Receipt
 } from 'lucide-react'
-import { format } from 'date-fns'
+import { formatDate, formatTime, getSlotStartTime, calculateEndTime } from '@/lib/utils/date-formatting'
 
 export function PricingConfirmation() {
   const router = useRouter()
@@ -33,10 +34,11 @@ export function PricingConfirmation() {
     error,
     submitBooking,
     previousStep,
-    resetFlow
+    resetFlow,
+    setUserData
   } = useBookingFlowStore()
 
-  const { isCurrentStep } = useBookingStep(6)
+  const { isCurrentStep } = useBookingStep(5)
   
   const [isProcessing, setIsProcessing] = useState(false)
   const [bookingResult, setBookingResult] = useState<{
@@ -48,8 +50,52 @@ export function PricingConfirmation() {
   } | null>(null)
   
   const [showPasswordModal, setShowPasswordModal] = useState(false)
+  const [showAuthModal, setShowAuthModal] = useState(false)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [authLoading, setAuthLoading] = useState(true)
+
+  // Check authentication status and auto-populate user data
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const response = await fetch('/api/auth/user')
+        const data = await response.json()
+        
+        if (data.success && data.data?.authenticated) {
+          setIsAuthenticated(true)
+          
+          // Auto-populate user data if not already set
+          if (!formData.user && data.data.user) {
+            const user = data.data.user
+            setUserData({
+              email: user.email || '',
+              phone: user.phone || '',
+              name: `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email,
+              isExistingUser: true,
+              userId: user.id
+            })
+          }
+        } else {
+          setIsAuthenticated(false)
+        }
+      } catch (error) {
+        console.error('Auth check failed:', error)
+        setIsAuthenticated(false)
+      } finally {
+        setAuthLoading(false)
+      }
+    }
+
+    checkAuth()
+  }, [])
 
   const handleConfirmBooking = async () => {
+    // Check if user is authenticated
+    if (!isAuthenticated && !formData.user) {
+      setShowAuthModal(true)
+      return
+    }
+
     setIsProcessing(true)
     
     try {
@@ -90,16 +136,19 @@ export function PricingConfirmation() {
     // The modal will handle the redirect to dashboard
   }
 
-  const formatTime = (timeString: string) => {
-    return new Date(`2000-01-01T${timeString}`).toLocaleTimeString('en-GB', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false
-    })
-  }
-
-  const formatDate = (dateString: string) => {
-    return format(new Date(dateString), 'EEEE, MMMM d, yyyy')
+  // Helper to get proper time values from slot data
+  const getSlotTimes = () => {
+    if (!formData.slot) return { startTime: '', endTime: '' }
+    
+    const startTime = getSlotStartTime(formData.slot)
+    let endTime = formData.slot.endTime || ''
+    
+    // If no endTime, calculate it from duration
+    if (!endTime && startTime && formData.service?.duration) {
+      endTime = calculateEndTime(startTime, formData.service.duration)
+    }
+    
+    return { startTime, endTime }
   }
 
   if (!isCurrentStep) {
@@ -144,10 +193,13 @@ export function PricingConfirmation() {
                 <div>
                   <h4 className="font-medium text-text-primary mb-1">Date & Time</h4>
                   <p className="text-text-secondary">
-                    {formData.slot && formatDate(formData.slot.date)}
+                    {formData.slot ? formatDate(formData.slot.slot_date) : 'Date not available'}
                   </p>
                   <p className="text-text-secondary">
-                    {formData.slot && formatTime(formData.slot.startTime)} - {formData.slot && formatTime(formData.slot.endTime)}
+                    {(() => {
+                      const { startTime, endTime } = getSlotTimes()
+                      return `${formatTime(startTime)} - ${formatTime(endTime)}`
+                    })()}
                   </p>
                 </div>
                 
@@ -320,13 +372,16 @@ export function PricingConfirmation() {
                   <div className="flex items-center gap-2 mb-1">
                     <CalendarIcon className="w-4 h-4 text-brand-400" />
                     <h4 className="font-medium text-text-primary">
-                      {formatDate(formData.slot.date)}
+                      {formatDate(formData.slot.slot_date)}
                     </h4>
                   </div>
                   <div className="flex items-center gap-2">
                     <ClockIcon className="w-4 h-4 text-brand-400" />
                     <p className="text-sm text-text-secondary">
-                      {formatTime(formData.slot.startTime)} - {formatTime(formData.slot.endTime)}
+                      {(() => {
+                        const { startTime, endTime } = getSlotTimes()
+                        return `${formatTime(startTime)} - ${formatTime(endTime)}`
+                      })()}
                     </p>
                   </div>
                 </div>
@@ -479,7 +534,7 @@ export function PricingConfirmation() {
             fullWidth
             className="min-h-[48px]"
           >
-            Back to Personal Details
+            Back to Address
           </Button>
         </div>
         
@@ -491,7 +546,7 @@ export function PricingConfirmation() {
             disabled={isProcessing || isSubmitting}
             leftIcon={<ChevronLeftIcon className="w-4 h-4" />}
           >
-            Back to Personal Details
+            Back to Address
           </Button>
         
           <Button
@@ -509,6 +564,58 @@ export function PricingConfirmation() {
           </Button>
         </div>
       </div>
+
+      {/* Authentication Modal */}
+      <Modal open={showAuthModal} onClose={() => setShowAuthModal(false)}>
+        <ModalContent onClose={() => setShowAuthModal(false)}>
+          <ModalHeader 
+            title="Sign in to continue" 
+            subtitle="You need to sign in or create an account to complete your booking"
+          />
+          <ModalBody>
+            <div className="space-y-4">
+              <div className="text-center">
+                <p className="text-text-secondary mb-4">
+                  Already have an account? Sign in to access your saved vehicles and addresses.
+                </p>
+              </div>
+              
+              <div className="space-y-3">
+                <Button
+                  onClick={() => {
+                    // Save current booking state to session storage
+                    sessionStorage.setItem('booking_redirect', 'true')
+                    router.push('/auth/login?redirect=/book')
+                  }}
+                  fullWidth
+                  size="lg"
+                >
+                  Sign In
+                </Button>
+                
+                <Button
+                  onClick={() => {
+                    // Save current booking state to session storage
+                    sessionStorage.setItem('booking_redirect', 'true')
+                    router.push('/auth/register?redirect=/book')
+                  }}
+                  variant="outline"
+                  fullWidth
+                  size="lg"
+                >
+                  Create Account
+                </Button>
+              </div>
+              
+              <div className="text-center">
+                <p className="text-sm text-text-muted">
+                  Your booking progress will be saved and restored after signing in.
+                </p>
+              </div>
+            </div>
+          </ModalBody>
+        </ModalContent>
+      </Modal>
     </div>
   )
 }

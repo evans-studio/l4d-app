@@ -11,8 +11,9 @@ export async function GET(request: NextRequest) {
     const supabase = await createClient()
     
     const { searchParams } = new URL(request.url)
-    const serviceId = searchParams.get('serviceId')
+    const serviceId = searchParams.get('serviceId') || searchParams.get('service_id')
     const vehicleSizeId = searchParams.get('vehicleSizeId')
+    const sizeColumn = searchParams.get('size') // New direct column access
     
     // Build the query for the new denormalized structure
     let query = supabase
@@ -23,8 +24,7 @@ export async function GET(request: NextRequest) {
         medium,
         large,
         extra_large,
-        services!inner(name),
-        vehicle_sizes!inner(id, name)
+        services!inner(name)
       `)
     
     // Filter by service if provided
@@ -43,24 +43,34 @@ export async function GET(request: NextRequest) {
     if (!pricingData || pricingData.length === 0) {
       return ApiResponseHandler.success([])
     }
-
-    // Get vehicle sizes for mapping
-    const { data: vehicleSizes, error: sizesError } = await supabase
-      .from('vehicle_sizes')
-      .select('id, name')
-      .eq('is_active', true)
-      .order('display_order')
-
-    if (sizesError) {
-      console.error('Error fetching vehicle sizes:', sizesError)
-      return ApiResponseHandler.serverError('Failed to fetch vehicle sizes')
+    
+    // Handle direct column access for pricing calculator
+    if (sizeColumn && serviceId && pricingData.length > 0) {
+      const pricingRecord = pricingData[0]
+      if (pricingRecord) {
+        return ApiResponseHandler.success({
+          service_id: serviceId,
+          [sizeColumn]: (pricingRecord as any)[sizeColumn]
+        })
+      }
     }
 
-    // Create size name to ID mapping
-    const sizeNameToId: Record<string, string> = {}
-    vehicleSizes?.forEach(size => {
-      sizeNameToId[size.name] = size.id
-    })
+    // Create a mapping for vehicle sizes - no longer from database
+    // Using standard size mapping: S=Small, M=Medium, L=Large, XL=Extra Large
+    const sizeMapping: Record<string, string> = {
+      'S': 'Small',
+      'M': 'Medium', 
+      'L': 'Large',
+      'XL': 'Extra Large'
+    }
+    
+    // Create reverse mapping for API responses
+    const sizeNameToLetter: Record<string, string> = {
+      'Small': 'S',
+      'Medium': 'M',
+      'Large': 'L',
+      'Extra Large': 'XL'
+    }
     
     // Transform denormalized data back to individual pricing records for compatibility
     const transformedData: any[] = []
@@ -75,14 +85,14 @@ export async function GET(request: NextRequest) {
 
       Object.entries(priceMap).forEach(([sizeName, price]) => {
         if (price && price > 0) {
-          const vehicleSizeIdForSize = sizeNameToId[sizeName]
-          if (vehicleSizeIdForSize) {
+          const sizeLetter = sizeNameToLetter[sizeName]
+          if (sizeLetter) {
             transformedData.push({
               serviceId: item.service_id,
-              vehicleSizeId: vehicleSizeIdForSize,
+              vehicleSize: sizeLetter, // Changed from vehicleSizeId to vehicleSize (letter)
+              vehicleSizeName: sizeName,
               price: price,
-              serviceName: item.services?.name,
-              vehicleSizeName: sizeName
+              serviceName: item.services?.name
             })
           }
         }
@@ -90,9 +100,18 @@ export async function GET(request: NextRequest) {
     })
 
     // Filter by vehicle size if provided
-    const filteredData = vehicleSizeId 
-      ? transformedData.filter(item => item.vehicleSizeId === vehicleSizeId)
-      : transformedData
+    // Convert vehicleSizeId parameter to size letter if needed
+    let filteredData = transformedData
+    
+    if (vehicleSizeId) {
+      // Check if it's already a size letter (S, M, L, XL)
+      if (['S', 'M', 'L', 'XL'].includes(vehicleSizeId)) {
+        filteredData = transformedData.filter(item => item.vehicleSize === vehicleSizeId)
+      } else {
+        // Legacy support: might be getting old UUID, just return all data
+        console.warn('Received legacy vehicle size ID:', vehicleSizeId)
+      }
+    }
     
     return ApiResponseHandler.success(filteredData)
     

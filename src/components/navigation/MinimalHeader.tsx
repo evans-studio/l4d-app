@@ -20,6 +20,7 @@ const UserMenu: React.FC<{
   onLogout: () => void 
 }> = ({ user, profile, onLogout }) => {
   const [isOpen, setIsOpen] = useState(false)
+  const [dropdownPosition, setDropdownPosition] = useState<'bottom' | 'top'>('bottom')
   const router = useRouter()
   const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin'
 
@@ -36,6 +37,24 @@ const UserMenu: React.FC<{
   const handleLogoutClick = async () => {
     setIsOpen(false)
     await onLogout()
+  }
+
+  // Calculate dropdown position based on available space
+  const calculateDropdownPosition = () => {
+    const viewportHeight = window.innerHeight
+    const scrollY = window.scrollY
+    const headerHeight = 64 // Approximate header height
+    const dropdownHeight = 200 // Approximate dropdown height
+    
+    // If we're near the top of the page and there's not enough space below
+    const spaceBelow = viewportHeight - headerHeight
+    const spaceAbove = scrollY + headerHeight
+    
+    if (spaceBelow < dropdownHeight && spaceAbove > dropdownHeight) {
+      setDropdownPosition('top')
+    } else {
+      setDropdownPosition('bottom')
+    }
   }
 
   // Close dropdown when clicking outside
@@ -72,7 +91,12 @@ const UserMenu: React.FC<{
       <Button
         variant="ghost"
         size="sm"
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => {
+          if (!isOpen) {
+            calculateDropdownPosition()
+          }
+          setIsOpen(!isOpen)
+        }}
         className="flex items-center gap-2 px-2 py-1.5 hover:bg-surface-hover transition-colors"
         aria-expanded={isOpen}
         aria-haspopup="true"
@@ -96,7 +120,10 @@ const UserMenu: React.FC<{
 
       {/* Dropdown Menu */}
       {isOpen && (
-        <div className="absolute right-0 top-full mt-2 w-64 bg-surface-primary border border-border-secondary rounded-lg shadow-lg z-50 py-2">
+        <div className={cn(
+          "absolute right-0 w-64 bg-surface-primary border border-border-secondary rounded-lg shadow-lg z-[100] py-2",
+          dropdownPosition === 'bottom' ? "top-full mt-2" : "bottom-full mb-2"
+        )}>
           {/* User Info Header */}
           <div className="px-4 py-3 border-b border-border-secondary">
             <p className="text-sm font-medium text-text-primary truncate">
@@ -243,14 +270,6 @@ const MobileMenu: React.FC<{
                   {isAdmin ? 'Admin Dashboard' : 'Dashboard'}
                 </Button>
                 
-                <Button
-                  variant="primary"
-                  onClick={() => handleNavigation('/book')}
-                  className="w-full justify-start gap-3 min-h-[48px]"
-                >
-                  <Calendar className="w-5 h-5" />
-                  Book Service
-                </Button>
                 
                 <Button
                   variant="ghost"
@@ -348,7 +367,7 @@ export const MinimalHeader: React.FC<MinimalHeaderProps> = ({ className, showMob
   return (
     <>
       <header className={cn(
-        "sticky top-0 z-30 w-full bg-surface-primary/95 backdrop-blur-sm border-b border-border-secondary",
+        "sticky top-0 z-40 w-full bg-surface-primary/95 backdrop-blur-sm border-b border-border-secondary",
         className
       )}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -391,13 +410,6 @@ export const MinimalHeader: React.FC<MinimalHeaderProps> = ({ className, showMob
                         Dashboard
                       </Link>
                       
-                      <Button
-                        variant="primary"
-                        size="sm"
-                        onClick={() => router.push('/book')}
-                      >
-                        Book Now
-                      </Button>
                       
                       <UserMenu user={user} profile={profile} onLogout={handleLogout} />
                     </>

@@ -52,7 +52,7 @@ export async function PUT(
     }
 
     // Check if slot is actually booked
-    if (slot.is_available || !slot.booking_id) {
+    if (slot.is_available || !slot.booking_reference) {
       return ApiResponseHandler.badRequest('Time slot is not currently booked')
     }
 
@@ -76,8 +76,7 @@ export async function PUT(
       .from('time_slots')
       .update({
         is_available: true,
-        booking_id: null,
-        updated_at: new Date().toISOString()
+        booking_reference: null
       })
       .eq('id', slotId)
       .eq('is_available', false) // Ensure it's still booked (race condition protection)
@@ -122,7 +121,7 @@ export async function PUT(
           customerEmail: customerDetails.email,
           bookingReference: booking.booking_reference,
           serviceName: booking.booking_services?.[0]?.service_details?.name || 'Vehicle Detailing',
-          scheduledDate: slot.date,
+          scheduledDate: slot.slot_date,
           scheduledTime: slot.start_time,
           totalPrice: booking.total_price,
           address: booking.service_address?.address_line_1 || '',
@@ -144,11 +143,11 @@ export async function PUT(
       await supabase
         .from('booking_audit_log')
         .insert({
-          booking_id: slot.booking_id,
+          booking_id: slot.booking_reference,
           action: 'slot_released',
           details: {
             slot_id: slotId,
-            slot_date: slot.date,
+            slot_date: slot.slot_date,
             slot_time: slot.start_time,
             released_by: session.user.id,
             cancellation_reason: cancellation_reason

@@ -50,10 +50,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
           year,
           color,
           license_plate,
-          vehicle_sizes!vehicle_size_id (
-            name,
-            price_multiplier
-          )
+          registration
         ),
         customer_addresses!address_id (
           address_line_1,
@@ -115,17 +112,14 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
         estimated_duration: service.estimated_duration
       })) || [],
       
-      // Vehicle information with size details
+      // Vehicle information (no longer includes size details from deleted table)
       vehicle: booking.customer_vehicles ? {
         make: booking.customer_vehicles.make,
         model: booking.customer_vehicles.model,
         year: booking.customer_vehicles.year,
         color: booking.customer_vehicles.color,
-        license_plate: booking.customer_vehicles.license_plate,
-        vehicle_size: {
-          name: booking.customer_vehicles.vehicle_sizes?.name || 'Unknown',
-          price_multiplier: booking.customer_vehicles.vehicle_sizes?.price_multiplier || 1
-        }
+        license_plate: booking.customer_vehicles.license_plate || booking.customer_vehicles.registration,
+        registration: booking.customer_vehicles.registration || booking.customer_vehicles.license_plate
       } : null,
       
       // Address information with distance

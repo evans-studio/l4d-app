@@ -6,14 +6,14 @@ import { z } from 'zod'
 
 const pricingCalculationSchema = z.object({
   serviceId: z.string().uuid('Invalid service ID'),
-  vehicleSizeId: z.string().uuid('Invalid vehicle size ID'),
+  vehicleSize: z.enum(['S', 'M', 'L', 'XL']),
   distanceKm: z.number().min(0).optional(),
   customPostcode: z.string().optional(),
 })
 
 const multiplePricingSchema = z.object({
   serviceIds: z.array(z.string().uuid()).min(1, 'At least one service ID is required'),
-  vehicleSizeId: z.string().uuid('Invalid vehicle size ID'),
+  vehicleSize: z.enum(['S', 'M', 'L', 'XL']),
   distanceKm: z.number().min(0).optional(),
   customPostcode: z.string().optional(),
 })
@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
       const pricingService = new PricingService()
       const result = await pricingService.calculateMultipleServices(
         validation.data.serviceIds,
-        validation.data.vehicleSizeId,
+        validation.data.vehicleSize,
         validation.data.distanceKm,
         validation.data.customPostcode
       )

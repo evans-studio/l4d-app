@@ -44,13 +44,6 @@ const steps = [
   },
   { 
     number: 5, 
-    name: 'Contact', 
-    shortName: 'Details',
-    icon: User, 
-    description: 'Your information' 
-  },
-  { 
-    number: 6, 
     name: 'Confirm', 
     shortName: 'Review',
     icon: Receipt, 
