@@ -24,20 +24,17 @@ export function ServiceSelection(): React.JSX.Element {
   
   const { isCurrentStep } = useBookingStep(1)
   
-  const [categories, setCategories] = useState<any[]>([])
-  const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [selectedService, setSelectedService] = useState<string | null>(
     formData.service?.serviceId || null
   )
   const [servicesWithPricing, setServicesWithPricing] = useState<any[]>([])
-  const [vehicleSizes, setVehicleSizes] = useState<any[]>([])
 
   // Set hydration flag after component mounts
   useEffect(() => {
     setIsHydrated(true)
   }, [])
 
-  // Load services, categories, and vehicle sizes on component mount
+  // Load services on component mount
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -50,28 +47,10 @@ export function ServiceSelection(): React.JSX.Element {
           }
         }
         
-        // Load categories separately
-        const categoriesResponse = await fetch('/api/services/categories')
-        if (categoriesResponse.ok) {
-          const categoriesData = await categoriesResponse.json()
-          if (categoriesData.success) {
-            setCategories(categoriesData.data || [])
-          }
-        }
-
-        // Load vehicle sizes for price range calculation
-        const sizesResponse = await fetch('/api/vehicle-sizes')
-        if (sizesResponse.ok) {
-          const sizesData = await sizesResponse.json()
-          if (sizesData.success) {
-            setVehicleSizes(sizesData.data || [])
-          }
-        }
-        
         // Also load available services for the store
         await loadAvailableServices()
       } catch (error) {
-        console.error('Error loading data:', error)
+        console.error('Error loading services:', error)
       }
     }
 
@@ -118,11 +97,8 @@ export function ServiceSelection(): React.JSX.Element {
     return <Sparkles className="w-8 h-8" />;
   };
 
-  // Filter services by category - use servicesWithPricing if available, otherwise availableServices
+  // Use servicesWithPricing if available, otherwise availableServices - no filtering needed
   const servicesToDisplay = servicesWithPricing.length > 0 ? servicesWithPricing : availableServices
-  const filteredServices = selectedCategory === 'all' 
-    ? servicesToDisplay 
-    : servicesToDisplay.filter(service => service.category_id === selectedCategory)
   
     
   // Don't render if not current step
@@ -142,64 +118,6 @@ export function ServiceSelection(): React.JSX.Element {
         </p>
       </div>
 
-      {/* Category Filter - Mobile First Responsive */}
-      <div className="px-4 sm:px-0">
-        {/* Mobile: Horizontal scroll */}
-        <div className="flex gap-2 overflow-x-auto pb-2 sm:hidden scrollbar-hide">
-          <button
-            onClick={() => setSelectedCategory('all')}
-            className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-              selectedCategory === 'all'
-                ? 'bg-brand-600 text-white shadow-purple'
-                : 'bg-surface-tertiary text-text-secondary hover:bg-surface-hover border border-border-secondary hover:border-brand-400'
-            }`}
-          >
-            All Services
-          </button>
-          
-          {categories.map((category) => (
-            <button
-              key={category.id as string}
-              onClick={() => setSelectedCategory(category.id as string)}
-              className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                selectedCategory === category.id
-                  ? 'bg-brand-600 text-white shadow-purple'
-                  : 'bg-surface-tertiary text-text-secondary hover:bg-surface-hover border border-border-secondary hover:border-brand-400'
-              }`}
-            >
-              {category.name as string}
-            </button>
-          ))}
-        </div>
-        
-        {/* Desktop: Centered flex wrap */}
-        <div className="hidden sm:flex flex-wrap gap-2 justify-center">
-          <button
-            onClick={() => setSelectedCategory('all')}
-            className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-              selectedCategory === 'all'
-                ? 'bg-brand-600 text-white shadow-purple'
-                : 'bg-surface-tertiary text-text-secondary hover:bg-surface-hover border border-border-secondary hover:border-brand-400'
-            }`}
-          >
-            All Services
-          </button>
-          
-          {categories.map((category) => (
-            <button
-              key={category.id as string}
-              onClick={() => setSelectedCategory(category.id as string)}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                selectedCategory === category.id
-                  ? 'bg-brand-600 text-white shadow-purple'
-                  : 'bg-surface-tertiary text-text-secondary hover:bg-surface-hover border border-border-secondary hover:border-brand-400'
-              }`}
-            >
-              {category.name as string}
-            </button>
-          ))}
-        </div>
-      </div>
 
       {/* Services Grid - Mobile First Responsive */}
       <div className="px-4 sm:px-0">
@@ -216,15 +134,15 @@ export function ServiceSelection(): React.JSX.Element {
               </Card>
             ))}
           </div>
-        ) : filteredServices.length === 0 ? (
+        ) : servicesToDisplay.length === 0 ? (
           <div className="text-center py-8">
             <p className="text-text-secondary">
-              {isLoading ? 'Loading services...' : 'No services available for the selected category.'}
+              {isLoading ? 'Loading services...' : 'No services available.'}
             </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-            {filteredServices.map((service) => {
+            {servicesToDisplay.map((service) => {
               const isSelected = selectedService === service.id;
               const serviceName = service.name.toLowerCase();
               const isPremium = serviceName.includes('full') || serviceName.includes('complete') || serviceName.includes('premium');
@@ -321,13 +239,6 @@ export function ServiceSelection(): React.JSX.Element {
                         <Clock className="w-3 h-3" />
                         <span>~{Math.round((service.duration_minutes || service.estimated_duration || 0) / 60)} hours</span>
                       </div>
-                      
-                      {/* Category Badge */}
-                      {service.category && (
-                        <div className="inline-block px-2 py-1 bg-brand-600/10 text-brand-400 text-xs rounded-full">
-                          {service.category.name}
-                        </div>
-                      )}
                     </div>
                   </CardContent>
 

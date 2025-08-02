@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { supabaseAdmin } from '@/lib/supabase/direct'
 import { ApiResponseHandler } from '@/lib/api/response'
 import { EmailService } from '@/lib/services/email'
 
@@ -55,8 +56,8 @@ export async function POST(
       return ApiResponseHandler.badRequest('There is already a pending reschedule request for this booking')
     }
 
-    // Verify the requested time slot is available
-    const { data: timeSlot, error: timeSlotError } = await supabase
+    // Verify the requested time slot is available using admin client to bypass RLS
+    const { data: timeSlot, error: timeSlotError } = await supabaseAdmin
       .from('time_slots')
       .select('id, start_time, end_time, slot_date, is_available')
       .eq('slot_date', date)
