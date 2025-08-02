@@ -39,3 +39,24 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Security sensitive files - NEVER COMMIT THESE
+cookies.txt
+server.log
+*.log
+
+# Test files with credentials
+create-test-account.js
+test-*.js
+*test*.js
+
+# Database files with potential secrets
+*.sql
+database-init/
+*.db
+*.sqlite
+
+# Temporary and debug files
+temp-*
+debug-*
+*.tmp
