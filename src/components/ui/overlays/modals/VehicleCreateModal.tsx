@@ -7,6 +7,8 @@ import { BaseOverlayProps } from '@/lib/overlay/types'
 import { Button } from '@/components/ui/primitives/Button'
 import { Input } from '@/components/ui/primitives/Input'
 import { Select } from '@/components/ui/primitives/Select'
+import vehicleData from '@/data/vehicle-size-data.json'
+import { formatLicensePlateInput, getRandomLicensePlateExample } from '@/lib/utils/license-plate'
 
 interface VehicleSize {
   id: string
@@ -22,6 +24,7 @@ interface CreateVehicleData {
   color: string
   license_plate: string
   vehicle_size_id: string
+  detected_size?: string
   set_as_default?: boolean
 }
 
@@ -37,12 +40,39 @@ export const VehicleCreateModal: React.FC<BaseOverlayProps> = ({
     color: '',
     license_plate: '',
     vehicle_size_id: '',
+    detected_size: '',
     set_as_default: false
   })
   const [isLoading, setIsLoading] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [vehicleSizes, setVehicleSizes] = useState<VehicleSize[]>([])
+  const [licensePlateError, setLicensePlateError] = useState<string | null>(null)
+
+  // Get available makes from vehicle data
+  const availableMakes = vehicleData.vehicles.map(v => v.make).sort()
+
+  // Get available models for selected make
+  const availableModels = formData.make 
+    ? vehicleData.vehicles.find(v => v.make === formData.make)?.models || []
+    : []
+
+  // Get available years for selected make/model
+  const availableYears = formData.make && formData.model
+    ? availableModels.find(m => m.model === formData.model)?.years || []
+    : []
+
+  // Get size for selected make/model (auto-detection)
+  const getVehicleSize = (make: string, model: string): string => {
+    const vehicleMake = vehicleData.vehicles.find(v => v.make === make)
+    if (vehicleMake) {
+      const vehicleModel = vehicleMake.models.find(m => m.model === model)
+      if (vehicleModel) {
+        return vehicleModel.size
+      }
+    }
+    return ''
+  }
 
   useEffect(() => {
     if (isOpen) {
@@ -55,11 +85,36 @@ export const VehicleCreateModal: React.FC<BaseOverlayProps> = ({
         color: '',
         license_plate: '',
         vehicle_size_id: '',
+        detected_size: '',
         set_as_default: false
       })
       setError('')
     }
   }, [isOpen])
+
+  // Auto-detect size when make/model changes
+  useEffect(() => {
+    if (formData.make && formData.model) {
+      const detectedSize = getVehicleSize(formData.make, formData.model)
+      if (detectedSize) {
+        // Find the corresponding vehicle size ID
+        const sizeRecord = vehicleSizes.find(size => 
+          size.name.toLowerCase() === {
+            'S': 'small',
+            'M': 'medium', 
+            'L': 'large',
+            'XL': 'extra large'
+          }[detectedSize]?.toLowerCase()
+        )
+        
+        setFormData(prev => ({
+          ...prev,
+          detected_size: detectedSize,
+          vehicle_size_id: sizeRecord?.id || ''
+        }))
+      }
+    }
+  }, [formData.make, formData.model, vehicleSizes])
 
   const loadVehicleSizes = async () => {
     try {
@@ -77,6 +132,27 @@ export const VehicleCreateModal: React.FC<BaseOverlayProps> = ({
     } finally {
       setIsLoading(false)
     }
+  }
+
+  const handleFormChange = (field: string, value: any) => {
+    setFormData(prev => {
+      const newForm = { ...prev, [field]: value }
+      
+      // Reset dependent fields when make changes
+      if (field === 'make') {
+        newForm.model = ''
+        newForm.year = new Date().getFullYear()
+        newForm.detected_size = ''
+        newForm.vehicle_size_id = ''
+      }
+      
+      // Reset year when model changes
+      if (field === 'model') {
+        newForm.year = new Date().getFullYear()
+      }
+      
+      return newForm
+    })
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -115,6 +191,22 @@ export const VehicleCreateModal: React.FC<BaseOverlayProps> = ({
     }
   }
 
+  // Create options for dropdowns
+  const makeOptions = availableMakes.map(make => ({
+    value: make,
+    label: make
+  }))
+
+  const modelOptions = availableModels.map(model => ({
+    value: model.model,
+    label: model.model
+  }))
+
+  const yearOptions = availableYears.map(year => ({
+    value: year.toString(),
+    label: year.toString()
+  }))
+
   const vehicleSizeOptions = vehicleSizes.map(size => ({
     value: size.id,
     label: `${size.name}${size.price_multiplier ? ` (${size.price_multiplier}x)` : ''}`
@@ -129,32 +221,38 @@ export const VehicleCreateModal: React.FC<BaseOverlayProps> = ({
     >
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Input
+          <Select
             label="Make"
-            placeholder="e.g. BMW, Mercedes, Audi"
+            placeholder="Select vehicle make"
             required
+            options={makeOptions}
             value={formData.make}
-            onChange={(e) => setFormData(prev => ({ ...prev, make: e.target.value }))}
+            onChange={(e) => handleFormChange('make', e.target.value)}
             leftIcon={<Car className="w-4 h-4" />}
           />
           
-          <Input
+          <Select
             label="Model"
-            placeholder="e.g. 3 Series, C-Class, A4"
+            placeholder="Select vehicle model"
             required
+            options={modelOptions}
             value={formData.model}
-            onChange={(e) => setFormData(prev => ({ ...prev, model: e.target.value }))}
+            onChange={(e) => handleFormChange('model', e.target.value)}
+            disabled={!formData.make}
+            helperText={!formData.make ? "Select a make first" : ""}
           />
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Input
+          <Select
             label="Year"
-            type="number"
-            min="1990"
-            max={new Date().getFullYear() + 1}
-            value={formData.year}
-            onChange={(e) => setFormData(prev => ({ ...prev, year: parseInt(e.target.value) }))}
+            placeholder="Select year"
+            required
+            options={yearOptions}
+            value={formData.year.toString()}
+            onChange={(e) => handleFormChange('year', parseInt(e.target.value))}
+            disabled={!formData.model}
+            helperText={!formData.model ? "Select a model first" : ""}
           />
           
           <Input
@@ -167,10 +265,16 @@ export const VehicleCreateModal: React.FC<BaseOverlayProps> = ({
 
         <Input
           label="Registration Number"
-          placeholder="e.g. AB12 CDE"
+          placeholder={`e.g. ${getRandomLicensePlateExample()}`}
           optional
           value={formData.license_plate}
-          onChange={(e) => setFormData(prev => ({ ...prev, license_plate: e.target.value.toUpperCase() }))}
+          onChange={(e) => {
+            const { formatted, error } = formatLicensePlateInput(e.target.value)
+            setFormData(prev => ({ ...prev, license_plate: formatted }))
+            setLicensePlateError(error || null)
+          }}
+          error={licensePlateError}
+          helperText={licensePlateError || "UK license plate format (optional)"}
         />
 
         <Select
@@ -180,7 +284,12 @@ export const VehicleCreateModal: React.FC<BaseOverlayProps> = ({
           options={vehicleSizeOptions}
           value={formData.vehicle_size_id}
           onChange={(e) => setFormData(prev => ({ ...prev, vehicle_size_id: e.target.value }))}
-          helperText="Vehicle size affects pricing"
+          helperText={
+            formData.detected_size 
+              ? `Auto-detected: ${formData.detected_size} (${['S', 'M', 'L', 'XL'].includes(formData.detected_size) ? 
+                  { 'S': 'Small', 'M': 'Medium', 'L': 'Large', 'XL': 'Extra Large' }[formData.detected_size] : formData.detected_size})`
+              : "Vehicle size affects pricing"
+          }
           disabled={isLoading}
         />
 

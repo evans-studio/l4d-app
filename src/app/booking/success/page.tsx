@@ -56,6 +56,8 @@ interface BookingDetails {
 function BookingSuccessContent() {
   const searchParams = useSearchParams()
   const bookingRef = searchParams.get('ref')
+  const needsVerification = searchParams.get('verify') === 'true'
+  const isNewCustomer = searchParams.get('new') === 'true'
   const [booking, setBooking] = useState<BookingDetails | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -173,6 +175,47 @@ function BookingSuccessContent() {
           <p className="text-lg text-text-secondary">
             Thank you for choosing Love4Detailing. Your booking has been successfully created.
           </p>
+          
+          {/* Email Verification Notice for New Customers */}
+          {needsVerification && isNewCustomer && (
+            <div className="mt-6 p-4 bg-brand-50 border border-brand-200 rounded-lg max-w-2xl mx-auto">
+              <div className="flex items-start gap-3">
+                <Mail className="w-5 h-5 text-brand-600 mt-0.5 flex-shrink-0" />
+                <div className="text-left">
+                  <h3 className="font-semibold text-brand-800 mb-1">
+                    Please verify your email to complete your account setup
+                  </h3>
+                  <p className="text-sm text-brand-700 mb-3">
+                    We've sent a verification email with your booking confirmation and account setup instructions. 
+                    Please check your inbox and follow the link to set up your password and access your customer dashboard.
+                  </p>
+                  <div className="text-xs text-brand-600">
+                    • Access your booking details and manage appointments<br/>
+                    • Save vehicle information for faster future bookings<br/>
+                    • Track service history and receive updates
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {/* Email Verification for Existing Users */}
+          {needsVerification && !isNewCustomer && (
+            <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg max-w-2xl mx-auto">
+              <div className="flex items-start gap-3">
+                <Mail className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                <div className="text-left">
+                  <h3 className="font-semibold text-blue-800 mb-1">
+                    Email verification sent
+                  </h3>
+                  <p className="text-sm text-blue-700">
+                    We've sent you a verification email with your booking confirmation. 
+                    Please check your inbox to verify your email address.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -347,7 +390,10 @@ function BookingSuccessContent() {
                   </span>
                 </div>
                 <p className="text-text-tertiary text-xs mt-4">
-                  We'll send you a confirmation email and reminder before your appointment.
+                  {needsVerification 
+                    ? "Check your email for booking confirmation and account setup instructions."
+                    : "We'll send you a confirmation email and reminder before your appointment."
+                  }
                 </p>
               </CardContent>
             </Card>

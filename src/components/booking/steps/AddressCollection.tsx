@@ -40,7 +40,6 @@ export function AddressCollection() {
     addressLine1: formData.address?.addressLine1 || '',
     addressLine2: formData.address?.addressLine2 || '',
     city: formData.address?.city || '',
-    state: formData.address?.state || '',
     postcode: formData.address?.postcode || '',
   })
   const [postcodeError, setPostcodeError] = useState<string | null>(null)
@@ -52,7 +51,6 @@ export function AddressCollection() {
         addressLine1: formData.address.addressLine1,
         addressLine2: formData.address.addressLine2 || '',
         city: formData.address.city,
-        state: formData.address.state || '',
         postcode: formData.address.postcode,
       })
     }
@@ -80,7 +78,6 @@ export function AddressCollection() {
         addressLine1: address.address_line_1,
         addressLine2: address.address_line_2 || '',
         city: address.city,
-        state: address.county || '',
         postcode: address.postal_code,
         isExisting: true,
         addressId: address.id
@@ -259,16 +256,7 @@ export function AddressCollection() {
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-text-primary mb-2">
-                State/County
-              </label>
-              <Input
-                value={addressForm.state}
-                onChange={(e) => handleFormChange('state', e.target.value)}
-                placeholder="e.g., Greater London"
-              />
-            </div>
+            {/* County field removed for simplified UK address entry */}
 
             <div className="flex items-center gap-3 pt-4">
               {isExistingUser && userAddresses.length > 0 && (

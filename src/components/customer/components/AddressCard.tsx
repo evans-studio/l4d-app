@@ -190,9 +190,6 @@ export function AddressCard({
                     {address.address_line_2 && `${address.address_line_2}, `}
                     {address.city}, {address.postal_code}
                   </p>
-                  {address.county && address.county !== address.city && (
-                    <p className="text-sm text-text-muted">{address.county}</p>
-                  )}
                 </div>
               </div>
             </div>

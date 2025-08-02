@@ -195,54 +195,110 @@ export function VehicleDetails() {
 
       {/* Existing Vehicles (for returning customers) */}
       {isExistingUser && userVehicles.length > 0 && !showNewVehicleForm && (
-        <div className="space-y-4">
-          <h3 className="text-xl font-semibold text-text-primary">Choose from your saved vehicles</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {userVehicles.map((vehicle) => (
-              <Card
-                key={vehicle.id}
-                className={`cursor-pointer transition-all duration-200 ${
-                  selectedVehicleId === vehicle.id
-                    ? 'border-brand-500 bg-brand-600/5 shadow-purple-lg'
-                    : 'hover:border-brand-400 hover:shadow-purple'
-                }`}
-                onClick={() => handleExistingVehicleSelect(vehicle.id)}
-              >
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-full bg-brand-600/10 flex items-center justify-center">
-                        <CarIcon className="w-6 h-6 text-brand-400" />
-                      </div>
-                      <div>
-                        <h4 className="font-semibold text-text-primary">
-                          {vehicle.year} {vehicle.make} {vehicle.model}
-                        </h4>
-                        <p className="text-sm text-text-secondary">
-                          {vehicle.vehicle_size?.name} • {vehicle.color}
-                        </p>
-                      </div>
-                    </div>
-                    {selectedVehicleId === vehicle.id && (
-                      <CheckIcon className="w-5 h-5 text-brand-600" />
-                    )}
-                  </div>
-                  {vehicle.registration && (
-                    <p className="text-sm text-text-muted">Reg: {vehicle.registration}</p>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
+        <div className="space-y-6">
+          <div className="text-center">
+            <h3 className="text-xl font-semibold text-text-primary mb-2">Choose from your saved vehicles</h3>
+            <p className="text-text-secondary">Select one of your previously saved vehicles for faster booking</p>
           </div>
           
-          <div className="text-center">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {userVehicles.map((vehicle) => {
+              const sizeInfo = getSizeInfo(getSizeNameFromMultiplier(vehicle.vehicle_size?.price_multiplier || 1.3))
+              const isSelected = selectedVehicleId === vehicle.id
+              
+              return (
+                <Card
+                  key={vehicle.id}
+                  className={`cursor-pointer transition-all duration-300 transform hover:scale-[1.02] ${
+                    isSelected
+                      ? 'border-brand-500 bg-brand-600/10 shadow-brand-lg ring-2 ring-brand-500/20'
+                      : 'hover:border-brand-400 hover:shadow-purple hover:bg-brand-600/5'
+                  }`}
+                  onClick={() => handleExistingVehicleSelect(vehicle.id)}
+                >
+                  <CardContent className="p-5">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-center gap-4">
+                        <div className={`w-14 h-14 rounded-xl flex items-center justify-center ${
+                          isSelected ? 'bg-brand-600 text-white' : 'bg-brand-600/10 text-brand-400'
+                        }`}>
+                          <CarIcon className="w-7 h-7" />
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-text-primary text-lg leading-tight">
+                            {vehicle.year} {vehicle.make} {vehicle.model}
+                          </h4>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="inline-flex items-center gap-1 px-2 py-1 bg-surface-tertiary rounded-full text-xs font-medium text-text-secondary">
+                              {sizeInfo.label} Vehicle
+                            </span>
+                            {vehicle.color && (
+                              <span className="text-sm text-text-secondary">• {vehicle.color}</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      {isSelected && (
+                        <div className="flex-shrink-0">
+                          <div className="w-6 h-6 bg-brand-600 rounded-full flex items-center justify-center">
+                            <CheckIcon className="w-4 h-4 text-white" />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Vehicle Details */}
+                    <div className="space-y-2">
+                      {vehicle.registration && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-medium text-text-secondary uppercase tracking-wide">Registration:</span>
+                          <span className="text-sm font-mono bg-surface-secondary px-2 py-1 rounded text-text-primary">
+                            {vehicle.registration}
+                          </span>
+                        </div>
+                      )}
+                      
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-medium text-text-secondary uppercase tracking-wide">Size:</span>
+                        <span className="text-sm text-text-primary">{sizeInfo.label}</span>
+                        <span className="text-xs text-text-muted">({sizeInfo.multiplier} pricing)</span>
+                      </div>
+                      
+                      {vehicle.notes && (
+                        <div className="pt-2 border-t border-border-secondary/50">
+                          <span className="text-xs font-medium text-text-secondary uppercase tracking-wide">Notes:</span>
+                          <p className="text-sm text-text-secondary mt-1 line-clamp-2">{vehicle.notes}</p>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Selection Indicator */}
+                    {isSelected && (
+                      <div className="mt-4 pt-3 border-t border-brand-200">
+                        <div className="flex items-center gap-2 text-brand-600">
+                          <CheckIcon className="w-4 h-4" />
+                          <span className="text-sm font-medium">Selected for this booking</span>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )
+            })}
+          </div>
+          
+          <div className="text-center pt-4">
             <Button
               variant="outline"
               onClick={() => setShowNewVehicleForm(true)}
               leftIcon={<PlusIcon className="w-4 h-4" />}
+              size="lg"
             >
               Add Different Vehicle
             </Button>
+            <p className="text-xs text-text-muted mt-2">
+              Don't see your vehicle? Add a new one for this booking.
+            </p>
           </div>
         </div>
       )}

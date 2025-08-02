@@ -7,6 +7,8 @@ import { BaseOverlayProps } from '@/lib/overlay/types'
 import { Button } from '@/components/ui/primitives/Button'
 import { Input } from '@/components/ui/primitives/Input'
 import { Select } from '@/components/ui/primitives/Select'
+import vehicleData from '@/data/vehicle-size-data.json'
+import { formatLicensePlateInput, getRandomLicensePlateExample } from '@/lib/utils/license-plate'
 
 interface Vehicle {
   id: string
@@ -15,6 +17,13 @@ interface Vehicle {
   year: number
   color?: string
   registration?: string
+}
+
+interface VehicleSize {
+  id: string
+  name: string
+  description?: string
+  price_multiplier?: number
 }
 
 interface VehicleEditModalProps extends BaseOverlayProps {
@@ -35,12 +44,39 @@ export const VehicleEditModal: React.FC<VehicleEditModalProps> = ({
     model: '',
     year: new Date().getFullYear(),
     color: '',
-    registration: ''
+    registration: '',
+    vehicle_size_id: '',
+    detected_size: ''
   })
   const [isLoading, setIsLoading] = useState(false)
+  const [vehicleSizes, setVehicleSizes] = useState<VehicleSize[]>([])
+  const [licensePlateError, setLicensePlateError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
-  // Removed vehicle sizes - using service pricing instead
+  // Get available makes from vehicle data
+  const availableMakes = vehicleData.vehicles.map(v => v.make).sort()
+
+  // Get available models for selected make
+  const availableModels = formData.make 
+    ? vehicleData.vehicles.find(v => v.make === formData.make)?.models || []
+    : []
+
+  // Get available years for selected make/model
+  const availableYears = formData.make && formData.model
+    ? availableModels.find(m => m.model === formData.model)?.years || []
+    : []
+
+  // Get size for selected make/model (auto-detection)
+  const getVehicleSize = (make: string, model: string): string => {
+    const vehicleMake = vehicleData.vehicles.find(v => v.make === make)
+    if (vehicleMake) {
+      const vehicleModel = vehicleMake.models.find(m => m.model === model)
+      if (vehicleModel) {
+        return vehicleModel.size
+      }
+    }
+    return ''
+  }
 
   useEffect(() => {
     if (isOpen && data?.vehicle) {
@@ -49,17 +85,83 @@ export const VehicleEditModal: React.FC<VehicleEditModalProps> = ({
         model: data.vehicle.model || '',
         year: data.vehicle.year || new Date().getFullYear(),
         color: data.vehicle.color || '',
-        registration: data.vehicle.registration || ''
+        registration: data.vehicle.registration || '',
+        vehicle_size_id: '',
+        detected_size: ''
       })
+      loadVehicleSizes()
+    } else if (isOpen) {
+      loadVehicleSizes()
     }
   }, [isOpen, data?.vehicle])
 
-  // Vehicle sizes functionality removed - using service pricing instead
+  // Auto-detect size when make/model changes
+  useEffect(() => {
+    if (formData.make && formData.model) {
+      const detectedSize = getVehicleSize(formData.make, formData.model)
+      if (detectedSize) {
+        // Find the corresponding vehicle size ID
+        const sizeRecord = vehicleSizes.find(size => 
+          size.name.toLowerCase() === {
+            'S': 'small',
+            'M': 'medium', 
+            'L': 'large',
+            'XL': 'extra large'
+          }[detectedSize]?.toLowerCase()
+        )
+        
+        setFormData(prev => ({
+          ...prev,
+          detected_size: detectedSize,
+          vehicle_size_id: sizeRecord?.id || ''
+        }))
+      }
+    }
+  }, [formData.make, formData.model, vehicleSizes])
+
+  const loadVehicleSizes = async () => {
+    try {
+      setIsLoading(true)
+      const response = await fetch('/api/vehicle-sizes')
+      const result = await response.json()
+      
+      if (result.success) {
+        setVehicleSizes(result.data || [])
+      } else {
+        console.error('Failed to load vehicle sizes:', result.error)
+      }
+    } catch (error) {
+      console.error('Failed to load vehicle sizes:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleFormChange = (field: string, value: any) => {
+    setFormData(prev => {
+      const newForm = { ...prev, [field]: value }
+      
+      // Reset dependent fields when make changes
+      if (field === 'make') {
+        newForm.model = ''
+        newForm.year = new Date().getFullYear()
+        newForm.detected_size = ''
+        newForm.vehicle_size_id = ''
+      }
+      
+      // Reset year when model changes
+      if (field === 'model') {
+        newForm.year = new Date().getFullYear()
+      }
+      
+      return newForm
+    })
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!formData.make.trim() || !formData.model.trim()) {
+    if (!formData.make.trim() || !formData.model.trim() || !formData.vehicle_size_id) {
       setError('Please fill in all required fields')
       return
     }
@@ -135,70 +237,81 @@ export const VehicleEditModal: React.FC<VehicleEditModalProps> = ({
       size="md"
     >
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-          <div>
-            <label className="block text-sm font-medium text-text-primary mb-2">
-              Make *
-            </label>
-            <Input
-              value={formData.make}
-              onChange={(e) => setFormData(prev => ({ ...prev, make: e.target.value }))}
-              placeholder="e.g. BMW, Mercedes, Audi"
-              required
-            />
-          </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Select
+            label="Make"
+            placeholder="Select vehicle make"
+            required
+            options={vehicleData.vehicles.map(v => ({ value: v.make, label: v.make })).sort((a, b) => a.label.localeCompare(b.label))}
+            value={formData.make}
+            onChange={(e) => handleFormChange('make', e.target.value)}
+            leftIcon={<Car className="w-4 h-4" />}
+          />
           
-          <div>
-            <label className="block text-sm font-medium text-text-primary mb-2">
-              Model *
-            </label>
-            <Input
-              value={formData.model}
-              onChange={(e) => setFormData(prev => ({ ...prev, model: e.target.value }))}
-              placeholder="e.g. 3 Series, C-Class, A4"
-              required
-            />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-          <div>
-            <label className="block text-sm font-medium text-text-primary mb-2">
-              Year
-            </label>
-            <Input
-              type="number"
-              value={formData.year}
-              onChange={(e) => setFormData(prev => ({ ...prev, year: parseInt(e.target.value) }))}
-              min="1990"
-              max={new Date().getFullYear() + 1}
-            />
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-text-primary mb-2">
-              Color
-            </label>
-            <Input
-              value={formData.color}
-              onChange={(e) => setFormData(prev => ({ ...prev, color: e.target.value }))}
-              placeholder="e.g. Black, White, Silver"
-            />
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-text-primary mb-2">
-            Registration Number
-          </label>
-          <Input
-            value={formData.registration}
-            onChange={(e) => setFormData(prev => ({ ...prev, registration: e.target.value.toUpperCase() }))}
-            placeholder="e.g. AB12 CDE"
+          <Select
+            label="Model"
+            placeholder="Select vehicle model"
+            required
+            options={availableModels.map(model => ({ value: model.model, label: model.model }))}
+            value={formData.model}
+            onChange={(e) => handleFormChange('model', e.target.value)}
+            disabled={!formData.make}
+            helperText={!formData.make ? "Select a make first" : ""}
           />
         </div>
 
-        {/* Vehicle size removed - pricing now determined by service selection */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Select
+            label="Year"
+            placeholder="Select year"
+            required
+            options={availableYears.map(year => ({ value: year.toString(), label: year.toString() }))}
+            value={formData.year.toString()}
+            onChange={(e) => handleFormChange('year', parseInt(e.target.value))}
+            disabled={!formData.model}
+            helperText={!formData.model ? "Select a model first" : ""}
+          />
+          
+          <Input
+            label="Color"
+            placeholder="e.g. Black, White, Silver"
+            value={formData.color}
+            onChange={(e) => setFormData(prev => ({ ...prev, color: e.target.value }))}
+          />
+        </div>
+
+        <Input
+          label="Registration Number"
+          placeholder={`e.g. ${getRandomLicensePlateExample()}`}
+          optional
+          value={formData.registration}
+          onChange={(e) => {
+            const { formatted, error } = formatLicensePlateInput(e.target.value)
+            setFormData(prev => ({ ...prev, registration: formatted }))
+            setLicensePlateError(error || null)
+          }}
+          error={licensePlateError}
+          helperText={licensePlateError || "UK license plate format (optional)"}
+        />
+
+        <Select
+          label="Vehicle Size"
+          placeholder="Select vehicle size"
+          required
+          options={vehicleSizes.map(size => ({
+            value: size.id,
+            label: `${size.name}${size.price_multiplier ? ` (${size.price_multiplier}x)` : ''}`
+          }))}
+          value={formData.vehicle_size_id}
+          onChange={(e) => setFormData(prev => ({ ...prev, vehicle_size_id: e.target.value }))}
+          helperText={
+            formData.detected_size 
+              ? `Auto-detected: ${formData.detected_size} (${['S', 'M', 'L', 'XL'].includes(formData.detected_size) ? 
+                  { 'S': 'Small', 'M': 'Medium', 'L': 'Large', 'XL': 'Extra Large' }[formData.detected_size] : formData.detected_size})`
+              : "Vehicle size affects pricing"
+          }
+          disabled={isLoading}
+        />
 
         {error && (
           <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-800 text-sm">

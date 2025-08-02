@@ -116,9 +116,9 @@ export const CustomerLayout: React.FC<CustomerLayoutProps> = ({ children }) => {
       {/* PWA Bottom Navigation - Enhanced for mobile-first thumb access */}
       <div className="lg:hidden bg-surface-secondary/95 backdrop-blur-md border-t border-border-secondary/50 fixed bottom-0 left-0 right-0 z-50">
         <div className="safe-area-inset-bottom">
-          <div className="flex items-center justify-around py-1">
-            {/* First 2 navigation items */}
-            {navigationItems.slice(0, 2).map((item) => {
+          <div className="grid grid-cols-5 gap-1 py-1 px-2">
+            {/* All navigation items in a 5-column grid */}
+            {navigationItems.map((item) => {
               const Icon = item.icon;
               const isActive = pathname === item.href || 
                 (item.href !== '/dashboard' && pathname.startsWith(item.href));
@@ -128,7 +128,7 @@ export const CustomerLayout: React.FC<CustomerLayoutProps> = ({ children }) => {
                   key={item.href}
                   href={item.href}
                   className={cn(
-                    "flex flex-col items-center gap-1 px-2 py-2 text-xs font-medium transition-all duration-200 min-h-[56px] justify-center rounded-lg mx-1 relative overflow-hidden touch-manipulation",
+                    "flex flex-col items-center gap-1 px-1 py-2 text-xs font-medium transition-all duration-200 min-h-[60px] justify-center rounded-lg relative overflow-hidden touch-manipulation",
                     "active:scale-95 active:bg-surface-hover/50",
                     isActive
                       ? "text-brand-600 bg-brand-600/10"
@@ -137,68 +137,37 @@ export const CustomerLayout: React.FC<CustomerLayoutProps> = ({ children }) => {
                 >
                   {/* Active indicator */}
                   {isActive && (
-                    <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-8 h-1 bg-brand-600 rounded-full" />
+                    <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-6 h-1 bg-brand-600 rounded-full" />
                   )}
                   <Icon className={cn(
                     "w-5 h-5 transition-transform duration-200",
                     isActive ? "scale-110" : "scale-100"
                   )} />
-                  <span className="text-[10px] leading-tight font-medium">
-                    {item.name.replace('My ', '')}
+                  <span className="text-[9px] leading-tight font-medium text-center max-w-full">
+                    {item.name.replace('My ', '').replace('Dashboard', 'Home')}
                   </span>
                 </Link>
               );
             })}
-            
-            {/* Enhanced Book Button - Center Position */}
+          </div>
+          
+          {/* Floating Book Button - Positioned above the navigation */}
+          <div className="absolute -top-8 left-1/2 transform -translate-x-1/2">
             <Link
               href="/book"
               className={cn(
-                "flex flex-col items-center justify-center px-2 py-2 min-h-[56px] rounded-lg mx-1 relative overflow-hidden touch-manipulation",
-                "bg-brand-600 text-white shadow-lg shadow-brand-600/25 active:scale-95 active:shadow-brand-600/40 transition-all duration-200",
+                "flex items-center justify-center w-12 h-12 rounded-full shadow-lg transition-all duration-200 touch-manipulation",
+                "bg-brand-600 text-white shadow-brand-600/25 active:scale-95 active:shadow-brand-600/40",
                 pathname === '/book' && "bg-brand-700 shadow-brand-600/40"
               )}
             >
-              {/* Plus Icon with pulse animation */}
-              <div className="relative w-6 h-6 flex items-center justify-center">
+              {/* Plus Icon with subtle pulse animation */}
+              <div className="relative flex items-center justify-center">
                 <Plus className="w-6 h-6 transition-transform duration-200" />
-                {/* Pulse animation for book button */}
-                <div className="absolute inset-0 rounded-full bg-white/20 animate-ping" />
+                {/* Subtle pulse animation for book button */}
+                <div className="absolute inset-0 rounded-full bg-white/20 animate-ping opacity-75" />
               </div>
             </Link>
-
-            {/* Last 2 navigation items */}
-            {navigationItems.slice(2, 4).map((item) => {
-              const Icon = item.icon;
-              const isActive = pathname === item.href || 
-                (item.href !== '/dashboard' && pathname.startsWith(item.href));
-
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={cn(
-                    "flex flex-col items-center gap-1 px-2 py-2 text-xs font-medium transition-all duration-200 min-h-[56px] justify-center rounded-lg mx-1 relative overflow-hidden touch-manipulation",
-                    "active:scale-95 active:bg-surface-hover/50",
-                    isActive
-                      ? "text-brand-600 bg-brand-600/10"
-                      : "text-text-secondary hover:text-text-primary hover:bg-surface-hover/30"
-                  )}
-                >
-                  {/* Active indicator */}
-                  {isActive && (
-                    <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-8 h-1 bg-brand-600 rounded-full" />
-                  )}
-                  <Icon className={cn(
-                    "w-5 h-5 transition-transform duration-200",
-                    isActive ? "scale-110" : "scale-100"
-                  )} />
-                  <span className="text-[10px] leading-tight font-medium">
-                    {item.name.replace('My ', '')}
-                  </span>
-                </Link>
-              );
-            })}
           </div>
         </div>
       </div>

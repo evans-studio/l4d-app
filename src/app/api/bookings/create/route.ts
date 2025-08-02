@@ -672,7 +672,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
         message: isNewCustomer 
           ? 'Booking confirmed! Please check your email to verify your account and set up your password.'
           : 'Booking created successfully',
-        redirectTo: isNewCustomer ? `/auth/verify-email?email=${encodeURIComponent(bookingData.customer.email)}` : (userRole === 'admin' ? '/admin' : '/dashboard'),
+        redirectTo: isNewCustomer ? `/booking/success?ref=${bookingReference}&verify=true&new=true` : `/booking/success?ref=${bookingReference}`,
         isNewCustomer: isNewCustomer,
         requiresEmailVerification: isNewCustomer,
         requiresPasswordSetup: isNewCustomer && passwordSetupToken !== null,
