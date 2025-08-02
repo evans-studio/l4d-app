@@ -106,7 +106,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
           password_setup_token: passwordSetupToken,
           password_setup_expires: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24 hours
         },
-        email_confirm: true
+        email_confirm: false // Require email verification for security consistency
       })
 
       if (authError || !authUser.user) {
@@ -602,25 +602,42 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
         }
       }
     
-    // Send customer confirmation email (if enabled)
+    // Send customer email (booking confirmation or welcome verification for new customers)
     const shouldSendCustomerEmail = notificationSettings?.email_bookings !== false // Default to true if no settings
     if (shouldSendCustomerEmail) {
       const customerName = `${bookingData.customer.firstName} ${bookingData.customer.lastName}`
       
       try {
-        const customerEmailResult = await emailService.sendBookingConfirmation(
-          bookingData.customer.email,
-          customerName,
-          bookingForEmail as any
-        )
-        
-        if (!customerEmailResult.success) {
-          console.error('Failed to send customer confirmation email:', customerEmailResult.error)
+        if (isNewCustomer) {
+          // Send booking welcome verification email for new customers
+          const bookingWelcomeResult = await emailService.sendBookingWelcomeVerificationEmail(
+            bookingData.customer.email,
+            customerName,
+            bookingReference,
+            userId
+          )
+          
+          if (!bookingWelcomeResult.success) {
+            console.error('Failed to send booking welcome verification email:', bookingWelcomeResult.error)
+          } else {
+            console.log('Booking welcome verification email sent successfully')
+          }
         } else {
-          console.log('Customer confirmation email sent successfully')
+          // Send regular booking confirmation for existing customers
+          const customerEmailResult = await emailService.sendBookingConfirmation(
+            bookingData.customer.email,
+            customerName,
+            bookingForEmail as any
+          )
+          
+          if (!customerEmailResult.success) {
+            console.error('Failed to send customer confirmation email:', customerEmailResult.error)
+          } else {
+            console.log('Customer confirmation email sent successfully')
+          }
         }
       } catch (emailError) {
-        console.error('Error sending customer confirmation email:', emailError)
+        console.error('Error sending customer email:', emailError)
       }
     }
     
@@ -652,9 +669,12 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
         customerId: userId,
         totalPrice: totalPrice,
         pricingBreakdown: pricingBreakdown,
-        message: 'Booking created successfully',
-        redirectTo: userRole === 'admin' ? '/admin' : '/dashboard',
+        message: isNewCustomer 
+          ? 'Booking confirmed! Please check your email to verify your account and set up your password.'
+          : 'Booking created successfully',
+        redirectTo: isNewCustomer ? `/auth/verify-email?email=${encodeURIComponent(bookingData.customer.email)}` : (userRole === 'admin' ? '/admin' : '/dashboard'),
         isNewCustomer: isNewCustomer,
+        requiresEmailVerification: isNewCustomer,
         requiresPasswordSetup: isNewCustomer && passwordSetupToken !== null,
         passwordSetupToken: isNewCustomer ? passwordSetupToken : null
       }
