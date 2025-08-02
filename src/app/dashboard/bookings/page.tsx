@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useBookingFlowStore } from '@/lib/store/bookingFlowStore'
 import { useOverlay } from '@/lib/overlay/context'
+import { useCustomerRealTimeBookings, type CustomerBooking } from '@/hooks/useCustomerRealTimeBookings'
 import { Button } from '@/components/ui/primitives/Button'
 import { CustomerLayout } from '@/components/layout/templates/CustomerLayout'
 import { Container } from '@/components/layout/templates/PageLayout'
@@ -23,31 +24,8 @@ import {
   Search
 } from 'lucide-react'
 
-interface DashboardBooking {
-  id: string
-  booking_reference: string
-  scheduled_date: string
-  scheduled_start_time: string
-  status: 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled'
-  total_price: number
-  service: {
-    name: string
-    short_description?: string
-    category?: string
-  } | null
-  vehicle: {
-    make: string
-    model: string
-    year?: number
-    color?: string
-  } | null
-  address: {
-    address_line_1: string
-    address_line_2?: string
-    city: string
-    postal_code: string
-  } | null
-}
+// Use the type from the real-time hook
+type DashboardBooking = CustomerBooking
 
 const statusConfig = {
   pending: {
@@ -63,6 +41,20 @@ const statusConfig = {
     color: 'text-success-400',
     bgColor: 'bg-success-600/10',
     borderColor: 'border-success-500/20'
+  },
+  rescheduled: {
+    label: 'Rescheduled',
+    icon: Calendar,
+    color: 'text-blue-400',
+    bgColor: 'bg-blue-600/10',
+    borderColor: 'border-blue-500/20'
+  },
+  declined: {
+    label: 'Declined',
+    icon: X,
+    color: 'text-red-400',
+    bgColor: 'bg-red-600/10',
+    borderColor: 'border-red-500/20'
   },
   in_progress: {
     label: 'In Progress',
@@ -91,30 +83,26 @@ export default function MyBookingsPage() {
   const router = useRouter()
   const { openOverlay } = useOverlay()
   const { initializeRebooking } = useBookingFlowStore()
-  const [bookings, setBookings] = useState<DashboardBooking[]>([])
-  const [isLoading, setIsLoading] = useState(true)
   const [activeFilter, setActiveFilter] = useState<'all' | 'upcoming' | 'completed' | 'cancelled'>('all')
   const [searchTerm, setSearchTerm] = useState('')
   const [rebookingBookingId, setRebookingBookingId] = useState<string | null>(null)
 
-  useEffect(() => {
-    const fetchBookings = async () => {
-      try {
-        const response = await fetch('/api/customer/bookings')
-        const data = await response.json()
-        
-        if (data.success) {
-          setBookings(data.data)
-        }
-      } catch (error) {
-        console.error('Failed to fetch bookings:', error)
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    fetchBookings()
-  }, [])
+  // Real-time bookings hook
+  const {
+    bookings,
+    isLoading,
+    error: bookingsError,
+    lastUpdated,
+    refreshBookings,
+    cancelBooking: realtimeCancelBooking,
+    requestReschedule: realtimeRequestReschedule,
+    getUpcomingBookings,
+    getPastBookings,
+    getBookingsByStatus
+  } = useCustomerRealTimeBookings({
+    enableRealTimeUpdates: true,
+    pollInterval: 60000 // 60 seconds for customer dashboard
+  })
 
   // Handle rebooking flow
   const handleRebook = async (bookingId: string) => {
@@ -155,15 +143,13 @@ export default function MyBookingsPage() {
   const getFilteredBookings = () => {
     let filtered = bookings
 
-    // Filter by status
+    // Use real-time hook functions for better filtering
     if (activeFilter === 'upcoming') {
-      filtered = filtered.filter(booking => 
-        ['pending', 'confirmed', 'in_progress'].includes(booking.status)
-      )
+      filtered = getUpcomingBookings()
     } else if (activeFilter === 'completed') {
-      filtered = filtered.filter(booking => booking.status === 'completed')
+      filtered = getPastBookings().filter(b => b.status === 'completed')
     } else if (activeFilter === 'cancelled') {
-      filtered = filtered.filter(booking => booking.status === 'cancelled')
+      filtered = getBookingsByStatus('cancelled')
     }
 
     // Filter by search term
@@ -171,7 +157,8 @@ export default function MyBookingsPage() {
       filtered = filtered.filter(booking =>
         booking.booking_reference.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (booking.vehicle?.make || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (booking.vehicle?.model || '').toLowerCase().includes(searchTerm.toLowerCase())
+        (booking.vehicle?.model || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (booking.service?.name || '').toLowerCase().includes(searchTerm.toLowerCase())
       )
     }
 
@@ -182,9 +169,9 @@ export default function MyBookingsPage() {
 
   const getFilterCount = (filter: typeof activeFilter) => {
     if (filter === 'all') return bookings.length
-    if (filter === 'upcoming') return bookings.filter(b => ['pending', 'confirmed', 'in_progress'].includes(b.status)).length
-    if (filter === 'completed') return bookings.filter(b => b.status === 'completed').length
-    if (filter === 'cancelled') return bookings.filter(b => b.status === 'cancelled').length
+    if (filter === 'upcoming') return getUpcomingBookings().length
+    if (filter === 'completed') return getBookingsByStatus('completed').length
+    if (filter === 'cancelled') return getBookingsByStatus('cancelled').length
     return 0
   }
 
@@ -208,12 +195,40 @@ export default function MyBookingsPage() {
         <Container>
           {/* Header */}
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-text-primary">
-              My Bookings
-            </h1>
-            <p className="text-text-secondary">
-              Manage your car detailing appointments
-            </p>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div>
+                <h1 className="text-3xl font-bold text-text-primary">
+                  My Bookings
+                </h1>
+                <div className="flex items-center gap-3">
+                  <p className="text-text-secondary">
+                    Manage your car detailing appointments
+                  </p>
+                  {lastUpdated && (
+                    <div className="flex items-center gap-1 text-xs text-text-muted">
+                      <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                      <span>Live • Updated {new Date(lastUpdated).toLocaleTimeString()}</span>
+                    </div>
+                  )}
+                </div>
+                {bookingsError && (
+                  <div className="mt-2 text-sm text-red-600 bg-red-50 px-2 py-1 rounded">
+                    {bookingsError}
+                  </div>
+                )}
+              </div>
+              
+              <Button
+                onClick={refreshBookings}
+                variant="outline"
+                size="sm"
+                disabled={isLoading}
+                className="min-h-[44px] touch-manipulation"
+              >
+                <Search className="w-4 h-4 mr-2" />
+                Refresh
+              </Button>
+            </div>
           </div>
 
           {/* Search and Filters */}

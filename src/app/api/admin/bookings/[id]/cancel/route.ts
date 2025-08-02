@@ -2,12 +2,19 @@ import { NextRequest } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase/direct'
 import { ApiResponseHandler } from '@/lib/api/response'
 import { EmailService } from '@/lib/services/email'
+import { authenticateAdmin } from '@/lib/api/auth-handler'
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Re-enable authentication for security
+    const authResult = await authenticateAdmin(request)
+    if (!authResult.success) {
+      return authResult.error!
+    }
+
     const { reason, refundAmount, notes } = await request.json()
     const { id } = await params
     
@@ -15,7 +22,7 @@ export async function POST(
       return ApiResponseHandler.badRequest('Cancellation reason is required')
     }
 
-    // Use admin client to bypass authentication temporarily
+    // Use admin client for database queries
     const supabase = supabaseAdmin
     
     // First, get the current booking to verify it exists
@@ -91,7 +98,7 @@ export async function POST(
         booking_id: id,
         from_status: booking.status,
         to_status: 'cancelled',
-        changed_by: null, // TODO: Use actual admin user ID from headers
+        changed_by: authResult.user!.id,
         reason: `Cancelled: ${reason}`,
         notes: cancellationNotes,
         created_at: new Date().toISOString()

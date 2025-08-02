@@ -2,16 +2,23 @@ import { NextRequest } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase/direct'
 import { ApiResponseHandler } from '@/lib/api/response'
 import { EmailService } from '@/lib/services/email'
+import { authenticateAdmin } from '@/lib/api/auth-handler'
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Re-enable authentication for security
+    const authResult = await authenticateAdmin(request)
+    if (!authResult.success) {
+      return authResult.error!
+    }
+
     const { sendEmail = true } = await request.json()
     const { id } = await params
     
-    // Use admin client to bypass authentication temporarily
+    // Use admin client for database queries
     const supabase = supabaseAdmin
     
     // First, get the current booking to verify it exists and is pending
@@ -58,10 +65,10 @@ export async function POST(
       .from('booking_status_history')
       .insert({
         booking_id: id,
-        old_status: 'pending',
-        new_status: 'confirmed',
-        changed_by: 'admin', // TODO: Use actual admin user ID
-        change_reason: 'Admin confirmation',
+        from_status: 'pending',
+        to_status: 'confirmed',
+        changed_by: authResult.user!.id,
+        reason: 'Admin confirmation',
         created_at: new Date().toISOString()
       })
 

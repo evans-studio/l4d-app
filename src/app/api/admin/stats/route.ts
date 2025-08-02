@@ -6,13 +6,13 @@ import { authenticateAdmin } from '@/lib/api/auth-handler'
 
 export async function GET(request: NextRequest) {
   try {
-    // TODO: Re-enable authentication after fixing session issues
-    // const authResult = await authenticateAdmin(request)
-    // if (!authResult.success) {
-    //   return authResult.error
-    // }
+    // Re-enable authentication for security
+    const authResult = await authenticateAdmin(request)
+    if (!authResult.success) {
+      return authResult.error!
+    }
     
-    // Use admin client for now to bypass authentication issues
+    // Use admin client for database queries
     const supabase = supabaseAdmin
 
     // Calculate date ranges for operational dashboard

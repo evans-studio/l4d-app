@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase/direct'
 import { RegisterRequestSchema, AuthResponseSchema } from '@/schemas/auth.schema'
 import { EmailService } from '@/lib/services/email'
+import { ApiResponseHandler } from '@/lib/api/response'
 
 // Admin emails that should get admin role
 const ADMIN_EMAILS = [
@@ -17,18 +18,12 @@ export async function POST(request: NextRequest) {
     const validation = RegisterRequestSchema.safeParse(body)
     
     if (!validation.success) {
-      return NextResponse.json(
+      return ApiResponseHandler.validationError(
+        'Validation failed',
         {
-          success: false,
-          error: {
-            message: 'Validation failed',
-            code: 'INVALID_INPUT'
-          },
-          metadata: {
-            validationErrors: validation.error.flatten().fieldErrors
-          }
-        },
-        { status: 400 }
+          code: 'INVALID_INPUT',
+          validationErrors: validation.error.flatten().fieldErrors
+        }
       )
     }
 

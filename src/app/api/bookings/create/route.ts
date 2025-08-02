@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase/direct'
-import { BookingFormData, ApiResponse } from '@/types/booking'
+import { BookingFormData } from '@/types/booking'
 import { EmailService } from '@/lib/services/email'
 import { Database } from '@/lib/db/database.types'
 import { calculatePostcodeDistance } from '@/lib/utils/postcode-distance'
+import { ApiResponseHandler } from '@/lib/api/response'
 
 // Admin emails that should get admin role
 const ADMIN_EMAILS = [
@@ -41,23 +42,17 @@ function calculateDistanceSurcharge(distanceKm: number): number {
 }
 
 
-export async function POST(request: NextRequest): Promise<NextResponse<ApiResponse>> {
+export async function POST(request: NextRequest) {
   try {
     const bookingData: BookingFormData = await request.json()
 
     // Validate required fields
     if (!bookingData.customer.email || !bookingData.customer.firstName || !bookingData.customer.lastName) {
-      return NextResponse.json({
-        success: false,
-        error: { message: 'Customer information is required', code: 'MISSING_CUSTOMER_INFO' }
-      }, { status: 400 })
+      return ApiResponseHandler.validationError('Customer information is required', { code: 'MISSING_CUSTOMER_INFO' })
     }
 
     if (!bookingData.services || bookingData.services.length === 0) {
-      return NextResponse.json({
-        success: false,
-        error: { message: 'At least one service is required', code: 'MISSING_SERVICES' }
-      }, { status: 400 })
+      return ApiResponseHandler.validationError('At least one service is required', { code: 'MISSING_SERVICES' })
     }
 
     // Determine user role
@@ -111,10 +106,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
 
       if (authError || !authUser.user) {
         console.error('Auth user creation error:', authError)
-        return NextResponse.json({
-          success: false,
-          error: { message: 'Failed to create user account', code: 'AUTH_CREATION_FAILED' }
-        }, { status: 500 })
+        return ApiResponseHandler.serverError('Failed to create user account')
       }
 
       // Check if profile already exists (might be created by triggers)
@@ -147,14 +139,9 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
 
         if (profileError || !newProfile) {
           console.error('Profile creation error:', profileError)
-          return NextResponse.json({
-            success: false,
-            error: { 
-              message: `Failed to create user profile: ${profileError?.message || 'Unknown error'}`, 
-              code: 'PROFILE_CREATION_FAILED',
-              details: profileError
-            }
-          }, { status: 500 })
+          return ApiResponseHandler.serverError(
+            `Failed to create user profile: ${profileError?.message || 'Unknown error'}`
+          )
         }
 
         userId = newProfile.id
@@ -661,30 +648,24 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
     // Note: Password setup will be handled via modal/page flow instead of email
     // The frontend will detect requiresPasswordSetup: true and show setup modal
 
-    return NextResponse.json({
-      success: true,
-      data: {
-        bookingId: newBooking.id,
-        bookingReference,
-        customerId: userId,
-        totalPrice: totalPrice,
-        pricingBreakdown: pricingBreakdown,
-        message: isNewCustomer 
-          ? 'Booking confirmed! Please check your email to verify your account and set up your password.'
-          : 'Booking created successfully',
-        redirectTo: isNewCustomer ? `/booking/success?ref=${bookingReference}&verify=true&new=true` : `/booking/success?ref=${bookingReference}`,
-        isNewCustomer: isNewCustomer,
-        requiresEmailVerification: isNewCustomer,
-        requiresPasswordSetup: isNewCustomer && passwordSetupToken !== null,
-        passwordSetupToken: isNewCustomer ? passwordSetupToken : null
-      }
+    return ApiResponseHandler.success({
+      bookingId: newBooking.id,
+      bookingReference,
+      customerId: userId,
+      totalPrice: totalPrice,
+      pricingBreakdown: pricingBreakdown,
+      message: isNewCustomer 
+        ? 'Booking confirmed! Please check your email to verify your account and set up your password.'
+        : 'Booking created successfully',
+      redirectTo: isNewCustomer ? `/booking/success?ref=${bookingReference}&verify=true&new=true` : `/booking/success?ref=${bookingReference}`,
+      isNewCustomer: isNewCustomer,
+      requiresEmailVerification: isNewCustomer,
+      requiresPasswordSetup: isNewCustomer && passwordSetupToken !== null,
+      passwordSetupToken: isNewCustomer ? passwordSetupToken : null
     })
 
   } catch (error) {
     console.error('Booking creation error:', error)
-    return NextResponse.json({
-      success: false,
-      error: { message: 'Internal server error', code: 'SERVER_ERROR' }
-    }, { status: 500 })
+    return ApiResponseHandler.serverError('Internal server error')
   }
 }

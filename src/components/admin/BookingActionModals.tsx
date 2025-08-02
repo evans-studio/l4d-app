@@ -87,7 +87,7 @@ export function ConfirmBookingModal({
 
   return (
     <Modal open={open} onClose={onClose}>
-      <ModalContent size="md" onClose={onClose} className="bg-surface-primary border border-border-secondary">
+      <ModalContent size="md" onClose={onClose} className="bg-surface-primary border border-border-secondary max-h-[90vh] overflow-y-auto">
         <ModalHeader title="Confirm Booking?" className="border-border-secondary" />
         <ModalBody className="bg-surface-primary">
           <div className="space-y-6">
@@ -213,7 +213,7 @@ export function DeclineBookingModal({
 
   return (
     <Modal open={open} onClose={onClose}>
-      <ModalContent size="md" onClose={onClose}>
+      <ModalContent size="md" onClose={onClose} className="max-h-[90vh] overflow-y-auto">
         <ModalHeader title="Decline Booking?" />
         <ModalBody>
           <div className="space-y-6">
@@ -238,7 +238,7 @@ export function DeclineBookingModal({
           
           <div className="space-y-2">
             {declineReasons.map((reason) => (
-              <label key={reason.value} className="flex items-center space-x-3 cursor-pointer">
+              <label key={reason.value} className="flex items-center space-x-3 cursor-pointer py-2 px-3 rounded-lg hover:bg-surface-hover transition-colors min-h-[44px] touch-manipulation">
                 <input
                   type="radio"
                   name="decline-reason"
@@ -428,7 +428,7 @@ export function RescheduleBookingModal({
 
   return (
     <Modal open={open} onClose={onClose}>
-      <ModalContent size="lg" onClose={onClose} className="bg-surface-primary border border-border-secondary">
+      <ModalContent size="lg" onClose={onClose} className="bg-surface-primary border border-border-secondary max-h-[90vh] overflow-y-auto">
         <ModalHeader title="Reschedule Booking" className="border-border-secondary" />
         <ModalBody className="bg-surface-primary">
           <div className="space-y-6">
@@ -666,7 +666,7 @@ export function CancelBookingModal({
 
   return (
     <Modal open={open} onClose={onClose}>
-      <ModalContent size="md" onClose={onClose}>
+      <ModalContent size="md" onClose={onClose} className="max-h-[90vh] overflow-y-auto">
         <ModalHeader title="Cancel Booking?" />
         <ModalBody>
           <div className="space-y-6">

@@ -2,7 +2,10 @@
 
 import { useEffect, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Search, Calendar, Plus } from 'lucide-react'
+import { Search, Calendar, Plus, CheckIcon, XIcon, CalendarIcon, ClockIcon } from 'lucide-react'
+
+// Real-time hooks
+import { useRealTimeBookings, type AdminBooking } from '@/hooks/useRealTimeBookings'
 
 // UI Components
 import { Button } from '@/components/ui/primitives/Button'
@@ -17,47 +20,34 @@ import { AdminRoute } from '@/components/ProtectedRoute'
 import { TodaysSchedule } from '@/components/admin/TodaysSchedule'
 import { ConfirmBookingModal, DeclineBookingModal, RescheduleBookingModal, CancelBookingModal } from '@/components/admin/BookingActionModals'
 
-interface Booking {
-  id: string
-  booking_reference: string
-  customer_id: string
-  customer_name: string
-  customer_email: string
-  customer_phone?: string
-  scheduled_date: string
-  start_time: string
-  status: 'pending' | 'confirmed' | 'rescheduled' | 'in_progress' | 'completed' | 'cancelled' | 'declined'
-  total_price: number
-  special_instructions?: string
-  services: Array<{
-    name: string
-    base_price: number
-  }>
-  vehicle: {
-    make: string
-    model: string
-    year?: number
-    color?: string
-  }
-  address: {
-    address_line_1: string
-    city: string
-    postal_code: string
-  }
-  created_at: string
-}
+// Use the booking type from the hook
+type Booking = AdminBooking
 
 function AdminBookingsContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   
   // State
-  const [bookings, setBookings] = useState<Booking[]>([])
   const [filteredBookings, setFilteredBookings] = useState<Booking[]>([])
-  const [isLoading, setIsLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [activeTab, setActiveTab] = useState(searchParams.get('status') || 'all')
   const [viewMode, setViewMode] = useState<'today' | 'all'>('all')
+  
+  // Real-time bookings hook
+  const {
+    bookings,
+    isLoading,
+    error: bookingsError,
+    lastUpdated,
+    refreshBookings,
+    updateBookingStatus: realtimeUpdateStatus,
+    confirmBooking: realtimeConfirmBooking,
+    cancelBooking: realtimeCancelBooking,
+    rescheduleBooking: realtimeRescheduleBooking
+  } = useRealTimeBookings({
+    enableRealTimeUpdates: true,
+    pollInterval: 30000 // 30 seconds
+  })
   
   // Modal states
   const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean; booking: Booking | null }>({
@@ -77,28 +67,6 @@ function AdminBookingsContent() {
     booking: null
   })
   const [actionLoading, setActionLoading] = useState(false)
-
-  // Fetch bookings
-  useEffect(() => {
-    const fetchBookings = async () => {
-      try {
-        const response = await fetch('/api/admin/bookings/all')
-        const data = await response.json()
-        
-        if (data.success) {
-          setBookings(data.data || [])
-        } else {
-          setBookings([])
-        }
-      } catch (error) {
-        setBookings([])
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    fetchBookings()
-  }, [])
 
   // Filter bookings
   useEffect(() => {
@@ -154,23 +122,12 @@ function AdminBookingsContent() {
 
     setActionLoading(true)
     try {
-      const response = await fetch(`/api/admin/bookings/${confirmModal.booking.id}/confirm`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sendEmail })
-      })
-
-      const data = await response.json()
-      if (data.success) {
-        // Update local state optimistically
-        setBookings(prev => prev.map(booking => 
-          booking.id === confirmModal.booking!.id 
-            ? { ...booking, status: 'confirmed' as Booking['status'] }
-            : booking
-        ))
+      const success = await realtimeConfirmBooking(confirmModal.booking.id, sendEmail)
+      
+      if (success) {
         setConfirmModal({ isOpen: false, booking: null })
       } else {
-        console.error('Failed to confirm booking:', data.error)
+        console.error('Failed to confirm booking')
       }
     } catch (error) {
       console.error('Error confirming booking:', error)
@@ -184,6 +141,7 @@ function AdminBookingsContent() {
 
     setActionLoading(true)
     try {
+      // Use the existing API endpoint for decline (not available in hook yet)
       const response = await fetch(`/api/admin/bookings/${declineModal.booking.id}/decline`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -192,12 +150,8 @@ function AdminBookingsContent() {
 
       const data = await response.json()
       if (data.success) {
-        // Update local state optimistically
-        setBookings(prev => prev.map(booking => 
-          booking.id === declineModal.booking!.id 
-            ? { ...booking, status: 'declined' as Booking['status'] }
-            : booking
-        ))
+        // Refresh bookings to sync with real-time hook
+        await refreshBookings()
         setDeclineModal({ isOpen: false, booking: null })
       } else {
         console.error('Failed to decline booking:', data.error)
@@ -214,26 +168,13 @@ function AdminBookingsContent() {
 
     setActionLoading(true)
     try {
-      const response = await fetch(`/api/admin/bookings/${rescheduleModal.booking.id}/reschedule`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ newDate, newTime, reason })
-      })
-
-      const data = await response.json()
-      if (data.success) {
-        // Update local state optimistically
-        setBookings(prev => prev.map(booking => 
-          booking.id === rescheduleModal.booking!.id 
-            ? { ...booking, scheduled_date: newDate, start_time: newTime, status: 'rescheduled' as Booking['status'] }
-            : booking
-        ))
+      const success = await realtimeRescheduleBooking(rescheduleModal.booking.id, newDate, newTime, reason)
+      
+      if (success) {
         setRescheduleModal({ isOpen: false, booking: null })
       } else {
-        console.error('Failed to reschedule booking:', data.error)
-        console.error('Response status:', response.status)
-        console.error('Full response:', data)
-        alert(`Failed to reschedule booking: ${data.error?.message || 'Unknown error'}`)
+        console.error('Failed to reschedule booking')
+        alert('Failed to reschedule booking. Please try again.')
       }
     } catch (error) {
       console.error('Error rescheduling booking:', error)
@@ -247,23 +188,12 @@ function AdminBookingsContent() {
 
     setActionLoading(true)
     try {
-      const response = await fetch(`/api/admin/bookings/${cancelModal.booking.id}/cancel`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reason, refundAmount, notes })
-      })
-
-      const data = await response.json()
-      if (data.success) {
-        // Update local state optimistically
-        setBookings(prev => prev.map(booking => 
-          booking.id === cancelModal.booking!.id 
-            ? { ...booking, status: 'cancelled' as Booking['status'] }
-            : booking
-        ))
+      const success = await realtimeCancelBooking(cancelModal.booking.id, reason, refundAmount)
+      
+      if (success) {
         setCancelModal({ isOpen: false, booking: null })
       } else {
-        console.error('Failed to cancel booking:', data.error)
+        console.error('Failed to cancel booking')
       }
     } catch (error) {
       console.error('Error cancelling booking:', error)
@@ -272,25 +202,12 @@ function AdminBookingsContent() {
     }
   }
 
-  // Update booking status (legacy - keeping for other status updates)
+  // Update booking status using real-time hook
   const updateBookingStatus = async (bookingId: string, newStatus: string) => {
     try {
-      const response = await fetch(`/api/admin/bookings/${bookingId}/status`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus })
-      })
-
-      const data = await response.json()
-      if (data.success) {
-        setBookings(prev => prev.map(booking => 
-          booking.id === bookingId 
-            ? { ...booking, status: newStatus as Booking['status'] }
-            : booking
-        ))
-      }
+      await realtimeUpdateStatus(bookingId, newStatus as Booking['status'])
     } catch (error) {
-      // Silent error handling
+      console.error('Error updating booking status:', error)
     }
   }
 
@@ -335,136 +252,134 @@ function AdminBookingsContent() {
   return (
     <AdminLayout>
       <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold text-text-primary">Bookings</h1>
-            <p className="text-text-secondary">Manage and track customer bookings</p>
-          </div>
-          
-          <div className="flex items-center gap-3">
-            <Button
-              onClick={() => setViewMode(viewMode === 'today' ? 'all' : 'today')}
-              variant="outline"
-              size="sm"
-            >
-              <Calendar className="w-4 h-4 mr-2" />
-              {viewMode === 'today' ? 'All Bookings' : "Today's Schedule"}
-            </Button>
-            <Button
-              onClick={() => router.push('/admin')}
-              variant="outline"
-              size="sm"
-            >
-              Dashboard
-            </Button>
+        {/* Header - Mobile Optimized */}
+        <div className="space-y-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold text-text-primary">Bookings</h1>
+              <div className="flex items-center gap-2">
+                <p className="text-text-secondary text-sm sm:text-base">Manage and track customer bookings</p>
+                {lastUpdated && (
+                  <div className="flex items-center gap-1 text-xs text-text-muted">
+                    <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                    <span>Live • Updated {new Date(lastUpdated).toLocaleTimeString()}</span>
+                  </div>
+                )}
+              </div>
+              {bookingsError && (
+                <div className="mt-2 text-sm text-red-600 bg-red-50 px-2 py-1 rounded">
+                  {bookingsError}
+                </div>
+              )}
+            </div>
+            
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <Button
+                onClick={refreshBookings}
+                variant="outline"
+                size="sm"
+                className="flex-1 sm:flex-none min-h-[44px] touch-manipulation"
+                disabled={isLoading}
+              >
+                <Search className="w-4 h-4 mr-2" />
+                <span className="hidden xs:inline">Refresh</span>
+              </Button>
+              <Button
+                onClick={() => setViewMode(viewMode === 'today' ? 'all' : 'today')}
+                variant="outline"
+                size="sm"
+                className="flex-1 sm:flex-none min-h-[44px] touch-manipulation"
+              >
+                <Calendar className="w-4 h-4 mr-2" />
+                <span className="hidden xs:inline">{viewMode === 'today' ? 'All Bookings' : "Today's Schedule"}</span>
+                <span className="xs:hidden">{viewMode === 'today' ? 'All' : 'Today'}</span>
+              </Button>
+              <Button
+                onClick={() => router.push('/admin')}
+                variant="outline"
+                size="sm"
+                className="flex-1 sm:flex-none min-h-[44px] touch-manipulation"
+              >
+                <span className="hidden xs:inline">Dashboard</span>
+                <span className="xs:hidden">Home</span>
+              </Button>
+            </div>
           </div>
         </div>
 
         {/* Content */}
         {viewMode === 'today' ? (
           <TodaysSchedule 
-            onRefresh={() => {
-              // Refresh bookings
-              const fetchBookings = async () => {
-                try {
-                  const response = await fetch('/api/admin/bookings/all')
-                  const data = await response.json()
-                  if (data.success) {
-                    setBookings(data.data)
-                  }
-                } catch (error) {
-                  // Silent error handling
-                }
-              }
-              fetchBookings()
-            }} 
+            onRefresh={refreshBookings}
           />
         ) : (
           <>
-            {/* Search */}
-            <div className="max-w-md">
+            {/* Search - Mobile Optimized */}
+            <div className="w-full max-w-md">
               <Input
                 leftIcon={<Search className="w-4 h-4" />}
                 placeholder="Search bookings..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
+                className="min-h-[44px] touch-manipulation"
               />
             </div>
 
-            {/* Status Tabs */}
+            {/* Status Tabs - Mobile Responsive */}
             <div className="w-full">
-              <div className="inline-flex h-10 items-center justify-center rounded-md bg-gray-100 p-1 text-gray-500 w-full lg:w-fit">
-                <button
-                  className={`inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium transition-all ${
-                    activeTab === 'all' 
-                      ? 'bg-white text-gray-950 shadow-sm' 
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                  onClick={() => setActiveTab('all')}
-                >
-                  All
-                </button>
-                <button
-                  className={`inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium transition-all ${
-                    activeTab === 'pending' 
-                      ? 'bg-white text-gray-950 shadow-sm' 
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                  onClick={() => setActiveTab('pending')}
-                >
-                  Pending
-                </button>
-                <button
-                  className={`inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium transition-all ${
-                    activeTab === 'confirmed' 
-                      ? 'bg-white text-gray-950 shadow-sm' 
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                  onClick={() => setActiveTab('confirmed')}
-                >
-                  Confirmed
-                </button>
-                <button
-                  className={`inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium transition-all ${
-                    activeTab === 'rescheduled' 
-                      ? 'bg-white text-gray-950 shadow-sm' 
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                  onClick={() => setActiveTab('rescheduled')}
-                >
-                  Rescheduled
-                </button>
-                <button
-                  className={`inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium transition-all ${
-                    activeTab === 'completed' 
-                      ? 'bg-white text-gray-950 shadow-sm' 
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                  onClick={() => setActiveTab('completed')}
-                >
-                  Completed
-                </button>
-                <button
-                  className={`inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium transition-all ${
-                    activeTab === 'cancelled' 
-                      ? 'bg-white text-gray-950 shadow-sm' 
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                  onClick={() => setActiveTab('cancelled')}
-                >
-                  Cancelled
-                </button>
-                <button
-                  className={`inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium transition-all ${
-                    activeTab === 'declined' 
-                      ? 'bg-white text-gray-950 shadow-sm' 
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                  onClick={() => setActiveTab('declined')}
-                >
-                  Declined
-                </button>
+              {/* Desktop Tabs */}
+              <div className="hidden lg:block">
+                <div className="inline-flex h-10 items-center justify-center rounded-md bg-gray-100 p-1 text-gray-500 w-fit">
+                  {['all', 'pending', 'confirmed', 'rescheduled', 'completed', 'cancelled', 'declined'].map((status) => (
+                    <button
+                      key={status}
+                      className={`inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium transition-all ${
+                        activeTab === status 
+                          ? 'bg-white text-gray-950 shadow-sm' 
+                          : 'text-gray-600 hover:text-gray-900'
+                      }`}
+                      onClick={() => setActiveTab(status)}
+                    >
+                      {status.charAt(0).toUpperCase() + status.slice(1)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              
+              {/* Mobile Scrollable Tabs */}
+              <div className="lg:hidden">
+                <div className="flex overflow-x-auto gap-2 pb-2" style={{scrollbarWidth: 'none', msOverflowStyle: 'none'}}>
+                  {[
+                    { key: 'all', label: 'All', count: bookings.length },
+                    { key: 'pending', label: 'Pending', count: bookings.filter(b => b.status === 'pending').length },
+                    { key: 'confirmed', label: 'Confirmed', count: bookings.filter(b => b.status === 'confirmed').length },
+                    { key: 'rescheduled', label: 'Rescheduled', count: bookings.filter(b => b.status === 'rescheduled').length },
+                    { key: 'completed', label: 'Completed', count: bookings.filter(b => b.status === 'completed').length },
+                    { key: 'cancelled', label: 'Cancelled', count: bookings.filter(b => b.status === 'cancelled').length },
+                    { key: 'declined', label: 'Declined', count: bookings.filter(b => b.status === 'declined').length }
+                  ].map((tab) => (
+                    <button
+                      key={tab.key}
+                      className={`flex-shrink-0 min-h-[44px] px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 touch-manipulation ${
+                        activeTab === tab.key
+                          ? 'bg-brand-600 text-white shadow-purple-lg'
+                          : 'bg-surface-secondary text-text-secondary hover:bg-surface-hover hover:text-text-primary border border-border-secondary'
+                      }`}
+                      onClick={() => setActiveTab(tab.key)}
+                    >
+                      <div className="flex flex-col items-center gap-1">
+                        <span>{tab.label}</span>
+                        <span className={`text-xs px-1.5 py-0.5 rounded-full ${
+                          activeTab === tab.key
+                            ? 'bg-white/20 text-white'
+                            : 'bg-text-muted/10 text-text-muted'
+                        }`}>
+                          {tab.count}
+                        </span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
               </div>
 
               {/* Results */}
@@ -581,41 +496,45 @@ function BookingCard({ booking, onStatusUpdate, onConfirm, onDecline, onReschedu
     switch (booking.status) {
       case 'pending':
         return (
-          <div className="space-y-2">
+          <div className="space-y-3">
             {/* Primary Actions */}
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <Button
                 onClick={onConfirm}
                 size="sm"
-                className="bg-green-600 hover:bg-green-700"
+                className="bg-green-600 hover:bg-green-700 text-white min-h-[44px] touch-manipulation"
               >
+                <CheckIcon className="w-4 h-4 mr-2" />
                 Confirm
               </Button>
               <Button
                 onClick={onDecline}
                 variant="outline"
                 size="sm"
-                className="text-red-600 border-red-200 hover:bg-red-50"
+                className="text-red-600 border-red-200 hover:bg-red-50 min-h-[44px] touch-manipulation"
               >
+                <XIcon className="w-4 h-4 mr-2" />
                 Decline
               </Button>
             </div>
             {/* Secondary Actions */}
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <Button
                 onClick={onReschedule}
                 variant="outline"
                 size="sm"
-                className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                className="text-blue-600 border-blue-200 hover:bg-blue-50 min-h-[44px] touch-manipulation"
               >
+                <CalendarIcon className="w-4 h-4 mr-2" />
                 Reschedule
               </Button>
               <Button
                 onClick={onCancel}
                 variant="outline"
                 size="sm"
-                className="text-red-600 border-red-200 hover:bg-red-50"
+                className="text-red-600 border-red-200 hover:bg-red-50 min-h-[44px] touch-manipulation"
               >
+                <XIcon className="w-4 h-4 mr-2" />
                 Cancel
               </Button>
             </div>
@@ -628,8 +547,9 @@ function BookingCard({ booking, onStatusUpdate, onConfirm, onDecline, onReschedu
             <Button
               onClick={() => onStatusUpdate(booking.id, 'in_progress')}
               size="sm"
-              className="w-full bg-blue-600 hover:bg-blue-700"
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white min-h-[44px] touch-manipulation"
             >
+              <ClockIcon className="w-4 h-4 mr-2" />
               Start Service
             </Button>
             {/* Secondary Actions */}
@@ -638,16 +558,18 @@ function BookingCard({ booking, onStatusUpdate, onConfirm, onDecline, onReschedu
                 onClick={onReschedule}
                 variant="outline"
                 size="sm"
-                className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                className="text-blue-600 border-blue-200 hover:bg-blue-50 min-h-[44px] touch-manipulation"
               >
+                <CalendarIcon className="w-4 h-4 mr-2" />
                 Reschedule
               </Button>
               <Button
                 onClick={onCancel}
                 variant="outline"
                 size="sm"
-                className="text-red-600 border-red-200 hover:bg-red-50"
+                className="text-red-600 border-red-200 hover:bg-red-50 min-h-[44px] touch-manipulation"
               >
+                <XIcon className="w-4 h-4 mr-2" />
                 Cancel
               </Button>
             </div>
@@ -660,8 +582,9 @@ function BookingCard({ booking, onStatusUpdate, onConfirm, onDecline, onReschedu
             <Button
               onClick={() => onStatusUpdate(booking.id, 'in_progress')}
               size="sm"
-              className="w-full bg-blue-600 hover:bg-blue-700"
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white min-h-[44px] touch-manipulation"
             >
+              <ClockIcon className="w-4 h-4 mr-2" />
               Start Service
             </Button>
             {/* Secondary Actions */}
@@ -670,16 +593,19 @@ function BookingCard({ booking, onStatusUpdate, onConfirm, onDecline, onReschedu
                 onClick={onReschedule}
                 variant="outline"
                 size="sm"
-                className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                className="text-blue-600 border-blue-200 hover:bg-blue-50 min-h-[44px] touch-manipulation"
               >
-                Reschedule Again
+                <CalendarIcon className="w-4 h-4 mr-2" />
+                <span className="hidden xs:inline">Reschedule Again</span>
+                <span className="xs:hidden">Reschedule</span>
               </Button>
               <Button
                 onClick={onCancel}
                 variant="outline"
                 size="sm"
-                className="text-red-600 border-red-200 hover:bg-red-50"
+                className="text-red-600 border-red-200 hover:bg-red-50 min-h-[44px] touch-manipulation"
               >
+                <XIcon className="w-4 h-4 mr-2" />
                 Cancel
               </Button>
             </div>
@@ -692,8 +618,9 @@ function BookingCard({ booking, onStatusUpdate, onConfirm, onDecline, onReschedu
             <Button
               onClick={() => onStatusUpdate(booking.id, 'completed')}
               size="sm"
-              className="w-full bg-green-600 hover:bg-green-700"
+              className="w-full bg-green-600 hover:bg-green-700 text-white min-h-[44px] touch-manipulation"
             >
+              <CheckIcon className="w-4 h-4 mr-2" />
               Complete Service
             </Button>
             {/* Emergency Actions */}
@@ -701,8 +628,9 @@ function BookingCard({ booking, onStatusUpdate, onConfirm, onDecline, onReschedu
               onClick={onCancel}
               variant="outline"
               size="sm"
-              className="w-full text-red-600 border-red-200 hover:bg-red-50"
+              className="w-full text-red-600 border-red-200 hover:bg-red-50 min-h-[44px] touch-manipulation"
             >
+              <XIcon className="w-4 h-4 mr-2" />
               Emergency Cancel
             </Button>
           </div>
@@ -715,8 +643,9 @@ function BookingCard({ booking, onStatusUpdate, onConfirm, onDecline, onReschedu
               onClick={() => onStatusUpdate(booking.id, 'in_progress')}
               variant="outline"
               size="sm"
-              className="w-full text-orange-600 border-orange-200 hover:bg-orange-50"
+              className="w-full text-orange-600 border-orange-200 hover:bg-orange-50 min-h-[44px] touch-manipulation"
             >
+              <ClockIcon className="w-4 h-4 mr-2" />
               Mark In Progress
             </Button>
           </div>
@@ -729,8 +658,9 @@ function BookingCard({ booking, onStatusUpdate, onConfirm, onDecline, onReschedu
               onClick={() => onStatusUpdate(booking.id, 'pending')}
               variant="outline"
               size="sm"
-              className="w-full text-orange-600 border-orange-200 hover:bg-orange-50"
+              className="w-full text-orange-600 border-orange-200 hover:bg-orange-50 min-h-[44px] touch-manipulation"
             >
+              <ClockIcon className="w-4 h-4 mr-2" />
               Reactivate
             </Button>
           </div>
@@ -743,8 +673,9 @@ function BookingCard({ booking, onStatusUpdate, onConfirm, onDecline, onReschedu
               onClick={() => onStatusUpdate(booking.id, 'pending')}
               variant="outline"
               size="sm"
-              className="w-full text-orange-600 border-orange-200 hover:bg-orange-50"
+              className="w-full text-orange-600 border-orange-200 hover:bg-orange-50 min-h-[44px] touch-manipulation"
             >
+              <ClockIcon className="w-4 h-4 mr-2" />
               Reactivate
             </Button>
           </div>
@@ -784,23 +715,30 @@ function BookingCard({ booking, onStatusUpdate, onConfirm, onDecline, onReschedu
           </div>
         </div>
 
-        {/* Customer & Vehicle Info */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          <div>
-            <p className="text-xs text-text-secondary mb-1">Customer</p>
-            <p className="font-medium text-text-primary">{booking.customer_name}</p>
-            <p className="text-sm text-text-secondary">{booking.customer_email}</p>
+        {/* Customer & Vehicle Info - Mobile Optimized */}
+        <div className="space-y-4 sm:space-y-0 sm:grid sm:grid-cols-2 sm:gap-4 mb-4">
+          <div className="bg-surface-tertiary rounded-lg p-3">
+            <p className="text-xs text-text-secondary mb-2 font-medium uppercase tracking-wide">Customer</p>
+            <div className="space-y-1">
+              <p className="font-semibold text-text-primary">{booking.customer_name}</p>
+              <p className="text-sm text-text-secondary break-all">{booking.customer_email}</p>
+              {booking.customer_phone && (
+                <p className="text-sm text-text-secondary">{booking.customer_phone}</p>
+              )}
+            </div>
           </div>
-          <div>
-            <p className="text-xs text-text-secondary mb-1">Vehicle</p>
-            <p className="font-medium text-text-primary">
-              {booking.vehicle.make} {booking.vehicle.model}
-            </p>
-            {booking.vehicle.year && (
-              <p className="text-sm text-text-secondary">
-                {booking.vehicle.year} • {booking.vehicle.color}
+          <div className="bg-surface-tertiary rounded-lg p-3">
+            <p className="text-xs text-text-secondary mb-2 font-medium uppercase tracking-wide">Vehicle</p>
+            <div className="space-y-1">
+              <p className="font-semibold text-text-primary">
+                {booking.vehicle.make} {booking.vehicle.model}
               </p>
-            )}
+              {booking.vehicle.year && (
+                <p className="text-sm text-text-secondary">
+                  {booking.vehicle.year} • {booking.vehicle.color}
+                </p>
+              )}
+            </div>
           </div>
         </div>
 
@@ -827,17 +765,19 @@ function BookingCard({ booking, onStatusUpdate, onConfirm, onDecline, onReschedu
           </div>
         )}
 
-        {/* Actions */}
-        <div className="space-y-2">
+        {/* Actions - Mobile Optimized */}
+        <div className="space-y-3">
           <Button
             onClick={() => router.push(`/admin/bookings/${booking.id}`)}
             variant="outline"
             size="sm"
-            className="w-full"
+            className="w-full min-h-[44px] touch-manipulation"
           >
             View Details
           </Button>
-          {getStatusActions()}
+          <div className="space-y-2">
+            {getStatusActions()}
+          </div>
         </div>
       </CardContent>
     </Card>
