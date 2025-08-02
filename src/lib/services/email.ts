@@ -87,6 +87,37 @@ export class EmailService {
     }
   }
 
+  // Send welcome email with verification link
+  async sendWelcomeVerificationEmail(
+    customerEmail: string,
+    customerName: string,
+    userId: string
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      const { error } = await resend.emails.send({
+        from: `${this.config.fromName} <${this.config.fromEmail}>`,
+        to: [customerEmail],
+        replyTo: this.config.replyToEmail,
+        subject: 'Welcome to Love4Detailing - Verify Your Email',
+        html: this.generateWelcomeVerificationHTML(customerName, customerEmail),
+        text: this.generateWelcomeVerificationText(customerName, customerEmail)
+      })
+
+      if (error) {
+        console.error('Welcome verification email error:', error)
+        return { success: false, error: error.message }
+      }
+
+      return { success: true }
+    } catch (error) {
+      console.error('Welcome verification email service error:', error)
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Unknown email error' 
+      }
+    }
+  }
+
   // Send password setup email to new customers
   async sendPasswordSetupEmail(
     customerEmail: string,
@@ -826,6 +857,167 @@ If you have any questions, please contact us at ${this.config.adminEmail}
 
 ---
 Love 4 Detailing - Professional Vehicle Detailing Services
+    `
+  }
+
+  private generateWelcomeVerificationHTML(customerName: string, customerEmail: string): string {
+    const verificationUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://l4d-app.vercel.app'}/auth/verify-email`
+
+    return `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Welcome to Love4Detailing</title>
+          <style>
+            * { box-sizing: border-box; }
+            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #ffffff; max-width: 600px; margin: 0 auto; padding: 0; background: #0a0a0a; }
+            .email-container { background: #0a0a0a; min-height: 100vh; }
+            .header { background: linear-gradient(135deg, #9747FF 0%, #B269FF 100%); color: white; padding: 40px 30px; text-align: center; }
+            .logo { display: inline-flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+            .logo-icon { width: 40px; height: 40px; background: rgba(255, 255, 255, 0.2); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+            .logo-text { font-size: 24px; font-weight: bold; background: linear-gradient(to right, #ffffff, #e5e7eb); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+            .tagline { color: rgba(255, 255, 255, 0.8); font-size: 14px; margin-top: 8px; }
+            .content { background: #1a1a1a; padding: 40px 30px; }
+            .welcome-card { background: #252525; border-radius: 12px; padding: 30px; margin: 25px 0; border: 1px solid rgba(151, 71, 255, 0.2); text-align: center; }
+            .verify-button { 
+              display: inline-block; 
+              background: linear-gradient(135deg, #9747FF, #B269FF); 
+              color: white; 
+              padding: 15px 30px; 
+              text-decoration: none; 
+              border-radius: 8px; 
+              font-weight: bold; 
+              margin: 20px 0;
+              transition: transform 0.2s;
+              font-size: 16px;
+            }
+            .verify-button:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(151, 71, 255, 0.3); }
+            .benefits-card { background: rgba(151, 71, 255, 0.1); border: 1px solid rgba(151, 71, 255, 0.3); border-radius: 12px; padding: 25px; margin: 25px 0; }
+            .benefits-card h4 { color: #B269FF; margin: 0 0 15px 0; font-size: 18px; }
+            .benefits-list { list-style: none; padding: 0; margin: 0; }
+            .benefits-list li { margin: 10px 0; padding: 8px 0; color: rgba(255, 255, 255, 0.8); position: relative; padding-left: 24px; }
+            .benefits-list li::before { content: '✨'; position: absolute; left: 0; color: #9747FF; font-weight: bold; }
+            .security-note { background: #252525; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 20px; margin: 20px 0; }
+            .footer { background: #0a0a0a; padding: 30px; text-align: center; border-top: 1px solid rgba(255, 255, 255, 0.05); }
+            .footer-brand { color: #9747FF; font-weight: 600; margin-bottom: 8px; }
+            .footer-text { color: rgba(255, 255, 255, 0.5); font-size: 12px; line-height: 1.5; }
+            @media (max-width: 480px) {
+              .header, .content, .footer { padding: 20px 15px; }
+              .welcome-card, .benefits-card { padding: 20px 15px; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="email-container">
+            <div class="header">
+              <div class="logo">
+                <div class="logo-icon">🚗</div>
+                <div class="logo-text">Love4Detailing</div>
+              </div>
+              <h1 style="margin: 0; font-size: 28px; font-weight: 700;">Welcome to Love4Detailing!</h1>
+              <p class="tagline">Your premium car detailing journey starts here</p>
+            </div>
+            
+            <div class="content">
+              <div class="welcome-card">
+                <h2 style="color: #9747FF; margin: 0 0 15px 0; font-size: 22px;">Hi ${customerName}! 👋</h2>
+                <p style="color: rgba(255, 255, 255, 0.8); font-size: 16px; margin: 0 0 20px 0;">
+                  Thank you for joining Love4Detailing! We're excited to help you keep your vehicle looking absolutely stunning.
+                </p>
+                
+                <div style="background: rgba(151, 71, 255, 0.1); border-radius: 8px; padding: 20px; margin: 20px 0;">
+                  <h3 style="color: #B269FF; margin: 0 0 10px 0; font-size: 18px;">⚡ One Quick Step</h3>
+                  <p style="color: rgba(255, 255, 255, 0.8); margin: 0 0 15px 0;">
+                    Please verify your email address to activate your account and start booking our premium services.
+                  </p>
+                  
+                  <a href="${verificationUrl}?email=${encodeURIComponent(customerEmail)}" class="verify-button">
+                    Verify My Email Address
+                  </a>
+                </div>
+              </div>
+              
+              <div class="benefits-card">
+                <h4>🎯 What You Get with Your Account:</h4>
+                <ul class="benefits-list">
+                  <li><strong>Quick Booking:</strong> Save your vehicle details for faster future bookings</li>
+                  <li><strong>Booking Management:</strong> View, reschedule, or cancel appointments easily</li>
+                  <li><strong>Service History:</strong> Track all your past detailing services</li>
+                  <li><strong>Exclusive Offers:</strong> Get member-only discounts and promotions</li>
+                  <li><strong>Priority Support:</strong> Fast customer service for account holders</li>
+                </ul>
+              </div>
+              
+              <div class="security-note">
+                <h4 style="color: #9747FF; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                  <span>🔒</span>
+                  <span>Security First</span>
+                </h4>
+                <p style="color: rgba(255, 255, 255, 0.8); margin: 0; font-size: 14px;">
+                  We take your privacy seriously. Your email verification helps us ensure account security and prevents unauthorized access. 
+                  If you didn't create this account, please ignore this email.
+                </p>
+              </div>
+              
+              <div style="text-align: center; margin: 30px 0; padding: 20px; background: #252525; border-radius: 12px;">
+                <h4 style="color: #B269FF; margin: 0 0 15px 0;">Need Help?</h4>
+                <p style="color: rgba(255, 255, 255, 0.8); margin: 0;">
+                  📧 Email: ${this.config.adminEmail}<br>
+                  🌐 Visit: ${process.env.NEXT_PUBLIC_APP_URL || 'https://l4d-app.vercel.app'}
+                </p>
+              </div>
+            </div>
+            
+            <div class="footer">
+              <div class="footer-brand">Love4Detailing</div>
+              <div class="footer-text">
+                Professional Mobile Car Detailing Services<br>
+                Transforming vehicles, exceeding expectations<br><br>
+                This is a welcome email for your new account.<br>
+                Please verify your email to get started.
+              </div>
+            </div>
+          </div>
+        </body>
+      </html>
+    `
+  }
+
+  private generateWelcomeVerificationText(customerName: string, customerEmail: string): string {
+    const verificationUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://l4d-app.vercel.app'}/auth/verify-email?email=${encodeURIComponent(customerEmail)}`
+
+    return `
+WELCOME TO LOVE4DETAILING!
+
+Hi ${customerName}!
+
+Thank you for joining Love4Detailing! We're excited to help you keep your vehicle looking absolutely stunning.
+
+VERIFY YOUR EMAIL ADDRESS:
+Please verify your email address to activate your account:
+${verificationUrl}
+
+WHAT YOU GET WITH YOUR ACCOUNT:
+✨ Quick Booking - Save your vehicle details for faster future bookings
+✨ Booking Management - View, reschedule, or cancel appointments easily  
+✨ Service History - Track all your past detailing services
+✨ Exclusive Offers - Get member-only discounts and promotions
+✨ Priority Support - Fast customer service for account holders
+
+SECURITY FIRST:
+We take your privacy seriously. Your email verification helps us ensure account security and prevents unauthorized access. If you didn't create this account, please ignore this email.
+
+NEED HELP?
+Email: ${this.config.adminEmail}
+Visit: ${process.env.NEXT_PUBLIC_APP_URL || 'https://l4d-app.vercel.app'}
+
+Welcome to the Love4Detailing family!
+
+---
+Love4Detailing - Professional Mobile Car Detailing Services
+Transforming vehicles, exceeding expectations
     `
   }
 

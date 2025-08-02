@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase/direct'
 import { RegisterRequestSchema, AuthResponseSchema } from '@/schemas/auth.schema'
+import { EmailService } from '@/lib/services/email'
 
 // Admin emails that should get admin role
 const ADMIN_EMAILS = [
@@ -36,7 +37,7 @@ export async function POST(request: NextRequest) {
     // Determine role based on email
     const role = ADMIN_EMAILS.includes(email.toLowerCase()) ? 'admin' : 'customer'
 
-    // Create user with Supabase Auth using admin client for auto-confirmation
+    // Create user with Supabase Auth - require email verification
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
@@ -46,7 +47,7 @@ export async function POST(request: NextRequest) {
         phone: phone,
         role: role
       },
-      email_confirm: true // Auto-confirm email to avoid confirmation flow
+      email_confirm: false // Require email verification for security
     })
 
     if (authError || !authData.user) {
@@ -82,6 +83,23 @@ export async function POST(request: NextRequest) {
       // Continue anyway - profile can be created on first login if needed
     }
 
+    // Send welcome email with verification link
+    try {
+      const emailService = new EmailService()
+      const fullName = `${firstName} ${lastName}`
+      
+      await emailService.sendWelcomeVerificationEmail(
+        email,
+        fullName,
+        authData.user.id
+      )
+      
+      console.log('Welcome verification email sent to:', email)
+    } catch (emailError) {
+      console.error('Failed to send welcome email:', emailError)
+      // Continue anyway - user can resend verification if needed
+    }
+
     return NextResponse.json({
       success: true,
       data: {
@@ -92,8 +110,9 @@ export async function POST(request: NextRequest) {
           lastName: lastName,
           role: role
         },
-        message: 'Registration successful! You can now sign in.',
-        redirectTo: role === 'admin' ? '/admin' : '/dashboard'
+        message: 'Registration successful! Please check your email to verify your account.',
+        redirectTo: `/auth/verify-email?email=${encodeURIComponent(email)}`,
+        requiresVerification: true
       }
     })
 

@@ -69,9 +69,13 @@ export async function POST(request: NextRequest) {
         result = await emailService.sendBookingStatusUpdate(email, name, mockBooking, 'pending', 'Booking confirmed by admin')
         break
       
+      case 'welcome-verification':
+        result = await emailService.sendWelcomeVerificationEmail(email, name, 'test-user-id')
+        break
+      
       default:
         return NextResponse.json(
-          { success: false, error: { message: 'Invalid email type. Use: booking-confirmation, admin-notification, or status-update' } },
+          { success: false, error: { message: 'Invalid email type. Use: booking-confirmation, admin-notification, status-update, or welcome-verification' } },
           { status: 400 }
         )
     }
