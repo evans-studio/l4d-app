@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
     const { data: specificCustomer, error: specificError } = await supabaseService
       .from('user_profiles')
       .select('*')
-      .eq('email', 'evanspaul87@gmail.com')
+      .eq('email', 'test@example.com')
       .single()
 
     console.log('Debug: Specific customer result:', { data: specificCustomer, error: specificError })
