@@ -296,93 +296,150 @@ export class EmailService {
       <html>
         <head>
           <meta charset="utf-8">
-          <title>Booking Confirmation</title>
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Booking Confirmation - Love4Detailing</title>
           <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: #1e40af; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
-            .content { background: #f8fafc; padding: 30px; border-radius: 0 0 8px 8px; }
-            .booking-details { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #1e40af; }
-            .detail-row { display: flex; justify-content: space-between; margin: 10px 0; padding: 8px 0; border-bottom: 1px solid #e2e8f0; }
-            .detail-label { font-weight: bold; color: #64748b; }
-            .detail-value { color: #1e293b; }
-            .highlight { background: #dbeafe; padding: 15px; border-radius: 6px; margin: 15px 0; }
-            .footer { text-align: center; margin-top: 30px; color: #64748b; font-size: 14px; }
-            .total-price { font-size: 18px; font-weight: bold; color: #1e40af; }
+            * { box-sizing: border-box; }
+            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #ffffff; max-width: 600px; margin: 0 auto; padding: 0; background: #0a0a0a; }
+            .email-container { background: #0a0a0a; min-height: 100vh; }
+            .header { background: linear-gradient(135deg, #9747FF 0%, #B269FF 100%); color: white; padding: 40px 30px; text-align: center; }
+            .logo { display: inline-flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+            .logo-icon { width: 40px; height: 40px; background: rgba(255, 255, 255, 0.2); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+            .logo-text { font-size: 24px; font-weight: bold; background: linear-gradient(to right, #ffffff, #e5e7eb); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+            .tagline { color: rgba(255, 255, 255, 0.8); font-size: 14px; margin-top: 8px; }
+            .content { background: #1a1a1a; padding: 40px 30px; }
+            .welcome-message { text-align: center; margin-bottom: 30px; }
+            .booking-card { background: #252525; border-radius: 12px; overflow: hidden; margin: 25px 0; border: 1px solid rgba(151, 71, 255, 0.2); }
+            .booking-header { background: linear-gradient(135deg, rgba(151, 71, 255, 0.1), rgba(178, 105, 255, 0.1)); padding: 20px; border-bottom: 1px solid rgba(151, 71, 255, 0.2); }
+            .booking-ref { color: #9747FF; font-size: 18px; font-weight: bold; margin: 0; }
+            .booking-status { display: inline-block; background: rgba(151, 71, 255, 0.2); color: #B269FF; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 500; margin-top: 8px; }
+            .booking-details { padding: 25px; }
+            .detail-row { display: flex; align-items: flex-start; margin: 16px 0; padding: 12px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+            .detail-row:last-child { border-bottom: none; }
+            .detail-icon { width: 20px; height: 20px; margin-right: 12px; color: #9747FF; flex-shrink: 0; margin-top: 2px; }
+            .detail-content { flex: 1; }
+            .detail-label { font-weight: 600; color: rgba(255, 255, 255, 0.7); font-size: 14px; margin-bottom: 4px; }
+            .detail-value { color: #ffffff; font-size: 16px; line-height: 1.4; }
+            .price-highlight { color: #9747FF; font-size: 20px; font-weight: bold; }
+            .info-card { background: rgba(151, 71, 255, 0.1); border: 1px solid rgba(151, 71, 255, 0.3); border-radius: 12px; padding: 25px; margin: 30px 0; }
+            .info-card h4 { color: #B269FF; margin: 0 0 15px 0; font-size: 18px; }
+            .info-card p { margin: 8px 0; color: rgba(255, 255, 255, 0.8); }
+            .instructions-card { background: #252525; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 20px; margin: 20px 0; }
+            .contact-info { background: #252525; border-radius: 12px; padding: 20px; margin: 25px 0; text-align: center; }
+            .contact-info h4 { color: #9747FF; margin-bottom: 15px; }
+            .contact-item { margin: 8px 0; color: rgba(255, 255, 255, 0.8); }
+            .footer { background: #0a0a0a; padding: 30px; text-align: center; border-top: 1px solid rgba(255, 255, 255, 0.05); }
+            .footer-brand { color: #9747FF; font-weight: 600; margin-bottom: 8px; }
+            .footer-text { color: rgba(255, 255, 255, 0.5); font-size: 12px; line-height: 1.5; }
+            @media (max-width: 480px) {
+              .header, .content, .footer { padding: 20px 15px; }
+              .booking-details { padding: 20px 15px; }
+              .detail-row { flex-direction: column; align-items: flex-start; }
+              .detail-icon { margin-bottom: 8px; }
+            }
           </style>
         </head>
         <body>
-          <div class="header">
-            <h1>Booking Confirmation</h1>
-            <p>Thank you for choosing Love 4 Detailing!</p>
-          </div>
-          
-          <div class="content">
-            <p>Dear ${customerName},</p>
+          <div class="email-container">
+            <div class="header">
+              <div class="logo">
+                <div class="logo-icon">🚗</div>
+                <div class="logo-text">Love4Detailing</div>
+              </div>
+              <h1 style="margin: 0; font-size: 28px; font-weight: 700;">Booking Confirmed!</h1>
+              <p class="tagline">Your premium car detailing experience awaits</p>
+            </div>
             
-            <p>Your booking has been received and is being processed. Here are your booking details:</p>
-            
-            <div class="booking-details">
-              <h3>Booking Reference: ${booking.booking_reference}</h3>
-              
-              <div class="detail-row">
-                <span class="detail-label">Date:</span>
-                <span class="detail-value">${formatDate(booking.scheduled_date)}</span>
+            <div class="content">
+              <div class="welcome-message">
+                <p style="color: rgba(255, 255, 255, 0.8); font-size: 16px; margin: 0;">Dear ${customerName},</p>
+                <p style="color: #ffffff; font-size: 18px; margin: 10px 0 0 0;">Thank you for choosing Love4Detailing! Your booking has been received and is being processed.</p>
               </div>
               
-              <div class="detail-row">
-                <span class="detail-label">Time:</span>
-                <span class="detail-value">${formatTime(booking.scheduled_start_time)}</span>
+              <div class="booking-card">
+                <div class="booking-header">
+                  <h3 class="booking-ref">${booking.booking_reference}</h3>
+                  <span class="booking-status">${booking.status === 'pending' ? 'Awaiting Confirmation' : booking.status}</span>
+                </div>
+                
+                <div class="booking-details">
+                  <div class="detail-row">
+                    <div class="detail-icon">📅</div>
+                    <div class="detail-content">
+                      <div class="detail-label">Scheduled Date</div>
+                      <div class="detail-value">${formatDate(booking.scheduled_date)}</div>
+                    </div>
+                  </div>
+                  
+                  <div class="detail-row">
+                    <div class="detail-icon">⏰</div>
+                    <div class="detail-content">
+                      <div class="detail-label">Scheduled Time</div>
+                      <div class="detail-value">${formatTime(booking.scheduled_start_time)}</div>
+                    </div>
+                  </div>
+                  
+                  <div class="detail-row">
+                    <div class="detail-icon">🚗</div>
+                    <div class="detail-content">
+                      <div class="detail-label">Vehicle</div>
+                      <div class="detail-value">${booking.vehicle_details?.make} ${booking.vehicle_details?.model}${booking.vehicle_details?.year ? ` (${booking.vehicle_details.year})` : ''}${booking.vehicle_details?.color ? ` - ${booking.vehicle_details.color}` : ''}</div>
+                    </div>
+                  </div>
+                  
+                  <div class="detail-row">
+                    <div class="detail-icon">📍</div>
+                    <div class="detail-content">
+                      <div class="detail-label">Service Location</div>
+                      <div class="detail-value">
+                        ${booking.service_address?.address_line_1}<br>
+                        ${booking.service_address?.address_line_2 ? `${booking.service_address.address_line_2}<br>` : ''}
+                        ${booking.service_address?.city}, ${booking.service_address?.postcode}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div class="detail-row">
+                    <div class="detail-icon">💰</div>
+                    <div class="detail-content">
+                      <div class="detail-label">Total Investment</div>
+                      <div class="detail-value price-highlight">£${booking.total_price}</div>
+                    </div>
+                  </div>
+                </div>
               </div>
               
-              <div class="detail-row">
-                <span class="detail-label">Vehicle:</span>
-                <span class="detail-value">${booking.vehicle_details?.make} ${booking.vehicle_details?.model}</span>
+              <div class="info-card">
+                <h4>✨ What happens next?</h4>
+                <p><strong>Review & Confirmation:</strong> Our team will review your booking and contact you within 24 hours to confirm the appointment and discuss any specific requirements.</p>
+                <p><strong>Payment:</strong> Payment is due after service completion. We accept cash, card, and bank transfer for your convenience.</p>
+                <p><strong>Preparation:</strong> We'll bring all equipment needed. Please ensure access to water and electricity at your location.</p>
               </div>
               
-              <div class="detail-row">
-                <span class="detail-label">Service Address:</span>
-                <span class="detail-value">
-                  ${booking.service_address?.address_line_1}<br>
-                  ${booking.service_address?.city}, ${booking.service_address?.postcode}
-                </span>
-              </div>
+              ${booking.special_instructions ? `
+                <div class="instructions-card">
+                  <h4 style="color: #9747FF; margin-bottom: 12px;">📝 Your Special Instructions</h4>
+                  <p style="color: rgba(255, 255, 255, 0.8); margin: 0;">${booking.special_instructions}</p>
+                </div>
+              ` : ''}
               
-              <div class="detail-row">
-                <span class="detail-label">Total Price:</span>
-                <span class="detail-value total-price">£${booking.total_price}</span>
-              </div>
-              
-              <div class="detail-row">
-                <span class="detail-label">Status:</span>
-                <span class="detail-value">${booking.status === 'pending' ? 'Awaiting Confirmation' : booking.status}</span>
+              <div class="contact-info">
+                <h4>Need to get in touch?</h4>
+                <div class="contact-item">📧 Email: ${this.config.adminEmail}</div>
+                <div class="contact-item">📱 Phone: Available upon confirmation</div>
+                <p style="color: rgba(255, 255, 255, 0.6); font-size: 14px; margin-top: 15px;">We're here to make your experience exceptional!</p>
               </div>
             </div>
             
-            <div class="highlight">
-              <h4>What happens next?</h4>
-              <p>Our team will review your booking and contact you within 24 hours to confirm the appointment time and discuss any specific requirements.</p>
-              <p><strong>Payment:</strong> Payment is due after service completion. We accept cash, card, and bank transfer.</p>
-            </div>
-            
-            ${booking.special_instructions ? `
-              <div class="booking-details">
-                <h4>Special Instructions:</h4>
-                <p>${booking.special_instructions}</p>
+            <div class="footer">
+              <div class="footer-brand">Love4Detailing</div>
+              <div class="footer-text">
+                Professional Vehicle Detailing Services<br>
+                Transforming vehicles, exceeding expectations<br><br>
+                This is an automated confirmation email.<br>
+                Please do not reply directly to this message.
               </div>
-            ` : ''}
-            
-            <p>If you have any questions or need to make changes to your booking, please contact us:</p>
-            <ul>
-              <li>Email: ${this.config.adminEmail}</li>
-              <li>Phone: [Your phone number]</li>
-            </ul>
-            
-            <p>Thank you for choosing Love 4 Detailing!</p>
-          </div>
-          
-          <div class="footer">
-            <p>Love 4 Detailing - Professional Vehicle Detailing Services</p>
-            <p>This is an automated email. Please do not reply directly to this email.</p>
+            </div>
           </div>
         </body>
       </html>
@@ -464,118 +521,181 @@ This is an automated email. Please do not reply directly to this email.
       <html>
         <head>
           <meta charset="utf-8">
-          <title>New Booking Notification</title>
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>New Booking Alert - Love4Detailing Admin</title>
           <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: #dc2626; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
-            .content { background: #f8fafc; padding: 30px; border-radius: 0 0 8px 8px; }
-            .booking-details { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #dc2626; }
-            .detail-row { display: flex; justify-content: space-between; margin: 10px 0; padding: 8px 0; border-bottom: 1px solid #e2e8f0; }
-            .detail-label { font-weight: bold; color: #64748b; }
-            .detail-value { color: #1e293b; }
-            .customer-info { background: #dbeafe; padding: 15px; border-radius: 6px; margin: 15px 0; }
-            .urgent { background: #fee2e2; padding: 15px; border-radius: 6px; margin: 15px 0; border-left: 4px solid #dc2626; }
-            .total-price { font-size: 18px; font-weight: bold; color: #dc2626; }
+            * { box-sizing: border-box; }
+            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #ffffff; max-width: 600px; margin: 0 auto; padding: 0; background: #0a0a0a; }
+            .email-container { background: #0a0a0a; min-height: 100vh; }
+            .header { background: linear-gradient(135deg, #9747FF 0%, #B269FF 100%); color: white; padding: 30px; text-align: center; }
+            .alert-badge { display: inline-block; background: rgba(255, 255, 255, 0.2); border-radius: 20px; padding: 6px 16px; font-size: 12px; font-weight: 600; margin-bottom: 15px; }
+            .logo-section { margin-bottom: 20px; }
+            .logo-text { font-size: 20px; font-weight: bold; }
+            .content { background: #1a1a1a; padding: 30px; }
+            .priority-alert { background: rgba(151, 71, 255, 0.15); border: 1px solid rgba(151, 71, 255, 0.3); border-radius: 12px; padding: 20px; margin-bottom: 25px; text-align: center; }
+            .priority-alert h3 { color: #B269FF; margin: 0 0 10px 0; font-size: 18px; }
+            .customer-card { background: #252525; border-radius: 12px; padding: 25px; margin: 20px 0; border: 1px solid rgba(151, 71, 255, 0.2); }
+            .customer-header { color: #9747FF; font-size: 18px; font-weight: 600; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; }
+            .customer-details { display: grid; gap: 12px; }
+            .customer-detail { display: flex; align-items: center; gap: 12px; color: rgba(255, 255, 255, 0.8); }
+            .customer-detail strong { color: #ffffff; min-width: 60px; }
+            .booking-card { background: #252525; border-radius: 12px; overflow: hidden; margin: 25px 0; border: 1px solid rgba(151, 71, 255, 0.2); }
+            .booking-header { background: linear-gradient(135deg, rgba(151, 71, 255, 0.1), rgba(178, 105, 255, 0.1)); padding: 20px; border-bottom: 1px solid rgba(151, 71, 255, 0.2); }
+            .booking-ref { color: #9747FF; font-size: 20px; font-weight: bold; margin: 0; }
+            .booking-status { display: inline-block; background: rgba(151, 71, 255, 0.2); color: #B269FF; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 500; margin-top: 8px; }
+            .booking-details { padding: 25px; }
+            .detail-grid { display: grid; gap: 16px; }
+            .detail-row { display: flex; align-items: flex-start; padding: 12px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+            .detail-row:last-child { border-bottom: none; }
+            .detail-icon { width: 20px; height: 20px; margin-right: 12px; color: #9747FF; flex-shrink: 0; margin-top: 2px; }
+            .detail-content { flex: 1; }
+            .detail-label { font-weight: 500; color: rgba(255, 255, 255, 0.7); font-size: 14px; margin-bottom: 4px; }
+            .detail-value { color: #ffffff; font-size: 15px; line-height: 1.4; }
+            .price-highlight { color: #9747FF; font-size: 18px; font-weight: bold; }
+            .instructions-card { background: rgba(151, 71, 255, 0.1); border: 1px solid rgba(151, 71, 255, 0.3); border-radius: 12px; padding: 20px; margin: 20px 0; }
+            .action-card { background: #252525; border: 1px solid rgba(151, 71, 255, 0.3); border-radius: 12px; padding: 25px; margin: 25px 0; }
+            .action-card h4 { color: #B269FF; margin: 0 0 15px 0; font-size: 18px; }
+            .action-list { list-style: none; padding: 0; margin: 0; }
+            .action-list li { margin: 10px 0; padding: 8px 0; color: rgba(255, 255, 255, 0.8); position: relative; padding-left: 24px; }
+            .action-list li::before { content: '→'; position: absolute; left: 0; color: #9747FF; font-weight: bold; }
+            .footer { background: #0a0a0a; padding: 25px; text-align: center; border-top: 1px solid rgba(255, 255, 255, 0.05); }
+            .footer-brand { color: #9747FF; font-weight: 600; margin-bottom: 8px; }
+            .footer-text { color: rgba(255, 255, 255, 0.5); font-size: 12px; line-height: 1.5; }
+            @media (max-width: 480px) {
+              .header, .content, .footer { padding: 20px 15px; }
+              .booking-details, .customer-card, .action-card { padding: 20px 15px; }
+            }
           </style>
         </head>
         <body>
-          <div class="header">
-            <h1>🔔 New Booking Alert</h1>
-            <p>A new booking has been received!</p>
-          </div>
-          
-          <div class="content">
-            <div class="urgent">
-              <h3>⚡ Action Required</h3>
-              <p>A new booking needs your attention. Please review and confirm within 24 hours.</p>
+          <div class="email-container">
+            <div class="header">
+              <div class="alert-badge">🔔 NEW BOOKING ALERT</div>
+              <div class="logo-section">
+                <div class="logo-text">Love4Detailing Admin</div>
+              </div>
+              <h1 style="margin: 0; font-size: 24px; font-weight: 700;">Action Required</h1>
+              <p style="margin: 8px 0 0 0; opacity: 0.9;">New booking awaiting confirmation</p>
             </div>
             
-            <div class="customer-info">
-              <h3>Customer Information</h3>
-              <p><strong>Name:</strong> ${customerName}</p>
-              <p><strong>Email:</strong> ${customerEmail}</p>
+            <div class="content">
+              <div class="priority-alert">
+                <h3>⚡ Priority: High</h3>
+                <p style="margin: 0; color: rgba(255, 255, 255, 0.8);">Please review and respond within 24 hours to maintain service excellence.</p>
+              </div>
+              
+              <div class="customer-card">
+                <div class="customer-header">
+                  <span>👤</span>
+                  <span>Customer Information</span>
+                </div>
+                <div class="customer-details">
+                  <div class="customer-detail">
+                    <strong>Name:</strong>
+                    <span>${customerName}</span>
+                  </div>
+                  <div class="customer-detail">
+                    <strong>Email:</strong>
+                    <span>${customerEmail}</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="booking-card">
+                <div class="booking-header">
+                  <h3 class="booking-ref">${booking.booking_reference}</h3>
+                  <span class="booking-status">${booking.status}</span>
+                </div>
+                
+                <div class="booking-details">
+                  <div class="detail-grid">
+                    <div class="detail-row">
+                      <div class="detail-icon">📅</div>
+                      <div class="detail-content">
+                        <div class="detail-label">Service Date</div>
+                        <div class="detail-value">${formatDate(booking.scheduled_date)}</div>
+                      </div>
+                    </div>
+                    
+                    <div class="detail-row">
+                      <div class="detail-icon">⏰</div>
+                      <div class="detail-content">
+                        <div class="detail-label">Service Time</div>
+                        <div class="detail-value">${formatTime(booking.scheduled_start_time)} (${booking.estimated_duration} min duration)</div>
+                      </div>
+                    </div>
+                    
+                    <div class="detail-row">
+                      <div class="detail-icon">🚗</div>
+                      <div class="detail-content">
+                        <div class="detail-label">Vehicle Details</div>
+                        <div class="detail-value">
+                          ${booking.vehicle_details?.make} ${booking.vehicle_details?.model}
+                          ${booking.vehicle_details?.year ? ` (${booking.vehicle_details.year})` : ''}
+                          ${booking.vehicle_details?.color ? `<br>Color: ${booking.vehicle_details.color}` : ''}
+                          ${booking.vehicle_details?.registration ? `<br>Reg: ${booking.vehicle_details.registration}` : ''}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div class="detail-row">
+                      <div class="detail-icon">📍</div>
+                      <div class="detail-content">
+                        <div class="detail-label">Service Location</div>
+                        <div class="detail-value">
+                          ${booking.service_address?.address_line_1}<br>
+                          ${booking.service_address?.address_line_2 ? `${booking.service_address.address_line_2}<br>` : ''}
+                          ${booking.service_address?.city}, ${booking.service_address?.postcode}
+                          ${booking.distance_km ? `<br><small style="color: rgba(255, 255, 255, 0.6);">Distance: ${booking.distance_km} km</small>` : ''}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div class="detail-row">
+                      <div class="detail-icon">💰</div>
+                      <div class="detail-content">
+                        <div class="detail-label">Service Value</div>
+                        <div class="detail-value price-highlight">£${booking.total_price}</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              ${booking.special_instructions ? `
+                <div class="instructions-card">
+                  <h4 style="color: #B269FF; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                    <span>📝</span>
+                    <span>Special Instructions</span>
+                  </h4>
+                  <p style="color: rgba(255, 255, 255, 0.8); margin: 0; font-style: italic;">${booking.special_instructions}</p>
+                </div>
+              ` : ''}
+              
+              <div class="action-card">
+                <h4>🎯 Required Actions</h4>
+                <ul class="action-list">
+                  <li>Review booking details and customer requirements</li>
+                  <li>Check schedule availability for the requested time slot</li>
+                  <li>Contact customer to confirm appointment details</li>
+                  <li>Update booking status in the admin dashboard</li>
+                  <li>Prepare equipment and materials for the service</li>
+                </ul>
+                
+                <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(255, 255, 255, 0.1); text-align: center;">
+                  <p style="color: #9747FF; font-weight: 600; margin: 0;">💡 Remember: Outstanding service starts with prompt communication!</p>
+                </div>
+              </div>
             </div>
             
-            <div class="booking-details">
-              <h3>Booking Details - ${booking.booking_reference}</h3>
-              
-              <div class="detail-row">
-                <span class="detail-label">Date:</span>
-                <span class="detail-value">${formatDate(booking.scheduled_date)}</span>
+            <div class="footer">
+              <div class="footer-brand">Love4Detailing Admin System</div>
+              <div class="footer-text">
+                Professional Vehicle Detailing Services<br>
+                Admin Notification System<br><br>
+                This is an automated admin alert.<br>
+                Please access the admin dashboard to take action.
               </div>
-              
-              <div class="detail-row">
-                <span class="detail-label">Time:</span>
-                <span class="detail-value">${formatTime(booking.scheduled_start_time)}</span>
-              </div>
-              
-              <div class="detail-row">
-                <span class="detail-label">Vehicle:</span>
-                <span class="detail-value">
-                  ${booking.vehicle_details?.make} ${booking.vehicle_details?.model}
-                  ${booking.vehicle_details?.year ? `(${booking.vehicle_details.year})` : ''}
-                  ${booking.vehicle_details?.color ? `- ${booking.vehicle_details.color}` : ''}
-                </span>
-              </div>
-              
-              <div class="detail-row">
-                <span class="detail-label">Registration:</span>
-                <span class="detail-value">${booking.vehicle_details?.registration || 'Not provided'}</span>
-              </div>
-              
-              <div class="detail-row">
-                <span class="detail-label">Service Address:</span>
-                <span class="detail-value">
-                  ${booking.service_address?.address_line_1}<br>
-                  ${booking.service_address?.address_line_2 ? `${booking.service_address.address_line_2}<br>` : ''}
-                  ${booking.service_address?.city}, ${booking.service_address?.postcode}
-                </span>
-              </div>
-              
-              <div class="detail-row">
-                <span class="detail-label">Distance:</span>
-                <span class="detail-value">${booking.distance_km ? `${booking.distance_km} km` : 'Not calculated'}</span>
-              </div>
-              
-              <div class="detail-row">
-                <span class="detail-label">Estimated Duration:</span>
-                <span class="detail-value">${booking.estimated_duration} minutes</span>
-              </div>
-              
-              <div class="detail-row">
-                <span class="detail-label">Total Price:</span>
-                <span class="detail-value total-price">£${booking.total_price}</span>
-              </div>
-              
-              <div class="detail-row">
-                <span class="detail-label">Status:</span>
-                <span class="detail-value">${booking.status}</span>
-              </div>
-            </div>
-            
-            ${booking.special_instructions ? `
-              <div class="booking-details">
-                <h4>Special Instructions:</h4>
-                <p>${booking.special_instructions}</p>
-              </div>
-            ` : ''}
-            
-            <div class="booking-details">
-              <h4>Pricing Breakdown:</h4>
-              <p><strong>Base Price:</strong> £${booking.base_price}</p>
-              <p><strong>Vehicle Size Multiplier:</strong> ${booking.vehicle_size_multiplier}x</p>
-              ${booking.distance_surcharge ? `<p><strong>Distance Surcharge:</strong> £${booking.distance_surcharge}</p>` : ''}
-              <p><strong>Total:</strong> £${booking.total_price}</p>
-            </div>
-            
-            <div class="urgent">
-              <h4>Next Steps:</h4>
-              <ol>
-                <li>Review the booking details above</li>
-                <li>Check your schedule for availability</li>
-                <li>Contact the customer to confirm the appointment</li>
-                <li>Update the booking status in the admin panel</li>
-              </ol>
             </div>
           </div>
         </body>
@@ -602,48 +722,42 @@ This is an automated email. Please do not reply directly to this email.
     }
 
     return `
-NEW BOOKING ALERT - Love 4 Detailing Admin
+🔔 NEW BOOKING ALERT - Love4Detailing Admin
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⚡ PRIORITY: HIGH - Action Required Within 24 Hours
 
-🔔 A new booking has been received and needs your attention!
-
-CUSTOMER INFORMATION:
+👤 CUSTOMER INFORMATION:
 Name: ${customerName}
 Email: ${customerEmail}
 
-BOOKING DETAILS:
+🎯 BOOKING DETAILS:
 Reference: ${booking.booking_reference}
 Date: ${formatDate(booking.scheduled_date)}
 Time: ${formatTime(booking.scheduled_start_time)}
-Vehicle: ${booking.vehicle_details?.make} ${booking.vehicle_details?.model} ${booking.vehicle_details?.year ? `(${booking.vehicle_details.year})` : ''}
-Registration: ${booking.vehicle_details?.registration || 'Not provided'}
-Color: ${booking.vehicle_details?.color || 'Not specified'}
+Duration: ${booking.estimated_duration} minutes
 
-SERVICE ADDRESS:
-${booking.service_address?.address_line_1}
-${booking.service_address?.address_line_2 ? `${booking.service_address.address_line_2}` : ''}
-${booking.service_address?.city}, ${booking.service_address?.postcode}
+🚗 VEHICLE INFORMATION:
+${booking.vehicle_details?.make} ${booking.vehicle_details?.model}${booking.vehicle_details?.year ? ` (${booking.vehicle_details.year})` : ''}${booking.vehicle_details?.color ? `\nColor: ${booking.vehicle_details.color}` : ''}${booking.vehicle_details?.registration ? `\nRegistration: ${booking.vehicle_details.registration}` : ''}
 
-PRICING:
-Base Price: £${booking.base_price}
-Vehicle Multiplier: ${booking.vehicle_size_multiplier}x
-Distance Surcharge: £${booking.distance_surcharge || 0}
-Total Price: £${booking.total_price}
+📍 SERVICE LOCATION:
+${booking.service_address?.address_line_1}${booking.service_address?.address_line_2 ? `\n${booking.service_address.address_line_2}` : ''}
+${booking.service_address?.city}, ${booking.service_address?.postcode}${booking.distance_km ? `\nDistance: ${booking.distance_km} km` : ''}
 
-Estimated Duration: ${booking.estimated_duration} minutes
-Distance: ${booking.distance_km ? `${booking.distance_km} km` : 'Not calculated'}
+💰 SERVICE VALUE: £${booking.total_price}
 
-${booking.special_instructions ? `SPECIAL INSTRUCTIONS:\n${booking.special_instructions}\n` : ''}
+${booking.special_instructions ? `📝 SPECIAL INSTRUCTIONS:\n${booking.special_instructions}\n\n` : ''}
+🎯 REQUIRED ACTIONS:
+→ Review booking details and customer requirements
+→ Check schedule availability for requested time slot
+→ Contact customer to confirm appointment details
+→ Update booking status in admin dashboard
+→ Prepare equipment and materials for service
 
-ACTION REQUIRED:
-1. Review the booking details above
-2. Check your schedule for availability  
-3. Contact the customer to confirm the appointment
-4. Update the booking status in the admin panel
+💡 Remember: Outstanding service starts with prompt communication!
 
-Please confirm this booking within 24 hours.
-
----
-Love 4 Detailing Admin System
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Love4Detailing Admin System
+Professional Vehicle Detailing Services
     `
   }
 
@@ -673,10 +787,11 @@ Love 4 Detailing Admin System
           <title>Booking Status Update</title>
           <style>
             body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: ${color}; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
-            .content { background: #f8fafc; padding: 30px; border-radius: 0 0 8px 8px; }
-            .status-update { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid ${color}; }
-            .highlight { background: #dbeafe; padding: 15px; border-radius: 6px; margin: 15px 0; }
+            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #ffffff; max-width: 600px; margin: 0 auto; padding: 0; background: #0a0a0a; }
+            .header { background: linear-gradient(135deg, ${color}, ${color}dd); color: white; padding: 30px; text-align: center; }
+            .content { background: #1a1a1a; padding: 30px; }
+            .status-update { background: #252525; border-radius: 12px; padding: 25px; margin: 20px 0; border: 1px solid ${color}40; }
+            .highlight { background: rgba(151, 71, 255, 0.1); border: 1px solid rgba(151, 71, 255, 0.3); border-radius: 12px; padding: 20px; margin: 20px 0; }
           </style>
         </head>
         <body>
@@ -771,23 +886,25 @@ Love 4 Detailing - Professional Vehicle Detailing Services
           <title>Complete Your Account Setup</title>
           <style>
             body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: #059669; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
-            .content { background: #f8fafc; padding: 30px; border-radius: 0 0 8px 8px; }
-            .setup-box { background: white; padding: 25px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #059669; text-align: center; }
+            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #ffffff; max-width: 600px; margin: 0 auto; padding: 0; background: #0a0a0a; }
+            .header { background: linear-gradient(135deg, #9747FF 0%, #B269FF 100%); color: white; padding: 30px; text-align: center; }
+            .content { background: #1a1a1a; padding: 30px; }
+            .setup-box { background: #252525; border-radius: 12px; padding: 30px; margin: 25px 0; border: 1px solid rgba(151, 71, 255, 0.3); text-align: center; }
             .setup-button { 
               display: inline-block; 
-              background: #059669; 
+              background: linear-gradient(135deg, #9747FF, #B269FF); 
               color: white; 
               padding: 15px 30px; 
               text-decoration: none; 
-              border-radius: 6px; 
+              border-radius: 8px; 
               font-weight: bold; 
               margin: 20px 0;
+              transition: transform 0.2s;
             }
-            .setup-button:hover { background: #047857; }
-            .highlight { background: #ecfdf5; padding: 15px; border-radius: 6px; margin: 15px 0; border-left: 4px solid #059669; }
-            .footer { text-align: center; margin-top: 30px; color: #64748b; font-size: 14px; }
-            .warning { background: #fef3c7; padding: 15px; border-radius: 6px; margin: 15px 0; border-left: 4px solid #f59e0b; }
+            .setup-button:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(151, 71, 255, 0.3); }
+            .highlight { background: rgba(151, 71, 255, 0.1); border: 1px solid rgba(151, 71, 255, 0.3); border-radius: 12px; padding: 20px; margin: 20px 0; }
+            .footer { text-align: center; margin-top: 30px; color: rgba(255, 255, 255, 0.5); font-size: 12px; background: #0a0a0a; padding: 25px; }
+            .warning { background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 12px; padding: 20px; margin: 20px 0; }
           </style>
         </head>
         <body>
@@ -917,15 +1034,16 @@ ${setupUrl}
           <title>Booking Declined</title>
           <style>
             body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: #dc2626; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
-            .content { background: #f8fafc; padding: 30px; border-radius: 0 0 8px 8px; }
-            .booking-details { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #dc2626; }
-            .detail-row { display: flex; justify-content: space-between; margin: 10px 0; padding: 8px 0; border-bottom: 1px solid #e2e8f0; }
-            .detail-label { font-weight: bold; color: #64748b; }
-            .detail-value { color: #1e293b; }
-            .decline-reason { background: #fef2f2; padding: 15px; border-radius: 6px; margin: 15px 0; border-left: 4px solid #dc2626; }
-            .rebook-section { background: #dbeafe; padding: 15px; border-radius: 6px; margin: 15px 0; border-left: 4px solid #2563eb; }
-            .footer { text-align: center; margin-top: 30px; color: #64748b; font-size: 14px; }
+            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #ffffff; max-width: 600px; margin: 0 auto; padding: 0; background: #0a0a0a; }
+            .header { background: linear-gradient(135deg, #ef4444, #dc2626); color: white; padding: 30px; text-align: center; }
+            .content { background: #1a1a1a; padding: 30px; }
+            .booking-details { background: #252525; border-radius: 12px; padding: 25px; margin: 20px 0; border: 1px solid rgba(239, 68, 68, 0.3); }
+            .detail-row { display: flex; justify-content: space-between; margin: 12px 0; padding: 10px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+            .detail-label { font-weight: 600; color: rgba(255, 255, 255, 0.7); }
+            .detail-value { color: #ffffff; }
+            .decline-reason { background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 12px; padding: 20px; margin: 20px 0; }
+            .rebook-section { background: rgba(151, 71, 255, 0.1); border: 1px solid rgba(151, 71, 255, 0.3); border-radius: 12px; padding: 20px; margin: 20px 0; }
+            .footer { text-align: center; margin-top: 30px; color: rgba(255, 255, 255, 0.5); font-size: 12px; background: #0a0a0a; padding: 25px; }
           </style>
         </head>
         <body>
@@ -1085,15 +1203,16 @@ Visit our website to book a new appointment or contact us for assistance
           <title>Reschedule Request</title>
           <style>
             body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: #dc2626; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
-            .content { background: #f8fafc; padding: 30px; border-radius: 0 0 8px 8px; }
-            .booking-details { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #dc2626; }
-            .detail-row { display: flex; justify-content: space-between; margin: 10px 0; padding: 8px 0; border-bottom: 1px solid #e2e8f0; }
-            .detail-label { font-weight: bold; color: #64748b; }
-            .detail-value { color: #1e293b; }
-            .highlight { background: #fef2f2; padding: 15px; border-radius: 6px; margin: 15px 0; border: 1px solid #fecaca; }
-            .footer { text-align: center; margin-top: 30px; color: #64748b; font-size: 14px; }
-            .cta-button { background: #dc2626; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin: 10px 0; }
+            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #ffffff; max-width: 600px; margin: 0 auto; padding: 0; background: #0a0a0a; }
+            .header { background: linear-gradient(135deg, #9747FF 0%, #B269FF 100%); color: white; padding: 30px; text-align: center; }
+            .content { background: #1a1a1a; padding: 30px; }
+            .booking-details { background: #252525; border-radius: 12px; padding: 25px; margin: 20px 0; border: 1px solid rgba(151, 71, 255, 0.3); }
+            .detail-row { display: flex; justify-content: space-between; margin: 12px 0; padding: 10px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+            .detail-label { font-weight: 600; color: rgba(255, 255, 255, 0.7); }
+            .detail-value { color: #ffffff; }
+            .highlight { background: rgba(151, 71, 255, 0.1); border: 1px solid rgba(151, 71, 255, 0.3); border-radius: 12px; padding: 20px; margin: 20px 0; }
+            .footer { text-align: center; margin-top: 30px; color: rgba(255, 255, 255, 0.5); font-size: 12px; background: #0a0a0a; padding: 25px; }
+            .cta-button { background: linear-gradient(135deg, #9747FF, #B269FF); color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; display: inline-block; margin: 10px 0; }
           </style>
         </head>
         <body>
@@ -1228,14 +1347,15 @@ Love 4 Detailing - Admin Notifications
           <title>Reschedule Request Update</title>
           <style>
             body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: ${color}; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
-            .content { background: #f8fafc; padding: 30px; border-radius: 0 0 8px 8px; }
-            .booking-details { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid ${color}; }
-            .detail-row { display: flex; justify-content: space-between; margin: 10px 0; padding: 8px 0; border-bottom: 1px solid #e2e8f0; }
-            .detail-label { font-weight: bold; color: #64748b; }
-            .detail-value { color: #1e293b; }
-            .highlight { background: #f0f9ff; padding: 15px; border-radius: 6px; margin: 15px 0; border: 1px solid #bae6fd; }
-            .footer { text-align: center; margin-top: 30px; color: #64748b; font-size: 14px; }
+            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #ffffff; max-width: 600px; margin: 0 auto; padding: 0; background: #0a0a0a; }
+            .header { background: linear-gradient(135deg, ${color}, ${color}dd); color: white; padding: 30px; text-align: center; }
+            .content { background: #1a1a1a; padding: 30px; }
+            .booking-details { background: #252525; border-radius: 12px; padding: 25px; margin: 20px 0; border: 1px solid ${color}40; }
+            .detail-row { display: flex; justify-content: space-between; margin: 12px 0; padding: 10px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+            .detail-label { font-weight: 600; color: rgba(255, 255, 255, 0.7); }
+            .detail-value { color: #ffffff; }
+            .highlight { background: rgba(151, 71, 255, 0.1); border: 1px solid rgba(151, 71, 255, 0.3); border-radius: 12px; padding: 20px; margin: 20px 0; }
+            .footer { text-align: center; margin-top: 30px; color: rgba(255, 255, 255, 0.5); font-size: 12px; background: #0a0a0a; padding: 25px; }
           </style>
         </head>
         <body>
