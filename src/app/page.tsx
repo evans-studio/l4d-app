@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 import { Button } from '@/components/ui/primitives/Button';
 import { Container, Section } from '@/components/layout/templates/PageLayout';
 import { ArrowRight, Star, CheckCircle, Award, Car, Sparkles, Palette, Shield, Heart, Users, ChevronDown } from 'lucide-react';
@@ -30,15 +31,16 @@ export default function HomePage() {
               </div>
               
               <div className="flex flex-col sm:flex-row gap-4">
-                <Button 
-                  variant="primary" 
-                  size="lg" 
-                  rightIcon={<ArrowRight className="w-5 h-5" />}
-                  onClick={() => window.location.href = '/book'}
-                  className="flex-1 sm:flex-none"
-                >
-                  Book Your Service
-                </Button>
+                <Link href="/book" className="flex-1 sm:flex-none">
+                  <Button 
+                    variant="primary" 
+                    size="lg" 
+                    rightIcon={<ArrowRight className="w-5 h-5" />}
+                    fullWidth
+                  >
+                    Book Your Service
+                  </Button>
+                </Link>
                 <Button 
                   variant="outline" 
                   size="lg"
@@ -127,9 +129,11 @@ export default function HomePage() {
                 </div>
               </CardContent>
               <CardFooter>
-                <Button variant="outline" fullWidth onClick={() => window.location.href = '/book'}>
-                  Choose Essential
-                </Button>
+                <Link href="/book" className="w-full">
+                  <Button variant="outline" fullWidth>
+                    Choose Essential
+                  </Button>
+                </Link>
               </CardFooter>
             </Card>
 
@@ -175,9 +179,11 @@ export default function HomePage() {
                 </div>
               </CardContent>
               <CardFooter>
-                <Button variant="primary" fullWidth onClick={() => window.location.href = '/book'}>
-                  Choose Premium
-                </Button>
+                <Link href="/book" className="w-full">
+                  <Button variant="primary" fullWidth>
+                    Choose Premium
+                  </Button>
+                </Link>
               </CardFooter>
             </Card>
 
@@ -212,9 +218,11 @@ export default function HomePage() {
                 </div>
               </CardContent>
               <CardFooter>
-                <Button variant="outline" fullWidth onClick={() => window.location.href = '/book'}>
-                  Choose Ultimate
-                </Button>
+                <Link href="/book" className="w-full">
+                  <Button variant="outline" fullWidth>
+                    Choose Ultimate
+                  </Button>
+                </Link>
               </CardFooter>
             </Card>
           </div>
@@ -278,9 +286,11 @@ export default function HomePage() {
             <h2 className="text-3xl font-bold text-text-primary mb-4">Ready to Transform Your Car?</h2>
             <p className="text-xl text-text-secondary mb-8">Book your professional mobile detailing service today</p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button variant="primary" size="lg" onClick={() => window.location.href = '/book'}>
-                Book Now
-              </Button>
+              <Link href="/book">
+                <Button variant="primary" size="lg">
+                  Book Now
+                </Button>
+              </Link>
               <Button variant="outline" size="lg" onClick={() => window.location.href = 'tel:+447123456789'}>
                 Call 07123 456789
               </Button>
