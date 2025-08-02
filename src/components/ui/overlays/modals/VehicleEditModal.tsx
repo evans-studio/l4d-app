@@ -50,7 +50,7 @@ export const VehicleEditModal: React.FC<VehicleEditModalProps> = ({
   })
   const [isLoading, setIsLoading] = useState(false)
   const [vehicleSizes, setVehicleSizes] = useState<VehicleSize[]>([])
-  const [licensePlateError, setLicensePlateError] = useState<string | null>(null)
+  const [licensePlateError, setLicensePlateError] = useState<string | undefined>(undefined)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
   // Get available makes from vehicle data
@@ -288,7 +288,7 @@ export const VehicleEditModal: React.FC<VehicleEditModalProps> = ({
           onChange={(e) => {
             const { formatted, error } = formatLicensePlateInput(e.target.value)
             setFormData(prev => ({ ...prev, registration: formatted }))
-            setLicensePlateError(error || null)
+            setLicensePlateError(error || undefined)
           }}
           error={licensePlateError}
           helperText={licensePlateError || "UK license plate format (optional)"}

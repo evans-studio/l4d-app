@@ -47,7 +47,7 @@ export const VehicleCreateModal: React.FC<BaseOverlayProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [vehicleSizes, setVehicleSizes] = useState<VehicleSize[]>([])
-  const [licensePlateError, setLicensePlateError] = useState<string | null>(null)
+  const [licensePlateError, setLicensePlateError] = useState<string | undefined>(undefined)
 
   // Get available makes from vehicle data
   const availableMakes = vehicleData.vehicles.map(v => v.make).sort()
@@ -271,7 +271,7 @@ export const VehicleCreateModal: React.FC<BaseOverlayProps> = ({
           onChange={(e) => {
             const { formatted, error } = formatLicensePlateInput(e.target.value)
             setFormData(prev => ({ ...prev, license_plate: formatted }))
-            setLicensePlateError(error || null)
+            setLicensePlateError(error || undefined)
           }}
           error={licensePlateError}
           helperText={licensePlateError || "UK license plate format (optional)"}

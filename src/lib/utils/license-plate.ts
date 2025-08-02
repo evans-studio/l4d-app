@@ -114,5 +114,6 @@ export const LICENSE_PLATE_EXAMPLES = [
  * Get random license plate example for placeholder
  */
 export function getRandomLicensePlateExample(): string {
-  return LICENSE_PLATE_EXAMPLES[Math.floor(Math.random() * LICENSE_PLATE_EXAMPLES.length)]
+  const randomIndex = Math.floor(Math.random() * LICENSE_PLATE_EXAMPLES.length)
+  return LICENSE_PLATE_EXAMPLES[randomIndex] || 'AB12 CDE'
 }
