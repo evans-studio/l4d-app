@@ -222,44 +222,6 @@ export default function DashboardPage() {
             <RecentActivityWidget recentBookings={recentBookings} />
           </div>
 
-          {/* Quick Navigation - Mobile First */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <Button
-              variant="outline"
-              onClick={() => router.push('/dashboard/bookings')}
-              className="h-16 flex flex-col items-center justify-center gap-1"
-            >
-              <span className="text-xs font-medium">All Bookings</span>
-              <span className="text-lg font-bold text-brand-400">{bookings.length}</span>
-            </Button>
-            
-            <Button
-              variant="outline"
-              onClick={() => router.push('/dashboard/vehicles')}
-              className="h-16 flex flex-col items-center justify-center gap-1"
-            >
-              <span className="text-xs font-medium">Vehicles</span>
-              <span className="text-sm text-text-secondary">Saved</span>
-            </Button>
-            
-            <Button
-              variant="outline"
-              onClick={() => router.push('/dashboard/addresses')}
-              className="h-16 flex flex-col items-center justify-center gap-1"
-            >
-              <span className="text-xs font-medium">Addresses</span>
-              <span className="text-sm text-text-secondary">Saved</span>
-            </Button>
-            
-            <Button
-              variant="outline"
-              onClick={() => router.push('/dashboard/profile')}
-              className="h-16 flex flex-col items-center justify-center gap-1"
-            >
-              <span className="text-xs font-medium">Profile</span>
-              <span className="text-sm text-text-secondary">Settings</span>
-            </Button>
-          </div>
         </Container>
       </CustomerLayout>
     </CustomerRoute>

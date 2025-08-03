@@ -48,6 +48,11 @@ const statusConfig = {
     icon: CheckCircle,
     color: 'success'
   },
+  rescheduled: {
+    label: 'Rescheduled',
+    icon: Calendar,
+    color: 'brand'
+  },
   in_progress: {
     label: 'In Progress',
     icon: Activity,
@@ -61,6 +66,11 @@ const statusConfig = {
   cancelled: {
     label: 'Cancelled',
     icon: X,
+    color: 'error'
+  },
+  no_show: {
+    label: 'No Show',
+    icon: AlertCircle,
     color: 'error'
   }
 } as const
@@ -137,7 +147,7 @@ export function RecentActivityWidget({ recentBookings }: RecentActivityWidgetPro
       </CardHeader>
       <CardContent className="space-y-3">
         {displayBookings.map((booking) => {
-          const config = statusConfig[booking.status]
+          const config = statusConfig[booking.status] || statusConfig.pending
           const StatusIcon = config.icon
           
           return (

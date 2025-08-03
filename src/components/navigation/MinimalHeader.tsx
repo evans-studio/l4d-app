@@ -97,7 +97,7 @@ const UserMenu: React.FC<{
           }
           setIsOpen(!isOpen)
         }}
-        className="flex items-center gap-2 px-2 py-1.5 hover:bg-surface-hover transition-colors"
+        className="flex items-center gap-2 px-2 py-1.5 hover:bg-surface-hover transition-colors min-h-[44px] touch-manipulation"
         aria-expanded={isOpen}
         aria-haspopup="true"
       >
@@ -122,6 +122,8 @@ const UserMenu: React.FC<{
       {isOpen && (
         <div className={cn(
           "absolute right-0 w-64 bg-surface-primary border border-border-secondary rounded-lg shadow-lg z-[100] py-2",
+          "sm:w-64", // Desktop width
+          "w-72 sm:w-64", // Mobile gets wider dropdown
           dropdownPosition === 'bottom' ? "top-full mt-2" : "bottom-full mb-2"
         )}>
           {/* User Info Header */}
@@ -143,7 +145,7 @@ const UserMenu: React.FC<{
           <div className="py-1">
             <button
               onClick={handleDashboardClick}
-              className="w-full flex items-center gap-3 px-4 py-2 text-sm text-text-secondary hover:bg-surface-hover hover:text-text-primary transition-colors"
+              className="w-full flex items-center gap-3 px-4 py-3 text-sm text-text-secondary hover:bg-surface-hover hover:text-text-primary transition-colors min-h-[44px] touch-manipulation"
             >
               <Home className="w-4 h-4" />
               {isAdmin ? 'Admin Dashboard' : 'Dashboard'}
@@ -151,7 +153,7 @@ const UserMenu: React.FC<{
             
             <button
               onClick={handleProfileClick}
-              className="w-full flex items-center gap-3 px-4 py-2 text-sm text-text-secondary hover:bg-surface-hover hover:text-text-primary transition-colors"
+              className="w-full flex items-center gap-3 px-4 py-3 text-sm text-text-secondary hover:bg-surface-hover hover:text-text-primary transition-colors min-h-[44px] touch-manipulation"
             >
               <Settings className="w-4 h-4" />
               Settings
@@ -162,7 +164,7 @@ const UserMenu: React.FC<{
           <div className="border-t border-border-secondary pt-1">
             <button
               onClick={handleLogoutClick}
-              className="w-full flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+              className="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors min-h-[44px] touch-manipulation"
             >
               <LogOut className="w-4 h-4" />
               Sign Out
@@ -451,12 +453,10 @@ export const MinimalHeader: React.FC<MinimalHeaderProps> = ({ className, showMob
               )}
             </nav>
 
-            {/* Mobile User Indicator */}
+            {/* Mobile User Menu */}
             <div className="lg:hidden">
               {!isLoading && user && (
-                <div className="w-8 h-8 rounded-full bg-brand-600 text-white flex items-center justify-center text-sm font-medium">
-                  {profile?.first_name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || '?'}
-                </div>
+                <UserMenu user={user} profile={profile} onLogout={handleLogout} />
               )}
             </div>
           </div>
