@@ -74,7 +74,7 @@ interface TableProps<T = Record<string, unknown>> extends VariantProps<typeof ta
   filterable?: boolean;
   loading?: boolean;
   emptyMessage?: string;
-  mobileScrollable?: boolean;
+  mobileView?: 'scroll' | 'cards' | 'auto'; // 'auto' will use cards on mobile, scroll on tablet/desktop
   onRowClick?: (row: T, index: number) => void;
 }
 
@@ -89,7 +89,7 @@ export const Table = <T extends Record<string, unknown>>({
   filterable = false,
   loading = false,
   emptyMessage = 'No data available',
-  mobileScrollable = true,
+  mobileView = 'auto',
   onRowClick,
   ...props
 }: TableProps<T>) => {
@@ -196,118 +196,137 @@ export const Table = <T extends Record<string, unknown>>({
         </div>
       )}
 
-      {/* Table Container */}
-      <div className={cn(
-        'overflow-hidden rounded-lg border border-gray-700',
-        mobileScrollable && 'overflow-x-auto'
-      )}>
-        <table
-          className={cn(tableVariants({ variant, size }), className)}
-          {...props}
-        >
-          <thead>
-            <tr>
-              {columns.map((column) => (
-                <th
-                  key={column.key}
-                  className={cn(
-                    cellVariants({ 
-                      variant: 'header', 
-                      align: column.align,
-                      size 
-                    }),
-                    column.mobileHidden && 'hidden sm:table-cell',
-                    (sortable && column.sortable !== false) && 'cursor-pointer select-none hover:bg-gray-600',
-                    column.width && `w-[${column.width}]`
-                  )}
-                  style={{ width: column.width }}
-                  onClick={() => (sortable && column.sortable !== false) && handleSort(column.key)}
-                >
-                  <div className="flex items-center justify-between">
-                    <span>{column.header}</span>
-                    {(sortable && column.sortable !== false) && (
-                      <span className="ml-2">
-                        {getSortIcon(column.key)}
-                      </span>
-                    )}
-                  </div>
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {sortedData.length === 0 ? (
-              <tr>
-                <td
-                  colSpan={columns.length}
-                  className={cn(cellVariants({ variant: 'body', align: 'center', size }))}
-                >
-                  <div className="py-8 text-gray-400">
-                    {emptyMessage}
-                  </div>
-                </td>
-              </tr>
-            ) : (
-              sortedData.map((row, index) => (
-                <tr
-                  key={index}
-                  className={cn(
-                    'group',
-                    onRowClick && 'cursor-pointer hover:bg-gray-750'
-                  )}
-                  onClick={() => onRowClick?.(row, index)}
-                >
-                  {columns.map((column) => (
-                    <td
-                      key={column.key}
-                      className={cn(
-                        cellVariants({ 
-                          variant: variant === 'minimal' ? 'minimal' : 'body',
-                          align: column.align,
-                          size 
-                        }),
-                        column.mobileHidden && 'hidden sm:table-cell'
-                      )}
-                    >
-                      {column.render 
-                        ? column.render(row[column.key], row)
-                        : String(row[column.key] || '')
-                      }
-                    </td>
-                  ))}
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Mobile Card View (Alternative) */}
-      <div className="sm:hidden space-y-3">
-        {sortedData.map((row, index) => (
-          <div
-            key={index}
-            className="bg-gray-800 rounded-lg p-4 border border-gray-700"
-            onClick={() => onRowClick?.(row, index)}
+      {/* Desktop/Tablet Table View */}
+      {(mobileView === 'scroll' || mobileView === 'auto') && (
+        <div className={cn(
+          'overflow-hidden rounded-lg border border-gray-700',
+          mobileView === 'auto' ? 'hidden sm:block' : '',  // Hide on mobile when auto
+          mobileView === 'scroll' && 'overflow-x-auto'
+        )}>
+          <table
+            className={cn(tableVariants({ variant, size }), className)}
+            {...props}
           >
-            {columns
-              .filter(col => !col.mobileHidden)
-              .map((column) => (
-                <div key={column.key} className="flex justify-between py-1">
-                  <span className="text-gray-400 text-sm font-medium">
-                    {column.header}:
-                  </span>
-                  <span className="text-gray-100 text-sm">
-                    {column.render 
-                      ? column.render(row[column.key], row)
-                      : String(row[column.key] || '')
-                    }
-                  </span>
-                </div>
-              ))}
-          </div>
-        ))}
-      </div>
+            <thead>
+              <tr>
+                {columns.map((column) => (
+                  <th
+                    key={column.key}
+                    className={cn(
+                      cellVariants({ 
+                        variant: 'header', 
+                        align: column.align,
+                        size 
+                      }),
+                      column.mobileHidden && mobileView === 'scroll' && 'hidden sm:table-cell',
+                      (sortable && column.sortable !== false) && 'cursor-pointer select-none hover:bg-gray-600',
+                      column.width && `w-[${column.width}]`
+                    )}
+                    style={{ width: column.width }}
+                    onClick={() => (sortable && column.sortable !== false) && handleSort(column.key)}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span>{column.header}</span>
+                      {(sortable && column.sortable !== false) && (
+                        <span className="ml-2">
+                          {getSortIcon(column.key)}
+                        </span>
+                      )}
+                    </div>
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {sortedData.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={columns.length}
+                    className={cn(cellVariants({ variant: 'body', align: 'center', size }))}
+                  >
+                    <div className="py-8 text-gray-400">
+                      {emptyMessage}
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                sortedData.map((row, index) => (
+                  <tr
+                    key={index}
+                    className={cn(
+                      'group',
+                      onRowClick && 'cursor-pointer hover:bg-gray-750'
+                    )}
+                    onClick={() => onRowClick?.(row, index)}
+                  >
+                    {columns.map((column) => (
+                      <td
+                        key={column.key}
+                        className={cn(
+                          cellVariants({ 
+                            variant: variant === 'minimal' ? 'minimal' : 'body',
+                            align: column.align,
+                            size 
+                          }),
+                          column.mobileHidden && mobileView === 'scroll' && 'hidden sm:table-cell'
+                        )}
+                      >
+                        {column.render 
+                          ? column.render(row[column.key], row)
+                          : String(row[column.key] || '')
+                        }
+                      </td>
+                    ))}
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Mobile Card View */}
+      {(mobileView === 'cards' || mobileView === 'auto') && (
+        <div className={cn(
+          'space-y-3',
+          mobileView === 'auto' ? 'block sm:hidden' : '' // Show only on mobile when auto
+        )}>
+          {sortedData.length === 0 ? (
+            <div className="bg-gray-800 rounded-lg p-8 border border-gray-700 text-center">
+              <div className="text-gray-400">
+                {emptyMessage}
+              </div>
+            </div>
+          ) : (
+            sortedData.map((row, index) => (
+              <div
+                key={index}
+                className={cn(
+                  'bg-gray-800 rounded-lg p-4 border border-gray-700 transition-colors',
+                  onRowClick && 'cursor-pointer hover:bg-gray-750 hover:border-gray-600'
+                )}
+                onClick={() => onRowClick?.(row, index)}
+              >
+                {columns
+                  .filter(col => !col.mobileHidden)
+                  .map((column) => (
+                    <div key={column.key} className="flex justify-between items-start py-2 first:pt-0 last:pb-0">
+                      <span className="text-gray-400 text-sm font-medium flex-shrink-0 mr-4">
+                        {column.header}:
+                      </span>
+                      <span className="text-gray-100 text-sm text-right flex-1">
+                        {column.render 
+                          ? column.render(row[column.key], row)
+                          : String(row[column.key] || '')
+                        }
+                      </span>
+                    </div>
+                  ))}
+              </div>
+            ))
+          )}
+        </div>
+      )}
     </div>
   );
 };
@@ -398,6 +417,7 @@ export const TableDemo: React.FC = () => {
         sortable
         searchable
         filterable
+        mobileView="auto"
         onRowClick={(row) => console.log('Clicked:', row)}
       />
     </div>

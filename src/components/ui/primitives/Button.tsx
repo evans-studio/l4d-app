@@ -51,37 +51,21 @@ const buttonVariants = cva(
       loading: false,
     },
     compoundVariants: [
-      // Touch-friendly sizing for mobile
+      // Touch-friendly sizing for mobile - ensure 44px minimum for accessibility
       {
         size: ['xs', 'sm'],
-        class: 'min-h-[44px] sm:min-h-auto', // Ensure minimum touch target on mobile
+        class: 'min-h-[44px]', // Always maintain minimum touch target
       },
-      // Link variant overrides
+      // Link variant overrides - links don't need touch targets
       {
         variant: 'link',
         size: ['xs', 'sm', 'md', 'lg', 'xl'],
-        class: 'h-auto p-0 gap-1',
+        class: 'h-auto min-h-0 p-0 gap-1',
       },
-      // Icon variant overrides
+      // Icon variant ensures proper touch targets
       {
-        variant: 'primary',
         size: 'icon',
-        class: 'h-10 w-10 min-h-[44px] min-w-[44px] sm:min-h-10 sm:min-w-10',
-      },
-      {
-        variant: 'secondary',
-        size: 'icon',
-        class: 'h-10 w-10 min-h-[44px] min-w-[44px] sm:min-h-10 sm:min-w-10',
-      },
-      {
-        variant: 'outline',
-        size: 'icon',
-        class: 'h-10 w-10 min-h-[44px] min-w-[44px] sm:min-h-10 sm:min-w-10',
-      },
-      {
-        variant: 'ghost',
-        size: 'icon',
-        class: 'h-10 w-10 min-h-[44px] min-w-[44px] sm:min-h-10 sm:min-w-10',
+        class: 'min-h-[44px] min-w-[44px]',
       },
     ],
   }

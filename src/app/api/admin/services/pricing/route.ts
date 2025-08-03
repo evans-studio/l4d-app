@@ -38,12 +38,13 @@ export async function GET(request: NextRequest) {
       { id: 'extra_large', name: 'Extra Large', display_order: 4 }
     ]
 
-    // Create mapping from size names to IDs
-    const sizeNameToId: Record<string, string> = {}
-    vehicleSizes.forEach(size => {
-      const normalizedName = size.name.toLowerCase().replace(/\s+/g, '_')
-      sizeNameToId[normalizedName] = size.id
-    })
+    // Create mapping from database column names to vehicle size IDs
+    const sizeNameToId: Record<string, string> = {
+      'small': 'small',
+      'medium': 'medium', 
+      'large': 'large',
+      'extra_large': 'extra_large'
+    }
 
     // Transform into matrix format for backward compatibility
     interface PricingMatrix {
@@ -121,11 +122,12 @@ export async function PUT(request: NextRequest) {
     ]
 
     // Create mapping from vehicle size IDs to column names
-    const sizeIdToColumn: Record<string, string> = {}
-    vehicleSizes.forEach(size => {
-      const normalizedName = size.name.toLowerCase().replace(/\s+/g, '_')
-      sizeIdToColumn[size.id] = normalizedName
-    })
+    const sizeIdToColumn: Record<string, string> = {
+      'small': 'small',
+      'medium': 'medium',
+      'large': 'large',
+      'extra_large': 'extra_large'
+    }
 
     // Build the pricing record with denormalized structure
     const pricingRecord: {
@@ -142,16 +144,8 @@ export async function PUT(request: NextRequest) {
     // Map vehicle size IDs to column names and set prices
     Object.entries(pricing as Record<string, number>).forEach(([vehicleSizeId, price]) => {
       const columnName = sizeIdToColumn[vehicleSizeId]
-      if (columnName && price && Number(price) > 0) {
-        if (columnName === 'small') {
-          pricingRecord.small = Number(price)
-        } else if (columnName === 'medium') {
-          pricingRecord.medium = Number(price)
-        } else if (columnName === 'large') {
-          pricingRecord.large = Number(price)
-        } else if (columnName === 'extra_large') {
-          pricingRecord.extra_large = Number(price)
-        }
+      if (columnName && Number(price) >= 0) { // Allow 0 prices
+        (pricingRecord as any)[columnName] = Number(price)
       }
     })
 

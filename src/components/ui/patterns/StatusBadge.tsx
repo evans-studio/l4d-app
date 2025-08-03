@@ -32,7 +32,7 @@ const statusBadgeVariants = cva(
   }
 )
 
-export interface StatusBadgeProps extends VariantProps<typeof statusBadgeVariants> {
+export interface StatusBadgeProps extends Omit<VariantProps<typeof statusBadgeVariants>, 'status'> {
   status: 'draft' | 'pending' | 'confirmed' | 'rescheduled' | 'in_progress' | 'completed' | 'paid' | 'cancelled' | 'declined' | 'no_show' | string
   showIcon?: boolean
   className?: string
@@ -102,7 +102,7 @@ export function StatusBadge({
   const Icon = config.icon
 
   return (
-    <span className={statusBadgeVariants({ status, size, className })}>
+    <span className={statusBadgeVariants({ status: status as any, size, className })}>
       {showIcon && <Icon className="w-3 h-3" />}
       {config.label}
     </span>

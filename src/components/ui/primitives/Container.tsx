@@ -17,10 +17,13 @@ const containerVariants = cva(
       },
       padding: {
         none: '',
+        xs: 'px-3 sm:px-4',
         sm: 'px-4 sm:px-6',
         md: 'px-4 sm:px-6 lg:px-8',
         lg: 'px-6 sm:px-8 lg:px-12',
-        xl: 'px-8 sm:px-12 lg:px-16'
+        xl: 'px-8 sm:px-12 lg:px-16',
+        mobile: 'px-4 sm:px-6', // Mobile-optimized padding
+        tight: 'px-2 sm:px-4', // For cramped mobile layouts
       },
       centered: {
         true: 'text-center',
@@ -61,7 +64,7 @@ export const PageContainer = forwardRef<HTMLDivElement, Omit<ContainerProps, 'as
     <Container
       ref={ref}
       as="main"
-      className={`min-h-screen py-8 ${className || ''}`}
+      className={`min-h-screen py-4 sm:py-8 ${className || ''}`}
       {...props}
     />
   )
@@ -94,6 +97,35 @@ export const ContentContainer = forwardRef<HTMLDivElement, ContainerProps>(
 )
 
 ContentContainer.displayName = 'ContentContainer'
+
+// Mobile-optimized container for mobile-first designs
+export const MobileContainer = forwardRef<HTMLDivElement, Omit<ContainerProps, 'padding'>>(
+  ({ className, ...props }, ref) => (
+    <Container
+      ref={ref}
+      padding="mobile"
+      className={`safe-area-inset-x ${className || ''}`}
+      {...props}
+    />
+  )
+)
+
+MobileContainer.displayName = 'MobileContainer'
+
+// Form container with mobile-friendly spacing
+export const FormContainer = forwardRef<HTMLDivElement, ContainerProps>(
+  ({ className, size = 'sm', padding = 'mobile', ...props }, ref) => (
+    <Container
+      ref={ref}
+      size={size}
+      padding={padding}
+      className={`space-y-4 sm:space-y-6 ${className || ''}`}
+      {...props}
+    />
+  )
+)
+
+FormContainer.displayName = 'FormContainer'
 
 // Demo component for documentation
 export const ContainerDemo = () => {

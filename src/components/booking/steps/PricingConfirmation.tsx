@@ -343,7 +343,7 @@ export function PricingConfirmation() {
       </div>
 
       {/* Booking Summary */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
         {/* Service Details */}
         <Card>
           <CardHeader>
@@ -560,61 +560,36 @@ export function PricingConfirmation() {
         </Card>
       )}
 
-      {/* Navigation */}
-      <div className="flex justify-between items-center pt-6">
-        {/* Mobile: Stacked */}
-        <div className="sm:hidden space-y-3 pt-6 w-full">
-          <Button
-            onClick={handleConfirmBooking}
-            disabled={isProcessing || isSubmitting}
-            size="lg"
-            fullWidth
-            className="min-h-[48px]"
-            rightIcon={
-              (isProcessing || isSubmitting) ? 
-                <LoaderIcon className="w-4 h-4 animate-spin" /> : 
-                <CheckCircleIcon className="w-4 h-4" />
-            }
+      {/* Navigation - Mobile-first responsive design */}
+      <div className="flex flex-col sm:flex-row gap-3 sm:justify-between sm:items-center pt-6">
+        {/* Back button - first on mobile, left on desktop */}
+        <Button
+          variant="outline"
+          onClick={previousStep}
+          disabled={isProcessing || isSubmitting}
+          leftIcon={<ChevronLeftIcon className="w-4 h-4" />}
+          size="lg"
+          fullWidth={true}
+          className="sm:w-auto order-2 sm:order-1"
           >
-            {isProcessing || isSubmitting ? 'Confirming...' : 'Confirm Booking'}
-          </Button>
-          <Button
-            variant="outline"
-            onClick={previousStep}
-            disabled={isProcessing || isSubmitting}
-            leftIcon={<ChevronLeftIcon className="w-4 h-4" />}
-            fullWidth
-            className="min-h-[48px]"
-          >
-            Back to Address
-          </Button>
-        </div>
+          Back to Address
+        </Button>
         
-        {/* Desktop: Side by side */}
-        <div className="hidden sm:flex justify-between items-center pt-6 w-full">
-          <Button
-            variant="outline"
-            onClick={previousStep}
-            disabled={isProcessing || isSubmitting}
-            leftIcon={<ChevronLeftIcon className="w-4 h-4" />}
-          >
-            Back to Address
-          </Button>
-        
-          <Button
-            onClick={handleConfirmBooking}
-            disabled={isProcessing || isSubmitting}
-            size="lg"
-            className="min-w-[200px]"
-            rightIcon={
-              (isProcessing || isSubmitting) ? 
-                <LoaderIcon className="w-4 h-4 animate-spin" /> : 
-                <CheckCircleIcon className="w-4 h-4" />
-            }
-          >
-            {isProcessing || isSubmitting ? 'Confirming...' : 'Confirm Booking'}
-          </Button>
-        </div>
+        {/* Confirm button - second on mobile, right on desktop */}
+        <Button
+          onClick={handleConfirmBooking}
+          disabled={isProcessing || isSubmitting}
+          size="lg"
+          fullWidth={true}
+          className="sm:w-auto sm:min-w-[200px] order-1 sm:order-2"
+          rightIcon={
+            (isProcessing || isSubmitting) ? 
+              <LoaderIcon className="w-4 h-4 animate-spin" /> : 
+              <CheckCircleIcon className="w-4 h-4" />
+          }
+        >
+          {isProcessing || isSubmitting ? 'Confirming...' : 'Confirm Booking'}
+        </Button>
       </div>
 
       {/* Auth modal no longer needed - users must be authenticated to reach this step */}
