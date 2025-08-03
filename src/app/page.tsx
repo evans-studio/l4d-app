@@ -61,13 +61,17 @@ export default function HomePage() {
   return (
     <MainLayout>
       {/* New Full-Screen Hero Section */}
-      <HeroSection />
+      <div className="relative z-0">
+        <HeroSection />
+      </div>
 
       {/* New What We Do Section */}
-      <WhatWeDoSection />
+      <div className="relative z-10 bg-surface-primary">
+        <WhatWeDoSection />
+      </div>
 
       {/* Enhanced Services Section */}
-      <div id="services">
+      <div id="services" className="relative z-10 bg-surface-primary">
         <Section background="transparent" padding="xl">
         <Container>
           <div className="text-center mb-16">
@@ -165,17 +169,22 @@ export default function HomePage() {
       </div>
 
       {/* New Dashboard Preview Section */}
-      <DashboardPreview />
+      <div className="relative z-10 bg-surface-primary">
+        <DashboardPreview />
+      </div>
 
       {/* New Service Area Check */}
-      <ServiceAreaCheck />
+      <div className="relative z-10 bg-surface-primary">
+        <ServiceAreaCheck />
+      </div>
 
       {/* New FAQ Section */}
-      <FAQSection />
-
+      <div className="relative z-10 bg-surface-primary">
+        <FAQSection />
+      </div>
 
       {/* Final CTA Section */}
-      <div id="contact">
+      <div id="contact" className="relative z-10 bg-surface-primary">
         <Section background="transparent" padding="xl">
         <Container>
           <div className="text-center">

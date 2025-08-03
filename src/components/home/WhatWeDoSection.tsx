@@ -201,7 +201,7 @@ export function WhatWeDoSection() {
     <section 
       id="what-we-do"
       ref={sectionRef}
-      className="relative overflow-hidden py-16 lg:py-24"
+      className="relative overflow-hidden py-16 lg:py-24 z-10"
     >
       
       <Container>

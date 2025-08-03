@@ -26,14 +26,14 @@ export function HeroSection() {
   }
 
   return (
-    <section className="relative h-screen flex flex-col overflow-hidden">{/* Background now handled by MainLayout */}
+    <section className="relative min-h-screen flex flex-col overflow-hidden pb-16 lg:pb-20">{/* Background now handled by MainLayout */}
 
       {/* Parallax Content */}
       <Container className="relative flex-1 flex flex-col items-center justify-center text-center px-4">
         <div 
           className="space-y-8 max-w-4xl mx-auto"
           style={{
-            transform: `translateY(${scrollY * 0.2}px)`,
+            transform: `translateY(${Math.max(-50, Math.min(50, scrollY * 0.2))}px)`,
           }}
         >
           {/* Logo - Dominant Visual Element */}
@@ -60,7 +60,7 @@ export function HeroSection() {
               size="h1" 
               color="white" 
               align="center" 
-              className="text-4xl sm:text-5xl lg:text-7xl leading-tight"
+              className="text-3xl sm:text-4xl md:text-5xl lg:text-7xl leading-tight"
             >
               Premium Mobile
               <span className="block text-brand-400">Car Detailing</span>
@@ -73,20 +73,21 @@ export function HeroSection() {
               color="secondary" 
               weight="normal" 
               align="center" 
-              className="sm:text-2xl lg:text-3xl text-gray-300 max-w-3xl mx-auto"
+              className="text-lg sm:text-xl md:text-2xl lg:text-3xl text-gray-300 max-w-3xl mx-auto px-4 sm:px-0"
             >
               Professional-grade equipment and eco-friendly products brought directly to your location
             </Heading>
           </div>
 
           {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center pt-8">
-            <Link href="/book">
+          <div className="flex flex-col sm:flex-row gap-4 justify-center pt-8 px-4 sm:px-0">
+            <Link href="/book" className="w-full sm:w-auto">
               <Button 
                 variant="primary" 
                 size="lg" 
-                className="text-lg px-8 py-4 h-auto min-w-[200px] bg-brand-600 hover:bg-brand-700 shadow-purple-lg hover:shadow-purple-xl transition-all duration-300"
-                rightIcon={<ArrowRight className="w-5 h-5" />}
+                fullWidth
+                className="text-base sm:text-lg px-6 sm:px-8 py-3 sm:py-4 h-auto min-w-[200px] bg-brand-600 hover:bg-brand-700 shadow-purple-lg hover:shadow-purple-xl transition-all duration-300 sm:w-auto"
+                rightIcon={<ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />}
               >
                 Book Your Service
               </Button>
@@ -94,7 +95,8 @@ export function HeroSection() {
             <Button 
               variant="outline" 
               size="lg"
-              className="text-lg px-8 py-4 h-auto min-w-[200px] border-white/30 text-white hover:bg-white/10 hover:border-white/50 transition-all duration-300"
+              fullWidth
+              className="text-base sm:text-lg px-6 sm:px-8 py-3 sm:py-4 h-auto min-w-[200px] border-white/30 text-white hover:bg-white/10 hover:border-white/50 transition-all duration-300 sm:w-auto"
               onClick={() => window.location.href = 'tel:+447908625581'}
             >
               Call 07908 625581
@@ -126,13 +128,14 @@ export function HeroSection() {
       </Container>
 
       {/* Animated Scroll Indicator */}
-      <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-20">
+      <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-10">
         <button
           onClick={scrollToNextSection}
           className="flex flex-col items-center gap-2 text-white/70 hover:text-white transition-colors duration-300 group"
           aria-label="Scroll to explore more"
         >
-          <Text size="sm" weight="medium" className="tracking-wide">Scroll to Explore</Text>
+          <Text size="sm" weight="medium" className="tracking-wide hidden sm:block">Scroll to Explore</Text>
+          <Text size="xs" weight="medium" className="tracking-wide sm:hidden">Explore</Text>
           <ChevronDown className={cn(
             "w-6 h-6 animate-bounce group-hover:animate-purple-bounce transition-all duration-300"
           )} />
