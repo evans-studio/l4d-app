@@ -81,8 +81,8 @@ export async function POST(request: NextRequest) {
     // Send verification email using Supabase's built-in system
     try {
       const redirectUrl = process.env.NODE_ENV === 'development' 
-        ? 'http://localhost:3000/auth/verify-email'
-        : `${process.env.NEXT_PUBLIC_APP_URL || 'https://l4d-app.vercel.app'}/auth/verify-email`
+        ? 'http://localhost:3000/auth/callback?next=/dashboard'
+        : `${process.env.NEXT_PUBLIC_APP_URL || 'https://l4d-app.vercel.app'}/auth/callback?next=/dashboard`
       
       // Use Supabase's resend method instead of generateLink for existing users
       const { error: verificationError } = await supabaseAdmin.auth.resend({
