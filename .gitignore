@@ -45,10 +45,23 @@ cookies.txt
 server.log
 *.log
 
+# API Keys and sensitive configuration
+*api-key*
+*secret*
+*credentials*
+*.key
+*.pem
+*.crt
+SUPABASE_EMAIL_SETUP.md
+*-setup.md
+
 # Test files with credentials
 create-test-account.js
 test-*.js
 *test*.js
+*-test.*
+*/test/*
+*/debug/*
 
 # Database files with potential secrets
 *.sql
@@ -60,3 +73,5 @@ database-init/
 temp-*
 debug-*
 *.tmp
+*.bak
+*.backup
