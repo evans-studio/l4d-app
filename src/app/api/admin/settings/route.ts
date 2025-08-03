@@ -67,13 +67,13 @@ const DEFAULT_SETTINGS: BusinessSettings = {
 
 export async function GET(request: NextRequest) {
   try {
-    // TODO: Re-enable authentication after fixing session issues
-    // const authResult = await authenticateAdmin(request)
-    // if (!authResult.success) {
-    //   return authResult.error
-    // }
+    // Re-enable authentication for security
+    const authResult = await authenticateAdmin(request)
+    if (!authResult.success) {
+      return authResult.error!
+    }
 
-    // Use admin client for now to bypass authentication issues
+    // Use admin client for settings access
     const supabase = supabaseAdmin
 
     // Try to get settings from database
@@ -118,11 +118,11 @@ export async function GET(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    // TODO: Re-enable authentication after fixing session issues
-    // const authResult = await authenticateAdmin(request)
-    // if (!authResult.success) {
-    //   return authResult.error
-    // }
+    // Re-enable authentication for security
+    const authResult = await authenticateAdmin(request)
+    if (!authResult.success) {
+      return authResult.error!
+    }
 
     const settings: BusinessSettings = await request.json()
 
@@ -131,7 +131,7 @@ export async function PUT(request: NextRequest) {
       return ApiResponseHandler.badRequest('Business name is required')
     }
 
-    // Use admin client for now to bypass authentication issues
+    // Use admin client for settings access
     const supabase = supabaseAdmin
 
     // Prepare settings data for database

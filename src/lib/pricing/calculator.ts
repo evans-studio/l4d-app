@@ -63,15 +63,7 @@ export interface BookingCalculation {
   errors: string[]
 }
 
-/**
- * Vehicle size multipliers for pricing (fallback only)
- */
-const VEHICLE_SIZE_MULTIPLIERS: Record<VehicleSize, number> = {
-  S: 1.0,   // Small cars (e.g., Fiesta, Polo)
-  M: 1.3,   // Medium cars (e.g., Golf, Focus)
-  L: 1.6,   // Large cars (e.g., BMW 5 Series, Audi A6)
-  XL: 2.0   // Extra large (e.g., Range Rover, large SUVs)
-}
+// Legacy multipliers removed - now using direct pricing from service_pricing table
 
 /**
  * Get pricing from service_pricing table for specific service and vehicle size
@@ -107,27 +99,21 @@ export async function getServicePricing(serviceId: string, vehicleSize: VehicleS
   }
 }
 
-/**
- * Get the multiplier for a vehicle size (fallback only)
- */
-export function getVehicleSizeMultiplier(size: VehicleSize): number {
-  return VEHICLE_SIZE_MULTIPLIERS[size] || 1.0
-}
+// Vehicle size multipliers removed - using direct pricing only
 
 /**
- * Calculate service price - first try service_pricing table, then fallback to calculation
+ * Calculate service price from service_pricing table
  */
 export async function calculateServicePrice(serviceId: string, basePrice: number, vehicleSize: VehicleSize): Promise<number> {
-  // Try to get price from service_pricing table first
+  // Get price directly from service_pricing table
   const databasePrice = await getServicePricing(serviceId, vehicleSize)
   if (databasePrice !== null && databasePrice > 0) {
     return databasePrice
   }
   
-  // Fallback to calculated pricing (deprecated - should not be used in production)
-  console.warn('Falling back to calculated pricing - service_pricing table should be used instead')
-  const multiplier = getVehicleSizeMultiplier(vehicleSize)
-  return Math.round(basePrice * multiplier * 100) / 100 // Round to 2 decimal places
+  // If no database pricing found, log error and return base price as fallback
+  console.error(`No pricing found for service ${serviceId} with vehicle size ${vehicleSize}`)
+  return basePrice
 }
 
 /**
@@ -139,9 +125,8 @@ export async function calculateBookingPrice(
   address: AddressDetails
 ): Promise<PriceBreakdown> {
   try {
-    // Calculate service price (database first, then fallback)
+    // Calculate service price from service_pricing table
     const servicePrice = await calculateServicePrice(service.id, service.basePrice, vehicle.size)
-    const vehicleSizeMultiplier = getVehicleSizeMultiplier(vehicle.size)
     
     // Calculate travel surcharge based on postcode
     const distanceResult = await calculatePostcodeDistance(address.postcode)
@@ -149,13 +134,10 @@ export async function calculateBookingPrice(
     // Calculate total price
     const totalPrice = servicePrice + distanceResult.surchargeAmount
     
-    // For database pricing, use service price as "base" for compatibility
-    const actualBasePrice = servicePrice // Direct pricing from database
-    
     return {
-      serviceBasePrice: actualBasePrice,
+      serviceBasePrice: servicePrice,
       vehicleSize: vehicle.size,
-      vehicleSizeMultiplier: 1, // No multiplier needed with direct pricing
+      vehicleSizeMultiplier: 1, // Direct pricing - no multiplier used
       servicePrice,
       travelDistance: distanceResult.distanceMiles,
       travelSurcharge: distanceResult.surchargeAmount,
@@ -163,7 +145,7 @@ export async function calculateBookingPrice(
       breakdown: {
         service: {
           name: service.name,
-          basePrice: actualBasePrice,
+          basePrice: servicePrice,
           size: vehicle.size,
           multiplier: 1, // Direct pricing - no multiplier
           subtotal: servicePrice
@@ -182,31 +164,28 @@ export async function calculateBookingPrice(
   } catch (error) {
     console.error('Error calculating booking price:', error)
     
-    // Fallback calculation without travel surcharge
-    const vehicleSizeMultiplier = getVehicleSizeMultiplier(vehicle.size)
-    const servicePrice = Math.round(service.basePrice * vehicleSizeMultiplier * 100) / 100
-    
+    // Fallback - return base price without travel surcharge
     return {
       serviceBasePrice: service.basePrice,
       vehicleSize: vehicle.size,
-      vehicleSizeMultiplier,
-      servicePrice,
+      vehicleSizeMultiplier: 1,
+      servicePrice: service.basePrice,
       travelSurcharge: 0,
-      totalPrice: servicePrice,
+      totalPrice: service.basePrice,
       breakdown: {
         service: {
           name: service.name,
           basePrice: service.basePrice,
           size: vehicle.size,
-          multiplier: vehicleSizeMultiplier,
-          subtotal: servicePrice
+          multiplier: 1,
+          subtotal: service.basePrice
         },
         travel: {
           withinFreeRadius: true,
           surcharge: 0,
           description: 'Travel calculation unavailable'
         },
-        total: servicePrice
+        total: service.basePrice
       }
     }
   }
@@ -352,7 +331,6 @@ export function calculateEstimatedDuration(
  * Export constants for use in components
  */
 export const PRICING_CONFIG = {
-  VEHICLE_SIZE_MULTIPLIERS,
   FREE_TRAVEL_RADIUS_MILES: 17.5,
   BUSINESS_POSTCODE: 'SW9'
 } as const

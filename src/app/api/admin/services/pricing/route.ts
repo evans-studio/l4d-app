@@ -5,12 +5,11 @@ import { authenticateAdmin } from '@/lib/api/auth-handler'
 
 export async function GET(request: NextRequest) {
   try {
-    // TEMPORARY: Skip auth check until RLS policies are fixed
-    // TODO: Re-enable after running the RLS setup scripts
-    // const authResult = await authenticateAdmin(request)
-    // if (!authResult.success) {
-    //   return authResult.error
-    // }
+    // Authenticate admin user
+    const authResult = await authenticateAdmin(request)
+    if (!authResult.success) {
+      return authResult.error
+    }
 
     const supabase = await createClient()
 
@@ -31,21 +30,17 @@ export async function GET(request: NextRequest) {
       return ApiResponseHandler.serverError(`Failed to fetch pricing data: ${pricingError.message}`)
     }
 
-    // Get vehicle sizes to map names to IDs for compatibility
-    const { data: vehicleSizes, error: sizesError } = await supabase
-      .from('vehicle_sizes')
-      .select('id, name, display_order')
-      .eq('is_active', true)
-      .order('display_order')
-
-    if (sizesError) {
-      console.error('Error fetching vehicle sizes:', sizesError)
-      return ApiResponseHandler.serverError('Failed to fetch vehicle sizes')
-    }
+    // Define vehicle sizes directly since table no longer exists (denormalized structure)
+    const vehicleSizes = [
+      { id: 'small', name: 'Small', display_order: 1 },
+      { id: 'medium', name: 'Medium', display_order: 2 },
+      { id: 'large', name: 'Large', display_order: 3 },
+      { id: 'extra_large', name: 'Extra Large', display_order: 4 }
+    ]
 
     // Create mapping from size names to IDs
     const sizeNameToId: Record<string, string> = {}
-    vehicleSizes?.forEach(size => {
+    vehicleSizes.forEach(size => {
       const normalizedName = size.name.toLowerCase().replace(/\s+/g, '_')
       sizeNameToId[normalizedName] = size.id
     })
@@ -100,12 +95,11 @@ export async function GET(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    // TEMPORARY: Skip auth check until RLS policies are fixed
-    // TODO: Re-enable after running the RLS setup scripts
-    // const authResult = await authenticateAdmin(request)
-    // if (!authResult.success) {
-    //   return authResult.error
-    // }
+    // Authenticate admin user
+    const authResult = await authenticateAdmin(request)
+    if (!authResult.success) {
+      return authResult.error
+    }
 
     // Use admin client to bypass RLS for now
     const { createAdminClient } = await import('@/lib/supabase/server')

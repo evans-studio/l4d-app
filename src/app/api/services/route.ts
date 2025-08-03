@@ -128,12 +128,11 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    // TEMPORARY: Skip auth check until RLS policies are fixed
-    // TODO: Re-enable after running the RLS setup scripts
-    // const authResult = await authenticateAdmin(request)
-    // if (!authResult.success) {
-    //   return authResult.error
-    // }
+    // Authenticate admin user
+    const authResult = await authenticateAdmin(request)
+    if (!authResult.success) {
+      return authResult.error
+    }
 
     const body = await request.json()
     const validation = await ApiValidation.validateBody(body, createServiceSchema)

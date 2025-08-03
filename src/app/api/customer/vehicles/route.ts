@@ -179,7 +179,7 @@ export async function POST(request: NextRequest) {
 
     const isFirstVehicle = !existingVehicles || existingVehicles.length === 0
 
-    // Insert new vehicle (no longer using vehicle_size_id)
+    // Insert new vehicle
     const { data: newVehicle, error: insertError } = await supabase
       .from('customer_vehicles')
       .insert({
@@ -190,7 +190,6 @@ export async function POST(request: NextRequest) {
         color: vehicleData.color.trim(),
         license_plate: vehicleData.license_plate?.trim() || null,
         registration: vehicleData.registration?.trim() || vehicleData.license_plate?.trim() || null,
-        vehicle_size_id: null, // No longer using vehicle_sizes table
         is_primary: isFirstVehicle,
         is_default: isFirstVehicle || vehicleData.set_as_default === true,
       })

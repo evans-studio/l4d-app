@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import { AlertTriangle } from 'lucide-react'
-import { BaseModal } from '../BaseModal'
+import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from '@/components/ui/composites/Modal'
 import { BaseOverlayProps } from '@/lib/overlay/types'
 import { Button } from '@/components/ui/primitives/Button'
 
@@ -42,47 +42,46 @@ export const ConfirmDeleteModal: React.FC<ConfirmDeleteModalProps> = ({
   }
 
   return (
-    <BaseModal
-      isOpen={isOpen}
-      onClose={onClose}
-      title={title}
-      size="sm"
-    >
-      <div className="space-y-6">
-        {/* Warning Icon */}
-        <div className="flex items-center justify-center">
-          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center">
-            <AlertTriangle className="w-8 h-8 text-red-600" />
+    <Modal open={isOpen} onClose={onClose}>
+      <ModalContent size="sm" mobile="drawer" onClose={onClose}>
+        <ModalHeader title={title} />
+        
+        <ModalBody>
+          <div className="space-y-6 text-center">
+            {/* Warning Icon */}
+            <div className="flex items-center justify-center">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center">
+                <AlertTriangle className="w-8 h-8 text-red-600" />
+              </div>
+            </div>
+
+            {/* Message */}
+            <p className="text-text-primary">{message}</p>
           </div>
-        </div>
+        </ModalBody>
 
-        {/* Message */}
-        <div className="text-center">
-          <p className="text-text-primary">{message}</p>
-        </div>
-
-        {/* Actions */}
-        <div className="flex gap-3">
+        <ModalFooter>
           <Button
-            type="button"
             variant="outline"
             onClick={onClose}
-            className="flex-1"
             disabled={isDeleting}
+            fullWidth
+            className="sm:w-auto"
           >
             Cancel
           </Button>
           <Button
-            type="button"
             variant="destructive"
             onClick={handleConfirm}
-            className="flex-1"
-            disabled={isDeleting}
+            loading={isDeleting}
+            loadingText="Deleting..."
+            fullWidth
+            className="sm:w-auto"
           >
-            {isDeleting ? 'Deleting...' : confirmText}
+            {confirmText}
           </Button>
-        </div>
-      </div>
-    </BaseModal>
+        </ModalFooter>
+      </ModalContent>
+    </Modal>
   )
 }

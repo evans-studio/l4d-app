@@ -2,9 +2,10 @@
 
 import React, { useState, useEffect } from 'react'
 import { Calendar, Clock, AlertTriangle, CheckCircle, XCircle } from 'lucide-react'
-import { BaseModal } from '../BaseModal'
+import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from '@/components/ui/composites/Modal'
 import { BaseOverlayProps } from '@/lib/overlay/types'
 import { Button } from '@/components/ui/primitives/Button'
+import { Alert, AlertDescription } from '@/components/ui/primitives/Alert'
 
 interface BookingDetails {
   id: string
@@ -154,58 +155,44 @@ export const CancelModal: React.FC<CancelModalProps> = ({
   }
 
   return (
-    <BaseModal
-      isOpen={isOpen}
-      onClose={onClose}
-      title="Cancel Booking"
-      size="md"
-    >
-      {isLoading ? (
-        <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600"></div>
-        </div>
-      ) : error && !booking ? (
-        <div className="text-center py-12">
-          <XCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-          <p className="text-red-600 mb-4">{error}</p>
-          <Button onClick={loadBookingDetails} variant="outline">
-            Try Again
-          </Button>
-        </div>
-      ) : booking && policy ? (
-        <form onSubmit={handleCancel} className="space-y-4 sm:space-y-6">
-          {/* Cancellation Policy Alert */}
-          <div className={`rounded-lg p-3 sm:p-4 border ${
-            policy.canCancelFree 
-              ? 'bg-green-50 border-green-200' 
-              : policy.refundPercentage > 0 
-              ? 'bg-yellow-50 border-yellow-200' 
-              : 'bg-red-50 border-red-200'
-          }`}>
-            <div className="flex items-start gap-3">
-              {policy.canCancelFree ? (
-                <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-              ) : (
-                <AlertTriangle className={`w-5 h-5 flex-shrink-0 mt-0.5 ${
-                  policy.refundPercentage > 0 ? 'text-yellow-600' : 'text-red-600'
-                }`} />
-              )}
-              <div className={`text-sm ${
-                policy.canCancelFree 
-                  ? 'text-green-800' 
-                  : policy.refundPercentage > 0 
-                  ? 'text-yellow-800' 
-                  : 'text-red-800'
-              }`}>
-                <p className="font-medium mb-1">Cancellation Policy</p>
-                <div className="space-y-1">
-                  <p>Time until appointment: <strong>{policy.hoursUntilAppointment} hours</strong></p>
-                  <p>Refund: <strong>{policy.refundPercentage}%</strong></p>
-                  <p className="text-xs opacity-90">{policy.policy}</p>
-                </div>
-              </div>
+    <Modal open={isOpen} onClose={onClose}>
+      <ModalContent size="md" mobile="drawer" onClose={onClose}>
+        <ModalHeader title="Cancel Booking" />
+        
+        <ModalBody scrollable maxHeight="60vh">
+          {isLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600"></div>
             </div>
-          </div>
+          ) : error && !booking ? (
+            <div className="text-center py-12">
+              <Alert variant="error">
+                <AlertDescription>
+                  <div className="flex flex-col items-center space-y-4">
+                    <XCircle className="w-12 h-12 text-red-500" />
+                    <p>{error}</p>
+                    <Button onClick={loadBookingDetails} variant="outline">
+                      Try Again
+                    </Button>
+                  </div>
+                </AlertDescription>
+              </Alert>
+            </div>
+          ) : booking && policy ? (
+            <form id="cancel-form" onSubmit={handleCancel} className="space-y-4 sm:space-y-6">
+              {/* Cancellation Policy Alert */}
+              <Alert variant={policy.canCancelFree ? 'success' : policy.refundPercentage > 0 ? 'warning' : 'error'}>
+                <AlertDescription>
+                  <div className="space-y-2">
+                    <p className="font-medium">Cancellation Policy</p>
+                    <div className="space-y-1 text-sm">
+                      <p>Time until appointment: <strong>{policy.hoursUntilAppointment} hours</strong></p>
+                      <p>Refund: <strong>{policy.refundPercentage}%</strong></p>
+                      <p className="text-xs opacity-90">{policy.policy}</p>
+                    </div>
+                  </div>
+                </AlertDescription>
+              </Alert>
 
           {/* Booking Details */}
           <div className="bg-surface-secondary rounded-lg p-3 sm:p-4 border border-border-secondary">
@@ -249,54 +236,62 @@ export const CancelModal: React.FC<CancelModalProps> = ({
             />
           </div>
 
-          {/* Refund Information */}
-          {policy.refundPercentage > 0 && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4">
-              <div className="flex items-start gap-3">
-                <CheckCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                <div className="text-sm text-blue-800">
-                  <p className="font-medium mb-1">Refund Information</p>
-                  <p>
-                    You will receive <strong>{formatPrice(booking.total_price * policy.refundPercentage / 100)}</strong> 
-                    {' '}refund ({policy.refundPercentage}% of total amount).
-                  </p>
-                  <p className="text-xs mt-1 opacity-90">
-                    Refunds are processed within 3-5 business days.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
+              {/* Refund Information */}
+              {policy.refundPercentage > 0 && (
+                <Alert variant="info">
+                  <AlertDescription>
+                    <div className="space-y-2">
+                      <p className="font-medium">Refund Information</p>
+                      <p>
+                        You will receive <strong>{formatPrice(booking.total_price * policy.refundPercentage / 100)}</strong> 
+                        {' '}refund ({policy.refundPercentage}% of total amount).
+                      </p>
+                      <p className="text-xs opacity-90">
+                        Refunds are processed within 3-5 business days.
+                      </p>
+                    </div>
+                  </AlertDescription>
+                </Alert>
+              )}
 
-          {/* Error */}
-          {error && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-800 text-sm">
-              {error}
-            </div>
-          )}
+              {/* Error */}
+              {error && (
+                <Alert variant="error">
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
 
-          {/* Actions - Mobile optimized */}
-          <div className="flex gap-3 pt-4 border-t border-border-secondary sticky bottom-0 bg-surface-primary">
+            </form>
+          ) : null}
+        </ModalBody>
+
+        {/* Footer with actions only when booking is loaded */}
+        {booking && policy && (
+          <ModalFooter>
             <Button
-              type="button"
               variant="outline"
               onClick={onClose}
-              className="flex-1 min-h-[44px] sm:min-h-[40px]"
               disabled={isSubmitting}
+              fullWidth
+              className="sm:w-auto"
             >
               Keep Booking
             </Button>
             <Button
               type="submit"
+              form="cancel-form"
               variant="destructive"
-              className="flex-1 min-h-[44px] sm:min-h-[40px]"
               disabled={!reason.trim() || isSubmitting}
+              loading={isSubmitting}
+              loadingText="Cancelling..."
+              fullWidth
+              className="sm:w-auto"
             >
-              {isSubmitting ? 'Cancelling...' : 'Confirm Cancellation'}
+              Confirm Cancellation
             </Button>
-          </div>
-        </form>
-      ) : null}
-    </BaseModal>
+          </ModalFooter>
+        )}
+      </ModalContent>
+    </Modal>
   )
 }

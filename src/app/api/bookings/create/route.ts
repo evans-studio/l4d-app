@@ -207,7 +207,6 @@ export async function POST(request: NextRequest) {
         .update({
           color: bookingData.vehicle.color,
           license_plate: bookingData.vehicle.licenseNumber,
-          vehicle_size_id: null, // No longer using vehicle_sizes table
           notes: bookingData.vehicle.notes,
           updated_at: new Date().toISOString()
         })
@@ -218,7 +217,6 @@ export async function POST(request: NextRequest) {
         .from('customer_vehicles')
         .insert({
           user_id: userId, // FK to user_profiles.id
-          vehicle_size_id: null, // No longer using vehicle_sizes table // FK to vehicle_sizes.id
           make: bookingData.vehicle.make,
           model: bookingData.vehicle.model,
           year: bookingData.vehicle.year,
@@ -429,8 +427,7 @@ export async function POST(request: NextRequest) {
         time_slot_id: bookingData.timeSlot.slotId, // FK to time_slots.id
         
         // Pricing breakdown
-        base_price: servicePrice, // Now using the size-specific price
-        vehicle_size_multiplier: 1.0, // No longer using multipliers
+        base_price: servicePrice, // Size-specific price from service_pricing table
         distance_surcharge: distanceSurcharge,
         total_price: totalPrice,
         pricing_breakdown: pricingBreakdown,
@@ -569,7 +566,6 @@ export async function POST(request: NextRequest) {
         status: 'pending' as Database["public"]["Enums"]["booking_status"],
         total_price: totalPrice,
         base_price: servicePrice,
-        vehicle_size_multiplier: 1.0,
         distance_surcharge: distanceSurcharge,
         distance_km: distanceKm,
         estimated_duration: service.duration_minutes,

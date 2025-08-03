@@ -60,7 +60,6 @@ export async function PUT(
     if (updateData.year) updateObject.year = parseInt(updateData.year)
     if (updateData.color) updateObject.color = updateData.color.trim()
     if (updateData.license_plate !== undefined) updateObject.license_plate = updateData.license_plate?.trim() || null
-    if (updateData.vehicle_size_id) updateObject.vehicle_size_id = updateData.vehicle_size_id
 
     // Update the vehicle
     const { data: updatedVehicle, error: updateError } = await supabase

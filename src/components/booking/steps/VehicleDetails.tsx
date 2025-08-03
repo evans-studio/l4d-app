@@ -167,12 +167,12 @@ export function VehicleDetails() {
       }
     }
     
-    // Use new size system
+    // Use direct pricing system (no multipliers)
     const sizeMap: Record<string, any> = {
-      S: { label: 'Small', description: getVehicleSizeDescription('S'), multiplier: `${PRICING_CONFIG.VEHICLE_SIZE_MULTIPLIERS.S}x`, examples: [] },
-      M: { label: 'Medium', description: getVehicleSizeDescription('M'), multiplier: `${PRICING_CONFIG.VEHICLE_SIZE_MULTIPLIERS.M}x`, examples: [] },
-      L: { label: 'Large', description: getVehicleSizeDescription('L'), multiplier: `${PRICING_CONFIG.VEHICLE_SIZE_MULTIPLIERS.L}x`, examples: [] },
-      XL: { label: 'Extra Large', description: getVehicleSizeDescription('XL'), multiplier: `${PRICING_CONFIG.VEHICLE_SIZE_MULTIPLIERS.XL}x`, examples: [] }
+      S: { label: 'Small', description: getVehicleSizeDescription('S'), multiplier: '', examples: [] },
+      M: { label: 'Medium', description: getVehicleSizeDescription('M'), multiplier: '', examples: [] },
+      L: { label: 'Large', description: getVehicleSizeDescription('L'), multiplier: '', examples: [] },
+      XL: { label: 'Extra Large', description: getVehicleSizeDescription('XL'), multiplier: '', examples: [] }
     }
     return sizeMap[sizeName] || sizeMap.M
   }
