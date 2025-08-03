@@ -84,7 +84,7 @@ export default function HomePage() {
           </div>
           
           {servicesLoading ? (
-            <GridLayout columns={{ default: 1, md: 3 }} gap="lg">
+            <GridLayout columns={{ default: 1, sm: 2, md: 3 }} gap="md" className="lg:gap-8">
               {[1, 2, 3].map((i) => (
                 <Card key={i} className="relative border-2 border-border-secondary">
                   <CardHeader>
@@ -104,7 +104,7 @@ export default function HomePage() {
               ))}
             </GridLayout>
           ) : (
-            <GridLayout columns={{ default: 1, md: 3 }} gap="lg">
+            <GridLayout columns={{ default: 1, sm: 2, md: 3 }} gap="md" className="lg:gap-8">
               {services.slice(0, 3).map((service, index) => {
                 const isPopular = service.name.toLowerCase().includes('full valet') // Make Full Valet popular
                 const ServiceIcon = index === 0 ? Sparkles : index === 1 ? Palette : Shield
@@ -190,13 +190,25 @@ export default function HomePage() {
           <div className="text-center">
             <Heading size="h2" align="center" className="mb-4">Ready to Transform Your Car?</Heading>
             <Text size="xl" color="secondary" align="center" className="mb-8">Book your professional mobile detailing service today</Text>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center max-w-md sm:max-w-none mx-auto">
+            <div className="flex flex-col sm:flex-row gap-4 justify-center max-w-sm sm:max-w-none mx-auto">
               <Link href="/book" className="w-full sm:w-auto">
-                <Button variant="primary" size="lg" fullWidth className="bg-brand-600 hover:bg-brand-700 shadow-purple-lg hover:shadow-purple-xl sm:w-auto">
+                <Button 
+                  variant="primary" 
+                  size="lg" 
+                  fullWidth 
+                  className="bg-brand-600 hover:bg-brand-700 shadow-purple-lg hover:shadow-purple-xl sm:w-auto min-h-[48px] text-base sm:text-lg px-8"
+                  rightIcon={<ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />}
+                >
                   Book Now
                 </Button>
               </Link>
-              <Button variant="outline" size="lg" fullWidth onClick={() => window.location.href = 'tel:+447908625581'} className="hover:border-brand-400 hover:text-brand-400 sm:w-auto">
+              <Button 
+                variant="outline" 
+                size="lg" 
+                fullWidth 
+                onClick={() => window.location.href = 'tel:+447908625581'} 
+                className="hover:border-brand-400 hover:text-brand-400 sm:w-auto min-h-[48px] text-base sm:text-lg px-8"
+              >
                 Call 07908 625581
               </Button>
             </div>

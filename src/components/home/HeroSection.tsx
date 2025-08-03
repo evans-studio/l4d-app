@@ -42,9 +42,9 @@ export function HeroSection() {
               <Image
                 src="/logo1.png"
                 alt="Love 4 Detailing"
-                width={300}
-                height={300}
-                className="w-48 h-48 sm:w-64 sm:h-64 lg:w-80 lg:h-80 object-contain drop-shadow-2xl"
+                width={400}
+                height={400}
+                className="w-60 h-60 sm:w-72 sm:h-72 md:w-80 md:h-80 lg:w-96 lg:h-96 object-contain drop-shadow-2xl"
                 priority
               />
               {/* Subtle glow effect */}

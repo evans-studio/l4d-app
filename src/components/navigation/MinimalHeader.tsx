@@ -311,6 +311,14 @@ const MobileMenu: React.FC<{
                 
                 <Button
                   variant="outline"
+                  onClick={() => handleNavigation('/auth/register')}
+                  className="w-full justify-start min-h-[48px]"
+                >
+                  Create Account
+                </Button>
+                
+                <Button
+                  variant="primary"
                   onClick={() => handleNavigation('/auth/login')}
                   className="w-full justify-start min-h-[48px]"
                 >
@@ -432,13 +440,22 @@ export const MinimalHeader: React.FC<MinimalHeaderProps> = ({ className, showMob
                         About
                       </Link>
                       
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => router.push('/auth/login')}
-                      >
-                        Login
-                      </Button>
+                      <div className="flex items-center gap-3">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => router.push('/auth/register')}
+                        >
+                          Create Account
+                        </Button>
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onClick={() => router.push('/auth/login')}
+                        >
+                          Login
+                        </Button>
+                      </div>
                     </>
                   )}
                 </>
