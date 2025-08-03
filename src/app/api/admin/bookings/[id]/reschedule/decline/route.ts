@@ -103,11 +103,11 @@ export async function POST(
         ? `Unfortunately, we cannot accommodate your reschedule request. ${decline_reason} Your original booking remains scheduled for ${booking.scheduled_date} at ${booking.scheduled_start_time}.`
         : `Unfortunately, we cannot accommodate your reschedule request at this time. Your original booking remains scheduled for ${booking.scheduled_date} at ${booking.scheduled_start_time}.`
       
-      const emailResult = await emailService.sendBookingStatusUpdate(
+      // Send custom decline email instead of status update (which would show same status twice)
+      const emailResult = await emailService.sendRescheduleDeclineNotification(
         customer.email,
         customerName,
         booking as any,
-        booking.status,
         declineMessage
       )
       

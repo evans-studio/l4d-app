@@ -134,8 +134,8 @@ BEGIN
     created_at
   ) VALUES (
     p_booking_id,
-    v_booking.status,
-    'rescheduled',
+    v_booking.status::booking_status,
+    'rescheduled'::booking_status,
     NULL, -- TODO: Pass admin_id parameter
     'Reschedule request approved by admin',
     format('Reschedule request approved%sRescheduled from %s %s to %s %s%s',

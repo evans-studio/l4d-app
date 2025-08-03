@@ -288,6 +288,38 @@ export class EmailService {
     }
   }
 
+  // Send reschedule decline notification to customer
+  async sendRescheduleDeclineNotification(
+    customerEmail: string,
+    customerName: string,
+    booking: Booking,
+    declineMessage: string
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      const { error } = await resend.emails.send({
+        from: `${this.config.fromName} <${this.config.fromEmail}>`,
+        to: [customerEmail],
+        replyTo: this.config.replyToEmail,
+        subject: `Reschedule Request Update - ${booking.booking_reference}`,
+        html: this.generateRescheduleDeclineHTML(customerName, booking, declineMessage),
+        text: this.generateRescheduleDeclineText(customerName, booking, declineMessage)
+      })
+
+      if (error) {
+        console.error('Reschedule decline email error:', error)
+        return { success: false, error: error.message }
+      }
+
+      return { success: true }
+    } catch (error) {
+      console.error('Reschedule decline email service error:', error)
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Unknown email error' 
+      }
+    }
+  }
+
   // Send admin notification about customer reschedule request
   async sendAdminRescheduleRequestNotification(
     booking: any,
@@ -869,50 +901,77 @@ Professional Vehicle Detailing Services
           <meta charset="utf-8">
           <title>Booking Status Update</title>
           <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+            * { box-sizing: border-box; }
             body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #ffffff; max-width: 600px; margin: 0 auto; padding: 0; background: #0a0a0a; }
-            .header { background: linear-gradient(135deg, ${color}, ${color}dd); color: white; padding: 30px; text-align: center; }
-            .content { background: #1a1a1a; padding: 30px; }
+            .email-container { background: #0a0a0a; min-height: 100vh; }
+            .header { background: linear-gradient(135deg, ${color}, ${color}dd); color: white; padding: 40px 30px; text-align: center; }
+            .logo { display: inline-flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+            .logo-icon { width: 40px; height: 40px; background: rgba(255, 255, 255, 0.2); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+            .logo-text { font-size: 24px; font-weight: bold; background: linear-gradient(to right, #ffffff, #e5e7eb); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+            .content { background: #1a1a1a; padding: 40px 30px; }
             .status-update { background: #252525; border-radius: 12px; padding: 25px; margin: 20px 0; border: 1px solid ${color}40; }
             .highlight { background: rgba(151, 71, 255, 0.1); border: 1px solid rgba(151, 71, 255, 0.3); border-radius: 12px; padding: 20px; margin: 20px 0; }
+            .footer { background: #0a0a0a; padding: 30px; text-align: center; border-top: 1px solid rgba(255, 255, 255, 0.05); }
+            .footer-brand { color: #9747FF; font-weight: 600; margin-bottom: 8px; }
+            .footer-text { color: rgba(255, 255, 255, 0.5); font-size: 12px; line-height: 1.5; }
+            @media (max-width: 480px) {
+              .header, .content, .footer { padding: 20px 15px; }
+              .status-update, .highlight { padding: 20px 15px; }
+            }
           </style>
         </head>
         <body>
-          <div class="header">
-            <h1>Booking Status Update</h1>
-            <p>${message}</p>
-          </div>
-          
-          <div class="content">
-            <p>Dear ${customerName},</p>
-            
-            <div class="status-update">
-              <h3>Booking Reference: ${booking.booking_reference}</h3>
-              <p><strong>Previous Status:</strong> ${previousStatus}</p>
-              <p><strong>New Status:</strong> ${booking.status}</p>
-              ${updateReason ? `<p><strong>Reason:</strong> ${updateReason}</p>` : ''}
+          <div class="email-container">
+            <div class="header">
+              <div class="logo">
+                <div class="logo-icon">🚗</div>
+                <div class="logo-text">Love4Detailing</div>
+              </div>
+              <h1 style="margin: 0; font-size: 28px; font-weight: 700;">Booking Status Update</h1>
+              <p style="color: rgba(255, 255, 255, 0.8); font-size: 16px; margin: 10px 0 0 0;">${message}</p>
             </div>
+            
+            <div class="content">
+              <p style="color: rgba(255, 255, 255, 0.8); font-size: 16px; margin: 0 0 20px 0;">Dear ${customerName},</p>
+              
+              <div class="status-update">
+                <h3 style="color: #ffffff; margin: 0 0 15px 0;">Booking Reference: ${booking.booking_reference}</h3>
+                <p style="color: rgba(255, 255, 255, 0.9); margin: 8px 0;"><strong>Previous Status:</strong> ${previousStatus}</p>
+                <p style="color: rgba(255, 255, 255, 0.9); margin: 8px 0;"><strong>New Status:</strong> ${booking.status}</p>
+                ${updateReason ? `<p style="color: rgba(255, 255, 255, 0.9); margin: 8px 0;"><strong>Reason:</strong> ${updateReason}</p>` : ''}
+              </div>
             
             ${booking.status === 'confirmed' ? `
               <div class="highlight">
-                <h4>Your booking is confirmed!</h4>
-                <p>We look forward to providing you with excellent service. Please ensure:</p>
-                <ul>
-                  <li>Access to water and electricity is available</li>
-                  <li>The vehicle is accessible at the scheduled time</li>
-                  <li>Any special instructions have been noted</li>
+                <h4 style="color: #B269FF; margin: 0 0 15px 0;">Your booking is confirmed!</h4>
+                <p style="color: rgba(255, 255, 255, 0.8); margin: 0 0 15px 0;">We look forward to providing you with excellent service. Please ensure:</p>
+                <ul style="color: rgba(255, 255, 255, 0.8); margin: 0; padding-left: 20px;">
+                  <li style="margin: 8px 0;">Access to water and electricity is available</li>
+                  <li style="margin: 8px 0;">The vehicle is accessible at the scheduled time</li>
+                  <li style="margin: 8px 0;">Any special instructions have been noted</li>
                 </ul>
               </div>
             ` : ''}
             
             ${booking.status === 'completed' ? `
               <div class="highlight">
-                <h4>Thank you for choosing Love 4 Detailing!</h4>
-                <p>We hope you're delighted with the results. If you have any feedback or would like to book another service, please don't hesitate to contact us.</p>
+                <h4 style="color: #B269FF; margin: 0 0 15px 0;">Thank you for choosing Love4Detailing!</h4>
+                <p style="color: rgba(255, 255, 255, 0.8);">We hope you're delighted with the results. If you have any feedback or would like to book another service, please don't hesitate to contact us.</p>
               </div>
             ` : ''}
             
-            <p>If you have any questions, please contact us at ${this.config.adminEmail}</p>
+            <p style="color: rgba(255, 255, 255, 0.8); margin: 20px 0;">
+              If you have any questions, please contact us at ${this.config.adminEmail}
+            </p>
+            </div>
+            
+            <div class="footer">
+              <div class="footer-brand">Love4Detailing</div>
+              <p class="footer-text">
+                Professional vehicle detailing services<br>
+                Contact us: ${this.config.adminEmail}
+              </p>
+            </div>
           </div>
         </body>
       </html>
@@ -957,6 +1016,109 @@ If you have any questions, please contact us at ${this.config.adminEmail}
 
 ---
 Love 4 Detailing - Professional Vehicle Detailing Services
+    `
+  }
+
+  private generateRescheduleDeclineHTML(customerName: string, booking: Booking, declineMessage: string): string {
+    return `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Reschedule Request Update - Love4Detailing</title>
+          <style>
+            * { box-sizing: border-box; }
+            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #ffffff; max-width: 600px; margin: 0 auto; padding: 0; background: #0a0a0a; }
+            .email-container { background: #0a0a0a; min-height: 100vh; }
+            .header { background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%); color: white; padding: 40px 30px; text-align: center; }
+            .logo { display: inline-flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+            .logo-icon { width: 40px; height: 40px; background: rgba(255, 255, 255, 0.2); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+            .logo-text { font-size: 24px; font-weight: bold; background: linear-gradient(to right, #ffffff, #e5e7eb); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+            .content { background: #1a1a1a; padding: 40px 30px; }
+            .decline-card { background: #252525; border-radius: 12px; padding: 25px; margin: 25px 0; border: 1px solid rgba(220, 38, 38, 0.2); }
+            .booking-details { background: rgba(151, 71, 255, 0.1); border: 1px solid rgba(151, 71, 255, 0.3); border-radius: 12px; padding: 20px; margin: 20px 0; }
+            .detail-row { display: flex; justify-content: space-between; margin: 8px 0; padding: 8px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+            .detail-row:last-child { border-bottom: none; }
+            .footer { background: #0a0a0a; padding: 30px; text-align: center; border-top: 1px solid rgba(255, 255, 255, 0.05); }
+            .footer-brand { color: #9747FF; font-weight: 600; margin-bottom: 8px; }
+            .footer-text { color: rgba(255, 255, 255, 0.5); font-size: 12px; line-height: 1.5; }
+            @media (max-width: 480px) {
+              .header, .content, .footer { padding: 20px 15px; }
+              .decline-card, .booking-details { padding: 20px 15px; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="email-container">
+            <div class="header">
+              <div class="logo">
+                <div class="logo-icon">🚗</div>
+                <div class="logo-text">Love4Detailing</div>
+              </div>
+              <h1 style="margin: 0; font-size: 28px; font-weight: 700;">Reschedule Request Update</h1>
+            </div>
+            
+            <div class="content">
+              <p style="color: rgba(255, 255, 255, 0.8); font-size: 16px; margin: 0 0 20px 0;">Dear ${customerName},</p>
+              
+              <div class="decline-card">
+                <h3 style="color: #ef4444; margin: 0 0 15px 0;">Reschedule Request - ${booking.booking_reference}</h3>
+                <p style="color: rgba(255, 255, 255, 0.9); margin: 0 0 15px 0;">${declineMessage}</p>
+              </div>
+              
+              <div class="booking-details">
+                <h4 style="color: #B269FF; margin: 0 0 15px 0;">Current Booking Details</h4>
+                <div class="detail-row">
+                  <span style="color: rgba(255, 255, 255, 0.7);">Booking Reference:</span>
+                  <span style="color: #ffffff; font-weight: 600;">${booking.booking_reference}</span>
+                </div>
+                <div class="detail-row">
+                  <span style="color: rgba(255, 255, 255, 0.7);">Date:</span>
+                  <span style="color: #ffffff;">${formatDateForEmail(booking.scheduled_date)}</span>
+                </div>
+                <div class="detail-row">
+                  <span style="color: rgba(255, 255, 255, 0.7);">Time:</span>
+                  <span style="color: #ffffff;">${formatTimeForEmail(booking.scheduled_start_time)}</span>
+                </div>
+              </div>
+              
+              <p style="color: rgba(255, 255, 255, 0.8); margin: 20px 0;">
+                If you need to discuss alternative arrangements, please contact us directly. We're here to help make your car detailing experience as convenient as possible.
+              </p>
+            </div>
+            
+            <div class="footer">
+              <div class="footer-brand">Love4Detailing</div>
+              <p class="footer-text">
+                Professional vehicle detailing services<br>
+                Contact us: ${this.config.adminEmail}
+              </p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `
+  }
+
+  private generateRescheduleDeclineText(customerName: string, booking: Booking, declineMessage: string): string {
+    return `
+RESCHEDULE REQUEST UPDATE - Love4Detailing
+
+Dear ${customerName},
+
+${declineMessage}
+
+CURRENT BOOKING DETAILS:
+Booking Reference: ${booking.booking_reference}
+Date: ${formatDateForEmail(booking.scheduled_date)}
+Time: ${formatTimeForEmail(booking.scheduled_start_time)}
+
+If you need to discuss alternative arrangements, please contact us directly. We're here to help make your car detailing experience as convenient as possible.
+
+---
+Love4Detailing - Professional Vehicle Detailing Services
+Contact us: ${this.config.adminEmail}
     `
   }
 
