@@ -280,11 +280,14 @@ export function BookingCard({
           <div>
             <p className="text-text-secondary text-xs mb-1">Vehicle</p>
             <p className="text-text-primary font-medium text-sm">
-              {booking.vehicle.make} {booking.vehicle.model}
+              {booking.vehicle?.make && booking.vehicle?.model 
+                ? `${booking.vehicle.make} ${booking.vehicle.model}`
+                : 'No vehicle info'
+              }
             </p>
-            {booking.vehicle.year && (
+            {booking.vehicle?.year && (
               <p className="text-text-secondary text-xs">
-                {booking.vehicle.year} • {booking.vehicle.color}
+                {booking.vehicle.year}{booking.vehicle?.color ? ` • ${booking.vehicle.color}` : ''}
               </p>
             )}
           </div>

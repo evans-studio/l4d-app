@@ -93,8 +93,8 @@ function AdminBookingsContent() {
         booking.customer_name.toLowerCase().includes(searchLower) ||
         booking.customer_email.toLowerCase().includes(searchLower) ||
         booking.customer_phone?.toLowerCase().includes(searchLower) ||
-        booking.vehicle.make.toLowerCase().includes(searchLower) ||
-        booking.vehicle.model.toLowerCase().includes(searchLower)
+        booking.vehicle?.make?.toLowerCase().includes(searchLower) ||
+        booking.vehicle?.model?.toLowerCase().includes(searchLower)
       )
     }
 
@@ -759,11 +759,14 @@ function BookingCard({ booking, onStatusUpdate, onConfirm, onDecline, onReschedu
             <p className="text-xs text-text-secondary mb-2 font-medium uppercase tracking-wide">Vehicle</p>
             <div className="space-y-1">
               <p className="font-semibold text-text-primary">
-                {booking.vehicle.make} {booking.vehicle.model}
+                {booking.vehicle?.make && booking.vehicle?.model 
+                  ? `${booking.vehicle.make} ${booking.vehicle.model}`
+                  : 'No vehicle info'
+                }
               </p>
-              {booking.vehicle.year && (
+              {booking.vehicle?.year && (
                 <p className="text-sm text-text-secondary">
-                  {booking.vehicle.year} • {booking.vehicle.color}
+                  {booking.vehicle.year}{booking.vehicle?.color ? ` • ${booking.vehicle.color}` : ''}
                 </p>
               )}
             </div>
