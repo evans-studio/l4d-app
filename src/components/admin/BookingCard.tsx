@@ -303,7 +303,7 @@ export function BookingCard({
           <div className="flex flex-wrap gap-1">
             {booking.services.map((service, index) => (
               <span
-                key={index}
+                key={`${booking.id}-service-${index}-${service.name}`}
                 className="px-2 py-1 bg-surface-tertiary rounded text-xs text-text-primary"
               >
                 {service.name}

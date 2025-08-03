@@ -19,6 +19,19 @@ export async function POST(
 
     const supabase = supabaseAdmin
     
+    // Get the original booking status BEFORE making any changes
+    const { data: originalBooking, error: originalBookingError } = await supabase
+      .from('bookings')
+      .select('status')
+      .eq('id', bookingId)
+      .single()
+
+    if (originalBookingError || !originalBooking) {
+      return ApiResponseHandler.notFound('Booking not found')
+    }
+
+    const originalStatus = originalBooking.status
+    
     // Use the atomic reschedule function to handle all database operations in a single transaction
     const rescheduleResult = await rescheduleBookingAtomic(supabase, {
       bookingId,
@@ -72,9 +85,6 @@ export async function POST(
           const emailService = new EmailService()
           const customerName = `${customer.first_name} ${customer.last_name}`
           
-          // Get the original status from the atomic function result
-          const originalStatus = rescheduleResult.data?.original_status || booking.status
-          
           const emailResult = await emailService.sendBookingStatusUpdate(
             customer.email,
             customerName,
@@ -84,7 +94,7 @@ export async function POST(
               scheduled_start_time: new_time,
               status: 'rescheduled' 
             } as Booking,
-            originalStatus, // FIXED: Use actual original status instead of 'rescheduled'
+            originalStatus, // Use the original status we captured before the atomic operation
             `Great news! Your reschedule request has been approved. Your booking is now scheduled for ${new_date} at ${new_time}.`
           )
           
