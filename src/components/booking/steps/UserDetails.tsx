@@ -90,6 +90,18 @@ export function UserDetails() {
         setPasswordError('')
       }
     }
+    
+    // Keep store in sync for new customers as they type
+    if (validationStatus === 'new') {
+      const updatedForm = { ...userForm, [field]: value }
+      setUserData({
+        email: updatedForm.email,
+        phone: updatedForm.phone,
+        name: updatedForm.name,
+        isExistingUser: false,
+        password: updatedForm.password
+      })
+    }
   }
 
   const handleValidateUser = async () => {
@@ -117,30 +129,14 @@ export function UserDetails() {
         setValidationStatus('new')
         setShowUserData(false)
         
-        // Require name and password for new users
-        if (!userForm.name || !userForm.password || !userForm.confirmPassword) {
-          return
-        }
-        
-        // Validate password
-        const passwordValidation = validatePassword(userForm.password)
-        if (passwordValidation) {
-          setPasswordError(passwordValidation)
-          return
-        }
-        
-        // Check passwords match
-        if (userForm.password !== userForm.confirmPassword) {
-          setPasswordError('Passwords do not match')
-          return
-        }
-        
+        // For new customers, always set basic user data first
+        // Additional validation will be checked by the continue button
         setUserData({
           email: userForm.email,
           phone: userForm.phone,
-          name: userForm.name,
+          name: userForm.name || '', // Allow empty name initially
           isExistingUser: false,
-          password: userForm.password // Include password for new users
+          password: userForm.password || '' // Allow empty password initially
         })
       }
     } catch (error) {
@@ -273,11 +269,11 @@ export function UserDetails() {
 
           {validationStatus === 'new' && (
             <div className="space-y-4">
-              <div className="flex items-center gap-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <AlertCircleIcon className="w-5 h-5 text-blue-600" />
+              <div className="flex items-center gap-3 p-4 bg-surface-secondary border border-border-secondary rounded-lg">
+                <AlertCircleIcon className="w-5 h-5 text-text-muted" />
                 <div>
-                  <p className="text-blue-700 font-medium">New Customer</p>
-                  <p className="text-blue-600 text-sm">Set your password to create your account during booking</p>
+                  <p className="text-text-primary font-medium">New Customer</p>
+                  <p className="text-text-secondary text-sm">Set your password to create your account during booking</p>
                 </div>
               </div>
 
