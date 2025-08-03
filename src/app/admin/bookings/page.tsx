@@ -435,9 +435,9 @@ function AdminBookingsContent() {
                     </div>
 
                     <CardGrid columns={{ mobile: 1, tablet: 1, desktop: 1 }} gap="md">
-                      {filteredBookings.map((booking) => (
+                      {filteredBookings.map((booking, index) => (
                         <BookingCard
-                          key={booking.id}
+                          key={`${booking.id}-${booking.booking_reference}-${index}`}
                           booking={booking}
                           onStatusUpdate={updateBookingStatus}
                           onConfirm={() => handleConfirmClick(booking)}
@@ -723,7 +723,7 @@ function BookingCard({ booking, onStatusUpdate, onConfirm, onDecline, onReschedu
           <div className="text-right">
             <p className="text-xl font-bold text-brand-500">£{booking.total_price}</p>
             <p className="text-sm text-text-muted">
-              {booking.services.length} service{booking.services.length !== 1 ? 's' : ''}
+              {booking.services?.length || 0} service{(booking.services?.length || 0) !== 1 ? 's' : ''}
             </p>
           </div>
         </div>
@@ -770,14 +770,14 @@ function BookingCard({ booking, onStatusUpdate, onConfirm, onDecline, onReschedu
         <div className="mb-4">
           <p className="text-xs text-text-secondary mb-2">Services</p>
           <div className="flex flex-wrap gap-1">
-            {booking.services.map((service, index) => (
+            {booking.services?.map((service, index) => (
               <span
-                key={index}
+                key={`${booking.id}-service-${index}-${service.name}`}
                 className="px-2 py-1 bg-surface-tertiary rounded text-xs text-text-primary"
               >
                 {service.name}
               </span>
-            ))}
+            )) || <span className="text-text-muted text-xs">No services</span>}
           </div>
         </div>
 
