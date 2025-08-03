@@ -9,6 +9,7 @@ import { VehicleCard } from '@/components/customer/components/VehicleCard'
 import { CustomerLayout } from '@/components/layout/templates/CustomerLayout'
 import { CustomerRoute } from '@/components/ProtectedRoute'
 import { Plus, Car, AlertCircle, Calendar, Palette, Hash } from 'lucide-react'
+import { ConfirmationModal } from '@/components/ui/composites/ConfirmationModal'
 
 interface Vehicle {
   id: string
@@ -50,6 +51,11 @@ export default function VehiclesPage() {
     set_as_default: false
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
+  
+  // Confirmation modal state
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [vehicleToDelete, setVehicleToDelete] = useState<Vehicle | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   // Fetch vehicles
   useEffect(() => {
@@ -131,11 +137,20 @@ export default function VehiclesPage() {
     }
   }
 
-  const handleDeleteVehicle = async (vehicleId: string) => {
-    if (!confirm('Are you sure you want to delete this vehicle?')) return
+  const handleDeleteVehicle = (vehicleId: string) => {
+    const vehicle = vehicles.find(v => v.id === vehicleId)
+    if (vehicle) {
+      setVehicleToDelete(vehicle)
+      setShowDeleteConfirm(true)
+    }
+  }
 
+  const confirmDeleteVehicle = async () => {
+    if (!vehicleToDelete) return
+    
+    setIsDeleting(true)
     try {
-      const response = await fetch(`/api/customer/vehicles/${vehicleId}`, {
+      const response = await fetch(`/api/customer/vehicles/${vehicleToDelete.id}`, {
         method: 'DELETE'
       })
       
@@ -143,11 +158,15 @@ export default function VehiclesPage() {
       
       if (result.success) {
         await fetchVehicles()
+        setShowDeleteConfirm(false)
+        setVehicleToDelete(null)
       } else {
         setError(result.error?.message || 'Failed to delete vehicle')
       }
     } catch (err) {
       setError('Failed to delete vehicle')
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -386,6 +405,25 @@ export default function VehiclesPage() {
           </div>
         )}
         </div>
+
+        {/* Delete Confirmation Modal */}
+        <ConfirmationModal
+          isOpen={showDeleteConfirm}
+          onClose={() => {
+            setShowDeleteConfirm(false)
+            setVehicleToDelete(null)
+          }}
+          onConfirm={confirmDeleteVehicle}
+          title="Delete Vehicle"
+          message={
+            vehicleToDelete
+              ? `Are you sure you want to delete the ${vehicleToDelete.year} ${vehicleToDelete.make} ${vehicleToDelete.model}? This action cannot be undone.`
+              : 'Are you sure you want to delete this vehicle?'
+          }
+          confirmText="Delete Vehicle"
+          confirmVariant="danger"
+          isLoading={isDeleting}
+        />
       </CustomerLayout>
     </CustomerRoute>
   )

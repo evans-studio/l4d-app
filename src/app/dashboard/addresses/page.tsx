@@ -7,6 +7,7 @@ import { AddressCard } from '@/components/customer/components/AddressCard'
 import { CustomerLayout } from '@/components/layout/templates/CustomerLayout'
 import { CustomerRoute } from '@/components/ProtectedRoute'
 import { Plus, MapPin, AlertCircle } from 'lucide-react'
+import { ConfirmationModal } from '@/components/ui/composites/ConfirmationModal'
 
 interface Address {
   id: string
@@ -43,6 +44,11 @@ export default function AddressesPage() {
     set_as_default: false
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
+  
+  // Confirmation modal state
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [addressToDelete, setAddressToDelete] = useState<Address | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   // Fetch addresses
   useEffect(() => {
@@ -125,11 +131,20 @@ export default function AddressesPage() {
     }
   }
 
-  const handleDeleteAddress = async (addressId: string) => {
-    if (!confirm('Are you sure you want to delete this address?')) return
+  const handleDeleteAddress = (addressId: string) => {
+    const address = addresses.find(a => a.id === addressId)
+    if (address) {
+      setAddressToDelete(address)
+      setShowDeleteConfirm(true)
+    }
+  }
 
+  const confirmDeleteAddress = async () => {
+    if (!addressToDelete) return
+    
+    setIsDeleting(true)
     try {
-      const response = await fetch(`/api/customer/addresses/${addressId}`, {
+      const response = await fetch(`/api/customer/addresses/${addressToDelete.id}`, {
         method: 'DELETE'
       })
       
@@ -137,11 +152,15 @@ export default function AddressesPage() {
       
       if (result.success) {
         await fetchAddresses()
+        setShowDeleteConfirm(false)
+        setAddressToDelete(null)
       } else {
         setError(result.error?.message || 'Failed to delete address')
       }
     } catch (err) {
       setError('Failed to delete address')
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -443,6 +462,25 @@ export default function AddressesPage() {
           </CardContent>
         </Card>
         </div>
+
+        {/* Delete Confirmation Modal */}
+        <ConfirmationModal
+          isOpen={showDeleteConfirm}
+          onClose={() => {
+            setShowDeleteConfirm(false)
+            setAddressToDelete(null)
+          }}
+          onConfirm={confirmDeleteAddress}
+          title="Delete Address"
+          message={
+            addressToDelete
+              ? `Are you sure you want to delete the address at ${addressToDelete.address_line_1}, ${addressToDelete.city}? This action cannot be undone.`
+              : 'Are you sure you want to delete this address?'
+          }
+          confirmText="Delete Address"
+          confirmVariant="danger"
+          isLoading={isDeleting}
+        />
       </CustomerLayout>
     </CustomerRoute>
   )

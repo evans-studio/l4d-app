@@ -126,6 +126,39 @@ export async function PUT(
       }, { status: 500 })
     }
 
+    // Handle setting as default address
+    if (updateData.set_as_default === true) {
+      // First, unset all other default addresses for this user
+      const { error: unsetError } = await supabaseService
+        .from('customer_addresses')
+        .update({ is_default: false })
+        .eq('user_id', profile.id)
+        .neq('id', addressId)
+
+      if (unsetError) {
+        console.error('Failed to unset other default addresses:', unsetError)
+        // Continue anyway, this is not critical
+      }
+
+      // Then set this address as default
+      const { error: setDefaultError } = await supabaseService
+        .from('customer_addresses')
+        .update({ is_default: true })
+        .eq('id', addressId)
+        .eq('user_id', profile.id)
+
+      if (setDefaultError) {
+        console.error('Failed to set address as default:', setDefaultError)
+        return NextResponse.json({
+          success: false,
+          error: { message: 'Failed to set address as default', code: 'DATABASE_ERROR' }
+        }, { status: 500 })
+      }
+
+      // Update the response data to reflect the change
+      updatedAddress.is_default = true
+    }
+
     // Transform the response
     const transformedAddress = {
       id: updatedAddress.id,

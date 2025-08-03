@@ -60,6 +60,7 @@ export async function PUT(
     if (updateData.year) updateObject.year = parseInt(updateData.year)
     if (updateData.color) updateObject.color = updateData.color.trim()
     if (updateData.license_plate !== undefined) updateObject.license_plate = updateData.license_plate?.trim() || null
+    if (updateData.registration !== undefined) updateObject.registration = updateData.registration?.trim() || null
 
     // Update the vehicle
     const { data: updatedVehicle, error: updateError } = await supabase
@@ -86,6 +87,39 @@ export async function PUT(
         success: false,
         error: { message: 'Failed to update vehicle', code: 'DATABASE_ERROR' }
       }, { status: 500 })
+    }
+
+    // Handle setting as default vehicle
+    if (updateData.set_as_default === true) {
+      // First, unset all other default vehicles for this user
+      const { error: unsetError } = await supabase
+        .from('customer_vehicles')
+        .update({ is_default: false })
+        .eq('user_id', profile.id)
+        .neq('id', vehicleId)
+
+      if (unsetError) {
+        console.error('Failed to unset other default vehicles:', unsetError)
+        // Continue anyway, this is not critical
+      }
+
+      // Then set this vehicle as default
+      const { error: setDefaultError } = await supabase
+        .from('customer_vehicles')
+        .update({ is_default: true })
+        .eq('id', vehicleId)
+        .eq('user_id', profile.id)
+
+      if (setDefaultError) {
+        console.error('Failed to set vehicle as default:', setDefaultError)
+        return NextResponse.json({
+          success: false,
+          error: { message: 'Failed to set vehicle as default', code: 'DATABASE_ERROR' }
+        }, { status: 500 })
+      }
+
+      // Update the response data to reflect the change
+      updatedVehicle.is_default = true
     }
 
     // Transform the response (no longer using vehicle_sizes)

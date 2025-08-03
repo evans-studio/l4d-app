@@ -22,11 +22,14 @@ function BookingPageContent(): React.JSX.Element {
   const { 
     currentStep, 
     previousStep, 
+    nextStep,
     isRebooking, 
     resetFlow, 
     formData,
     setServiceSelection,
-    loadAvailableServices
+    loadAvailableServices,
+    setUserData,
+    loadExistingUserData
   } = useBookingFlowStore();
   
   // Auth state (still needed for header display)
@@ -69,6 +72,20 @@ function BookingPageContent(): React.JSX.Element {
           }
           setIsAuthenticated(true);
           setProfile(user);
+          
+          // Auto-populate user data for authenticated users to skip UserDetails step
+          const userData = {
+            email: user.email,
+            phone: user.phone || '',
+            name: user.first_name && user.last_name ? `${user.first_name} ${user.last_name}` : user.first_name || '',
+            isExistingUser: true
+          };
+          setUserData(userData);
+          
+          // Load existing user's vehicles and addresses for booking selection
+          if (user.email) {
+            await loadExistingUserData(user.email, user.phone || '');
+          }
         } else {
           // Not authenticated - this is fine for new users
           setIsAuthenticated(false);
@@ -129,6 +146,14 @@ function BookingPageContent(): React.JSX.Element {
       prePopulateService();
     }
   }, [searchParams, setServiceSelection, loadAvailableServices, currentStep]);
+
+  // Auto-skip UserDetails step for authenticated users
+  useEffect(() => {
+    if (isAuthenticated && profile && currentStep === 5) {
+      console.log('🔄 Authenticated user detected at step 5, auto-advancing to step 6');
+      nextStep();
+    }
+  }, [isAuthenticated, profile, currentStep, nextStep]);
 
   const renderCurrentStep = (): React.JSX.Element | null => {
     switch (currentStep) {

@@ -21,6 +21,7 @@ interface VehicleCardProps {
     year: number
     color: string
     license_plate?: string
+    registration?: string
     vehicle_size?: {
       size: 'S' | 'M' | 'L' | 'XL'
       multiplier: number
@@ -39,11 +40,74 @@ interface VehicleCardProps {
 }
 
 const sizeConfig = {
-  S: { label: 'Small', color: 'text-green-600', examples: 'Hatchbacks, Mini' },
-  M: { label: 'Medium', color: 'text-blue-600', examples: 'Saloons, Compact SUVs' },
-  L: { label: 'Large', color: 'text-orange-600', examples: 'Estates, Large SUVs' },
-  XL: { label: 'Extra Large', color: 'text-red-600', examples: 'Vans, Luxury Cars' }
+  S: { label: 'Small', color: 'text-green-600', examples: 'Hatchbacks, Mini', multiplier: 1.0 },
+  M: { label: 'Medium', color: 'text-blue-600', examples: 'Saloons, Compact SUVs', multiplier: 1.2 },
+  L: { label: 'Large', color: 'text-orange-600', examples: 'Estates, Large SUVs', multiplier: 1.4 },
+  XL: { label: 'Extra Large', color: 'text-red-600', examples: 'Vans, Luxury Cars', multiplier: 1.6 }
 } as const
+
+// Detect vehicle size based on make and model
+const detectVehicleSize = (make: string, model: string): 'S' | 'M' | 'L' | 'XL' => {
+  const makeModel = `${make} ${model}`.toLowerCase()
+  
+  // Small vehicles
+  if (
+    makeModel.includes('mini') ||
+    makeModel.includes('smart') ||
+    makeModel.includes('fiat 500') ||
+    makeModel.includes('toyota aygo') ||
+    makeModel.includes('ford ka') ||
+    makeModel.includes('citroen c1') ||
+    makeModel.includes('peugeot 108') ||
+    makeModel.includes('hyundai i10') ||
+    makeModel.includes('volkswagen up') ||
+    model.toLowerCase().includes('hatchback')
+  ) {
+    return 'S'
+  }
+  
+  // Large vehicles
+  if (
+    makeModel.includes('range rover') ||
+    makeModel.includes('bmw x5') ||
+    makeModel.includes('bmw x6') ||
+    makeModel.includes('bmw x7') ||
+    makeModel.includes('audi q7') ||
+    makeModel.includes('audi q8') ||
+    makeModel.includes('mercedes gle') ||
+    makeModel.includes('mercedes gls') ||
+    makeModel.includes('mercedes g-class') ||
+    makeModel.includes('volvo xc90') ||
+    makeModel.includes('porsche cayenne') ||
+    makeModel.includes('estate') ||
+    makeModel.includes('touring') ||
+    model.toLowerCase().includes('suv') ||
+    model.toLowerCase().includes('4x4')
+  ) {
+    return 'L'
+  }
+  
+  // Extra large vehicles
+  if (
+    makeModel.includes('van') ||
+    makeModel.includes('transit') ||
+    makeModel.includes('sprinter') ||
+    makeModel.includes('mercedes v-class') ||
+    makeModel.includes('volkswagen crafter') ||
+    makeModel.includes('iveco daily') ||
+    makeModel.includes('bentley') ||
+    makeModel.includes('rolls royce') ||
+    makeModel.includes('ferrari') ||
+    makeModel.includes('lamborghini') ||
+    makeModel.includes('maserati') ||
+    makeModel.includes('aston martin')
+  ) {
+    return 'XL'
+  }
+  
+  // Default to medium for everything else (saloons, standard cars)
+  return 'M'
+}
 
 export function VehicleCard({ 
   vehicle, 
@@ -56,9 +120,10 @@ export function VehicleCard({
   const [isDeleting, setIsDeleting] = useState(false)
   const [isSettingDefault, setIsSettingDefault] = useState(false)
   
-  // Handle cases where vehicle_size might be undefined (after vehicle_sizes table removal)
-  const vehicleSize = vehicle.vehicle_size?.size || 'M' // Default to Medium if no size info
+  // Use detected size or fallback to provided size data
+  const vehicleSize = vehicle.vehicle_size?.size || detectVehicleSize(vehicle.make, vehicle.model)
   const sizeInfo = sizeConfig[vehicleSize]
+  const sizeMultiplier = vehicle.vehicle_size?.multiplier || sizeInfo.multiplier
 
   const formatLastUsed = (dateString?: string) => {
     if (!dateString) return 'Never used'
@@ -200,7 +265,7 @@ export function VehicleCard({
                     {sizeInfo.label} ({vehicleSize})
                   </p>
                   <p className="text-sm text-text-secondary">
-                    {vehicle.vehicle_size?.multiplier || 1.0}x price multiplier
+                    {sizeMultiplier}x price multiplier
                   </p>
                 </div>
               </div>
