@@ -249,12 +249,13 @@ export default function DashboardPage() {
                       </div>
                     </div>
                     
-                    <div className="flex flex-col sm:flex-row gap-4">
+                    <div className="flex flex-col gap-3">
                       <Button
                         onClick={() => router.push('/book')}
                         size="lg"
-                        className="bg-brand-600 hover:bg-brand-700"
+                        className="bg-brand-600 hover:bg-brand-700 min-h-[48px]"
                         rightIcon={<ArrowRight className="w-4 h-4" />}
+                        fullWidth
                       >
                         Book Your First Service
                       </Button>
@@ -262,6 +263,8 @@ export default function DashboardPage() {
                         onClick={() => router.push('/dashboard/vehicles')}
                         variant="outline"
                         size="lg"
+                        className="min-h-[48px]"
+                        fullWidth
                       >
                         Add Your Vehicle
                       </Button>
@@ -273,7 +276,7 @@ export default function DashboardPage() {
           )}
 
           {/* Dashboard Widgets Grid - Mobile First Responsive */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 mb-8">
             {/* Top Row - Next Booking & Quick Rebook */}
             <NextBookingWidget booking={nextBooking} />
             <QuickRebookWidget lastBooking={lastCompletedBooking} />

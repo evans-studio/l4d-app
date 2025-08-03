@@ -104,7 +104,7 @@ export function NextBookingWidget({ booking }: NextBookingWidgetProps) {
             <Calendar className="w-6 h-6 text-text-muted" />
           </div>
           <h4 className="font-medium text-text-primary mb-2">No upcoming bookings</h4>
-          <p className="text-sm text-text-secondary">
+          <p className="text-sm text-text-secondary text-center px-4">
             Your next booking will appear here. Use the floating book button to schedule a service.
           </p>
         </CardContent>
@@ -185,17 +185,18 @@ export function NextBookingWidget({ booking }: NextBookingWidgetProps) {
         </div>
 
         {/* Quick Actions */}
-        <div className="flex gap-2 pt-2">
+        <div className="flex flex-col sm:flex-row gap-2 pt-2">
           {booking.status !== 'in_progress' && (
             <Button
               variant="outline"
               size="sm"
-              className="flex-1"
+              className="flex-1 min-h-[40px]"
               onClick={() => openOverlay({
                 type: 'booking-reschedule',
                 data: { bookingId: booking.id, booking }
               })}
               leftIcon={<Edit className="w-4 h-4" />}
+              fullWidth
             >
               Reschedule
             </Button>
@@ -203,12 +204,13 @@ export function NextBookingWidget({ booking }: NextBookingWidgetProps) {
           <Button
             variant="outline"
             size="sm"
-            className="flex-1"
+            className="flex-1 min-h-[40px]"
             onClick={() => openOverlay({
               type: 'booking-cancel',
               data: { bookingId: booking.id, booking }
             })}
             leftIcon={<X className="w-4 h-4" />}
+            fullWidth
           >
             Cancel
           </Button>

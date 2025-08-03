@@ -58,7 +58,7 @@ export function QuickRebookWidget({ lastBooking }: QuickRebookWidgetProps) {
             <RefreshCw className="w-6 h-6 text-text-muted" />
           </div>
           <h4 className="font-medium text-text-primary mb-2">No previous bookings</h4>
-          <p className="text-sm text-text-secondary">
+          <p className="text-sm text-text-secondary text-center px-4">
             Complete your first booking to enable quick rebooking here
           </p>
         </CardContent>
@@ -123,7 +123,7 @@ export function QuickRebookWidget({ lastBooking }: QuickRebookWidgetProps) {
 
         {/* Service information only - use PWA floating button to book */}
         <div className="text-center">
-          <p className="text-xs text-text-muted">
+          <p className="text-xs text-text-muted px-2">
             Use the floating book button to rebook this service
           </p>
         </div>

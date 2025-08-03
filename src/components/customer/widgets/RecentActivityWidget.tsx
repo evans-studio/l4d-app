@@ -111,13 +111,14 @@ export function RecentActivityWidget({ recentBookings }: RecentActivityWidgetPro
             <Activity className="w-6 h-6 text-text-muted" />
           </div>
           <h4 className="font-medium text-text-primary mb-2">No activity yet</h4>
-          <p className="text-sm text-text-secondary mb-6">
+          <p className="text-sm text-text-secondary mb-6 text-center px-4">
             Your booking history will appear here
           </p>
           <Button
             onClick={() => router.push('/book')}
             size="sm"
-            className="w-full"
+            className="w-full min-h-[40px]"
+            fullWidth
           >
             Book Your First Service
           </Button>
@@ -153,7 +154,7 @@ export function RecentActivityWidget({ recentBookings }: RecentActivityWidgetPro
           return (
             <div
               key={booking.id}
-              className="flex items-center gap-3 p-3 rounded-lg bg-surface-tertiary hover:bg-surface-secondary transition-colors cursor-pointer"
+              className="flex items-center gap-3 p-3 rounded-lg bg-surface-tertiary hover:bg-surface-secondary transition-colors cursor-pointer min-h-[60px] touch-manipulation"
               onClick={() => openOverlay({
                 type: 'booking-view',
                 data: { bookingId: booking.id, booking }
@@ -215,8 +216,9 @@ export function RecentActivityWidget({ recentBookings }: RecentActivityWidgetPro
           <Button
             variant="outline"
             onClick={() => router.push('/dashboard/bookings')}
-            className="w-full"
+            className="w-full min-h-[44px]"
             rightIcon={<ChevronRight className="w-4 h-4" />}
+            fullWidth
           >
             View All Bookings ({recentBookings.length})
           </Button>
