@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/primitives/Button'
 import { Input } from '@/components/ui/primitives/Input'
+import { Select } from '@/components/ui/primitives/Select'
 import { Checkbox } from '@/components/ui/primitives/Checkbox'
 import { Card, CardContent } from '@/components/ui/composites/Card'
 import { VehicleCard } from '@/components/customer/components/VehicleCard'
@@ -10,6 +11,19 @@ import { CustomerLayout } from '@/components/layout/templates/CustomerLayout'
 import { CustomerRoute } from '@/components/ProtectedRoute'
 import { Plus, Car, AlertCircle, Calendar, Palette, Hash } from 'lucide-react'
 import { ConfirmationModal } from '@/components/ui/composites/ConfirmationModal'
+import vehicleData from '@/data/vehicle-size-data.json'
+
+// Vehicle data interfaces
+interface VehicleModel {
+  model: string
+  size: 'S' | 'M' | 'L' | 'XL'
+  years: number[]
+}
+
+interface VehicleMake {
+  make: string
+  models: VehicleModel[]
+}
 
 interface Vehicle {
   id: string
@@ -57,6 +71,37 @@ export default function VehiclesPage() {
   const [vehicleToDelete, setVehicleToDelete] = useState<Vehicle | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
 
+  // Vehicle data processing
+  const availableMakes = vehicleData.vehicles.map(v => v.make).sort()
+  
+  const availableModels = formData.make 
+    ? vehicleData.vehicles.find(v => v.make === formData.make)?.models || []
+    : []
+
+  const availableYears = formData.make && formData.model
+    ? availableModels.find(m => m.model === formData.model)?.years || []
+    : []
+
+  // Size detection function
+  const getVehicleSize = (make: string, model: string): string => {
+    const vehicleMake = vehicleData.vehicles.find(v => v.make === make)
+    if (vehicleMake) {
+      const vehicleModel = vehicleMake.models.find(m => m.model === model)
+      if (vehicleModel) {
+        return vehicleModel.size
+      }
+    }
+    return 'M' // Default to medium
+  }
+
+  // Size configuration with multipliers
+  const sizeConfig = {
+    S: { label: 'Small', multiplier: 1.0 },
+    M: { label: 'Medium', multiplier: 1.2 },
+    L: { label: 'Large', multiplier: 1.4 },
+    XL: { label: 'Extra Large', multiplier: 1.6 }
+  } as const
+
   // Fetch vehicles
   useEffect(() => {
     fetchVehicles().finally(() => setIsLoading(false))
@@ -77,6 +122,24 @@ export default function VehiclesPage() {
     }
   }
 
+  const handleFormChange = (field: string, value: any) => {
+    setFormData(prev => {
+      const newForm = { ...prev, [field]: value }
+      
+      // Reset dependent fields when make changes
+      if (field === 'make') {
+        newForm.model = ''
+        newForm.year = new Date().getFullYear()
+      }
+      
+      // Reset year when model changes
+      if (field === 'model') {
+        newForm.year = new Date().getFullYear()
+      }
+      
+      return newForm
+    })
+  }
 
   const handleAddVehicle = () => {
     setEditingVehicle(null)
@@ -277,38 +340,41 @@ export default function VehiclesPage() {
               <form onSubmit={handleSubmitVehicle} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Make */}
-                  <Input
+                  <Select
                     label="Make"
                     required
+                    placeholder="Select vehicle make"
+                    options={availableMakes.map(make => ({ value: make, label: make }))}
                     value={formData.make}
-                    onChange={(e) => setFormData(prev => ({ ...prev, make: e.target.value }))}
-                    placeholder="e.g., Toyota, BMW, Ford"
+                    onChange={(e) => handleFormChange('make', e.target.value)}
                     leftIcon={<Car className="w-4 h-4" />}
                     helperText="Vehicle manufacturer"
                   />
 
                   {/* Model */}
-                  <Input
+                  <Select
                     label="Model"
                     required
+                    placeholder="Select vehicle model"
+                    options={availableModels.map(model => ({ value: model.model, label: model.model }))}
                     value={formData.model}
-                    onChange={(e) => setFormData(prev => ({ ...prev, model: e.target.value }))}
-                    placeholder="e.g., Corolla, 3 Series, Focus"
+                    onChange={(e) => handleFormChange('model', e.target.value)}
                     leftIcon={<Car className="w-4 h-4" />}
-                    helperText="Vehicle model name"
+                    helperText={!formData.make ? "Select a make first" : "Vehicle model name"}
+                    disabled={!formData.make}
                   />
 
                   {/* Year */}
-                  <Input
+                  <Select
                     label="Year"
-                    type="number"
                     required
-                    min={1900}
-                    max={new Date().getFullYear() + 1}
+                    placeholder="Select year"
+                    options={availableYears.map(year => ({ value: year.toString(), label: year.toString() }))}
                     value={formData.year.toString()}
-                    onChange={(e) => setFormData(prev => ({ ...prev, year: parseInt(e.target.value) || new Date().getFullYear() }))}
+                    onChange={(e) => handleFormChange('year', parseInt(e.target.value))}
                     leftIcon={<Calendar className="w-4 h-4" />}
-                    helperText="Manufacturing year"
+                    helperText={!formData.model ? "Select a model first" : "Manufacturing year"}
+                    disabled={!formData.model}
                   />
 
                   {/* Color */}
@@ -335,6 +401,35 @@ export default function VehiclesPage() {
                   />
 
                 </div>
+
+                {/* Vehicle Size Detection */}
+                {formData.make && formData.model && (
+                  <div className="bg-surface-tertiary rounded-lg p-4">
+                    <h4 className="font-medium text-text-primary mb-2 flex items-center gap-2">
+                      <Car className="w-4 h-4" />
+                      Auto-Detected Vehicle Size
+                    </h4>
+                    {(() => {
+                      const detectedSize = getVehicleSize(formData.make, formData.model)
+                      const sizeInfo = sizeConfig[detectedSize as keyof typeof sizeConfig]
+                      return (
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-medium text-brand-600">
+                              {sizeInfo.label} ({detectedSize})
+                            </p>
+                            <p className="text-sm text-text-secondary">
+                              Price multiplier: {sizeInfo.multiplier}x
+                            </p>
+                          </div>
+                          <div className="text-xs text-text-muted">
+                            Based on {formData.make} {formData.model}
+                          </div>
+                        </div>
+                      )
+                    })()}
+                  </div>
+                )}
 
                 {/* Set as Default */}
                 {!editingVehicle && vehicles.length > 0 && (
