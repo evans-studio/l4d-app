@@ -138,6 +138,8 @@ function AdminBookingsContent() {
       const success = await realtimeConfirmBooking(confirmModal.booking.id, sendEmail)
       
       if (success) {
+        // Refresh bookings to sync with real-time hook and prevent stale data
+        await refreshBookings()
         setConfirmModal({ isOpen: false, booking: null })
       } else {
         console.error('Failed to confirm booking')
@@ -184,6 +186,8 @@ function AdminBookingsContent() {
       const success = await realtimeRescheduleBooking(rescheduleModal.booking.id, newDate, newTime, reason)
       
       if (success) {
+        // Refresh bookings to sync with real-time hook and prevent stale data
+        await refreshBookings()
         setRescheduleModal({ isOpen: false, booking: null })
       } else {
         console.error('Failed to reschedule booking')
@@ -204,6 +208,8 @@ function AdminBookingsContent() {
       const success = await realtimeCancelBooking(cancelModal.booking.id, reason, refundAmount)
       
       if (success) {
+        // Refresh bookings to sync with real-time hook and prevent stale data
+        await refreshBookings()
         setCancelModal({ isOpen: false, booking: null })
       } else {
         console.error('Failed to cancel booking')
