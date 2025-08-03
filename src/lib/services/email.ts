@@ -1198,32 +1198,34 @@ Transforming vehicles, exceeding expectations
               <div class="important-card">
                 <h4>⚡ Quick Action Required</h4>
                 <p style="color: rgba(255, 255, 255, 0.8); margin: 0;">
-                  To access your booking dashboard and set up your account password, please verify your email address first.
+                  You'll receive a separate email verification link to activate your account and access your dashboard.
                 </p>
               </div>
               
               <div style="text-align: center; margin: 30px 0; padding: 30px; background: #252525; border-radius: 12px; border: 2px solid rgba(151, 71, 255, 0.3);">
-                <h3 style="color: #B269FF; margin: 0 0 15px 0; font-size: 20px;">🔓 Verify Your Email</h3>
+                <h3 style="color: #B269FF; margin: 0 0 15px 0; font-size: 20px;">📧 Check Your Email</h3>
                 <p style="color: rgba(255, 255, 255, 0.8); margin: 0 0 20px 0;">
-                  Click the button below to verify your email and access your account:
+                  We've sent you a verification email from Love4Detailing. Click the link in that email to verify your account and access your dashboard.
                 </p>
                 
-                <a href="${verificationUrl}?email=${encodeURIComponent(customerEmail)}" class="verify-button">
-                  Verify Email & Setup Account
-                </a>
+                <div style="background: rgba(151, 71, 255, 0.1); border-radius: 8px; padding: 15px; margin: 15px 0;">
+                  <p style="color: rgba(255, 255, 255, 0.7); font-size: 14px; margin: 0;">
+                    💡 <strong>Tip:</strong> Check your spam folder if you don't see the verification email within a few minutes.
+                  </p>
+                </div>
               </div>
               
               <div class="steps-card">
                 <h4 style="color: #9747FF; margin: 0 0 20px 0; font-size: 18px;">📋 What Happens Next:</h4>
                 <ul class="steps-list">
                   <li data-step="1">
-                    <strong>Verify Your Email:</strong> Click the button above to confirm your email address
+                    <strong>Check Your Email:</strong> Look for the verification email from Love4Detailing (check spam if needed)
                   </li>
                   <li data-step="2">
-                    <strong>Set Your Password:</strong> Create a secure password for your account
+                    <strong>Click Verification Link:</strong> Click the link in the verification email to activate your account
                   </li>
                   <li data-step="3">
-                    <strong>Access Dashboard:</strong> View your booking details and manage future appointments
+                    <strong>Access Dashboard:</strong> You'll be redirected to your dashboard with full account access
                   </li>
                   <li data-step="4">
                     <strong>Get Notifications:</strong> Receive updates about your service appointment

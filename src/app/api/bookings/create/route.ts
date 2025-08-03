@@ -70,6 +70,7 @@ export async function POST(request: NextRequest) {
     let addressId: string
     let isNewCustomer = false
     let passwordSetupToken: string | null = null
+    let userPassword: string | null = null
 
     // Step 1: Create or get user
     const { data: existingProfile } = await supabaseAdmin
@@ -96,7 +97,7 @@ export async function POST(request: NextRequest) {
       passwordSetupToken = generatePasswordSetupToken()
       
       // Create new auth user with provided password or temp password
-      const userPassword = bookingData.customer.password || generateRandomPassword()
+      userPassword = bookingData.customer.password || generateRandomPassword()
       const needsPasswordSetup = !bookingData.customer.password
       
       const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
@@ -111,7 +112,7 @@ export async function POST(request: NextRequest) {
           password_setup_token: needsPasswordSetup ? passwordSetupToken : null,
           password_setup_expires: needsPasswordSetup ? new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() : null
         },
-        email_confirm: !bookingData.customer.password // Only require email verification if no password provided
+        email_confirm: false // Don't auto-confirm, we'll send verification email manually
       })
 
       if (authError || !authUser.user) {
@@ -618,18 +619,39 @@ export async function POST(request: NextRequest) {
               console.log('Customer confirmation email sent successfully to new user with password')
             }
           } else {
-            // No password provided - send welcome verification email
-            const bookingWelcomeResult = await emailService.sendBookingWelcomeVerificationEmail(
-              bookingData.customer.email,
-              customerName,
-              bookingReference,
-              userId
-            )
-            
-            if (!bookingWelcomeResult.success) {
-              console.error('Failed to send booking welcome verification email:', bookingWelcomeResult.error)
-            } else {
-              console.log('Booking welcome verification email sent successfully')
+            // No password provided - send Supabase verification email + booking confirmation
+            try {
+              // First send Supabase verification email
+              const { error: resendError } = await supabaseAdmin.auth.admin.generateLink({
+                type: 'signup',
+                email: bookingData.customer.email,
+                password: userPassword || generateRandomPassword(), // Use the generated password from earlier
+                options: {
+                  redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?message=booking-verified&ref=${bookingReference}`
+                }
+              })
+
+              if (resendError) {
+                console.error('Failed to generate Supabase verification link:', resendError)
+              } else {
+                console.log('Supabase verification email sent successfully')
+              }
+
+              // Also send our booking confirmation with verification reminder
+              const bookingWelcomeResult = await emailService.sendBookingWelcomeVerificationEmail(
+                bookingData.customer.email,
+                customerName,
+                bookingReference,
+                userId
+              )
+              
+              if (!bookingWelcomeResult.success) {
+                console.error('Failed to send booking welcome verification email:', bookingWelcomeResult.error)
+              } else {
+                console.log('Booking welcome verification email sent successfully')
+              }
+            } catch (verificationError) {
+              console.error('Error sending verification emails:', verificationError)
             }
           }
         } else {
