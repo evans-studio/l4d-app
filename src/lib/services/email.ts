@@ -46,6 +46,45 @@ export class EmailService {
     return { valid: true }
   }
 
+  // Send booking confirmation email with verification link for new customers
+  async sendBookingConfirmationWithVerification(
+    customerEmail: string,
+    customerName: string,
+    booking: Booking,
+    userId: string
+  ): Promise<{ success: boolean; error?: string }> {
+    // Validate service configuration
+    const validation = this.validateEmailService()
+    if (!validation.valid) {
+      console.error('Email service validation failed:', validation.error)
+      return { success: false, error: validation.error }
+    }
+
+    try {
+      const { error } = await resend.emails.send({
+        from: `${this.config.fromName} <${this.config.fromEmail}>`,
+        to: [customerEmail],
+        replyTo: this.config.replyToEmail,
+        subject: `Booking Confirmed! Verify Your Email - ${booking.booking_reference}`,
+        html: this.generateBookingConfirmationWithVerificationHTML(customerName, booking, customerEmail),
+        text: this.generateBookingConfirmationWithVerificationText(customerName, booking, customerEmail)
+      })
+
+      if (error) {
+        console.error('Email send error:', error)
+        return { success: false, error: error.message }
+      }
+
+      return { success: true }
+    } catch (error) {
+      console.error('Email service error:', error)
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Unknown email error' 
+      }
+    }
+  }
+
   // Send booking confirmation email to customer
   async sendBookingConfirmation(
     customerEmail: string,
@@ -559,6 +598,181 @@ export class EmailService {
     `
   }
 
+  // Generate booking confirmation HTML with verification link for new customers
+  private generateBookingConfirmationWithVerificationHTML(customerName: string, booking: Booking, customerEmail: string): string {
+    const verificationUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://l4d-app.vercel.app'}/auth/verify-email?email=${encodeURIComponent(customerEmail)}`
+
+    return `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Booking Confirmed - Verify Your Email</title>
+          <style>
+            * { box-sizing: border-box; }
+            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #ffffff; max-width: 600px; margin: 0 auto; padding: 0; background: #0a0a0a; }
+            .email-container { background: #0a0a0a; min-height: 100vh; }
+            .header { background: linear-gradient(135deg, #9747FF 0%, #B269FF 100%); color: white; padding: 40px 30px; text-align: center; }
+            .logo { display: inline-flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+            .logo-icon { width: 40px; height: 40px; background: rgba(255, 255, 255, 0.2); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+            .logo-text { font-size: 24px; font-weight: bold; background: linear-gradient(to right, #ffffff, #e5e7eb); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+            .tagline { color: rgba(255, 255, 255, 0.8); font-size: 14px; margin-top: 8px; }
+            .content { background: #1a1a1a; padding: 40px 30px; }
+            .booking-confirmed-card { background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(5, 150, 105, 0.1)); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 12px; padding: 30px; margin: 25px 0; text-align: center; }
+            .booking-reference { background: #252525; border: 2px solid #10b981; border-radius: 8px; padding: 15px; margin: 20px 0; font-family: monospace; font-size: 18px; font-weight: bold; color: #10b981; letter-spacing: 1px; }
+            .verify-button { 
+              display: inline-block; 
+              background: linear-gradient(135deg, #9747FF, #B269FF); 
+              color: white; 
+              padding: 15px 30px; 
+              text-decoration: none; 
+              border-radius: 8px; 
+              font-weight: bold; 
+              margin: 20px 0;
+              transition: transform 0.2s;
+              font-size: 16px;
+            }
+            .verify-button:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(151, 71, 255, 0.3); }
+            .booking-details { background: #252525; border-radius: 12px; overflow: hidden; margin: 25px 0; border: 1px solid rgba(151, 71, 255, 0.2); }
+            .booking-header { background: linear-gradient(135deg, rgba(151, 71, 255, 0.1), rgba(178, 105, 255, 0.1)); padding: 20px; border-bottom: 1px solid rgba(151, 71, 255, 0.2); }
+            .booking-ref { color: #9747FF; font-size: 20px; font-weight: bold; margin: 0; }
+            .booking-status { display: inline-block; background: rgba(151, 71, 255, 0.2); color: #B269FF; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 500; margin-top: 8px; }
+            .booking-info { padding: 25px; }
+            .detail-grid { display: grid; gap: 16px; }
+            .detail-row { display: flex; align-items: flex-start; padding: 12px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+            .detail-row:last-child { border-bottom: none; }
+            .detail-icon { width: 20px; height: 20px; margin-right: 12px; color: #9747FF; flex-shrink: 0; margin-top: 2px; }
+            .detail-content { flex: 1; }
+            .detail-label { font-weight: 500; color: rgba(255, 255, 255, 0.7); font-size: 14px; margin-bottom: 4px; }
+            .detail-value { color: #ffffff; font-size: 15px; line-height: 1.4; }
+            .price-highlight { color: #9747FF; font-size: 18px; font-weight: bold; }
+            .verify-section { background: #252525; border: 2px solid rgba(151, 71, 255, 0.3); border-radius: 12px; padding: 30px; margin: 30px 0; text-align: center; }
+            .footer { background: #0a0a0a; padding: 30px; text-align: center; border-top: 1px solid rgba(255, 255, 255, 0.05); }
+            .footer-brand { color: #9747FF; font-weight: 600; margin-bottom: 8px; }
+            .footer-text { color: rgba(255, 255, 255, 0.5); font-size: 12px; line-height: 1.5; }
+            @media (max-width: 480px) {
+              .header, .content, .footer { padding: 20px 15px; }
+              .booking-confirmed-card, .booking-info, .verify-section { padding: 20px 15px; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="email-container">
+            <div class="header">
+              <div class="logo">
+                <div class="logo-icon">🚗</div>
+                <div class="logo-text">Love4Detailing</div>
+              </div>
+              <h1 style="margin: 0; font-size: 28px; font-weight: 700;">Booking Confirmed! 🎉</h1>
+              <p class="tagline">Your premium detailing service is scheduled</p>
+            </div>
+            
+            <div class="content">
+              <div class="booking-confirmed-card">
+                <h2 style="color: #10b981; margin: 0 0 15px 0; font-size: 22px;">✅ Your Booking is Confirmed!</h2>
+                <p style="color: rgba(255, 255, 255, 0.8); font-size: 16px; margin: 0 0 20px 0;">
+                  Hi ${customerName}! Thank you for choosing Love4Detailing. Your service has been successfully booked.
+                </p>
+                
+                <div class="booking-reference">
+                  ${booking.booking_reference}
+                </div>
+                
+                <p style="color: rgba(255, 255, 255, 0.7); font-size: 14px; margin: 0;">
+                  Keep this reference number for your records
+                </p>
+              </div>
+              
+              <div class="verify-section">
+                <h3 style="color: #B269FF; margin: 0 0 15px 0; font-size: 20px;">🔓 Verify Your Email</h3>
+                <p style="color: rgba(255, 255, 255, 0.8); margin: 0 0 20px 0;">
+                  To access your booking dashboard and manage your account, please verify your email address:
+                </p>
+                
+                <a href="${verificationUrl}" class="verify-button">
+                  Verify Email & Access Dashboard
+                </a>
+                
+                <p style="color: rgba(255, 255, 255, 0.6); font-size: 12px; margin: 15px 0 0 0;">
+                  After verification, you can sign in with the password you created during booking.
+                </p>
+              </div>
+              
+              <div class="booking-details">
+                <div class="booking-header">
+                  <h3 class="booking-ref">${booking.booking_reference}</h3>
+                  <span class="booking-status">${booking.status}</span>
+                </div>
+                
+                <div class="booking-info">
+                  <div class="detail-grid">
+                    <div class="detail-row">
+                      <div class="detail-icon">📅</div>
+                      <div class="detail-content">
+                        <div class="detail-label">Service Date</div>
+                        <div class="detail-value">${formatDateForEmail(booking.scheduled_date)}</div>
+                      </div>
+                    </div>
+                    
+                    <div class="detail-row">
+                      <div class="detail-icon">⏰</div>
+                      <div class="detail-content">
+                        <div class="detail-label">Service Time</div>
+                        <div class="detail-value">${formatTimeForEmail(booking.scheduled_start_time)} (${booking.estimated_duration} min duration)</div>
+                      </div>
+                    </div>
+                    
+                    <div class="detail-row">
+                      <div class="detail-icon">🚗</div>
+                      <div class="detail-content">
+                        <div class="detail-label">Vehicle Details</div>
+                        <div class="detail-value">
+                          ${booking.vehicle_details?.make} ${booking.vehicle_details?.model}
+                          ${booking.vehicle_details?.year ? ` (${booking.vehicle_details.year})` : ''}
+                          ${booking.vehicle_details?.color ? `<br>Color: ${booking.vehicle_details.color}` : ''}
+                          ${booking.vehicle_details?.registration ? `<br>Reg: ${booking.vehicle_details.registration}` : ''}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div class="detail-row">
+                      <div class="detail-icon">📍</div>
+                      <div class="detail-content">
+                        <div class="detail-label">Service Location</div>
+                        <div class="detail-value">
+                          ${booking.service_address?.address_line_1}<br>
+                          ${booking.service_address?.city}, ${booking.service_address?.postcode}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div class="detail-row">
+                      <div class="detail-icon">💷</div>
+                      <div class="detail-content">
+                        <div class="detail-label">Total Price</div>
+                        <div class="detail-value price-highlight">£${booking.total_price}</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="footer">
+              <div class="footer-brand">Love4Detailing</div>
+              <div class="footer-text">
+                Professional Vehicle Detailing Services<br>
+                Transforming vehicles, exceeding expectations<br><br>
+                After verifying your email, you can sign in at ${process.env.NEXT_PUBLIC_APP_URL}/auth/login
+              </div>
+            </div>
+          </div>
+        </body>
+      </html>
+    `
+  }
+
   private generateBookingConfirmationText(customerName: string, booking: Booking): string {
     return `
 BOOKING CONFIRMATION - Love 4 Detailing
@@ -585,6 +799,58 @@ Payment is due after service completion. We accept cash, card, and bank transfer
 If you have any questions or need to make changes to your booking, please contact us:
 - Email: ${this.config.adminEmail}
 - Phone: [Your phone number]
+
+Thank you for choosing Love 4 Detailing!
+
+---
+Love 4 Detailing - Professional Vehicle Detailing Services
+This is an automated email. Please do not reply directly to this email.
+    `
+  }
+
+  private generateBookingConfirmationWithVerificationText(customerName: string, booking: Booking, customerEmail: string): string {
+    const verificationUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://l4d-app.vercel.app'}/auth/verify-email?email=${encodeURIComponent(customerEmail)}`
+
+    return `
+BOOKING CONFIRMATION - Love 4 Detailing
+
+Dear ${customerName},
+
+✅ YOUR BOOKING IS CONFIRMED!
+
+Thank you for choosing Love4Detailing. Your service has been successfully booked.
+
+BOOKING REFERENCE: ${booking.booking_reference}
+Keep this reference number for your records.
+
+🔓 VERIFY YOUR EMAIL
+
+To access your booking dashboard and manage your account, please verify your email address:
+
+${verificationUrl}
+
+After verification, you can sign in with the password you created during booking.
+
+📋 BOOKING DETAILS
+
+Date: ${formatDateForEmail(booking.scheduled_date)}
+Time: ${formatTimeForEmail(booking.scheduled_start_time)} (${booking.estimated_duration} min duration)
+
+Vehicle: ${booking.vehicle_details?.make} ${booking.vehicle_details?.model} ${booking.vehicle_details?.year ? `(${booking.vehicle_details.year})` : ''}
+${booking.vehicle_details?.color ? `Color: ${booking.vehicle_details.color}` : ''}
+${booking.vehicle_details?.registration ? `Registration: ${booking.vehicle_details.registration}` : ''}
+
+Service Location:
+${booking.service_address?.address_line_1}
+${booking.service_address?.city}, ${booking.service_address?.postcode}
+
+Total Price: £${booking.total_price}
+
+NEED HELP?
+- Email: ${this.config.adminEmail}
+- Phone: Available upon confirmation
+
+After verifying your email, you can sign in at ${process.env.NEXT_PUBLIC_APP_URL}/auth/login
 
 Thank you for choosing Love 4 Detailing!
 
