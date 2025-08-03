@@ -1,14 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+// Note: Removed rebook functionality - users should use PWA floating button
 import { useRouter } from 'next/navigation'
-import { useBookingFlowStore } from '@/lib/store/bookingFlowStore'
 import { Button } from '@/components/ui/primitives/Button'
 import { Card, CardHeader, CardContent } from '@/components/ui/composites/Card'
 import { 
   Calendar, 
-  Car, 
-  Clock,
+  Car,
   Sparkles,
   RefreshCw,
   ChevronRight
@@ -35,21 +33,7 @@ interface QuickRebookWidgetProps {
 
 export function QuickRebookWidget({ lastBooking }: QuickRebookWidgetProps) {
   const router = useRouter()
-  const { initializeRebooking } = useBookingFlowStore()
-  const [isRebooking, setIsRebooking] = useState(false)
-
-  const handleQuickRebook = async () => {
-    if (!lastBooking) return
-    
-    try {
-      setIsRebooking(true)
-      await initializeRebooking(lastBooking.id)
-      router.push('/book')
-    } catch (error) {
-      console.error('Quick rebook failed:', error)
-      setIsRebooking(false)
-    }
-  }
+  // Removed rebook functionality - widget now shows information only
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
@@ -137,23 +121,12 @@ export function QuickRebookWidget({ lastBooking }: QuickRebookWidgetProps) {
           <span className="font-bold text-text-primary">£{lastBooking.total_price}</span>
         </div>
 
-        {/* Quick Rebook Button */}
-        <Button
-          onClick={handleQuickRebook}
-          disabled={isRebooking}
-          className="w-full"
-          leftIcon={
-            isRebooking ? 
-              <div className="w-4 h-4 animate-spin rounded-full border-2 border-white border-t-transparent" /> :
-              <RefreshCw className="w-4 h-4" />
-          }
-        >
-          {isRebooking ? 'Setting up...' : 'Book Same Service'}
-        </Button>
-
-        <p className="text-xs text-text-muted text-center">
-          Same vehicle and service details. Choose new date & time.
-        </p>
+        {/* Service information only - use PWA floating button to book */}
+        <div className="text-center">
+          <p className="text-xs text-text-muted">
+            Use the floating book button to rebook this service
+          </p>
+        </div>
       </CardContent>
     </Card>
   )

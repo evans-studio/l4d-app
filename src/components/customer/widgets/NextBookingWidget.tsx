@@ -104,16 +104,9 @@ export function NextBookingWidget({ booking }: NextBookingWidgetProps) {
             <Calendar className="w-6 h-6 text-text-muted" />
           </div>
           <h4 className="font-medium text-text-primary mb-2">No upcoming bookings</h4>
-          <p className="text-sm text-text-secondary mb-6">
-            Book your next service to keep your car looking fresh
+          <p className="text-sm text-text-secondary">
+            Your next booking will appear here. Use the floating book button to schedule a service.
           </p>
-          <Button
-            onClick={() => router.push('/book')}
-            size="sm"
-            className="w-full"
-          >
-            Book Service
-          </Button>
         </CardContent>
       </Card>
     )

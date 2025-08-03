@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
         phone: phone,
         role: role
       },
-      email_confirm: false // Require email verification for security
+      email_confirm: false // Will send verification email manually below
     })
 
     if (authError || !authData.user) {
@@ -78,20 +78,29 @@ export async function POST(request: NextRequest) {
       // Continue anyway - profile can be created on first login if needed
     }
 
-    // Send welcome email with verification link
+    // Send verification email using Supabase's built-in system
     try {
-      const emailService = new EmailService()
-      const fullName = `${firstName} ${lastName}`
+      const redirectUrl = process.env.NODE_ENV === 'development' 
+        ? 'http://localhost:3000/auth/verify-email'
+        : `${process.env.NEXT_PUBLIC_APP_URL || 'https://l4d-app.vercel.app'}/auth/verify-email`
       
-      await emailService.sendWelcomeVerificationEmail(
-        email,
-        fullName,
-        authData.user.id
-      )
+      // Use Supabase's resend method instead of generateLink for existing users
+      const { error: verificationError } = await supabaseAdmin.auth.resend({
+        type: 'signup',
+        email: email,
+        options: {
+          emailRedirectTo: redirectUrl
+        }
+      })
       
-      console.log('Welcome verification email sent to:', email)
+      if (verificationError) {
+        console.error('Failed to send verification email:', verificationError)
+        // Continue anyway - user can resend verification if needed
+      } else {
+        console.log('Verification email sent to:', email)
+      }
     } catch (emailError) {
-      console.error('Failed to send welcome email:', emailError)
+      console.error('Failed to send verification email:', emailError)
       // Continue anyway - user can resend verification if needed
     }
 
