@@ -604,18 +604,18 @@ export async function POST(request: NextRequest) {
       
       try {
         if (isNewCustomer) {
-          // For all new customers, send booking confirmation with verification link
-          const customerEmailResult = await emailService.sendBookingConfirmationWithVerification(
+          // For new customers, send welcome email + Supabase will send verification email
+          const customerEmailResult = await emailService.sendBookingWelcomeVerificationEmail(
             bookingData.customer.email,
             customerName,
-            bookingForEmail as any,
-            userId // Pass userId for verification link generation
+            bookingReference,
+            userId
           )
           
           if (!customerEmailResult.success) {
-            console.error('Failed to send customer confirmation email:', customerEmailResult.error)
+            console.error('Failed to send booking welcome verification email:', customerEmailResult.error)
           } else {
-            console.log('Customer confirmation email with verification sent successfully')
+            console.log('Booking welcome verification email sent successfully')
           }
         } else {
           // Send regular booking confirmation for existing customers
