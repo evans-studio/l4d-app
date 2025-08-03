@@ -225,7 +225,8 @@ function AdminBookingsContent() {
   }
 
   // Format helpers
-  const formatTime = (time: string) => {
+  const formatTime = (time: string | undefined | null) => {
+    if (!time) return 'No time'
     const [hours, minutes] = time.split(':')
     const hour = parseInt(hours || '0')
     const ampm = hour >= 12 ? 'PM' : 'AM'
@@ -233,8 +234,11 @@ function AdminBookingsContent() {
     return `${displayHour}:${minutes || '00'} ${ampm}`
   }
 
-  const formatDate = (dateStr: string) => {
+  const formatDate = (dateStr: string | undefined | null) => {
+    if (!dateStr) return 'No date'
     const date = new Date(dateStr)
+    if (isNaN(date.getTime())) return 'Invalid date'
+    
     const today = new Date()
     const tomorrow = new Date(today)
     tomorrow.setDate(today.getDate() + 1)
