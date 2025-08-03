@@ -24,11 +24,13 @@ export async function middleware(request: NextRequest) {
   // Public API routes that don't require authentication
   const publicApiRoutes = [
     '/api/services',
+    '/api/services/homepage',
     '/api/vehicle-sizes',
     '/api/vehicle-data',
     '/api/time-slots/availability',
     '/api/email/test',
     '/api/booking/calculate-price',
+    '/api/booking/validate-user',
     '/api/bookings/create',
     '/api/auth/register',
     '/api/auth/forgot-password',
@@ -45,8 +47,8 @@ export async function middleware(request: NextRequest) {
     '/api/admin/bookings',
     '/api/debug/auth-status'
     // Note: /api/bookings/create now public to support new user bookings
+    // Note: /api/booking/validate-user now public to support new user validation
     // - /api/booking/create (deprecated, use /api/bookings/create)
-    // - /api/booking/validate-user (now requires auth)
     // - /api/auth/setup-password (deprecated)
   ]
 

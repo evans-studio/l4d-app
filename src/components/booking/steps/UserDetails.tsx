@@ -146,6 +146,24 @@ export function UserDetails() {
     } catch (error) {
       setValidationStatus('idle')
       console.error('User validation error:', error)
+      
+      // Enhanced error logging for debugging
+      if (error instanceof Error) {
+        console.error('Error details:', {
+          name: error.name,
+          message: error.message,
+          stack: error.stack
+        })
+      }
+      
+      // Check if it's a fetch error
+      if (error && typeof error === 'object' && 'status' in error) {
+        console.error('HTTP Error details:', {
+          status: (error as any).status,
+          statusText: (error as any).statusText,
+          url: '/api/booking/validate-user'
+        })
+      }
     }
   }
 

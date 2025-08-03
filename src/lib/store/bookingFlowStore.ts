@@ -240,6 +240,8 @@ const initialState: BookingFlowState = {
 // API utility functions
 const apiCall = async <T>(url: string, options?: RequestInit): Promise<ApiResponse<T>> => {
   try {
+    console.log(`BookingFlowStore: Making API call to ${url}`, { method: options?.method || 'GET' })
+    
     const response = await fetch(url, {
       headers: {
         'Content-Type': 'application/json',
@@ -248,12 +250,34 @@ const apiCall = async <T>(url: string, options?: RequestInit): Promise<ApiRespon
       ...options,
     })
     
+    console.log(`BookingFlowStore: API response from ${url}`, { 
+      status: response.status, 
+      statusText: response.statusText,
+      ok: response.ok 
+    })
+    
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
+      // Try to get error details from response
+      let errorDetails = `HTTP error! status: ${response.status}`
+      try {
+        const errorBody = await response.text()
+        console.error(`BookingFlowStore: Error response body from ${url}:`, errorBody)
+        if (errorBody) {
+          const parsedError = JSON.parse(errorBody)
+          errorDetails = parsedError.error?.message || errorDetails
+        }
+      } catch (parseError) {
+        console.error('BookingFlowStore: Could not parse error response:', parseError)
+      }
+      
+      throw new Error(errorDetails)
     }
     
-    return await response.json()
+    const data = await response.json()
+    console.log(`BookingFlowStore: Successful response from ${url}:`, data)
+    return data
   } catch (error) {
+    console.error(`BookingFlowStore: API call failed for ${url}:`, error)
     return {
       success: false,
       error: {
@@ -470,6 +494,17 @@ export const useBookingFlowStore = create<BookingFlowStore>()(
             setError(response.error?.message || 'Failed to validate user')
           }
         } catch (error) {
+          console.error('BookingFlowStore: loadExistingUserData error:', error)
+          
+          // Enhanced error logging
+          if (error instanceof Error) {
+            console.error('BookingFlowStore: Error details:', {
+              name: error.name,
+              message: error.message,
+              stack: error.stack
+            })
+          }
+          
           setError('Failed to validate user')
         } finally {
           setLoading(false)
