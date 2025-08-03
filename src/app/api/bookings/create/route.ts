@@ -120,6 +120,32 @@ export async function POST(request: NextRequest) {
         return ApiResponseHandler.serverError('Failed to create user account')
       }
 
+      // Send verification email using Supabase's built-in system
+      try {
+        const redirectUrl = process.env.NODE_ENV === 'development' 
+          ? 'http://localhost:3000/auth/verify-email'
+          : `${process.env.NEXT_PUBLIC_APP_URL || 'https://l4d-app.vercel.app'}/auth/verify-email`
+        
+        // Use Supabase's resend method to send verification email
+        const { error: verificationError } = await supabaseAdmin.auth.resend({
+          type: 'signup',
+          email: bookingData.customer.email,
+          options: {
+            emailRedirectTo: redirectUrl
+          }
+        })
+        
+        if (verificationError) {
+          console.error('Failed to send Supabase verification email:', verificationError)
+          // Continue anyway - user can resend verification if needed
+        } else {
+          console.log('Supabase verification email sent to:', bookingData.customer.email)
+        }
+      } catch (emailError) {
+        console.error('Failed to send Supabase verification email:', emailError)
+        // Continue anyway - user can resend verification if needed
+      }
+
       // Check if profile already exists (might be created by triggers)
       const { data: existingProfile } = await supabaseAdmin
         .from('user_profiles')
