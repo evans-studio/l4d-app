@@ -45,13 +45,13 @@ export const env: EnvironmentConfig = {
     serviceRoleKey: getOptionalEnvVar('SUPABASE_SERVICE_ROLE_KEY'),
   },
   business: {
-    name: getOptionalEnvVar('NEXT_PUBLIC_COMPANY_NAME', 'Love4Detailing')!,
-    phone: getOptionalEnvVar('NEXT_PUBLIC_COMPANY_PHONE', '+447123456789')!,
-    email: getOptionalEnvVar('NEXT_PUBLIC_COMPANY_EMAIL', 'info@love4detailing.co.uk')!,
+    name: getOptionalEnvVar('NEXT_PUBLIC_COMPANY_NAME', 'Love 4 Detailing')!,
+    phone: getOptionalEnvVar('NEXT_PUBLIC_COMPANY_PHONE', '+447908625581')!,
+    email: getOptionalEnvVar('NEXT_PUBLIC_COMPANY_EMAIL', 'zell@love4detailing.com')!,
     serviceRadiusMiles: parseFloat(getOptionalEnvVar('NEXT_PUBLIC_SERVICE_RADIUS_MILES', '17.5')!),
   },
   email: {
-    fromEmail: getOptionalEnvVar('NEXT_PUBLIC_FROM_EMAIL', 'noreply@love4detailing.co.uk')!,
+    fromEmail: getOptionalEnvVar('NEXT_PUBLIC_FROM_EMAIL', 'zell@love4detailing.com')!,
     resendApiKey: getOptionalEnvVar('RESEND_API_KEY'),
   },
 }

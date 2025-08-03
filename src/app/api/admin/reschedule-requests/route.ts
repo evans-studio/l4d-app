@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     // Use admin client for now to bypass authentication issues
     const supabase = supabaseAdmin
 
-    // Get all reschedule requests with booking and customer details
+    // Get all reschedule requests first (avoiding joins to prevent PGRST200 errors)
     const { data: rescheduleRequests, error: requestsError } = await supabase
       .from('booking_reschedule_requests')
       .select(`
@@ -31,21 +31,7 @@ export async function GET(request: NextRequest) {
         original_time,
         created_at,
         updated_at,
-        responded_at,
-        bookings!booking_id (
-          id,
-          booking_reference,
-          status,
-          customer_id,
-          total_price,
-          user_profiles!customer_id (
-            id,
-            email,
-            first_name,
-            last_name,
-            phone
-          )
-        )
+        responded_at
       `)
       .order('created_at', { ascending: false })
 
@@ -54,36 +40,59 @@ export async function GET(request: NextRequest) {
       return ApiResponseHandler.serverError('Failed to fetch reschedule requests')
     }
 
-    // Transform the data for easier frontend consumption
-    const transformedRequests = rescheduleRequests?.map(request => {
-      const booking = request.bookings as any
-      const customer = booking?.user_profiles
+    // Fetch related booking and customer data separately to avoid join issues
+    const transformedRequests = []
+    
+    if (rescheduleRequests && rescheduleRequests.length > 0) {
+      // Get all booking IDs
+      const bookingIds = rescheduleRequests.map(req => req.booking_id)
       
-      return {
-        id: request.id,
-        booking_id: request.booking_id,
-        booking_reference: booking?.booking_reference,
-        customer_name: customer 
-          ? `${customer.first_name} ${customer.last_name}`
-          : 'Unknown Customer',
-        customer_email: customer?.email,
-        customer_phone: customer?.phone,
-        booking_status: booking?.status,
-        total_price: booking?.total_price,
-        original_date: request.original_date,
-        original_time: request.original_time,
-        requested_date: request.requested_date,
-        requested_time: request.requested_time,
-        reason: request.reason,
-        customer_notes: request.customer_notes,
-        status: request.status,
-        admin_response: request.admin_response,
-        admin_notes: request.admin_notes,
-        created_at: request.created_at,
-        updated_at: request.updated_at,
-        responded_at: request.responded_at
+      // Fetch booking details separately
+      const { data: bookings } = await supabase
+        .from('bookings')
+        .select('id, booking_reference, status, customer_id, total_price')
+        .in('id', bookingIds)
+      
+      // Get all customer IDs from bookings
+      const customerIds = bookings?.map(booking => booking.customer_id).filter(Boolean) || []
+      
+      // Fetch customer details separately
+      const { data: customers } = await supabase
+        .from('user_profiles')
+        .select('id, email, first_name, last_name, phone')
+        .in('id', customerIds)
+      
+      // Transform the data
+      for (const request of rescheduleRequests) {
+        const booking = bookings?.find(b => b.id === request.booking_id)
+        const customer = customers?.find(c => c.id === booking?.customer_id)
+        
+        transformedRequests.push({
+          id: request.id,
+          booking_id: request.booking_id,
+          booking_reference: booking?.booking_reference || 'Unknown',
+          customer_name: customer 
+            ? `${customer.first_name} ${customer.last_name}`
+            : 'Unknown Customer',
+          customer_email: customer?.email || '',
+          customer_phone: customer?.phone || '',
+          booking_status: booking?.status || 'unknown',
+          total_price: booking?.total_price || 0,
+          original_date: request.original_date,
+          original_time: request.original_time,
+          requested_date: request.requested_date,
+          requested_time: request.requested_time,
+          reason: request.reason,
+          customer_notes: request.customer_notes,
+          status: request.status,
+          admin_response: request.admin_response,
+          admin_notes: request.admin_notes,
+          created_at: request.created_at,
+          updated_at: request.updated_at,
+          responded_at: request.responded_at
+        })
       }
-    }) || []
+    }
 
     return ApiResponseHandler.success({
       reschedule_requests: transformedRequests,

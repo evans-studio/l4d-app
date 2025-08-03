@@ -319,13 +319,13 @@ function BookingSuccessContent(): React.JSX.Element {
               Need to make changes or have questions about your booking?
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-4">
-              <a href="tel:+447123456789" className="text-brand-400 hover:text-brand-300 transition-colors flex items-center gap-2">
+              <a href="tel:+447908625581" className="text-brand-400 hover:text-brand-300 transition-colors flex items-center gap-2">
                 <PhoneIcon className="w-4 h-4" />
-                07123 456789
+                07908 625581
               </a>
-              <a href="mailto:info@love4detailing.co.uk" className="text-brand-400 hover:text-brand-300 transition-colors flex items-center gap-2">
+              <a href="mailto:zell@love4detailing.com" className="text-brand-400 hover:text-brand-300 transition-colors flex items-center gap-2">
                 <MailIcon className="w-4 h-4" />
-                info@love4detailing.co.uk
+                zell@love4detailing.com
               </a>
             </div>
             <p className="text-text-muted text-sm">

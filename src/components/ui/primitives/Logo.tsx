@@ -227,19 +227,19 @@ export const BrandedLogo: React.FC<LogoProps & {
 // Responsive logo that adapts to screen size
 export const ResponsiveLogo: React.FC<LogoProps> = ({ className, ...props }) => (
   <div className={cn('flex items-center', className)}>
-    {/* Mobile: Icon only */}
-    <div className="block sm:hidden">
-      <Logo variant="icon" size="sm" {...props} />
+    {/* Mobile: Larger icon only, fills width */}
+    <div className="block sm:hidden w-full">
+      <Logo variant="icon" size="lg" className="justify-center" {...props} />
     </div>
     
-    {/* Tablet: Icon + Text */}
+    {/* Tablet: Icon + Text, bigger than before */}
     <div className="hidden sm:block lg:hidden">
-      <Logo variant="full" size="md" showText={true} {...props} />
+      <Logo variant="full" size="lg" showText={true} {...props} />
     </div>
     
-    {/* Desktop: Full logo with larger size */}
+    {/* Desktop: Full logo with extra large size */}
     <div className="hidden lg:block">
-      <Logo variant="full" size="lg" showText={true} {...props} />
+      <Logo variant="full" size="xl" showText={true} {...props} />
     </div>
   </div>
 );

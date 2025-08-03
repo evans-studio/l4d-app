@@ -1,5 +1,15 @@
 import { BaseService, ServiceResponse } from './base'
-import { ServiceWithCategory, Service, ServiceCategory, VehicleSize } from '@/lib/utils/database'
+import { Service, VehicleSize } from '@/lib/utils/database'
+
+// Define ServiceCategory locally since it's no longer in database.ts
+interface ServiceCategory {
+  id: string
+  name: string
+  description?: string
+  display_order: number
+  is_active: boolean
+  created_at: string
+}
 
 export interface ServiceFilters {
   categoryId?: string
@@ -7,7 +17,7 @@ export interface ServiceFilters {
   isActive?: boolean
 }
 
-export interface ServiceWithPricing extends ServiceWithCategory {
+export interface ServiceWithPricing extends Service {
   priceRange: {
     min: number
     max: number
@@ -22,10 +32,7 @@ export class ServicesService extends BaseService {
       const supabase = this.supabase
       let query = supabase
         .from('services')
-        .select(`
-          *,
-          category:service_categories(*)
-        `)
+        .select(`*`)
         .order('display_order')
 
       // Apply filters
@@ -117,10 +124,7 @@ export class ServicesService extends BaseService {
       const supabase = this.supabase
       const { data: service, error } = await supabase
         .from('services')
-        .select(`
-          *,
-          category:service_categories(*)
-        `)
+        .select(`*`)
         .eq('id', id)
         .eq('is_active', true)
         .single()
@@ -137,20 +141,20 @@ export class ServicesService extends BaseService {
         .single()
 
       if (pricingError) {
-        console.error('Service pricing error:', pricingError)
-        return { data: null, error: pricingError }
+        console.warn('Service pricing data missing for service:', id, pricingError)
+        // Continue without pricing data - use base price as fallback
       }
 
-      // Calculate price range from actual pricing data
-      const prices = [
+      // Calculate price range from actual pricing data (if available)
+      const prices = servicePricing ? [
         servicePricing.small,
         servicePricing.medium,
         servicePricing.large,
         servicePricing.extra_large
-      ].filter((price): price is number => price !== undefined && price > 0)
+      ].filter((price): price is number => price !== undefined && price > 0) : []
 
-      const minPrice = prices.length > 0 ? Math.min(...prices) : 0
-      const maxPrice = prices.length > 0 ? Math.max(...prices) : 0
+      const minPrice = prices.length > 0 ? Math.min(...prices) : (service.base_price || 0)
+      const maxPrice = prices.length > 0 ? Math.max(...prices) : (service.base_price || 0)
 
       const serviceWithPricing: ServiceWithPricing = {
         ...service,
@@ -165,14 +169,11 @@ export class ServicesService extends BaseService {
   }
 
   async getServiceCategories(): Promise<ServiceResponse<ServiceCategory[]>> {
-    return this.executeQuery(async () => {
-      const supabase = this.supabase
-      return supabase
-        .from('service_categories')
-        .select('*')
-        .eq('is_active', true)
-        .order('display_order')
-    }, 'Failed to fetch service categories')
+    // Service categories table no longer exists - return empty array
+    return {
+      success: true,
+      data: []
+    }
   }
 
   async getVehicleSizes(): Promise<ServiceResponse<VehicleSize[]>> {
@@ -222,50 +223,33 @@ export class ServicesService extends BaseService {
     }, 'Failed to delete service')
   }
 
-  // Service Category CRUD Methods
+  // Service Category CRUD Methods - No longer available as table was removed
   async getServiceCategoryById(id: string): Promise<ServiceResponse<ServiceCategory>> {
-    return this.executeQuery(async () => {
-      const supabase = this.supabase
-      return supabase
-        .from('service_categories')
-        .select('*')
-        .eq('id', id)
-        .single()
-    }, 'Failed to fetch service category')
+    return {
+      success: false,
+      error: { message: 'Service categories are no longer available' }
+    }
   }
 
   async createServiceCategory(categoryData: Partial<ServiceCategory>): Promise<ServiceResponse<ServiceCategory>> {
-    return this.executeQuery(async () => {
-      const supabase = this.supabase
-      return supabase
-        .from('service_categories')
-        .insert(categoryData)
-        .select()
-        .single()
-    }, 'Failed to create service category')
+    return {
+      success: false,
+      error: { message: 'Service categories are no longer available' }
+    }
   }
 
   async updateServiceCategory(id: string, categoryData: Partial<ServiceCategory>): Promise<ServiceResponse<ServiceCategory>> {
-    return this.executeQuery(async () => {
-      const supabase = this.supabase
-      return supabase
-        .from('service_categories')
-        .update(categoryData)
-        .eq('id', id)
-        .select()
-        .single()
-    }, 'Failed to update service category')
+    return {
+      success: false,
+      error: { message: 'Service categories are no longer available' }
+    }
   }
 
   async deleteServiceCategory(id: string): Promise<ServiceResponse<void>> {
-    return this.executeQuery(async () => {
-      const supabase = this.supabase
-      const result = await supabase
-        .from('service_categories')
-        .delete()
-        .eq('id', id)
-      return { data: undefined, error: result.error }
-    }, 'Failed to delete service category')
+    return {
+      success: false,
+      error: { message: 'Service categories are no longer available' }
+    }
   }
 
   // Vehicle Size CRUD Methods - These now work with hardcoded data

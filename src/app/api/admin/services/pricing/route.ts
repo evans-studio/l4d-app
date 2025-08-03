@@ -112,21 +112,17 @@ export async function PUT(request: NextRequest) {
       return ApiResponseHandler.badRequest('serviceId and pricing are required')
     }
 
-    // Get vehicle sizes to map IDs to column names
-    const { data: vehicleSizes, error: sizesError } = await supabase
-      .from('vehicle_sizes')
-      .select('id, name, display_order')
-      .eq('is_active', true)
-      .order('display_order')
-
-    if (sizesError) {
-      console.error('Error fetching vehicle sizes:', sizesError)
-      return ApiResponseHandler.serverError('Failed to fetch vehicle sizes')
-    }
+    // Define vehicle sizes directly since table no longer exists (denormalized structure)
+    const vehicleSizes = [
+      { id: 'small', name: 'Small', display_order: 1 },
+      { id: 'medium', name: 'Medium', display_order: 2 },
+      { id: 'large', name: 'Large', display_order: 3 },
+      { id: 'extra_large', name: 'Extra Large', display_order: 4 }
+    ]
 
     // Create mapping from vehicle size IDs to column names
     const sizeIdToColumn: Record<string, string> = {}
-    vehicleSizes?.forEach(size => {
+    vehicleSizes.forEach(size => {
       const normalizedName = size.name.toLowerCase().replace(/\s+/g, '_')
       sizeIdToColumn[size.id] = normalizedName
     })

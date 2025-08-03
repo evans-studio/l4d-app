@@ -84,10 +84,7 @@ export async function GET(request: NextRequest) {
     // Get vehicles for each customer
     const { data: vehicles, error: vehicleError } = await supabase
       .from('customer_vehicles')
-      .select(`
-        *,
-        vehicle_size:vehicle_sizes(name)
-      `)
+      .select('*')
       .in('user_id', customerIds)
 
     if (vehicleError) {

@@ -1,3 +1,7 @@
+// DEPRECATED COMPONENT: No longer used after switching to single registration flow
+// Users must now register with email verification before booking
+// Password setup after booking has been removed
+
 'use client'
 
 import { useState } from 'react'

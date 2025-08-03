@@ -86,13 +86,20 @@ export async function getServicePricing(serviceId: string, vehicleSize: VehicleS
     
     // Get pricing directly from service_pricing table
     const pricingResponse = await fetch(`/api/pricing/service-pricing?service_id=${serviceId}&size=${sizeColumn}`)
-    if (!pricingResponse.ok) return null
+    if (!pricingResponse.ok) {
+      console.warn(`Pricing API returned ${pricingResponse.status} for service ${serviceId}`)
+      return null
+    }
     
     const pricingData = await pricingResponse.json()
-    if (!pricingData.success || !pricingData.data) return null
+    if (!pricingData.success || !pricingData.data) {
+      console.warn(`No pricing data returned for service ${serviceId} size ${sizeColumn}`)
+      return null
+    }
     
     // Return the price for the specific vehicle size
-    return pricingData.data[sizeColumn] as number
+    const price = pricingData.data[sizeColumn] as number
+    return price && price > 0 ? price : null
   } catch (error) {
     console.error('Error fetching service pricing:', error)
     return null
@@ -111,8 +118,8 @@ export async function calculateServicePrice(serviceId: string, basePrice: number
     return databasePrice
   }
   
-  // If no database pricing found, log error and return base price as fallback
-  console.error(`No pricing found for service ${serviceId} with vehicle size ${vehicleSize}`)
+  // If no database pricing found, use base price as fallback (this is expected for some services)
+  console.warn(`No pricing found for service ${serviceId} with vehicle size ${vehicleSize}, using base price: £${basePrice}`)
   return basePrice
 }
 

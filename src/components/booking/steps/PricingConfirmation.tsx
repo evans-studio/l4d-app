@@ -21,7 +21,8 @@ import {
   PhoneIcon,
   MailIcon,
   Calculator,
-  Receipt
+  Receipt,
+  ArrowRight
 } from 'lucide-react'
 import { formatDate, formatTime, getSlotStartTime, calculateEndTime } from '@/lib/utils/date-formatting'
 
@@ -38,7 +39,7 @@ export function PricingConfirmation() {
     setUserData
   } = useBookingFlowStore()
 
-  const { isCurrentStep } = useBookingStep(5)
+  const { isCurrentStep } = useBookingStep(6)
   
   const [isProcessing, setIsProcessing] = useState(false)
   const [bookingResult, setBookingResult] = useState<{
@@ -62,11 +63,19 @@ export function PricingConfirmation() {
         const data = await response.json()
         
         if (data.success && data.data?.authenticated) {
+          const user = data.data.user
+          
+          // Verify email is confirmed
+          if (!user.email_verified) {
+            // This shouldn't happen since booking page checks, but handle gracefully
+            router.push('/auth/verify-email?reason=booking')
+            return
+          }
+          
           setIsAuthenticated(true)
           
           // Auto-populate user data if not already set
-          if (!formData.user && data.data.user) {
-            const user = data.data.user
+          if (!formData.user && user) {
             setUserData({
               email: user.email || '',
               phone: user.phone || '',
@@ -76,44 +85,47 @@ export function PricingConfirmation() {
             })
           }
         } else {
+          // User is not authenticated - this is now expected for new users
+          console.log('🆕 New user detected - account will be created during booking')
           setIsAuthenticated(false)
         }
       } catch (error) {
         console.error('Auth check failed:', error)
         setIsAuthenticated(false)
+        // Don't redirect - allow unauthenticated users to continue
       } finally {
         setAuthLoading(false)
       }
     }
 
     checkAuth()
-  }, [])
+  }, [router])
 
   const handleConfirmBooking = async () => {
-    // Check if user is authenticated
-    if (!isAuthenticated && !formData.user) {
-      setShowAuthModal(true)
-      return
-    }
-
     setIsProcessing(true)
     
     try {
+      console.log('🔄 Starting booking submission for', isAuthenticated ? 'existing user' : 'new user')
       const result = await submitBooking()
+      
       const bookingData = {
         success: true,
         confirmationNumber: result.confirmationNumber,
         bookingId: result.bookingId,
-        requiresPassword: result.requiresPassword,
-        passwordSetupToken: result.passwordSetupToken
+        isNewUser: !isAuthenticated // Track if this was a new user
       }
       setBookingResult(bookingData)
       
-      // Show password modal immediately if password setup is required
-      if (result.requiresPassword && result.passwordSetupToken) {
-        setShowPasswordModal(true)
+      if (!isAuthenticated) {
+        console.log('✅ New user booking created - account verification required')
+        // For new users, show verification message instead of redirecting
+      } else {
+        console.log('✅ Existing user booking created')
+        // Redirect existing users to booking success page
+        router.push(`/booking/success?ref=${result.confirmationNumber}`)
       }
     } catch (error) {
+      console.error('❌ Booking submission failed:', error)
       setBookingResult({
         success: false
       })
@@ -157,6 +169,8 @@ export function PricingConfirmation() {
 
   // Show success screen after booking confirmation
   if (bookingResult?.success) {
+    const isNewUser = (bookingResult as any)?.isNewUser
+    
     return (
       <div className="space-y-8 text-center">
         <div className="w-20 h-20 mx-auto bg-green-100 rounded-full flex items-center justify-center">
@@ -165,11 +179,25 @@ export function PricingConfirmation() {
         
         <div>
           <h2 className="text-3xl font-bold text-text-primary mb-2">
-            Booking Confirmed!
+            {isNewUser ? 'Account Created & Booking Confirmed!' : 'Booking Confirmed!'}
           </h2>
           <p className="text-text-secondary text-lg">
-            Your detailing service has been successfully booked
+            {isNewUser 
+              ? 'Your account has been created and your detailing service has been booked'
+              : 'Your detailing service has been successfully booked'
+            }
           </p>
+          {isNewUser && (
+            <div className="mt-4 p-4 bg-brand-600/10 border border-brand-400/30 rounded-lg">
+              <div className="flex items-center justify-center gap-2 text-brand-700 mb-2">
+                <MailIcon className="w-5 h-5" />
+                <span className="font-medium">Email Verification Required</span>
+              </div>
+              <p className="text-sm text-brand-600">
+                Please check your email and click the verification link to activate your account and access your dashboard.
+              </p>
+            </div>
+          )}
         </div>
 
         <Card>
@@ -224,56 +252,80 @@ export function PricingConfirmation() {
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
           <h4 className="font-medium text-blue-900 mb-2">What happens next?</h4>
           <ul className="text-blue-800 text-sm space-y-1 text-left">
-            <li>• You&apos;ll receive a confirmation email shortly</li>
-            <li>• We&apos;ll send you a reminder 24 hours before your appointment</li>
-            <li>• Our team will arrive at your location at the scheduled time</li>
-            {bookingResult.requiresPassword && !showPasswordModal && (
-              <li>• Your account is ready - access your dashboard anytime</li>
+            {isNewUser ? (
+              <>
+                <li>• Check your email for the verification link</li>
+                <li>• Click the link to activate your account</li>
+                <li>• You&apos;ll receive a booking confirmation email after verification</li>
+                <li>• We&apos;ll send you a reminder 24 hours before your appointment</li>
+                <li>• Our team will arrive at your location at the scheduled time</li>
+              </>
+            ) : (
+              <>
+                <li>• You&apos;ll receive a confirmation email shortly</li>
+                <li>• We&apos;ll send you a reminder 24 hours before your appointment</li>
+                <li>• Our team will arrive at your location at the scheduled time</li>
+                <li>• Your account is ready - access your dashboard anytime</li>
+              </>
             )}
           </ul>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <Button
-            onClick={handleGoToDashboard}
-            size="lg"
-            rightIcon={<UserIcon className="w-4 h-4" />}
-          >
-            View Dashboard
-          </Button>
-          <Button
-            onClick={handleStartNewBooking}
-            variant="outline"
-            size="lg"
-          >
-            Book Another Service
-          </Button>
+          {isNewUser ? (
+            <>
+              <Button
+                onClick={() => window.location.href = '/'}
+                size="lg"
+                variant="primary"
+                rightIcon={<ArrowRight className="w-4 h-4" />}
+              >
+                Back to Home
+              </Button>
+              <Button
+                onClick={() => router.push('/auth/login')}
+                variant="outline"
+                size="lg"
+                rightIcon={<UserIcon className="w-4 h-4" />}
+              >
+                Sign In (After Verification)
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button
+                onClick={handleGoToDashboard}
+                size="lg"
+                rightIcon={<UserIcon className="w-4 h-4" />}
+              >
+                View Dashboard
+              </Button>
+              <Button
+                onClick={handleStartNewBooking}
+                variant="outline"
+                size="lg"
+              >
+                Book Another Service
+              </Button>
+            </>
+          )}
         </div>
 
         <div className="text-center pt-6">
           <p className="text-text-secondary text-sm mb-2">Need to make changes?</p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center text-sm">
-            <a href="tel:+447123456789" className="flex items-center gap-2 text-brand-400 hover:text-brand-300">
+            <a href="tel:+447908625581" className="flex items-center gap-2 text-brand-400 hover:text-brand-300">
               <PhoneIcon className="w-4 h-4" />
-              07123 456789
+              07908 625581
             </a>
-            <a href="mailto:info@love4detailing.co.uk" className="flex items-center gap-2 text-brand-400 hover:text-brand-300">
+            <a href="mailto:zell@love4detailing.com" className="flex items-center gap-2 text-brand-400 hover:text-brand-300">
               <MailIcon className="w-4 h-4" />
-              info@love4detailing.co.uk
+              zell@love4detailing.com
             </a>
           </div>
         </div>
 
-        {/* Password Setup Modal */}
-        {showPasswordModal && bookingResult.passwordSetupToken && formData.user && (
-          <PasswordSetupModal
-            isOpen={showPasswordModal}
-            onClose={() => setShowPasswordModal(false)}
-            passwordSetupToken={bookingResult.passwordSetupToken}
-            userEmail={formData.user.email}
-            onSuccess={handlePasswordSetupSuccess}
-          />
-        )}
+        {/* Password setup no longer needed - users must register first */}
       </div>
     )
   }
@@ -565,57 +617,7 @@ export function PricingConfirmation() {
         </div>
       </div>
 
-      {/* Authentication Modal */}
-      <Modal open={showAuthModal} onClose={() => setShowAuthModal(false)}>
-        <ModalContent onClose={() => setShowAuthModal(false)}>
-          <ModalHeader 
-            title="Sign in to continue" 
-            subtitle="You need to sign in or create an account to complete your booking"
-          />
-          <ModalBody>
-            <div className="space-y-4">
-              <div className="text-center">
-                <p className="text-text-secondary mb-4">
-                  Already have an account? Sign in to access your saved vehicles and addresses.
-                </p>
-              </div>
-              
-              <div className="space-y-3">
-                <Button
-                  onClick={() => {
-                    // Save current booking state to session storage
-                    sessionStorage.setItem('booking_redirect', 'true')
-                    router.push('/auth/login?redirect=/book')
-                  }}
-                  fullWidth
-                  size="lg"
-                >
-                  Sign In
-                </Button>
-                
-                <Button
-                  onClick={() => {
-                    // Save current booking state to session storage
-                    sessionStorage.setItem('booking_redirect', 'true')
-                    router.push('/auth/register?redirect=/book')
-                  }}
-                  variant="outline"
-                  fullWidth
-                  size="lg"
-                >
-                  Create Account
-                </Button>
-              </div>
-              
-              <div className="text-center">
-                <p className="text-sm text-text-muted">
-                  Your booking progress will be saved and restored after signing in.
-                </p>
-              </div>
-            </div>
-          </ModalBody>
-        </ModalContent>
-      </Modal>
+      {/* Auth modal no longer needed - users must be authenticated to reach this step */}
     </div>
   )
 }

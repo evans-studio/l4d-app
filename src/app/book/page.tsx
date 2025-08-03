@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/primitives/Button';
 import { ResponsiveLogo } from '@/components/ui/primitives/Logo';
 import { Container, Section } from '@/components/layout/templates/PageLayout';
@@ -11,17 +11,22 @@ import { ServiceSelection } from '@/components/booking/steps/ServiceSelection';
 import { VehicleDetails } from '@/components/booking/steps/VehicleDetails';
 import { TimeSlotSelection } from '@/components/booking/steps/TimeSlotSelection';
 import { AddressCollection } from '@/components/booking/steps/AddressCollection';
+import { UserDetails } from '@/components/booking/steps/UserDetails';
 import { PricingConfirmation } from '@/components/booking/steps/PricingConfirmation';
-import { ArrowLeft, Phone, User, LogIn } from 'lucide-react';
+import { Card, CardContent, CardHeader } from '@/components/ui/composites/Card';
+import { ArrowLeft, Phone, User, LogIn, Mail, Shield, CheckCircle } from 'lucide-react';
 
-export default function BookingPage(): React.JSX.Element {
+function BookingPageContent(): React.JSX.Element {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { 
     currentStep, 
     previousStep, 
     isRebooking, 
     resetFlow, 
-    formData 
+    formData,
+    setServiceSelection,
+    loadAvailableServices
   } = useBookingFlowStore();
   
   // Auth state (still needed for header display)
@@ -31,6 +36,9 @@ export default function BookingPage(): React.JSX.Element {
   
   // State to track if user has made a choice about continuing
   const [userChoiceMade, setUserChoiceMade] = useState(false);
+  
+  // State for service pre-population
+  const [preSelectedService, setPreSelectedService] = useState<string | null>(null);
 
   // Check if there's existing booking data from a previous session
   const hasExistingBookingData = React.useMemo(() => {
@@ -43,7 +51,7 @@ export default function BookingPage(): React.JSX.Element {
     );
   }, [isRebooking, userChoiceMade, formData, currentStep]);
 
-  // Check authentication status
+  // Check authentication status and email verification
   useEffect(() => {
     const checkAuth = async () => {
       try {
@@ -51,9 +59,18 @@ export default function BookingPage(): React.JSX.Element {
         const data = await response.json();
         
         if (data.success && data.data?.authenticated) {
+          const user = data.data.user;
+          // Only redirect to email verification if user is authenticated but not verified
+          // New users can proceed without authentication
+          if (user.email_verified === false) {
+            // Only redirect authenticated users who need to verify their email
+            router.push('/auth/verify-email?reason=booking');
+            return;
+          }
           setIsAuthenticated(true);
-          setProfile(data.data.user);
+          setProfile(user);
         } else {
+          // Not authenticated - this is fine for new users
           setIsAuthenticated(false);
           setProfile(null);
         }
@@ -67,7 +84,51 @@ export default function BookingPage(): React.JSX.Element {
     };
 
     checkAuth();
-  }, []);
+  }, [router]);
+
+  // Handle service pre-population from URL parameters
+  useEffect(() => {
+    const serviceId = searchParams.get('service');
+    if (serviceId) {
+      console.log('🔗 Service pre-selection detected:', serviceId);
+      setPreSelectedService(serviceId);
+      
+      // Load available services and auto-select the specified one
+      const prePopulateService = async () => {
+        try {
+          // First load available services
+          await loadAvailableServices();
+          
+          // Fetch the specific service details
+          const response = await fetch(`/api/services/${serviceId}`);
+          const data = await response.json();
+          
+          if (data.success && data.data) {
+            console.log('✅ Service pre-populated:', data.data.name);
+            // Set the service data in the booking flow
+            setServiceSelection({
+              serviceId: data.data.id,
+              name: data.data.name,
+              description: data.data.short_description || data.data.full_description,
+              duration: data.data.duration_minutes,
+              basePrice: data.data.base_price,
+              category: data.data.category_id
+            });
+            
+            // If we're on step 1 and service is selected, move to step 2
+            if (currentStep === 1) {
+              console.log('📍 Auto-advancing to vehicle details step');
+              // The step advancement will be handled by the ServiceSelection component
+            }
+          }
+        } catch (error) {
+          console.error('❌ Failed to pre-populate service:', error);
+        }
+      };
+      
+      prePopulateService();
+    }
+  }, [searchParams, setServiceSelection, loadAvailableServices, currentStep]);
 
   const renderCurrentStep = (): React.JSX.Element | null => {
     switch (currentStep) {
@@ -80,146 +141,31 @@ export default function BookingPage(): React.JSX.Element {
       case 4:
         return <AddressCollection />;
       case 5:
+        return <UserDetails />;
+      case 6:
         return <PricingConfirmation />;
       default:
         return null;
     }
   };
 
+  // No auth gate - allow all users to proceed with booking
+  // Account will be created automatically during the booking process
+
   return (
     <div className="min-h-screen bg-surface-primary">
-      {/* Header - Mobile First Responsive */}
-      <Section background="muted" padding="sm">
-        <Container>
-          {/* Mobile Header Layout */}
-          <div className="flex flex-col space-y-3 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
-            {/* Top Row - Logo and Title */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 sm:gap-3">
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={() => window.location.href = '/'}
-                  className="p-2 sm:px-3"
-                >
-                  <ArrowLeft className="w-4 h-4" />
-                  <span className="hidden sm:inline ml-2">Back to Home</span>
-                </Button>
-                <div className="flex items-center gap-2 sm:gap-3">
-                  <ResponsiveLogo />
-                  <div className="hidden sm:block">
-                    <h1 className="text-xl sm:text-2xl font-bold text-text-primary">
-                      {isRebooking ? 'Rebook Your Service' : 'Book Your Service'}
-                    </h1>
-                    <p className="text-sm text-text-secondary">
-                      {isRebooking ? 'Using your previous booking details' : 'Professional mobile car detailing'}
-                    </p>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Mobile Auth Quick Access */}
-              <div className="sm:hidden">
-                {!authLoading && (
-                  <>
-                    {isAuthenticated && profile ? (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => router.push('/dashboard')}
-                        className="text-brand-400 hover:text-brand-300 p-2"
-                      >
-                        <User className="w-4 h-4" />
-                      </Button>
-                    ) : (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => router.push('/auth/login')}
-                        className="text-brand-400 hover:text-brand-300 p-2"
-                      >
-                        <LogIn className="w-4 h-4" />
-                      </Button>
-                    )}
-                  </>
-                )}
-              </div>
-            </div>
-
-            {/* Mobile Title (visible only on mobile) */}
-            <div className="sm:hidden">
-              <h1 className="text-lg font-bold text-text-primary">
-                {isRebooking ? 'Rebook Your Service' : 'Book Your Service'}
-              </h1>
-              <p className="text-sm text-text-secondary">
-                {isRebooking ? 'Using your previous booking details' : 'Professional mobile car detailing'}
-              </p>
-            </div>
-
-            {/* Desktop Right Side */}
-            <div className="hidden sm:flex items-center gap-3 lg:gap-4">
-              {/* Authentication Status */}
-              {!authLoading && (
-                <div className="flex items-center gap-2">
-                  {isAuthenticated && profile ? (
-                    <div className="flex items-center gap-2 text-text-secondary">
-                      <User className="w-4 h-4 text-brand-400" />
-                      <span className="text-sm lg:text-base">Hi, {(profile as any)?.first_name || 'Guest'}</span>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => router.push('/dashboard')}
-                        className="text-brand-400 hover:text-brand-300"
-                      >
-                        Dashboard
-                      </Button>
-                    </div>
-                  ) : (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => router.push('/auth/login')}
-                      leftIcon={<LogIn className="w-4 h-4" />}
-                      className="text-brand-400 hover:text-brand-300"
-                    >
-                      Sign In
-                    </Button>
-                  )}
-                </div>
-              )}
-              
-              {/* Help Contact */}
-              <div className="hidden lg:flex items-center gap-2 text-text-secondary">
-                <Phone className="w-4 h-4 text-brand-400" />
-                <span className="text-sm">Need help? Call 07123 456789</span>
-              </div>
-              
-              {/* Mobile Help Button (for tablet) */}
-              <Button
-                variant="ghost"
-                size="sm"
-                className="lg:hidden text-brand-400 hover:text-brand-300"
-                onClick={() => window.location.href = 'tel:07123456789'}
-              >
-                <Phone className="w-4 h-4" />
-              </Button>
-            </div>
-          </div>
-
-          {/* Mobile Help Contact Bar */}
-          <div className="sm:hidden mt-3 pt-3 border-t border-border-secondary">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="w-full justify-center text-brand-400 hover:text-brand-300"
-              onClick={() => window.location.href = 'tel:07123456789'}
-            >
-              <Phone className="w-4 h-4 mr-2" />
-              Need help? Tap to call
-            </Button>
-          </div>
-        </Container>
-      </Section>
+      {/* Simple Back to Home Link */}
+      <div className="px-4 py-3 border-b border-border-secondary">
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          onClick={() => window.location.href = '/'}
+          className="text-text-muted hover:text-text-primary"
+        >
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Back to Home
+        </Button>
+      </div>
 
       {/* Rebooking Notice */}
       {isRebooking && (
@@ -312,22 +258,37 @@ export default function BookingPage(): React.JSX.Element {
             <p>
               Need help? Contact us at{' '}
               <a 
-                href="tel:+447123456789" 
+                href="tel:+447908625581" 
                 className="text-brand-400 hover:text-brand-300 transition-colors"
               >
-                07123 456789
+                07908 625581
               </a>
               {' '}or email{' '}
               <a 
-                href="mailto:info@love4detailing.co.uk" 
+                href="mailto:zell@love4detailing.com" 
                 className="text-brand-400 hover:text-brand-300 transition-colors"
               >
-                info@love4detailing.co.uk
+                zell@love4detailing.com
               </a>
             </p>
           </div>
         </Container>
       </Section>
     </div>
+  );
+}
+
+export default function BookingPage(): React.JSX.Element {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-surface-primary flex items-center justify-center">
+        <div className="text-center">
+          <ResponsiveLogo />
+          <p className="mt-4 text-text-secondary">Loading booking form...</p>
+        </div>
+      </div>
+    }>
+      <BookingPageContent />
+    </Suspense>
   );
 }

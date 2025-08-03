@@ -42,16 +42,8 @@ export default function RegisterPage() {
         return
       }
 
-      // Handle different registration outcomes
-      if (result.redirectTo) {
-        // Registration complete with auto-login, redirect based on role
-        console.log('Registration successful, redirecting to:', result.redirectTo)
-        router.push(result.redirectTo)
-      } else if (result.error) {
-        // Registration successful but needs email confirmation
-        setSuccess(true)
-      } else {
-        // Registration successful with no redirect
+      // Registration always requires email verification
+      if (result.success) {
         setSuccess(true)
       }
 
@@ -92,9 +84,9 @@ export default function RegisterPage() {
               <Button
                 variant="primary"
                 fullWidth
-                onClick={() => window.location.href = '/auth/login'}
+                onClick={() => window.location.href = '/'}
               >
-                Go to Sign In
+                Back to Home
               </Button>
             </div>
           </div>

@@ -55,12 +55,6 @@ export async function GET(
         confirmation_sent_at,
         confirmed_at,
         customer_id,
-        user_profiles!customer_id (
-          email,
-          first_name,
-          last_name,
-          phone
-        ),
         customer_vehicles!vehicle_id (
           make,
           model,
@@ -114,6 +108,17 @@ export async function GET(
       }, { status: 500 })
     }
 
+    // Get customer profile separately
+    const { data: customerProfile, error: customerError } = await supabase
+      .from('user_profiles')
+      .select('id, email, first_name, last_name, phone')
+      .eq('id', booking.customer_id)
+      .single()
+
+    if (customerError) {
+      console.error('Error fetching customer profile:', customerError)
+    }
+
     // Transform the data for frontend consumption (format expected by rebooking)
     const transformedBooking = {
       id: booking.id,
@@ -122,12 +127,12 @@ export async function GET(
       total_price: booking.total_price,
       
       // Customer information
-      customer: booking.user_profiles?.[0] ? {
+      customer: customerProfile ? {
         id: booking.customer_id,
-        email: booking.user_profiles[0].email,
-        first_name: booking.user_profiles[0].first_name,
-        last_name: booking.user_profiles[0].last_name,
-        phone: booking.user_profiles[0].phone
+        email: customerProfile.email,
+        first_name: customerProfile.first_name,
+        last_name: customerProfile.last_name,
+        phone: customerProfile.phone
       } : null,
       
       // Vehicle details (use stored JSON first, fallback to joined data)

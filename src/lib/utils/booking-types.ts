@@ -4,6 +4,7 @@ export type BookingStatus =
   | 'draft'
   | 'pending' 
   | 'confirmed'
+  | 'rescheduled'
   | 'in_progress'
   | 'completed'
   | 'paid'
@@ -321,4 +322,5 @@ export interface AdminBookingOverview {
 }
 
 // Re-export existing types for convenience
-export type { Service, ServiceCategory } from './database'
+export type { Service } from './database'
+// ServiceCategory removed as service_categories table no longer exists

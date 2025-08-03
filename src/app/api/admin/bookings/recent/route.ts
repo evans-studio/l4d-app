@@ -29,20 +29,11 @@ export async function GET(request: NextRequest) {
         vehicle_details,
         service_address,
         created_at,
-        user_profiles!customer_id (
-          id,
-          email,
-          first_name,
-          last_name
-        ),
         booking_services (
           id,
           service_details,
           price,
-          services (
-            id,
-            name
-          )
+          service_id
         )
       `)
       .order('created_at', { ascending: false })
@@ -56,10 +47,27 @@ export async function GET(request: NextRequest) {
 
     console.log('Bookings fetched successfully:', bookings?.length || 0)
 
-    // Transform the data for the frontend using joined data and embedded JSON
+    // Get unique customer IDs and fetch user profiles separately
+    const customerIds = [...new Set(bookings?.map(b => b.customer_id).filter(Boolean))] as string[]
+    let customerProfiles: any[] = []
+    
+    if (customerIds.length > 0) {
+      const { data: profiles, error: profilesError } = await supabase
+        .from('user_profiles')
+        .select('id, email, first_name, last_name')
+        .in('id', customerIds)
+      
+      if (profilesError) {
+        console.error('Error fetching customer profiles:', profilesError)
+      } else {
+        customerProfiles = profiles || []
+      }
+    }
+
+    // Transform the data for the frontend using embedded JSON and separate profile data
     const recentBookings = bookings?.map((booking: any) => {
-      // Get customer info from joined data
-      const customer = booking.user_profiles || { first_name: '', last_name: '', email: '' }
+      // Get customer info from separate profile data
+      const customer = customerProfiles.find(p => p.id === booking.customer_id) || { first_name: '', last_name: '', email: '' }
       const customerName = [customer.first_name, customer.last_name]
         .filter(Boolean)
         .join(' ') || 'Customer'
@@ -83,7 +91,7 @@ export async function GET(request: NextRequest) {
       
       // Get services from booking_services relationship
       const services = booking.booking_services?.map((bs: any) => ({
-        name: bs.services?.name || bs.service_details?.name || 'Vehicle Detailing Service'
+        name: bs.service_details?.name || 'Vehicle Detailing Service'
       })) || [{ name: 'Vehicle Detailing Service' }]
       
       return {

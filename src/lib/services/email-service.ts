@@ -367,7 +367,7 @@ Email: zell@love4detailing.com
           <div style="text-align: center; margin-top: 30px; padding-top: 25px; border-top: 1px solid #404040;">
             <p style="color: #cccccc; margin-bottom: 10px;">Need help with your account?</p>
             <p style="color: #cccccc; margin: 0;">
-              📞 <a href="tel:+447123456789" style="color: #9747FF; text-decoration: none;">07123 456789</a> | 
+              📞 <a href="tel:+447123456789" style="color: #9747FF; text-decoration: none;">07908 625581</a> | 
               ✉️ <a href="mailto:zell@love4detailing.com" style="color: #9747FF; text-decoration: none;">zell@love4detailing.com</a>
             </p>
           </div>
@@ -406,7 +406,7 @@ IMPORTANT SECURITY INFORMATION:
 Didn't request this? If you didn't request a password reset, please ignore this email or contact us if you're concerned about account security.
 
 Need help?
-Phone: 07123 456789
+Phone: 07908 625581
 Email: zell@love4detailing.com
 
 © 2024 Love 4 Detailing

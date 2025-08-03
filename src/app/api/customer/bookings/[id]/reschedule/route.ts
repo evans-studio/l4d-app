@@ -59,7 +59,7 @@ export async function POST(
     // Verify the requested time slot is available using admin client to bypass RLS
     const { data: timeSlot, error: timeSlotError } = await supabaseAdmin
       .from('time_slots')
-      .select('id, start_time, end_time, slot_date, is_available')
+      .select('id, start_time, slot_date, is_available')
       .eq('slot_date', date)
       .eq('start_time', time)
       .eq('is_available', true)
@@ -74,13 +74,12 @@ export async function POST(
       .from('booking_reschedule_requests')
       .insert({
         booking_id: bookingId,
-        customer_id: user.id,
         requested_date: date,
         requested_time: time,
-        requested_end_time: timeSlot.end_time,
-        time_slot_id: timeSlot.id,
         reason: reason,
         status: 'pending',
+        original_date: booking.scheduled_date,
+        original_time: booking.scheduled_start_time,
         created_at: new Date().toISOString()
       })
       .select('id')
@@ -128,15 +127,16 @@ export async function POST(
         const customerName = `${customerProfile.first_name} ${customerProfile.last_name}`
         
         // Send customer confirmation email
-        await emailService.sendBookingStatusUpdate(
+        await emailService.sendRescheduleRequestConfirmation(
           customerProfile.email,
           customerName,
           {
             ...booking,
             booking_reference: booking.booking_reference
-          } as any,
-          'reschedule_requested',
-          `We've received your reschedule request for ${date} at ${time}. Our team will review your request and get back to you within 24 hours.`
+          },
+          date,
+          time,
+          reason
         )
 
         // TODO: Send notification to admin about new reschedule request

@@ -49,11 +49,11 @@ export async function POST(
       return ApiResponseHandler.notFound('Booking not found')
     }
 
-    // Update the reschedule request status to declined
+    // Update the reschedule request status to rejected (matches DB constraint)
     const { error: updateRequestError } = await supabase
       .from('booking_reschedule_requests')
       .update({
-        status: 'declined',
+        status: 'rejected',
         admin_response: decline_reason || 'Reschedule request declined by admin',
         updated_at: new Date().toISOString()
       })

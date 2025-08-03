@@ -160,7 +160,7 @@ export async function POST(request: NextRequest) {
 
         // Send email via Resend
         const { data, error: emailError } = await resend.emails.send({
-          from: `Love 4 Detailing <${process.env.NEXT_PUBLIC_FROM_EMAIL || 'zell@love4detailing.co.uk'}>`,
+          from: `Love 4 Detailing <${process.env.NEXT_PUBLIC_FROM_EMAIL || 'zell@love4detailing.com'}>`,
           to: [email.toLowerCase()],
           subject,
           html,
@@ -176,7 +176,7 @@ export async function POST(request: NextRequest) {
         console.log('✅ Password reset email sent successfully via Resend')
         console.log('Email ID:', data?.id)
         console.log('Recipient:', email)
-        console.log('Sender:', process.env.NEXT_PUBLIC_FROM_EMAIL || 'zell@love4detailing.co.uk')
+        console.log('Sender:', process.env.NEXT_PUBLIC_FROM_EMAIL || 'zell@love4detailing.com')
         console.log('Full Resend response:', JSON.stringify(data, null, 2))
         
       } catch (customEmailError) {

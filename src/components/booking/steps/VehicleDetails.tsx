@@ -6,9 +6,24 @@ import { Button } from '@/components/ui/primitives/Button'
 import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/composites/Card'
 import { Input } from '@/components/ui/primitives/Input'
 import { Select } from '@/components/ui/primitives/Select'
-import { ChevronLeftIcon, ChevronRightIcon, PlusIcon, CarIcon, CheckIcon, Clock } from 'lucide-react'
+import { ChevronLeftIcon, ChevronRightIcon, PlusIcon, CarIcon, CheckIcon, Clock, AlertCircle, Loader2 } from 'lucide-react'
 import { getVehicleSizeDescription, PRICING_CONFIG } from '@/lib/pricing/calculator'
-import vehicleData from '@/data/vehicle-size-data.json'
+
+// Vehicle data interfaces
+interface VehicleModel {
+  model: string
+  size: 'S' | 'M' | 'L' | 'XL'
+  years: number[]
+}
+
+interface VehicleMake {
+  make: string
+  models: VehicleModel[]
+}
+
+interface VehicleDataResponse {
+  vehicles: VehicleMake[]
+}
 
 export function VehicleDetails() {
   const {
@@ -18,7 +33,7 @@ export function VehicleDetails() {
     isExistingUser,
     isLoading,
     error,
-    setVehicleData,
+    setVehicleData: setStoreVehicleData,
     loadVehicleSizes,
     previousStep,
     nextStep,
@@ -30,6 +45,9 @@ export function VehicleDetails() {
   
   const [showNewVehicleForm, setShowNewVehicleForm] = useState(!isExistingUser || userVehicles.length === 0)
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null)
+  const [vehicleData, setVehicleData] = useState<VehicleDataResponse | null>(null)
+  const [vehicleDataLoading, setVehicleDataLoading] = useState(false)
+  const [vehicleDataError, setVehicleDataError] = useState<string | null>(null)
   const [vehicleForm, setVehicleForm] = useState({
     make: formData.vehicle?.make || '',
     model: formData.vehicle?.model || '',
@@ -40,30 +58,79 @@ export function VehicleDetails() {
     notes: formData.vehicle?.notes || '',
   })
 
-  // Get available makes from vehicle data
-  const availableMakes = vehicleData.vehicles.map(v => v.make).sort()
-
-  // Get available models for selected make
-  const availableModels = vehicleForm.make 
-    ? vehicleData.vehicles.find(v => v.make === vehicleForm.make)?.models || []
+  // Get available makes from vehicle data with safety checks and deduplication
+  const availableMakes = vehicleData?.vehicles 
+    ? [...new Set(vehicleData.vehicles.map(v => v.make))].sort() 
     : []
 
-  // Get available years for selected make/model
-  const availableYears = vehicleForm.make && vehicleForm.model
-    ? availableModels.find(m => m.model === vehicleForm.model)?.years || []
+  // Get available models for selected make with safety checks and deduplication
+  const availableModels = vehicleForm.make && vehicleData?.vehicles
+    ? (() => {
+        const models = vehicleData.vehicles.find(v => v.make === vehicleForm.make)?.models || []
+        // Deduplicate models by name while preserving the first occurrence
+        const uniqueModels = models.filter((model, index, array) => 
+          array.findIndex(m => m.model === model.model) === index
+        )
+        return uniqueModels
+      })()
+    : []
+
+  // Get available years for selected make/model with safety checks and deduplication
+  const availableYears = vehicleForm.make && vehicleForm.model && availableModels.length > 0
+    ? (() => {
+        const years = availableModels.find(m => m.model === vehicleForm.model)?.years || []
+        // Deduplicate years and sort them
+        return [...new Set(years)].sort((a, b) => b - a)
+      })()
     : []
 
   // Get size for selected make/model (auto-detection on model selection)
   const getVehicleSize = (make: string, model: string): 'S' | 'M' | 'L' | 'XL' => {
-    const vehicleMake = vehicleData.vehicles.find(v => v.make === make)
-    if (vehicleMake) {
-      const vehicleModel = vehicleMake.models.find(m => m.model === model)
-      if (vehicleModel) {
-        return vehicleModel.size as 'S' | 'M' | 'L' | 'XL'
+    try {
+      if (!vehicleData?.vehicles || !make || !model) {
+        return 'M' // Default fallback
       }
+      
+      const vehicleMake = vehicleData.vehicles.find(v => v.make === make)
+      if (vehicleMake?.models) {
+        const vehicleModel = vehicleMake.models.find(m => m.model === model)
+        if (vehicleModel?.size) {
+          return vehicleModel.size as 'S' | 'M' | 'L' | 'XL'
+        }
+      }
+    } catch (error) {
+      console.error('Error getting vehicle size:', error)
     }
     return 'M' // Default fallback
   }
+
+  // Load vehicle data when component mounts
+  useEffect(() => {
+    if (isCurrentStep && !vehicleData && !vehicleDataLoading) {
+      const loadVehicleData = async () => {
+        setVehicleDataLoading(true)
+        setVehicleDataError(null)
+        
+        try {
+          const response = await fetch('/api/vehicle-data')
+          const data = await response.json()
+          
+          if (data.success && data.data) {
+            setVehicleData(data.data)
+          } else {
+            throw new Error(data.error?.message || 'Failed to load vehicle data')
+          }
+        } catch (error) {
+          console.error('Error loading vehicle data:', error)
+          setVehicleDataError(error instanceof Error ? error.message : 'Failed to load vehicle data')
+        } finally {
+          setVehicleDataLoading(false)
+        }
+      }
+      
+      loadVehicleData()
+    }
+  }, [isCurrentStep, vehicleData, vehicleDataLoading])
 
   // Load vehicle sizes when component mounts
   useEffect(() => {
@@ -112,25 +179,40 @@ export function VehicleDetails() {
   }
 
   const handleExistingVehicleSelect = (vehicleId: string) => {
-    const vehicle = userVehicles.find(v => v.id === vehicleId)
-    if (vehicle && vehicle.vehicle_size) {
+    try {
+      const vehicle = userVehicles.find(v => v.id === vehicleId)
+      if (!vehicle) {
+        console.error('Vehicle not found:', vehicleId)
+        return
+      }
+
       setSelectedVehicleId(vehicleId)
-      setVehicleData({
+      
+      // Safely handle vehicle size data
+      let vehicleSize: 'S' | 'M' | 'L' | 'XL' = 'M' // Default fallback
+      if (vehicle.vehicle_size?.price_multiplier) {
+        vehicleSize = getSizeNameFromMultiplier(vehicle.vehicle_size.price_multiplier)
+      }
+
+      setStoreVehicleData({
         make: vehicle.make || '',
         model: vehicle.model || '',
         year: vehicle.year || new Date().getFullYear(),
         color: vehicle.color || '',
         registration: vehicle.registration || '',
-        size: getSizeNameFromMultiplier(vehicle.vehicle_size.price_multiplier),
+        size: vehicleSize,
         notes: vehicle.notes || ''
       })
       setShowNewVehicleForm(false)
+    } catch (error) {
+      console.error('Error selecting existing vehicle:', error)
+      // Continue with default behavior - don't crash the component
     }
   }
 
   const handleNewVehicleSubmit = () => {
     if (vehicleForm.make && vehicleForm.model && vehicleForm.registration && vehicleForm.size) {
-      setVehicleData(vehicleForm)
+      setStoreVehicleData(vehicleForm)
       setSelectedVehicleId(null)
     }
   }
@@ -151,34 +233,132 @@ export function VehicleDetails() {
     return 'XL'
   }
 
-  // Helper function to get size display info from database
+  // Helper function to get size display info from database with safety checks
   const getSizeInfo = (sizeName: string) => {
-    const vehicleSize = vehicleSizes.find(size => 
-      size.name.toLowerCase().replace(/\s+/g, '_') === sizeName
-    )
-    
-    if (vehicleSize) {
+    try {
+      // Try to get from database first
+      if (vehicleSizes?.length > 0) {
+        const vehicleSize = vehicleSizes.find(size => 
+          size?.name?.toLowerCase().replace(/\s+/g, '_') === sizeName?.toLowerCase()
+        )
+        
+        if (vehicleSize) {
+          return {
+            id: vehicleSize.id,
+            label: vehicleSize.name || sizeName,
+            description: vehicleSize.description || 'Vehicle size',
+            multiplier: vehicleSize.price_multiplier ? `${vehicleSize.price_multiplier}x` : '',
+            examples: vehicleSize.examples || []
+          }
+        }
+      }
+      
+      // Fallback to static size map with safety checks
+      const sizeMap: Record<string, any> = {
+        S: { label: 'Small', description: getVehicleSizeDescription('S'), multiplier: '', examples: [] },
+        M: { label: 'Medium', description: getVehicleSizeDescription('M'), multiplier: '', examples: [] },
+        L: { label: 'Large', description: getVehicleSizeDescription('L'), multiplier: '', examples: [] },
+        XL: { label: 'Extra Large', description: getVehicleSizeDescription('XL'), multiplier: '', examples: [] }
+      }
+      
+      return sizeMap[sizeName] || sizeMap.M
+    } catch (error) {
+      console.error('Error getting size info:', error)
+      // Return safe fallback
       return {
-        id: vehicleSize.id,
-        label: vehicleSize.name,
-        description: vehicleSize.description || 'Vehicle size',
-        multiplier: `${vehicleSize.price_multiplier}x`,
-        examples: vehicleSize.examples || []
+        label: 'Medium',
+        description: 'Medium sized vehicle',
+        multiplier: '',
+        examples: []
       }
     }
-    
-    // Use direct pricing system (no multipliers)
-    const sizeMap: Record<string, any> = {
-      S: { label: 'Small', description: getVehicleSizeDescription('S'), multiplier: '', examples: [] },
-      M: { label: 'Medium', description: getVehicleSizeDescription('M'), multiplier: '', examples: [] },
-      L: { label: 'Large', description: getVehicleSizeDescription('L'), multiplier: '', examples: [] },
-      XL: { label: 'Extra Large', description: getVehicleSizeDescription('XL'), multiplier: '', examples: [] }
-    }
-    return sizeMap[sizeName] || sizeMap.M
   }
 
   if (!isCurrentStep) {
     return <div></div>
+  }
+
+  // Show loading state while vehicle data is loading
+  if (vehicleDataLoading) {
+    return (
+      <div className="space-y-8">
+        <div className="text-center">
+          <h2 className="text-3xl font-bold text-text-primary mb-2">
+            Vehicle Details
+          </h2>
+          <p className="text-text-secondary text-lg">
+            Tell us about your vehicle to ensure the best service
+          </p>
+        </div>
+        
+        <Card>
+          <CardContent className="flex items-center justify-center py-12">
+            <div className="flex items-center gap-3">
+              <Loader2 className="w-6 h-6 animate-spin text-brand-600" />
+              <span className="text-text-secondary">Loading vehicle database...</span>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  // Show error state if vehicle data failed to load
+  if (vehicleDataError && !vehicleData) {
+    return (
+      <div className="space-y-8">
+        <div className="text-center">
+          <h2 className="text-3xl font-bold text-text-primary mb-2">
+            Vehicle Details
+          </h2>
+          <p className="text-text-secondary text-lg">
+            Tell us about your vehicle to ensure the best service
+          </p>
+        </div>
+        
+        <Card className="border-red-500 bg-red-50">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <AlertCircle className="w-6 h-6 text-red-600" />
+              <h3 className="font-semibold text-red-600">Unable to Load Vehicle Database</h3>
+            </div>
+            <p className="text-red-600 mb-4">{vehicleDataError}</p>
+            <Button
+              onClick={() => {
+                setVehicleDataError(null)
+                // Trigger reload by resetting state
+                const loadVehicleData = async () => {
+                  setVehicleDataLoading(true)
+                  setVehicleDataError(null)
+                  
+                  try {
+                    const response = await fetch('/api/vehicle-data')
+                    const data = await response.json()
+                    
+                    if (data.success && data.data) {
+                      setVehicleData(data.data)
+                    } else {
+                      throw new Error(data.error?.message || 'Failed to load vehicle data')
+                    }
+                  } catch (error) {
+                    console.error('Error loading vehicle data:', error)
+                    setVehicleDataError(error instanceof Error ? error.message : 'Failed to load vehicle data')
+                  } finally {
+                    setVehicleDataLoading(false)
+                  }
+                }
+                
+                loadVehicleData()
+              }}
+              variant="outline"
+              className="border-red-500 text-red-600 hover:bg-red-50"
+            >
+              Try Again
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    )
   }
 
   return (
@@ -203,7 +383,16 @@ export function VehicleDetails() {
           
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {userVehicles.map((vehicle) => {
-              const sizeInfo = getSizeInfo(getSizeNameFromMultiplier(vehicle.vehicle_size?.price_multiplier || 1.3))
+              let sizeInfo
+              try {
+                const sizeName = vehicle.vehicle_size?.price_multiplier 
+                  ? getSizeNameFromMultiplier(vehicle.vehicle_size.price_multiplier)
+                  : 'M'
+                sizeInfo = getSizeInfo(sizeName)
+              } catch (error) {
+                console.error('Error getting size info for vehicle:', vehicle.id, error)
+                sizeInfo = getSizeInfo('M') // Safe fallback
+              }
               const isSelected = selectedVehicleId === vehicle.id
               
               return (
@@ -326,13 +515,18 @@ export function VehicleDetails() {
                   value={vehicleForm.make}
                   onChange={(e) => handleFormChange('make', e.target.value)}
                   placeholder="Select make"
+                  disabled={availableMakes.length === 0}
                 >
                   <option value="">Select make</option>
-                  {availableMakes.map((make) => (
-                    <option key={make} value={make}>
-                      {make}
-                    </option>
-                  ))}
+                  {availableMakes.length > 0 ? (
+                    availableMakes.map((make) => (
+                      <option key={make} value={make}>
+                        {make}
+                      </option>
+                    ))
+                  ) : (
+                    <option value="" disabled>Loading makes...</option>
+                  )}
                 </Select>
               </div>
               
@@ -344,14 +538,20 @@ export function VehicleDetails() {
                   value={vehicleForm.model}
                   onChange={(e) => handleFormChange('model', e.target.value)}
                   placeholder="Select model"
-                  disabled={!vehicleForm.make}
+                  disabled={!vehicleForm.make || availableModels.length === 0}
                 >
                   <option value="">Select model</option>
-                  {availableModels.map((model) => (
-                    <option key={model.model} value={model.model}>
-                      {model.model}
-                    </option>
-                  ))}
+                  {availableModels.length > 0 ? (
+                    availableModels.map((model, index) => (
+                      <option key={`${vehicleForm.make}-${model.model}-${index}`} value={model.model}>
+                        {model.model}
+                      </option>
+                    ))
+                  ) : vehicleForm.make ? (
+                    <option value="" disabled>Loading models...</option>
+                  ) : (
+                    <option value="" disabled>Select make first</option>
+                  )}
                 </Select>
               </div>
             </div>
@@ -376,14 +576,20 @@ export function VehicleDetails() {
                   value={vehicleForm.year.toString()}
                   onChange={(e) => handleFormChange('year', parseInt(e.target.value))}
                   placeholder="Select year"
-                  disabled={!vehicleForm.make || !vehicleForm.model}
+                  disabled={!vehicleForm.make || !vehicleForm.model || availableYears.length === 0}
                 >
                   <option value="">Select year</option>
-                  {availableYears.sort((a, b) => b - a).map((year) => (
-                    <option key={year} value={year.toString()}>
-                      {year}
-                    </option>
-                  ))}
+                  {availableYears.length > 0 ? (
+                    availableYears.map((year) => (
+                      <option key={year} value={year.toString()}>
+                        {year}
+                      </option>
+                    ))
+                  ) : vehicleForm.make && vehicleForm.model ? (
+                    <option value="" disabled>Loading years...</option>
+                  ) : (
+                    <option value="" disabled>Select make & model first</option>
+                  )}
                 </Select>
               </div>
               

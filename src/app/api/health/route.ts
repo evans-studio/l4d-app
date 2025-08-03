@@ -7,7 +7,7 @@ export async function GET() {
     
     // Simple connection test - just check if we can connect
     const { data, error } = await supabase
-      .from('vehicle_sizes')
+      .from('user_profiles')
       .select('count')
       .limit(1)
 

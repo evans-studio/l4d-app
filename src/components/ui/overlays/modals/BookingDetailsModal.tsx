@@ -11,36 +11,49 @@ interface BookingDetails {
   id: string
   booking_reference: string
   scheduled_date: string
-  scheduled_start_time: string
+  scheduled_start_time?: string
+  start_time?: string
   estimated_duration: number
   total_price: number
   status: 'draft' | 'pending' | 'confirmed' | 'rescheduled' | 'in_progress' | 'completed' | 'paid' | 'cancelled' | 'no_show'
   created_at: string
-  service: {
+  // Support both API response formats
+  service?: {
     name: string
     description?: string
     estimated_duration: number
   }
-  vehicle: {
+  services?: Array<{
+    name: string
+    base_price: number
+    quantity: number
+    total_price: number
+  }>
+  vehicle?: {
     make: string
     model: string
     year?: number
     color?: string
     registration?: string
+    license_plate?: string
   }
-  address: {
+  address?: {
     address_line_1: string
     address_line_2?: string
     city: string
     postal_code: string
     special_instructions?: string
   }
-  customer: {
+  // Support both API response formats
+  customer?: {
     first_name: string
     last_name: string
     email: string
     phone?: string
   }
+  customer_name?: string
+  customer_email?: string
+  customer_phone?: string
   notes?: string
 }
 
@@ -155,7 +168,8 @@ export const BookingDetailsModal: React.FC<BaseOverlayProps> = ({
     })
   }
 
-  const formatTime = (timeStr: string) => {
+  const formatTime = (timeStr: string | undefined) => {
+    if (!timeStr) return 'Time not available'
     const [hours, minutes] = timeStr.split(':')
     const hour = parseInt(hours || '0')
     const ampm = hour >= 12 ? 'PM' : 'AM'
@@ -241,7 +255,7 @@ export const BookingDetailsModal: React.FC<BaseOverlayProps> = ({
           <div>
             <div className="flex items-center gap-3 mb-2">
               <h3 className="text-xl font-semibold text-text-primary">
-                {booking.service?.name || 'Service Details'}
+                {booking.services?.[0]?.name || booking.service?.name || 'Service Details'}
               </h3>
               <Badge variant={config.color as any}>
                 <StatusIcon className="w-3 h-3 mr-1" />
@@ -273,7 +287,7 @@ export const BookingDetailsModal: React.FC<BaseOverlayProps> = ({
             </div>
             <div>
               <p className="text-sm text-text-secondary mb-1">Time</p>
-              <p className="font-medium text-text-primary">{formatTime(booking.scheduled_start_time)}</p>
+              <p className="font-medium text-text-primary">{formatTime(booking.start_time || booking.scheduled_start_time)}</p>
             </div>
             <div>
               <p className="text-sm text-text-secondary mb-1">Duration</p>
@@ -281,7 +295,7 @@ export const BookingDetailsModal: React.FC<BaseOverlayProps> = ({
             </div>
             <div>
               <p className="text-sm text-text-secondary mb-1">Service</p>
-              <p className="font-medium text-text-primary">{booking.service?.name || 'Service Details'}</p>
+              <p className="font-medium text-text-primary">{booking.services?.[0]?.name || booking.service?.name || 'Service Details'}</p>
             </div>
           </div>
           {(booking.service?.description) && (
@@ -351,22 +365,22 @@ export const BookingDetailsModal: React.FC<BaseOverlayProps> = ({
             <div>
               <p className="text-sm text-text-secondary mb-1">Name</p>
               <p className="font-medium text-text-primary">
-                {booking.customer?.first_name || 'Customer'} {booking.customer?.last_name || ''}
+                {booking.customer_name || booking.customer?.first_name || 'Customer'} {booking.customer?.last_name || ''}
               </p>
             </div>
             <div>
               <p className="text-sm text-text-secondary mb-1">Email</p>
               <p className="font-medium text-text-primary flex items-center gap-2">
                 <Mail className="w-3 h-3" />
-                {booking.customer?.email || 'Not available'}
+                {booking.customer_email || booking.customer?.email || 'Not available'}
               </p>
             </div>
-            {booking.customer?.phone && (
+            {(booking.customer_phone || booking.customer?.phone) && (
               <div className="sm:col-span-2">
                 <p className="text-sm text-text-secondary mb-1">Phone</p>
                 <p className="font-medium text-text-primary flex items-center gap-2">
                   <Phone className="w-3 h-3" />
-                  {booking.customer?.phone}
+                  {booking.customer_phone || booking.customer?.phone}
                 </p>
               </div>
             )}

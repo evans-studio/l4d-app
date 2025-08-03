@@ -37,7 +37,7 @@ function VerifyEmailPageContent() {
             setIsVerified(true)
             setEmail(session.user.email || '')
             
-            // Redirect to dashboard after successful verification
+            // Always redirect to dashboard after successful verification
             setTimeout(() => {
               router.push('/dashboard?message=email-verified')
             }, 3000)
@@ -134,7 +134,9 @@ function VerifyEmailPageContent() {
                 </div>
                 
                 <div className="text-sm text-text-secondary">
-                  <p>Redirecting you to your dashboard in a few seconds...</p>
+                  <p>
+                    Redirecting you to your dashboard in a few seconds...
+                  </p>
                 </div>
                 
                 <Button
@@ -176,7 +178,7 @@ function VerifyEmailPageContent() {
               Verify Your Email
             </h2>
             <p className="mt-2 text-text-secondary">
-              We sent a verification link to your email address
+We sent a verification link to your email address
             </p>
           </div>
 
@@ -211,7 +213,7 @@ function VerifyEmailPageContent() {
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="text-brand-400 mt-1">3.</span>
-                      You&apos;ll be automatically signed in
+                      You&apos;ll be automatically signed in and taken to your dashboard
                     </li>
                   </ul>
                 </div>

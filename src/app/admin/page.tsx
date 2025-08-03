@@ -629,14 +629,26 @@ function AdminDashboard() {
                         <span className="text-blue-600 font-medium">{stats.requiresAction.toConfirm} to confirm</span>
                       </div>
                     )}
-                    <Button 
-                      onClick={() => router.push('/admin/bookings')}
-                      variant="primary"
-                      size="sm" 
-                      className="w-full text-xs"
-                    >
-                      Take Action
-                    </Button>
+                    <div className="space-y-2">
+                      <Button 
+                        onClick={() => router.push('/admin/bookings')}
+                        variant="primary"
+                        size="sm" 
+                        className="w-full text-xs"
+                      >
+                        Manage Bookings
+                      </Button>
+                      {stats.requiresAction.rescheduleRequests > 0 && (
+                        <Button 
+                          onClick={() => router.push('/admin/reschedule-requests')}
+                          variant="outline"
+                          size="sm" 
+                          className="w-full text-xs"
+                        >
+                          View Reschedule Requests
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </CardContent>
               </Card>

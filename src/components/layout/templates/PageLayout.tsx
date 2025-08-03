@@ -364,7 +364,7 @@ export const FlexLayout: React.FC<FlexLayoutProps> = ({
 interface SectionProps {
   children: React.ReactNode;
   className?: string;
-  background?: 'default' | 'muted' | 'accent';
+  background?: 'default' | 'muted' | 'accent' | 'transparent';
   padding?: 'none' | 'sm' | 'md' | 'lg' | 'xl';
   fullWidth?: boolean;
 }
@@ -379,7 +379,8 @@ export const Section: React.FC<SectionProps> = ({
   const backgroundClasses = {
     default: 'bg-gray-900',
     muted: 'bg-gray-800',
-    accent: 'bg-gray-700'
+    accent: 'bg-gray-700',
+    transparent: 'bg-transparent'
   };
 
   const paddingClasses = {

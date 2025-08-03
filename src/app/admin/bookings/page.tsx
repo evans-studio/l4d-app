@@ -32,6 +32,19 @@ function AdminBookingsContent() {
   const [searchTerm, setSearchTerm] = useState('')
   const [activeTab, setActiveTab] = useState(searchParams.get('status') || 'all')
   const [viewMode, setViewMode] = useState<'today' | 'all'>('all')
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  
+  // Check for error query param
+  useEffect(() => {
+    const error = searchParams.get('error')
+    if (error === 'booking-not-found') {
+      setErrorMessage('The booking you tried to view no longer exists or has been removed.')
+      // Clear the error from URL
+      const newParams = new URLSearchParams(searchParams)
+      newParams.delete('error')
+      router.replace(`/admin/bookings?${newParams.toString()}`)
+    }
+  }, [searchParams, router])
   
   // Real-time bookings hook
   const {
@@ -269,6 +282,17 @@ function AdminBookingsContent() {
               {bookingsError && (
                 <div className="mt-2 text-sm text-red-600 bg-red-50 px-2 py-1 rounded">
                   {bookingsError}
+                </div>
+              )}
+              {errorMessage && (
+                <div className="mt-2 text-sm text-yellow-700 bg-yellow-50 px-3 py-2 rounded border border-yellow-200 flex items-center gap-2">
+                  <span>{errorMessage}</span>
+                  <button 
+                    onClick={() => setErrorMessage(null)}
+                    className="text-yellow-600 hover:text-yellow-800 ml-auto"
+                  >
+                    ×
+                  </button>
                 </div>
               )}
             </div>

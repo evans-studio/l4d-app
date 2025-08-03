@@ -21,7 +21,7 @@ type VehicleSizeRow = {
 }
 
 // Booking flow step types
-export type BookingStep = 1 | 2 | 3 | 4 | 5
+export type BookingStep = 1 | 2 | 3 | 4 | 5 | 6
 
 export interface SlotSelection {
   slotId: string
@@ -37,6 +37,7 @@ export interface UserData {
   name: string
   isExistingUser: boolean
   userId?: string
+  password?: string // Optional password for new users
 }
 
 export interface VehicleData {
@@ -52,8 +53,10 @@ export interface VehicleData {
 export interface ServiceSelection {
   serviceId: string
   name: string
+  description?: string
   basePrice: number
   duration: number
+  category?: string
 }
 
 export interface AddressData {
@@ -102,7 +105,7 @@ export interface BookingResponse {
 
 // Store state interface
 interface BookingFlowState {
-  // Current step (1-5)
+  // Current step (1-6)
   currentStep: BookingStep
   
   // Form data for each step
@@ -274,7 +277,7 @@ export const useBookingFlowStore = create<BookingFlowStore>()(
       
       nextStep: () => {
         const { currentStep, canProceedToNextStep } = get()
-        if (canProceedToNextStep() && currentStep < 5) {
+        if (canProceedToNextStep() && currentStep < 6) {
           set({ currentStep: (currentStep + 1) as BookingStep, error: null })
         }
       },
@@ -653,7 +656,8 @@ export const useBookingFlowStore = create<BookingFlowStore>()(
                 firstName: formData.user.name.split(' ')[0] || formData.user.name,
                 lastName: formData.user.name.split(' ').slice(1).join(' ') || 'Customer',
                 email: formData.user.email,
-                phone: formData.user.phone
+                phone: formData.user.phone,
+                password: formData.user.password // Include password for new users
               },
               vehicle: {
                 make: formData.vehicle.make,
@@ -734,8 +738,11 @@ export const useBookingFlowStore = create<BookingFlowStore>()(
             return !!formData.slot && !!formData.slot.slotId && !!formData.slot.slot_date
           case 4: // AddressCollection
             return !!formData.address && !!formData.address.addressLine1 && !!formData.address.city && !!formData.address.postcode
-          case 5: // PricingConfirmation - No validation needed, just display summary
-            return !!formData.slot && !!formData.address && !!formData.vehicle && !!formData.service
+          case 5: // UserDetails
+            return !!formData.user && !!formData.user.email && !!formData.user.phone && !!formData.user.name && 
+              (formData.user.isExistingUser || !!formData.user.password) // New users must have password
+          case 6: // PricingConfirmation - No validation needed, just display summary
+            return !!formData.slot && !!formData.address && !!formData.vehicle && !!formData.service && !!formData.user
           default:
             return false
         }

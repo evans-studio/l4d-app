@@ -63,10 +63,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
         ),
         services!service_id (
           name,
-          short_description,
-          service_categories!category_id (
-            name
-          )
+          short_description
         ),
         booking_services!booking_id (
           service_details,
@@ -102,7 +99,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
       service: booking.services ? {
         name: booking.services.name,
         short_description: booking.services.short_description,
-        category: booking.services.service_categories?.name || 'General'
+        category: 'General'
       } : null,
       
       // Detailed service breakdown from booking_services

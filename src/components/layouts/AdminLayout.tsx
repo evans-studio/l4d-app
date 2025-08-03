@@ -10,7 +10,8 @@ import {
   Settings,
   BarChart3,
   Wrench,
-  Plus
+  Plus,
+  CalendarClock
 } from 'lucide-react'
 import { Button } from '@/components/ui/primitives/Button'
 import { MinimalHeader } from '@/components/navigation/MinimalHeader'
@@ -30,6 +31,11 @@ const navigationItems = [
     name: 'Bookings',
     href: '/admin/bookings',
     icon: Calendar,
+  },
+  {
+    name: 'Reschedule Requests',
+    href: '/admin/reschedule-requests',
+    icon: CalendarClock,
   },
   {
     name: 'Schedule',
@@ -176,8 +182,8 @@ export function AdminLayout({ children }: AdminLayoutProps) {
               </div>
             </Link>
 
-            {/* Last 2 navigation items */}
-            {navigationItems.slice(2, 4).map((item) => {
+            {/* Last 2 navigation items - skip reschedule requests (index 2) and schedule (index 3) */}
+            {navigationItems.slice(4, 6).map((item) => {
               const Icon = item.icon
               const isActive = pathname === item.href || 
                 (item.href !== '/admin' && pathname.startsWith(item.href))

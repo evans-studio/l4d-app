@@ -5,6 +5,7 @@ export interface CustomerInfo {
   lastName: string
   email: string
   phone: string
+  password?: string // Optional password for new users during booking
 }
 
 export interface VehicleInfo {

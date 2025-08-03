@@ -32,10 +32,7 @@ export async function GET(request: NextRequest) {
 
     let query = supabase
       .from('services')
-      .select(`
-        *,
-        category:service_categories(*)
-      `)
+      .select(`*`)
       .order('display_order')
 
     // Apply filters

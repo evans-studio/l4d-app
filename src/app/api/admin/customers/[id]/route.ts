@@ -53,10 +53,8 @@ export async function GET(
         total_price,
         booking_services (
           service_id,
-          services (
-            name,
-            base_price
-          )
+          service_details,
+          price
         ),
         customer_vehicles (
           make,
@@ -110,10 +108,9 @@ export async function GET(
       status: booking.status,
       total_price: booking.total_price,
       services: booking.booking_services?.map(bs => {
-        const service = Array.isArray(bs.services) ? bs.services[0] : bs.services
         return {
-          name: service?.name || 'Unknown Service',
-          price: service?.base_price || 0
+          name: bs.service_details?.name || 'Unknown Service',
+          price: bs.price || 0
         }
       }) || [],
       vehicle: (() => {

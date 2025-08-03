@@ -32,7 +32,7 @@ interface ServiceFormData {
   name: string
   short_description: string
   long_description: string
-  category_id: string
+  // category_id removed as service_categories table no longer exists
   estimated_duration: number
   is_active: boolean
   display_order: number
@@ -53,7 +53,7 @@ function NewServicePage() {
     name: '',
     short_description: '',
     long_description: '',
-    category_id: '',
+    // category_id removed
     estimated_duration: 60,
     is_active: true,
     display_order: 0,
@@ -63,22 +63,12 @@ function NewServicePage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch categories and vehicle sizes in parallel
-        const [categoriesResponse, vehicleSizesResponse] = await Promise.all([
-          fetch('/api/services/categories'),
-          fetch('/api/services/vehicle-sizes')
-        ])
-
-        const categoriesData = await categoriesResponse.json()
+        // Only fetch vehicle sizes (categories no longer exist)
+        const vehicleSizesResponse = await fetch('/api/services/vehicle-sizes')
         const vehicleSizesData = await vehicleSizesResponse.json()
         
-        if (categoriesData.success) {
-          setCategories(categoriesData.data || [])
-          // Set first category as default
-          if (categoriesData.data?.length > 0) {
-            setFormData(prev => ({ ...prev, category_id: categoriesData.data[0].id }))
-          }
-        }
+        // Set categories to empty array since they no longer exist
+        setCategories([])
 
         if (vehicleSizesData.success) {
           setVehicleSizes(vehicleSizesData.data || [])
@@ -104,9 +94,7 @@ function NewServicePage() {
       newErrors.short_description = 'Short description is required'
     }
 
-    if (!formData.category_id) {
-      newErrors.category_id = 'Please select a category'
-    }
+    // Category validation removed
 
     if (formData.estimated_duration <= 0) {
       newErrors.estimated_duration = 'Duration must be greater than 0'
@@ -133,7 +121,7 @@ function NewServicePage() {
           name: formData.name,
           shortDescription: formData.short_description,
           longDescription: formData.long_description,
-          categoryId: formData.category_id,
+          // categoryId removed
           estimatedDuration: formData.estimated_duration,
           isActive: formData.is_active,
           displayOrder: formData.display_order
@@ -381,31 +369,7 @@ function NewServicePage() {
                 </h2>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
-                      Category *
-                    </label>
-                    <select
-                      value={formData.category_id}
-                      onChange={(e) => handleInputChange('category_id', e.target.value)}
-                      className={`w-full px-4 py-3 bg-[var(--input-bg)] border rounded-md text-[var(--input-text)] focus:outline-none transition-colors ${
-                        errors.category_id ? 'border-[var(--error)]' : 'border-[var(--input-border)] focus:border-[var(--input-border-focus)]'
-                      }`}
-                    >
-                      <option value="">Select a category</option>
-                      {categories.map(category => (
-                        <option key={category.id} value={category.id}>
-                          {category.name}
-                        </option>
-                      ))}
-                    </select>
-                    {errors.category_id && (
-                      <p className="text-[var(--error)] text-sm mt-1 flex items-center gap-1">
-                        <AlertCircleIcon className="w-4 h-4" />
-                        {errors.category_id}
-                      </p>
-                    )}
-                  </div>
+                  {/* Category selection removed as service_categories table no longer exists */}
 
                   <div>
                     <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">

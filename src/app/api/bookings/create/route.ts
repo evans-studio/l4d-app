@@ -51,6 +51,13 @@ export async function POST(request: NextRequest) {
       return ApiResponseHandler.validationError('Customer information is required', { code: 'MISSING_CUSTOMER_INFO' })
     }
 
+    // Validate password for new users (when provided)
+    if (bookingData.customer.password) {
+      if (bookingData.customer.password.length < 8) {
+        return ApiResponseHandler.validationError('Password must be at least 8 characters long', { code: 'INVALID_PASSWORD' })
+      }
+    }
+
     if (!bookingData.services || bookingData.services.length === 0) {
       return ApiResponseHandler.validationError('At least one service is required', { code: 'MISSING_SERVICES' })
     }
@@ -88,20 +95,23 @@ export async function POST(request: NextRequest) {
       isNewCustomer = true
       passwordSetupToken = generatePasswordSetupToken()
       
-      // Create new auth user first (with temp password)
+      // Create new auth user with provided password or temp password
+      const userPassword = bookingData.customer.password || generateRandomPassword()
+      const needsPasswordSetup = !bookingData.customer.password
+      
       const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
         email: bookingData.customer.email,
-        password: generateRandomPassword(),
+        password: userPassword,
         user_metadata: {
           first_name: bookingData.customer.firstName,
           last_name: bookingData.customer.lastName,
           phone: bookingData.customer.phone,
           role: userRole,
-          password_setup_required: true,
-          password_setup_token: passwordSetupToken,
-          password_setup_expires: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24 hours
+          password_setup_required: needsPasswordSetup,
+          password_setup_token: needsPasswordSetup ? passwordSetupToken : null,
+          password_setup_expires: needsPasswordSetup ? new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() : null
         },
-        email_confirm: false // Require email verification for security consistency
+        email_confirm: !bookingData.customer.password // Only require email verification if no password provided
       })
 
       if (authError || !authUser.user) {
@@ -159,15 +169,17 @@ export async function POST(request: NextRequest) {
           updated_at: new Date().toISOString()
         })
 
-      // Store password setup token in database for security
-      await supabaseAdmin
-        .from('password_reset_tokens')
-        .insert({
-          user_id: authUser.user.id,
-          token_hash: passwordSetupToken, // In production, this should be hashed
-          expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-          created_at: new Date().toISOString()
-        })
+      // Store password setup token in database for security (only if needed)
+      if (needsPasswordSetup && passwordSetupToken) {
+        await supabaseAdmin
+          .from('password_reset_tokens')
+          .insert({
+            user_id: authUser.user.id,
+            token_hash: passwordSetupToken, // In production, this should be hashed
+            expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+            created_at: new Date().toISOString()
+          })
+      }
     }
 
     // Step 2: Map vehicle size for pricing
@@ -340,8 +352,7 @@ export async function POST(request: NextRequest) {
     const { data: service, error: serviceError } = await supabaseAdmin
       .from('services')
       .select(`
-        id, name, duration_minutes,
-        service_categories!category_id (name)
+        id, name, duration_minutes
       `)
       .eq('id', bookingData.services[0]!.serviceId)
       .eq('is_active', true)
@@ -502,7 +513,7 @@ export async function POST(request: NextRequest) {
         service_id: service.id,
         service_details: {
           name: service.name,
-          category: service.service_categories?.[0]?.name || 'General',
+          category: 'General',
           originalBasePrice: servicePrice, // Using the actual service price
           appliedPrice: servicePrice
         },
@@ -592,18 +603,34 @@ export async function POST(request: NextRequest) {
       
       try {
         if (isNewCustomer) {
-          // Send booking welcome verification email for new customers
-          const bookingWelcomeResult = await emailService.sendBookingWelcomeVerificationEmail(
-            bookingData.customer.email,
-            customerName,
-            bookingReference,
-            userId
-          )
-          
-          if (!bookingWelcomeResult.success) {
-            console.error('Failed to send booking welcome verification email:', bookingWelcomeResult.error)
+          // Determine email type based on whether password was provided
+          if (bookingData.customer.password) {
+            // User provided password - send regular booking confirmation
+            const customerEmailResult = await emailService.sendBookingConfirmation(
+              bookingData.customer.email,
+              customerName,
+              bookingForEmail as any
+            )
+            
+            if (!customerEmailResult.success) {
+              console.error('Failed to send customer confirmation email:', customerEmailResult.error)
+            } else {
+              console.log('Customer confirmation email sent successfully to new user with password')
+            }
           } else {
-            console.log('Booking welcome verification email sent successfully')
+            // No password provided - send welcome verification email
+            const bookingWelcomeResult = await emailService.sendBookingWelcomeVerificationEmail(
+              bookingData.customer.email,
+              customerName,
+              bookingReference,
+              userId
+            )
+            
+            if (!bookingWelcomeResult.success) {
+              console.error('Failed to send booking welcome verification email:', bookingWelcomeResult.error)
+            } else {
+              console.log('Booking welcome verification email sent successfully')
+            }
           }
         } else {
           // Send regular booking confirmation for existing customers
@@ -644,6 +671,9 @@ export async function POST(request: NextRequest) {
     // Note: Password setup will be handled via modal/page flow instead of email
     // The frontend will detect requiresPasswordSetup: true and show setup modal
 
+    const hasPassword = isNewCustomer && bookingData.customer.password
+    const needsVerification = isNewCustomer && !bookingData.customer.password
+    
     return ApiResponseHandler.success({
       bookingId: newBooking.id,
       bookingReference,
@@ -651,13 +681,20 @@ export async function POST(request: NextRequest) {
       totalPrice: totalPrice,
       pricingBreakdown: pricingBreakdown,
       message: isNewCustomer 
-        ? 'Booking confirmed! Please check your email to verify your account and set up your password.'
+        ? (hasPassword 
+            ? 'Account created and booking confirmed! You can now log in with your credentials.'
+            : 'Booking confirmed! Please check your email to verify your account and set up your password.')
         : 'Booking created successfully',
-      redirectTo: isNewCustomer ? `/booking/success?ref=${bookingReference}&verify=true&new=true` : `/booking/success?ref=${bookingReference}`,
+      redirectTo: isNewCustomer 
+        ? (hasPassword 
+            ? `/booking/success?ref=${bookingReference}&new=true&ready=true`
+            : `/booking/success?ref=${bookingReference}&verify=true&new=true`)
+        : `/booking/success?ref=${bookingReference}`,
       isNewCustomer: isNewCustomer,
-      requiresEmailVerification: isNewCustomer,
-      requiresPasswordSetup: isNewCustomer && passwordSetupToken !== null,
-      passwordSetupToken: isNewCustomer ? passwordSetupToken : null
+      accountReady: hasPassword, // New field to indicate account is ready to use
+      requiresEmailVerification: needsVerification,
+      requiresPasswordSetup: needsVerification && passwordSetupToken !== null,
+      passwordSetupToken: needsVerification ? passwordSetupToken : null
     })
 
   } catch (error) {

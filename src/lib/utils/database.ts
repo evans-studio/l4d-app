@@ -6,7 +6,7 @@ export interface Service {
   base_price: number
   duration_minutes: number
   is_active?: boolean
-  category_id?: string
+  // category_id removed as service_categories table no longer exists
 }
 
 export interface VehicleSize {
@@ -20,18 +20,9 @@ export interface VehicleSize {
   created_at: string
 }
 
-export interface ServiceCategory {
-  id: string
-  name: string
-  description?: string
-  display_order: number
-  is_active: boolean
-  created_at: string
-}
+// ServiceCategory interface removed as service_categories table no longer exists
 
-export interface ServiceWithCategory extends Service {
-  category?: ServiceCategory
-}
+// ServiceWithCategory interface removed as categories no longer exist
 
 export interface UserProfile {
   id: string

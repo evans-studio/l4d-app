@@ -12,7 +12,8 @@ import { NextBookingWidget } from '@/components/customer/widgets/NextBookingWidg
 import { QuickRebookWidget } from '@/components/customer/widgets/QuickRebookWidget'
 import { BookingStatsWidget } from '@/components/customer/widgets/BookingStatsWidget'
 import { RecentActivityWidget } from '@/components/customer/widgets/RecentActivityWidget'
-import { Plus } from 'lucide-react'
+import { Card, CardContent, CardHeader } from '@/components/ui/composites/Card'
+import { ArrowRight, Calendar, Car, MapPin, Star } from 'lucide-react'
 
 interface DashboardBooking {
   id: string
@@ -186,28 +187,90 @@ export default function DashboardPage() {
       <CustomerLayout>
         <Container>
           {/* Header - Mobile First Responsive */}
-          <div className="flex flex-col space-y-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0 mb-6 sm:mb-8">
-            <div className="flex-1">
-              <h1 className="text-2xl sm:text-3xl font-bold text-text-primary mb-1">
-                My Dashboard
-              </h1>
-              {profile && (
-                <p className="text-text-secondary text-sm sm:text-base">
-                  Welcome back, {profile.first_name || 'Customer'}
-                </p>
-              )}
-            </div>
-            
-            <Button
-              variant="primary"
-              onClick={() => router.push('/book')}
-              leftIcon={<Plus className="w-4 h-4" />}
-              className="w-full sm:w-auto"
-            >
-              <span className="sm:hidden">Book Service</span>
-              <span className="hidden sm:inline">New Booking</span>
-            </Button>
+          <div className="mb-6 sm:mb-8">
+            <h1 className="text-2xl sm:text-3xl font-bold text-text-primary mb-1">
+              My Dashboard
+            </h1>
+            {profile && (
+              <p className="text-text-secondary text-sm sm:text-base">
+                {bookings.length === 0 ? `Welcome to Love 4 Detailing, ${profile.first_name || 'Customer'}!` : `Welcome back, ${profile.first_name || 'Customer'}`}
+              </p>
+            )}
           </div>
+
+          {/* New User Welcome Experience */}
+          {bookings.length === 0 && (
+            <div className="mb-8">
+              <Card className="border-2 border-brand-400/30 bg-gradient-to-br from-brand-600/5 to-brand-400/5">
+                <CardHeader>
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-brand-600 rounded-full flex items-center justify-center">
+                      <Star className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-bold text-text-primary">
+                        Your Account is Ready!
+                      </h2>
+                      <p className="text-text-secondary">
+                        Start your premium car detailing journey
+                      </p>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-6">
+                    <p className="text-text-secondary">
+                      Welcome to Love 4 Detailing! Your account has been successfully created. 
+                      Now you can book professional mobile car detailing services, manage your appointments, 
+                      and enjoy our premium service experience.
+                    </p>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div className="flex items-start gap-3 p-4 bg-surface-secondary rounded-lg">
+                        <Calendar className="w-5 h-5 text-brand-600 mt-0.5" />
+                        <div>
+                          <h4 className="font-medium text-text-primary text-sm">Easy Booking</h4>
+                          <p className="text-xs text-text-muted">Schedule services at your convenience</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3 p-4 bg-surface-secondary rounded-lg">
+                        <Car className="w-5 h-5 text-brand-600 mt-0.5" />
+                        <div>
+                          <h4 className="font-medium text-text-primary text-sm">Vehicle Management</h4>
+                          <p className="text-xs text-text-muted">Save multiple vehicles for quick booking</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3 p-4 bg-surface-secondary rounded-lg">
+                        <MapPin className="w-5 h-5 text-brand-600 mt-0.5" />
+                        <div>
+                          <h4 className="font-medium text-text-primary text-sm">Mobile Service</h4>
+                          <p className="text-xs text-text-muted">We come to your location</p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="flex flex-col sm:flex-row gap-4">
+                      <Button
+                        onClick={() => router.push('/book')}
+                        size="lg"
+                        className="bg-brand-600 hover:bg-brand-700"
+                        rightIcon={<ArrowRight className="w-4 h-4" />}
+                      >
+                        Book Your First Service
+                      </Button>
+                      <Button
+                        onClick={() => router.push('/dashboard/vehicles')}
+                        variant="outline"
+                        size="lg"
+                      >
+                        Add Your Vehicle
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
 
           {/* Dashboard Widgets Grid - Mobile First Responsive */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">

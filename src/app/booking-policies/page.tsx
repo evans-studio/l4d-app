@@ -334,12 +334,12 @@ export default function BookingPoliciesPage() {
                 </Button>
                 
                 <Button
-                  onClick={() => window.open('mailto:info@love4detailing.com')}
+                  onClick={() => window.open('mailto:zell@love4detailing.com')}
                   variant="outline"
                   className="flex items-center gap-2"
                 >
                   <MailIcon className="w-4 h-4" />
-                  Email: info@love4detailing.com
+                  Email: zell@love4detailing.com
                 </Button>
               </div>
               

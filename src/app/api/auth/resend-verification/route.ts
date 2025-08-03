@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
       type: 'signup',
       email: email.toLowerCase(),
       options: {
-        emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL || 'https://l4d-app.vercel.app'}/auth/verify-email`
+        emailRedirectTo: `${process.env.NODE_ENV === 'development' ? 'http://localhost:3000' : process.env.NEXT_PUBLIC_APP_URL || 'https://l4d-app.vercel.app'}/auth/verify-email`
       }
     })
 

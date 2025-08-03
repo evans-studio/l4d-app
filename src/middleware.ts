@@ -25,15 +25,14 @@ export async function middleware(request: NextRequest) {
   const publicApiRoutes = [
     '/api/services',
     '/api/vehicle-sizes',
+    '/api/vehicle-data',
     '/api/time-slots/availability',
-    '/api/bookings/create',
-    '/api/booking/slots',
+    '/api/email/test',
     '/api/booking/calculate-price',
-    '/api/booking/validate-user',
-    '/api/booking/create',
+    '/api/bookings/create',
     '/api/auth/register',
+    '/api/auth/forgot-password',
     '/api/auth/login',
-    '/api/auth/setup-password',
     '/api/admin/cleanup-users',
     '/api/admin/simple-cleanup',
     '/api/admin/direct-cleanup',
@@ -45,6 +44,10 @@ export async function middleware(request: NextRequest) {
     '/api/admin/bookings/all',
     '/api/admin/bookings',
     '/api/debug/auth-status'
+    // Note: /api/bookings/create now public to support new user bookings
+    // - /api/booking/create (deprecated, use /api/bookings/create)
+    // - /api/booking/validate-user (now requires auth)
+    // - /api/auth/setup-password (deprecated)
   ]
 
   // Skip auth check for public routes
@@ -79,6 +82,9 @@ export async function middleware(request: NextRequest) {
   // Get current user (more secure than getSession)
   const { data: { user }, error } = await supabase.auth.getUser()
   
+  // Only consider users with verified emails as authenticated
+  const isVerified = user && user.email_confirmed_at
+  
   // Create service client for profile lookup (bypasses RLS completely)
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!serviceKey) {
@@ -101,11 +107,11 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  // Handle API routes - require authentication
+  // Handle API routes - require verified authentication
   if (path.startsWith('/api/')) {
-    if (!user) {
+    if (!isVerified) {
       return NextResponse.json(
-        { success: false, error: { message: 'Authentication required', code: 'UNAUTHORIZED' } },
+        { success: false, error: { message: 'Email verification required', code: 'EMAIL_NOT_VERIFIED' } },
         { status: 401 }
       )
     }
@@ -142,7 +148,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // Handle page routes - redirect to login if not authenticated
-  if (!user) {
+  if (!isVerified) {
     const loginUrl = new URL('/auth/login', request.url)
     loginUrl.searchParams.set('redirect', request.nextUrl.pathname + request.nextUrl.search)
     return NextResponse.redirect(loginUrl)

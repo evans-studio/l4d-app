@@ -30,22 +30,11 @@ export async function GET(request: NextRequest) {
         service_address,
         pricing_breakdown,
         created_at,
-        user_profiles!customer_id (
-          id,
-          email,
-          first_name,
-          last_name,
-          phone
-        ),
         booking_services (
           id,
           service_details,
           price,
-          services (
-            id,
-            name,
-            short_description
-          )
+          service_id
         )
       `)
       .order('created_at', { ascending: false })
@@ -59,10 +48,27 @@ export async function GET(request: NextRequest) {
       return ApiResponseHandler.success([])
     }
 
-    // Transform the data for the frontend using joined data and embedded JSON
+    // Get unique customer IDs and fetch user profiles separately
+    const customerIds = [...new Set(bookings.map(b => b.customer_id).filter(Boolean))] as string[]
+    let customerProfiles: any[] = []
+    
+    if (customerIds.length > 0) {
+      const { data: profiles, error: profilesError } = await supabase
+        .from('user_profiles')
+        .select('id, email, first_name, last_name, phone')
+        .in('id', customerIds)
+      
+      if (profilesError) {
+        console.error('Error fetching customer profiles:', profilesError)
+      } else {
+        customerProfiles = profiles || []
+      }
+    }
+
+    // Transform the data for the frontend using embedded JSON and separate profile data
     const allBookings = bookings.map((booking: any) => {
-      // Get customer info from joined data
-      const customer = booking.user_profiles || { first_name: '', last_name: '', email: '', phone: '' }
+      // Get customer info from separate profile data
+      const customer = customerProfiles.find(p => p.id === booking.customer_id) || { first_name: '', last_name: '', email: '', phone: '' }
       const customerName = [customer.first_name, customer.last_name]
         .filter(Boolean)
         .join(' ') || 'Customer'
@@ -73,9 +79,9 @@ export async function GET(request: NextRequest) {
       // Get address info from embedded JSON
       const address = booking.service_address || { address_line_1: '', city: 'Unknown', postal_code: '' }
       
-      // Get services from booking_services relationship
+      // Get services from booking_services using service_details JSON
       const services = booking.booking_services?.map((bs: any) => ({
-        name: bs.services?.name || bs.service_details?.name || 'Vehicle Detailing Service',
+        name: bs.service_details?.name || 'Vehicle Detailing Service',
         base_price: bs.price || 0
       })) || [{
         name: 'Vehicle Detailing Service',

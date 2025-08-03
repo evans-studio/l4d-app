@@ -2,6 +2,11 @@ import { Resend } from 'resend'
 import { Booking } from '@/lib/utils/booking-types'
 import { formatDateForEmail, formatTimeForEmail } from '@/lib/utils/date-formatting'
 
+// Validate Resend API key on initialization
+if (!process.env.RESEND_API_KEY) {
+  console.warn('⚠️ RESEND_API_KEY not configured - email sending will fail')
+}
+
 const resend = new Resend(process.env.RESEND_API_KEY)
 
 export interface EmailServiceConfig {
@@ -12,7 +17,7 @@ export interface EmailServiceConfig {
 }
 
 const defaultConfig: EmailServiceConfig = {
-  fromEmail: process.env.EMAIL_FROM || 'zell@love4detailing.com',
+  fromEmail: process.env.NEXT_PUBLIC_FROM_EMAIL || 'zell@love4detailing.com',
   fromName: 'Love 4 Detailing - Zell',
   adminEmail: process.env.ADMIN_EMAIL || 'zell@love4detailing.com',
   replyToEmail: process.env.EMAIL_REPLY_TO
@@ -23,6 +28,22 @@ export class EmailService {
 
   constructor(config: Partial<EmailServiceConfig> = {}) {
     this.config = { ...defaultConfig, ...config }
+    
+    // Validate configuration
+    if (!process.env.RESEND_API_KEY) {
+      console.warn('⚠️ EmailService: RESEND_API_KEY not configured')
+    }
+  }
+
+  // Validate email service is ready
+  private validateEmailService(): { valid: boolean; error?: string } {
+    if (!process.env.RESEND_API_KEY) {
+      return { valid: false, error: 'RESEND_API_KEY not configured' }
+    }
+    if (!this.config.fromEmail) {
+      return { valid: false, error: 'From email not configured' }
+    }
+    return { valid: true }
   }
 
   // Send booking confirmation email to customer
@@ -31,6 +52,13 @@ export class EmailService {
     customerName: string,
     booking: Booking
   ): Promise<{ success: boolean; error?: string }> {
+    // Validate service configuration
+    const validation = this.validateEmailService()
+    if (!validation.valid) {
+      console.error('Email service validation failed:', validation.error)
+      return { success: false, error: validation.error }
+    }
+
     try {
       const { error } = await resend.emails.send({
         from: `${this.config.fromName} <${this.config.fromEmail}>`,
@@ -229,7 +257,8 @@ export class EmailService {
         confirmed: 'Your booking has been confirmed!',
         cancelled: 'Your booking has been cancelled',
         completed: 'Your booking has been completed',
-        in_progress: 'Your booking is now in progress'
+        in_progress: 'Your booking is now in progress',
+        rescheduled: 'Your booking has been rescheduled!'
       }
 
       const subject = `Booking Update - ${booking.booking_reference}: ${statusMessages[booking.status as keyof typeof statusMessages] || 'Status Updated'}`
@@ -285,6 +314,42 @@ export class EmailService {
       return { success: true }
     } catch (error) {
       console.error('Admin reschedule request email service error:', error)
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Unknown email error' 
+      }
+    }
+  }
+
+  // Send customer confirmation that reschedule request has been submitted
+  async sendRescheduleRequestConfirmation(
+    customerEmail: string,
+    customerName: string,
+    booking: any,
+    requestedDate: string,
+    requestedTime: string,
+    reason?: string
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      const subject = `Reschedule Request Submitted - ${booking.booking_reference}`
+
+      const { error } = await resend.emails.send({
+        from: `${this.config.fromName} <${this.config.fromEmail}>`,
+        to: [customerEmail],
+        replyTo: this.config.replyToEmail,
+        subject,
+        html: this.generateRescheduleRequestConfirmationHTML(customerName, booking, requestedDate, requestedTime, reason),
+        text: this.generateRescheduleRequestConfirmationText(customerName, booking, requestedDate, requestedTime, reason)
+      })
+
+      if (error) {
+        console.error('Reschedule request confirmation email error:', error)
+        return { success: false, error: error.message }
+      }
+
+      return { success: true }
+    } catch (error) {
+      console.error('Reschedule request confirmation email service error:', error)
       return { 
         success: false, 
         error: error instanceof Error ? error.message : 'Unknown email error' 
@@ -1632,6 +1697,150 @@ Please log into the admin dashboard to respond to this request.
 
 ---
 Love 4 Detailing - Admin Notifications
+    `
+  }
+
+  // Customer reschedule request confirmation templates
+  private generateRescheduleRequestConfirmationHTML(
+    customerName: string,
+    booking: any,
+    requestedDate: string,
+    requestedTime: string,
+    reason?: string
+  ): string {
+    return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reschedule Request Submitted</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #ffffff; max-width: 600px; margin: 0 auto; padding: 0; background: #0a0a0a; }
+    .email-container { background: #0a0a0a; min-height: 100vh; }
+    .email-content { background: #1a1a1a; margin: 0; }
+    .header { background: linear-gradient(135deg, #9747FF 0%, #B269FF 100%); color: white; padding: 30px; text-align: center; }
+    .content { background: #1a1a1a; padding: 30px; }
+    .highlight { background: #252525; border-radius: 12px; padding: 25px; margin: 20px 0; border: 1px solid rgba(151, 71, 255, 0.3); }
+    .booking-details { background: #252525; border-radius: 12px; padding: 25px; margin: 20px 0; border: 1px solid rgba(151, 71, 255, 0.3); }
+    .next-steps { background: #252525; border-radius: 12px; padding: 25px; margin: 20px 0; border: 1px solid rgba(151, 71, 255, 0.3); }
+    .contact-info { background: #252525; border-radius: 12px; padding: 25px; margin: 20px 0; border: 1px solid rgba(151, 71, 255, 0.3); }
+    .detail-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #333; }
+    .detail-row:last-child { border-bottom: none; }
+    .detail-label { font-weight: 600; color: #9747FF; }
+    .detail-value { font-weight: 400; text-align: right; }
+    h1 { margin: 0 0 10px; font-size: 28px; font-weight: 700; }
+    h3 { color: #9747FF; margin: 0 0 15px; font-size: 18px; font-weight: 600; }
+    p { margin: 16px 0; color: #cccccc; }
+    ul { margin: 15px 0; padding-left: 20px; }
+    li { margin: 8px 0; color: #cccccc; }
+    .footer { background: #0a0a0a; padding: 30px; text-align: center; border-top: 1px solid rgba(255, 255, 255, 0.05); }
+    .footer-brand { color: #9747FF; font-weight: 600; margin-bottom: 8px; }
+    .footer-text { color: rgba(255, 255, 255, 0.5); font-size: 12px; line-height: 1.5; }
+  </style>
+</head>
+<body>
+  <div class="email-container">
+    <div class="email-content">
+      <div class="header">
+        <h1>📅 Reschedule Request Submitted</h1>
+        <p>We've received your request to reschedule your booking</p>
+      </div>
+      
+      <div class="content">
+        <p>Hello ${customerName},</p>
+        
+        <div class="highlight">
+          <strong>Thank you!</strong> We've received your request to reschedule your booking. Our team will review your request and get back to you within 24 hours.
+        </div>
+        
+        <div class="booking-details">
+          <h3>Booking Details</h3>
+          <div class="detail-row">
+            <span class="detail-label">Booking Reference:</span>
+            <span class="detail-value">${booking.booking_reference}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Current Date:</span>
+            <span class="detail-value">${formatDateForEmail(booking.scheduled_date)} at ${formatTimeForEmail(booking.scheduled_start_time)}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Requested New Date:</span>
+            <span class="detail-value"><strong>${formatDateForEmail(requestedDate)} at ${formatTimeForEmail(requestedTime)}</strong></span>
+          </div>
+          ${reason ? `
+          <div class="detail-row">
+            <span class="detail-label">Reason:</span>
+            <span class="detail-value">${reason}</span>
+          </div>
+          ` : ''}
+        </div>
+
+        <div class="next-steps">
+          <h3>What Happens Next?</h3>
+          <ul>
+            <li>Our team will review your reschedule request</li>
+            <li>We'll check availability for your requested time slot</li>
+            <li>You'll receive a confirmation email within 24 hours</li>
+            <li>If the requested time isn't available, we'll suggest alternatives</li>
+          </ul>
+        </div>
+
+        <div class="contact-info">
+          <p>If you have any questions or need to make changes to your request, please contact us at:</p>
+          <p><strong>Email:</strong> ${this.config.adminEmail}</p>
+        </div>
+      </div>
+      
+      <div class="footer">
+        <div class="footer-brand">Love4Detailing</div>
+        <div class="footer-text">
+          Professional Mobile Car Detailing Services<br>
+          Transforming vehicles, exceeding expectations<br><br>
+          Your reschedule request has been submitted successfully.<br>
+          We'll get back to you within 24 hours.
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+    `
+  }
+
+  private generateRescheduleRequestConfirmationText(
+    customerName: string,
+    booking: any,
+    requestedDate: string,
+    requestedTime: string,
+    reason?: string
+  ): string {
+    return `
+RESCHEDULE REQUEST SUBMITTED
+
+Hello ${customerName},
+
+Thank you! We've received your request to reschedule your booking. Our team will review your request and get back to you within 24 hours.
+
+BOOKING DETAILS:
+Booking Reference: ${booking.booking_reference}
+Current Date: ${booking.scheduled_date} at ${booking.scheduled_start_time}
+Requested New Date: ${requestedDate} at ${requestedTime}
+${reason ? `Reason: ${reason}` : ''}
+
+WHAT HAPPENS NEXT:
+• Our team will review your reschedule request
+• We'll check availability for your requested time slot  
+• You'll receive a confirmation email within 24 hours
+• If the requested time isn't available, we'll suggest alternatives
+
+NEED HELP?
+If you have any questions or need to make changes to your request:
+Email: ${this.config.adminEmail}
+
+---
+Love 4 Detailing - Premium Vehicle Care
     `
   }
 

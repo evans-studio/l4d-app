@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClientFromRequest } from '@/lib/supabase/server'
+import { supabaseAdmin } from '@/lib/supabase/direct'
 import { ApiResponse } from '@/types/booking'
 
 const ADMIN_EMAILS = [
@@ -41,15 +42,14 @@ export async function GET(
     const params = await context.params
     const bookingId = params.id
 
-    console.log('Booking API: Fetching booking ID:', bookingId)
-    console.log('User profile:', { id: profile.id, email: profile.email, role: profile.role })
-
     // Determine if user is admin
     const isAdmin = profile.role === 'admin' || ADMIN_EMAILS.includes(profile.email.toLowerCase())
-    console.log('Is admin:', isAdmin)
+    
+    // Use admin client for admin users to bypass RLS, user client for regular users
+    const dbClient = isAdmin ? supabaseAdmin : supabase
 
     // First, try to fetch booking without joins to see if it exists
-    const { data: booking, error: bookingError } = await supabase
+    const { data: booking, error: bookingError } = await dbClient
       .from('bookings')
       .select('*')
       .eq('id', bookingId)
@@ -69,7 +69,6 @@ export async function GET(
       }, { status: 500 })
     }
 
-    console.log('Booking found:', { id: booking.id, reference: booking.booking_reference, customer_id: booking.customer_id })
 
     // Now fetch related data separately to avoid join issues
     let vehicle: any = null
@@ -77,29 +76,41 @@ export async function GET(
     let services: any[] = []
     let customer: any = null
 
-    // Get vehicle if vehicle_id exists
+    // Get vehicle if vehicle_id exists, otherwise use embedded vehicle_details
     if (booking.vehicle_id) {
-      const { data: vehicleData } = await supabase
+      const { data: vehicleData } = await dbClient
         .from('customer_vehicles')
         .select('make, model, year, color, license_plate, registration, name')
         .eq('id', booking.vehicle_id)
         .single()
       vehicle = vehicleData
+    } else if (booking.vehicle_details) {
+      // Use embedded vehicle data
+      vehicle = {
+        make: booking.vehicle_details.make,
+        model: booking.vehicle_details.model,
+        year: booking.vehicle_details.year,
+        color: booking.vehicle_details.color,
+        license_plate: booking.vehicle_details.registration
+      }
     }
 
-    // Get address if address_id exists  
+    // Get address if address_id exists, otherwise use embedded service_address  
     if (booking.address_id) {
-      const { data: addressData } = await supabase
+      const { data: addressData } = await dbClient
         .from('customer_addresses')
         .select('name, address_line_1, address_line_2, city, county, postal_code, country, special_instructions')
         .eq('id', booking.address_id)
         .single()
       address = addressData
+    } else if (booking.service_address) {
+      // Use embedded address data
+      address = booking.service_address
     }
 
     // Get customer data
     if (booking.customer_id) {
-      const { data: customerData } = await supabase
+      const { data: customerData } = await dbClient
         .from('user_profiles')
         .select('id, first_name, last_name, email, phone')
         .eq('id', booking.customer_id)
@@ -107,22 +118,20 @@ export async function GET(
       customer = customerData
     }
 
-    // Get booking services
-    const { data: bookingServices } = await supabase
+    // Get booking services (avoid broken foreign key relationships)
+    const { data: bookingServices } = await dbClient
       .from('booking_services')
       .select(`
         service_id,
+        service_details,
         price,
-        estimated_duration,
-        service:services!service_id (
-          name
-        )
+        estimated_duration
       `)
       .eq('booking_id', bookingId)
 
     if (bookingServices) {
       services = bookingServices.map((service: any) => ({
-        name: service.service?.name || 'Unknown Service',
+        name: service.service_details?.name || 'Vehicle Detailing Service',
         price: service.price,
         duration: service.estimated_duration
       }))
@@ -137,7 +146,7 @@ export async function GET(
     }
 
     // Get reschedule request data if any
-    const { data: rescheduleRequest } = await supabase
+    const { data: rescheduleRequest } = await dbClient
       .from('booking_reschedule_requests')
       .select('*')
       .eq('booking_id', bookingId)

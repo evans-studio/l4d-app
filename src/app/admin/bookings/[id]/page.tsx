@@ -101,11 +101,18 @@ const statusConfig = {
     borderColor: 'border-[var(--success)]'
   },
   cancelled: {
-    label: 'Cancelled',
+    label: 'Cancelled',   
     icon: XIcon,
     color: 'text-[var(--error)]',
     bgColor: 'bg-[var(--error-bg)]',
     borderColor: 'border-[var(--error)]'
+  },
+  rescheduled: {
+    label: 'Rescheduled',
+    icon: CalendarIcon,
+    color: 'text-[var(--info)]',
+    bgColor: 'bg-[var(--info-bg)]',
+    borderColor: 'border-[var(--info)]'
   }
 }
 
@@ -120,7 +127,12 @@ function AdminBookingDetailsPage() {
   useEffect(() => {
     const fetchBooking = async () => {
       try {
+        // Use the regular booking API route with admin authentication
         const response = await fetch(`/api/bookings/${params.id}`)
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+        }
+        
         const data = await response.json()
         
         if (data.success) {
@@ -128,9 +140,20 @@ function AdminBookingDetailsPage() {
           setAdminNotes(data.data.admin_notes || '')
         } else {
           console.error('Failed to fetch booking:', data.error)
+          console.error('Booking ID:', params.id)
+          console.error('Response status:', response.status)
         }
       } catch (error) {
         console.error('Failed to fetch booking:', error)
+        console.error('Booking ID:', params.id)
+        
+        // Check if it's a 404 error (booking not found)
+        if (error instanceof Error && error.message.includes('404')) {
+          // The booking doesn't exist - redirect back to bookings list
+          console.warn('Booking not found, redirecting to bookings list')
+          router.push('/admin/bookings?error=booking-not-found')
+          return
+        }
       } finally {
         setIsLoading(false)
       }
@@ -295,7 +318,7 @@ function AdminBookingDetailsPage() {
     )
   }
 
-  const status = statusConfig[booking.status]
+  const status = statusConfig[booking.status] || statusConfig.pending
   const StatusIcon = status.icon
 
   return (
@@ -396,29 +419,35 @@ function AdminBookingDetailsPage() {
                 Vehicle Details
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <p className="text-[var(--text-secondary)] text-sm mb-1">Make & Model</p>
-                  <p className="text-[var(--text-primary)] font-medium">
-                    {booking.vehicle.make} {booking.vehicle.model}
-                  </p>
-                </div>
-                {booking.vehicle.year && (
-                  <div>
-                    <p className="text-[var(--text-secondary)] text-sm mb-1">Year</p>
-                    <p className="text-[var(--text-primary)] font-medium">{booking.vehicle.year}</p>
-                  </div>
-                )}
-                {booking.vehicle.color && (
-                  <div>
-                    <p className="text-[var(--text-secondary)] text-sm mb-1">Color</p>
-                    <p className="text-[var(--text-primary)] font-medium">{booking.vehicle.color}</p>
-                  </div>
-                )}
-                {booking.vehicle.license_plate && (
-                  <div>
-                    <p className="text-[var(--text-secondary)] text-sm mb-1">License Plate</p>
-                    <p className="text-[var(--text-primary)] font-medium">{booking.vehicle.license_plate}</p>
-                  </div>
+                {booking.vehicle ? (
+                  <>
+                    <div>
+                      <p className="text-[var(--text-secondary)] text-sm mb-1">Make & Model</p>
+                      <p className="text-[var(--text-primary)] font-medium">
+                        {booking.vehicle.make} {booking.vehicle.model}
+                      </p>
+                    </div>
+                    {booking.vehicle.year && (
+                      <div>
+                        <p className="text-[var(--text-secondary)] text-sm mb-1">Year</p>
+                        <p className="text-[var(--text-primary)] font-medium">{booking.vehicle.year}</p>
+                      </div>
+                    )}
+                    {booking.vehicle.color && (
+                      <div>
+                        <p className="text-[var(--text-secondary)] text-sm mb-1">Color</p>
+                        <p className="text-[var(--text-primary)] font-medium">{booking.vehicle.color}</p>
+                      </div>
+                    )}
+                    {booking.vehicle.license_plate && (
+                      <div>
+                        <p className="text-[var(--text-secondary)] text-sm mb-1">License Plate</p>
+                        <p className="text-[var(--text-primary)] font-medium">{booking.vehicle.license_plate}</p>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-[var(--text-secondary)] italic">Vehicle information not available</p>
                 )}
               </div>
             </div>
@@ -430,13 +459,19 @@ function AdminBookingDetailsPage() {
                 Service Location
               </h2>
               <div className="space-y-2">
-                <p className="text-[var(--text-primary)]">{booking.address.address_line_1}</p>
-                {booking.address.address_line_2 && (
-                  <p className="text-[var(--text-primary)]">{booking.address.address_line_2}</p>
+                {booking.address ? (
+                  <>
+                    <p className="text-[var(--text-primary)]">{booking.address.address_line_1}</p>
+                    {booking.address.address_line_2 && (
+                      <p className="text-[var(--text-primary)]">{booking.address.address_line_2}</p>
+                    )}
+                    <p className="text-[var(--text-primary)]">
+                      {booking.address.city}, {booking.address.postal_code}
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-[var(--text-secondary)] italic">Address information not available</p>
                 )}
-                <p className="text-[var(--text-primary)]">
-                  {booking.address.city}, {booking.address.postal_code}
-                </p>
               </div>
             </div>
 

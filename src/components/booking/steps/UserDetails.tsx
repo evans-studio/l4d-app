@@ -5,7 +5,7 @@ import { useBookingFlowStore, useBookingStep } from '@/lib/store/bookingFlowStor
 import { Button } from '@/components/ui/primitives/Button'
 import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/composites/Card'
 import { Input } from '@/components/ui/primitives/Input'
-import { ChevronLeftIcon, ChevronRightIcon, UserIcon, CheckCircleIcon, AlertCircleIcon } from 'lucide-react'
+import { ChevronLeftIcon, ChevronRightIcon, UserIcon, CheckCircleIcon, AlertCircleIcon, Eye, EyeOff, Lock } from 'lucide-react'
 
 export function UserDetails() {
   const {
@@ -28,21 +28,44 @@ export function UserDetails() {
     email: formData.user?.email || '',
     phone: formData.user?.phone || '',
     name: formData.user?.name || '',
+    password: '',
+    confirmPassword: '',
   })
   
   const [validationStatus, setValidationStatus] = useState<'idle' | 'checking' | 'found' | 'new'>('idle')
   const [showUserData, setShowUserData] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [passwordError, setPasswordError] = useState('')
 
   // Update form when store data changes
   useEffect(() => {
     if (formData.user) {
-      setUserForm({
-        email: formData.user.email,
-        phone: formData.user.phone,
-        name: formData.user.name,
-      })
+      setUserForm(prev => ({
+        ...prev,
+        email: formData.user!.email,
+        phone: formData.user!.phone,
+        name: formData.user!.name,
+      }))
     }
   }, [formData.user])
+
+  // Password validation function
+  const validatePassword = (password: string) => {
+    if (password.length < 8) {
+      return 'Password must be at least 8 characters long'
+    }
+    if (!/(?=.*[a-z])/.test(password)) {
+      return 'Password must contain at least one lowercase letter'
+    }
+    if (!/(?=.*[A-Z])/.test(password)) {
+      return 'Password must contain at least one uppercase letter'
+    }
+    if (!/(?=.*\d)/.test(password)) {
+      return 'Password must contain at least one number'
+    }
+    return null
+  }
 
   const handleFormChange = (field: string, value: string) => {
     setUserForm(prev => ({ ...prev, [field]: value }))
@@ -51,6 +74,21 @@ export function UserDetails() {
     if (field === 'email' || field === 'phone') {
       setValidationStatus('idle')
       setShowUserData(false)
+    }
+    
+    // Validate password in real-time for new users
+    if (field === 'password' && validationStatus === 'new') {
+      const error = validatePassword(value)
+      setPasswordError(error || '')
+    }
+    
+    // Check password confirmation for new users
+    if (field === 'confirmPassword' && validationStatus === 'new') {
+      if (value !== userForm.password) {
+        setPasswordError('Passwords do not match')
+      } else if (!validatePassword(userForm.password)) {
+        setPasswordError('')
+      }
     }
   }
 
@@ -79,8 +117,21 @@ export function UserDetails() {
         setValidationStatus('new')
         setShowUserData(false)
         
-        // Require name for new users
-        if (!userForm.name) {
+        // Require name and password for new users
+        if (!userForm.name || !userForm.password || !userForm.confirmPassword) {
+          return
+        }
+        
+        // Validate password
+        const passwordValidation = validatePassword(userForm.password)
+        if (passwordValidation) {
+          setPasswordError(passwordValidation)
+          return
+        }
+        
+        // Check passwords match
+        if (userForm.password !== userForm.confirmPassword) {
+          setPasswordError('Passwords do not match')
           return
         }
         
@@ -88,7 +139,8 @@ export function UserDetails() {
           email: userForm.email,
           phone: userForm.phone,
           name: userForm.name,
-          isExistingUser: false
+          isExistingUser: false,
+          password: userForm.password // Include password for new users
         })
       }
     } catch (error) {
@@ -202,11 +254,102 @@ export function UserDetails() {
           )}
 
           {validationStatus === 'new' && (
-            <div className="flex items-center gap-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-              <AlertCircleIcon className="w-5 h-5 text-blue-600" />
-              <div>
-                <p className="text-blue-700 font-medium">New Customer</p>
-                <p className="text-blue-600 text-sm">We'll create an account for you after booking</p>
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <AlertCircleIcon className="w-5 h-5 text-blue-600" />
+                <div>
+                  <p className="text-blue-700 font-medium">New Customer</p>
+                  <p className="text-blue-600 text-sm">Set your password to create your account during booking</p>
+                </div>
+              </div>
+
+              {/* Password Creation Fields for New Users */}
+              <div className="space-y-4 p-4 bg-surface-secondary rounded-lg border border-border-secondary">
+                <div className="flex items-center gap-2 mb-3">
+                  <Lock className="w-4 h-4 text-brand-600" />
+                  <h4 className="font-medium text-text-primary">Create Your Password</h4>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-text-primary mb-2">
+                    Password *
+                  </label>
+                  <div className="relative">
+                    <Input
+                      type={showPassword ? 'text' : 'password'}
+                      value={userForm.password}
+                      onChange={(e) => handleFormChange('password', e.target.value)}
+                      placeholder="Enter your password"
+                      required
+                      className="pr-10"
+                    />
+                    <button
+                      type="button"
+                      className="absolute inset-y-0 right-0 flex items-center pr-3"
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? (
+                        <EyeOff className="w-4 h-4 text-text-muted" />
+                      ) : (
+                        <Eye className="w-4 h-4 text-text-muted" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-text-primary mb-2">
+                    Confirm Password *
+                  </label>
+                  <div className="relative">
+                    <Input
+                      type={showConfirmPassword ? 'text' : 'password'}
+                      value={userForm.confirmPassword}
+                      onChange={(e) => handleFormChange('confirmPassword', e.target.value)}
+                      placeholder="Confirm your password"
+                      required
+                      className="pr-10"
+                    />
+                    <button
+                      type="button"
+                      className="absolute inset-y-0 right-0 flex items-center pr-3"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    >
+                      {showConfirmPassword ? (
+                        <EyeOff className="w-4 h-4 text-text-muted" />
+                      ) : (
+                        <Eye className="w-4 h-4 text-text-muted" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Password Requirements */}
+                <div className="text-xs text-text-muted bg-surface-tertiary p-3 rounded-md">
+                  <p className="font-medium mb-2">Password requirements:</p>
+                  <ul className="space-y-1">
+                    <li className={userForm.password.length >= 8 ? 'text-green-600' : ''}>
+                      • At least 8 characters long
+                    </li>
+                    <li className={/(?=.*[a-z])/.test(userForm.password) ? 'text-green-600' : ''}>
+                      • One lowercase letter
+                    </li>
+                    <li className={/(?=.*[A-Z])/.test(userForm.password) ? 'text-green-600' : ''}>
+                      • One uppercase letter
+                    </li>
+                    <li className={/(?=.*\d)/.test(userForm.password) ? 'text-green-600' : ''}>
+                      • One number
+                    </li>
+                  </ul>
+                </div>
+
+                {/* Password Error Display */}
+                {passwordError && (
+                  <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <AlertCircleIcon className="w-4 h-4 text-red-600" />
+                    <span className="text-red-600 text-sm">{passwordError}</span>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -314,7 +457,7 @@ export function UserDetails() {
           <Button
             onClick={handleNext}
             disabled={!canProceedToNextStep() || 
-              (validationStatus === 'new' && !userForm.name) ||
+              (validationStatus === 'new' && (!userForm.name || !userForm.password || !userForm.confirmPassword || !!passwordError)) ||
               validationStatus === 'checking' ||
               validationStatus === 'idle'
             }
@@ -349,7 +492,7 @@ export function UserDetails() {
           <Button
             onClick={handleNext}
             disabled={!canProceedToNextStep() || 
-              (validationStatus === 'new' && !userForm.name) ||
+              (validationStatus === 'new' && (!userForm.name || !userForm.password || !userForm.confirmPassword || !!passwordError)) ||
               validationStatus === 'checking' ||
               validationStatus === 'idle'
             }

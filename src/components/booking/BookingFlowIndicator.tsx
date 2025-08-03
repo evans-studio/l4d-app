@@ -44,6 +44,13 @@ const steps = [
   },
   { 
     number: 5, 
+    name: 'Contact', 
+    shortName: 'Details',
+    icon: User, 
+    description: 'Your contact information' 
+  },
+  { 
+    number: 6, 
     name: 'Confirm', 
     shortName: 'Review',
     icon: Receipt, 
@@ -56,7 +63,15 @@ interface BookingFlowIndicatorProps {
 }
 
 export function BookingFlowIndicator({ variant = 'default' }: BookingFlowIndicatorProps) {
-  const { currentStep } = useBookingFlowStore();
+  const { currentStep, setStep } = useBookingFlowStore();
+
+  // Handle step navigation - only allow navigation to completed steps
+  const handleStepClick = (stepNumber: number) => {
+    // Only allow navigation to previous/completed steps
+    if (stepNumber < currentStep) {
+      setStep(stepNumber as any);
+    }
+  };
 
   if (variant === 'mobile') {
     return (
@@ -79,12 +94,32 @@ export function BookingFlowIndicator({ variant = 'default' }: BookingFlowIndicat
           </div>
         </div>
         
-        {/* Progress bar */}
-        <div className="mt-2 w-full h-1.5 bg-surface-tertiary rounded-full overflow-hidden">
-          <div 
-            className="h-full bg-brand-600 transition-all duration-300 ease-out"
-            style={{ width: `${(currentStep / steps.length) * 100}%` }}
-          />
+        {/* Clickable mini steps */}
+        <div className="mt-3 flex items-center justify-center gap-2">
+          {steps.map((step) => {
+            const isActive = currentStep === step.number;
+            const isCompleted = currentStep > step.number;
+            const isClickable = step.number < currentStep;
+            
+            return (
+              <button
+                key={step.number}
+                onClick={() => handleStepClick(step.number)}
+                disabled={!isClickable}
+                className={`
+                  w-8 h-2 rounded-full transition-all duration-200
+                  ${isCompleted 
+                    ? 'bg-brand-600 cursor-pointer hover:bg-brand-700' 
+                    : isActive 
+                      ? 'bg-brand-600' 
+                      : 'bg-surface-tertiary'
+                  }
+                  ${isClickable ? 'cursor-pointer hover:bg-brand-700' : ''}
+                `}
+                aria-label={`Go to ${step.name}`}
+              />
+            );
+          })}
         </div>
       </div>
     );
@@ -98,11 +133,19 @@ export function BookingFlowIndicator({ variant = 'default' }: BookingFlowIndicat
             {steps.map((step, index) => {
               const isActive = currentStep === step.number;
               const isCompleted = currentStep > step.number;
+              const isClickable = step.number < currentStep;
               const IconComponent = step.icon;
               
               return (
                 <div key={step.number} className="flex items-center">
-                  <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => handleStepClick(step.number)}
+                    disabled={!isClickable}
+                    className={`flex items-center gap-3 transition-all ${
+                      isClickable ? 'cursor-pointer hover:opacity-80' : ''
+                    }`}
+                    aria-label={isClickable ? `Go to ${step.name}` : undefined}
+                  >
                     <div className={`
                       w-8 h-8 rounded-full flex items-center justify-center transition-all
                       ${isCompleted 
@@ -111,6 +154,7 @@ export function BookingFlowIndicator({ variant = 'default' }: BookingFlowIndicat
                           ? 'bg-brand-600 text-white shadow-purple-lg' 
                           : 'bg-surface-tertiary text-text-muted'
                       }
+                      ${isClickable ? 'hover:bg-brand-700' : ''}
                     `}>
                       {isCompleted ? (
                         <Check className="w-4 h-4" />
@@ -123,7 +167,7 @@ export function BookingFlowIndicator({ variant = 'default' }: BookingFlowIndicat
                     }`}>
                       {step.shortName}
                     </span>
-                  </div>
+                  </button>
                   
                   {index < steps.length - 1 && (
                     <div className={`w-8 h-0.5 mx-4 ${
@@ -147,11 +191,19 @@ export function BookingFlowIndicator({ variant = 'default' }: BookingFlowIndicat
           {steps.map((step, index) => {
             const isActive = currentStep === step.number;
             const isCompleted = currentStep > step.number;
+            const isClickable = step.number < currentStep;
             const IconComponent = step.icon;
             
             return (
               <div key={step.number} className="flex items-center">
-                <div className="flex flex-col items-center text-center max-w-[120px]">
+                <button
+                  onClick={() => handleStepClick(step.number)}
+                  disabled={!isClickable}
+                  className={`flex flex-col items-center text-center max-w-[120px] transition-all ${
+                    isClickable ? 'cursor-pointer hover:opacity-80' : ''
+                  }`}
+                  aria-label={isClickable ? `Go to ${step.name}` : undefined}
+                >
                   <div className={`
                     w-12 h-12 rounded-full flex items-center justify-center mb-3 transition-all
                     ${isCompleted 
@@ -160,6 +212,7 @@ export function BookingFlowIndicator({ variant = 'default' }: BookingFlowIndicat
                         ? 'bg-brand-600 text-white shadow-purple-lg animate-purple-pulse' 
                         : 'bg-surface-tertiary text-text-muted'
                     }
+                    ${isClickable ? 'hover:bg-brand-700' : ''}
                   `}>
                     {isCompleted ? (
                       <Check className="w-6 h-6" />
@@ -177,7 +230,7 @@ export function BookingFlowIndicator({ variant = 'default' }: BookingFlowIndicat
                   }`}>
                     {step.description}
                   </p>
-                </div>
+                </button>
                 
                 {index < steps.length - 1 && (
                   <div className={`flex-1 h-0.5 mx-4 min-w-[40px] ${
