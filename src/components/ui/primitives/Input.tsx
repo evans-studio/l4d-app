@@ -21,9 +21,9 @@ const inputVariants = cva(
         warning: 'border-warning-500 bg-surface-card text-text-primary focus-visible:border-warning-purple focus-visible:ring-2 focus-visible:ring-warning-purple/20',
       },
       size: {
-        sm: 'h-9 px-3 py-1 text-sm',
-        md: 'h-10 px-3 py-2 text-sm',
-        lg: 'h-11 px-4 py-2 text-base',
+        sm: 'h-10 px-3 py-1 text-sm sm:h-9',
+        md: 'h-12 px-3 py-2 text-sm sm:h-10',
+        lg: 'h-12 px-4 py-2 text-base sm:h-11',
       },
     },
     defaultVariants: {

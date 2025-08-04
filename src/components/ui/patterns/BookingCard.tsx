@@ -199,11 +199,11 @@ const BookingCard = React.forwardRef<HTMLDivElement, BookingCardProps>(
       }).format(price)
     }
     
-    // Responsive layout classes
-    const cardLayoutClasses = {
-      compact: 'p-4',
-      detailed: 'p-4 sm:p-6',
-      summary: 'p-3',
+    // Map layout to Card size variants for consistency
+    const cardSize = {
+      compact: 'sm' as const,  // p-4
+      detailed: 'md' as const, // p-6  
+      summary: 'sm' as const,  // p-4
     }[layout]
     
     const handleCardClick = () => {
@@ -215,9 +215,9 @@ const BookingCard = React.forwardRef<HTMLDivElement, BookingCardProps>(
     return (
       <Card
         ref={ref}
+        size={cardSize}
         className={cn(
           bookingCardVariants({ status, priority, layout }),
-          cardLayoutClasses,
           interactive && 'cursor-pointer hover:shadow-md',
           className
         )}
@@ -349,11 +349,11 @@ const BookingCard = React.forwardRef<HTMLDivElement, BookingCardProps>(
                 decorative
               />
               <div className="flex-1 min-w-0">
-                <Text size="sm" weight="medium" className="truncate">
+                <Text size="sm" weight="medium" className="break-words line-clamp-1 sm:truncate">
                   {booking.customer.firstName} {booking.customer.lastName}
                 </Text>
                 {booking.customer.phone && (
-                  <Text size="xs" color="muted" className="truncate">
+                  <Text size="xs" color="muted" className="break-all sm:truncate">
                     {booking.customer.phone}
                   </Text>
                 )}
@@ -388,7 +388,7 @@ const BookingCard = React.forwardRef<HTMLDivElement, BookingCardProps>(
                 decorative
               />
               <div className="flex-1 min-w-0">
-                <Text size="sm" weight="medium" className="truncate">
+                <Text size="sm" weight="medium" className="break-words line-clamp-1 sm:truncate">
                   {booking.vehicle.year && `${booking.vehicle.year} `}
                   {booking.vehicle.make} {booking.vehicle.model}
                 </Text>
@@ -416,15 +416,15 @@ const BookingCard = React.forwardRef<HTMLDivElement, BookingCardProps>(
                 className="mt-0.5"
               />
               <div className="flex-1 min-w-0">
-                <Text size="sm" className="truncate">
+                <Text size="sm" className="break-words line-clamp-1 sm:truncate">
                   {booking.address.addressLine1}
                 </Text>
                 {booking.address.addressLine2 && (
-                  <Text size="sm" className="truncate">
+                  <Text size="sm" className="break-words line-clamp-1 sm:truncate">
                     {booking.address.addressLine2}
                   </Text>
                 )}
-                <Text size="xs" color="muted">
+                <Text size="xs" color="muted" className="break-words">
                   {booking.address.city}, {booking.address.postalCode}
                 </Text>
               </div>
@@ -440,7 +440,7 @@ const BookingCard = React.forwardRef<HTMLDivElement, BookingCardProps>(
               <div className="space-y-1">
                 {booking.services.map((service, index) => (
                   <div key={service.id} className="flex justify-between items-center">
-                    <Text size="sm" className="truncate">
+                    <Text size="sm" className="break-words line-clamp-1 sm:truncate">
                       {service.name}
                     </Text>
                     <Text size="sm" weight="medium">

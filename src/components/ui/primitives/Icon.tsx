@@ -97,10 +97,10 @@ const iconButtonVariants = cva(
       size: 'md',
     },
     compoundVariants: [
-      // Touch-friendly sizing for mobile
+      // Touch-friendly sizing for mobile - ensure 44px minimum for accessibility
       {
         size: ['xs', 'sm'],
-        class: 'min-h-[44px] min-w-[44px] sm:min-h-[auto] sm:min-w-[auto]',
+        class: 'min-h-[44px] min-w-[44px]',
       },
     ],
   }

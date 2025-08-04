@@ -83,17 +83,24 @@ const statusConfig = {
 
 export function StatusBadge({ 
   status, 
-  size, 
+  size = 'md', 
   showIcon = true, 
   className = '' 
 }: StatusBadgeProps) {
   const config = statusConfig[status as keyof typeof statusConfig]
   
+  // Size-responsive icon sizing for better alignment
+  const iconSize = {
+    sm: 'w-3 h-3',
+    md: 'w-3.5 h-3.5', 
+    lg: 'w-4 h-4'
+  }[size] || 'w-3 h-3'
+  
   // Fallback for undefined or unknown status values
   if (!config) {
     return (
       <span className={statusBadgeVariants({ status: 'pending', size, className })}>
-        {showIcon && <AlertCircle className="w-3 h-3" />}
+        {showIcon && <AlertCircle className={iconSize} />}
         {status || 'Unknown'}
       </span>
     )
@@ -103,7 +110,7 @@ export function StatusBadge({
 
   return (
     <span className={statusBadgeVariants({ status: status as any, size, className })}>
-      {showIcon && <Icon className="w-3 h-3" />}
+      {showIcon && <Icon className={iconSize} />}
       {config.label}
     </span>
   )
