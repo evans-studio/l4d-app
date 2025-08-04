@@ -190,7 +190,7 @@ export function NextBookingWidget({ booking }: NextBookingWidgetProps) {
             <Button
               variant="outline"
               size="sm"
-              className="flex-1 min-h-[40px]"
+              className="flex-1 min-h-[48px] touch-manipulation"
               onClick={() => openOverlay({
                 type: 'booking-reschedule',
                 data: { bookingId: booking.id, booking }
@@ -204,7 +204,7 @@ export function NextBookingWidget({ booking }: NextBookingWidgetProps) {
           <Button
             variant="outline"
             size="sm"
-            className="flex-1 min-h-[40px]"
+            className="flex-1 min-h-[48px] touch-manipulation"
             onClick={() => openOverlay({
               type: 'booking-cancel',
               data: { bookingId: booking.id, booking }

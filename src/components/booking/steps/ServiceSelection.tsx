@@ -265,54 +265,6 @@ export function ServiceSelection(): React.JSX.Element {
         )}
       </div>
 
-      {/* Selection Summary - Mobile First Responsive */}
-      {selectedService && formData.service && (
-        <div className="px-4 sm:px-0">
-          <Card>
-            <CardHeader className="p-4 sm:p-6">
-              <h3 className="text-lg font-semibold text-text-primary">
-                Selected Service
-              </h3>
-            </CardHeader>
-            <CardContent className="p-4 sm:p-6 pt-0">
-              {(() => {
-                const selectedServiceData = servicesWithPricing.find(s => s.id === selectedService) || availableServices.find(s => s.id === selectedService)
-                return (
-                  <>
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-surface-tertiary rounded-lg p-4 gap-3 sm:gap-0">
-                      <div className="flex-1">
-                        <span className="text-text-primary font-medium text-base sm:text-lg">{formData.service.name}</span>
-                        <div className="text-sm text-text-muted mt-1">~{Math.round(formData.service.duration / 60)} hours</div>
-                      </div>
-                      <div className="text-right">
-                        {selectedServiceData?.priceRange && selectedServiceData.priceRange.min !== selectedServiceData.priceRange.max ? (
-                          <div>
-                            <span className="text-brand-400 font-bold text-lg sm:text-xl">£{selectedServiceData.priceRange.min} - £{selectedServiceData.priceRange.max}</span>
-                            <div className="text-xs text-text-muted">Based on vehicle size</div>
-                          </div>
-                        ) : selectedServiceData?.priceRange?.min ? (
-                          <span className="text-brand-400 font-bold text-xl sm:text-2xl">£{selectedServiceData.priceRange.min}</span>
-                        ) : (
-                          <span className="text-text-secondary text-sm">Contact for pricing</span>
-                        )}
-                      </div>
-                    </div>
-                    <div className="mt-4 text-sm text-text-secondary space-y-2">
-                      <p>Final price will be calculated based on your vehicle size and service location.</p>
-                      {formData.service && (
-                        <div className="flex items-center gap-2 text-xs text-text-muted">
-                          <Clock className="w-3 h-3" />
-                          <span>Estimated duration: {Math.round(formData.service.duration / 60)} hours</span>
-                        </div>
-                      )}
-                    </div>
-                  </>
-                )
-              })()}
-            </CardContent>
-          </Card>
-        </div>
-      )}
       
       {/* Error Display */}
       {error && (

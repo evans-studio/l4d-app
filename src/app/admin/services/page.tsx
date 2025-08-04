@@ -221,7 +221,7 @@ function AdminServicesPage() {
                   placeholder="Search services..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-md text-[var(--input-text)] placeholder-[var(--input-placeholder)] focus:border-[var(--input-border-focus)] focus:outline-none transition-colors"
+                  className="w-full pl-10 pr-4 py-3 min-h-[44px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-md text-[var(--input-text)] placeholder-[var(--input-placeholder)] focus:border-[var(--input-border-focus)] focus:outline-none transition-colors touch-manipulation"
                 />
               </div>
             </div>
@@ -231,7 +231,7 @@ function AdminServicesPage() {
               <select
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value)}
-                className="px-4 py-2 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-md text-[var(--input-text)] focus:border-[var(--input-border-focus)] focus:outline-none transition-colors"
+                className="px-4 py-3 min-h-[44px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-md text-[var(--input-text)] focus:border-[var(--input-border-focus)] focus:outline-none transition-colors touch-manipulation"
               >
                 <option value="all">All Categories</option>
                 {categories.map(category => (
@@ -247,7 +247,7 @@ function AdminServicesPage() {
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="px-4 py-2 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-md text-[var(--input-text)] focus:border-[var(--input-border-focus)] focus:outline-none transition-colors"
+                className="px-4 py-3 min-h-[44px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-md text-[var(--input-text)] focus:border-[var(--input-border-focus)] focus:outline-none transition-colors touch-manipulation"
               >
                 <option value="all">All Status</option>
                 <option value="active">Active</option>
@@ -378,21 +378,21 @@ function AdminServicesPage() {
                 </div>
 
                 {/* Actions */}
-                <div className="flex items-center gap-2 pt-4 border-t border-[var(--border-secondary)]">
+                <div className="flex flex-col sm:flex-row items-center gap-3 pt-4 border-t border-[var(--border-secondary)]">
                   <Button
                     onClick={() => router.push(`/admin/services/${service.id}`)}
                     variant="outline"
-                    size="sm"
-                    className="flex-1 flex items-center gap-2"
+                    size="md"
+                    className="w-full sm:flex-1 flex items-center gap-2 min-h-[44px] touch-manipulation"
                   >
-                    <EditIcon className="w-3 h-3" />
+                    <EditIcon className="w-4 h-4" />
                     Edit
                   </Button>
                   <Button
                     onClick={() => toggleServiceStatus(service.id, !service.is_active)}
                     variant={service.is_active ? "outline" : "primary"}
-                    size="sm"
-                    className="flex-1"
+                    size="md"
+                    className="w-full sm:flex-1 min-h-[44px] touch-manipulation"
                   >
                     {service.is_active ? 'Deactivate' : 'Activate'}
                   </Button>

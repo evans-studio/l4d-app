@@ -281,7 +281,7 @@ export default function AddressesPage() {
                       required
                       value={formData.address_line_1}
                       onChange={(e) => setFormData(prev => ({ ...prev, address_line_1: e.target.value }))}
-                      className="w-full px-3 py-2 bg-surface-secondary border border-surface-tertiary rounded-lg focus:ring-2 focus:ring-brand-400 focus:border-transparent text-text-primary"
+                      className="w-full px-3 py-3 min-h-[44px] bg-surface-secondary border border-surface-tertiary rounded-lg focus:ring-2 focus:ring-brand-400 focus:border-transparent text-text-primary touch-manipulation"
                       placeholder="e.g., 123 Main Street"
                     />
                   </div>
@@ -295,7 +295,7 @@ export default function AddressesPage() {
                       type="text"
                       value={formData.address_line_2}
                       onChange={(e) => setFormData(prev => ({ ...prev, address_line_2: e.target.value }))}
-                      className="w-full px-3 py-2 bg-surface-secondary border border-surface-tertiary rounded-lg focus:ring-2 focus:ring-brand-400 focus:border-transparent text-text-primary"
+                      className="w-full px-3 py-3 min-h-[44px] bg-surface-secondary border border-surface-tertiary rounded-lg focus:ring-2 focus:ring-brand-400 focus:border-transparent text-text-primary touch-manipulation"
                       placeholder="e.g., Apartment 4B, Building Name"
                     />
                   </div>
@@ -310,7 +310,7 @@ export default function AddressesPage() {
                       required
                       value={formData.city}
                       onChange={(e) => setFormData(prev => ({ ...prev, city: e.target.value }))}
-                      className="w-full px-3 py-2 bg-surface-secondary border border-surface-tertiary rounded-lg focus:ring-2 focus:ring-brand-400 focus:border-transparent text-text-primary"
+                      className="w-full px-3 py-3 min-h-[44px] bg-surface-secondary border border-surface-tertiary rounded-lg focus:ring-2 focus:ring-brand-400 focus:border-transparent text-text-primary touch-manipulation"
                       placeholder="e.g., London"
                     />
                   </div>
@@ -324,7 +324,7 @@ export default function AddressesPage() {
                       type="text"
                       value={formData.county}
                       onChange={(e) => setFormData(prev => ({ ...prev, county: e.target.value }))}
-                      className="w-full px-3 py-2 bg-surface-secondary border border-surface-tertiary rounded-lg focus:ring-2 focus:ring-brand-400 focus:border-transparent text-text-primary"
+                      className="w-full px-3 py-3 min-h-[44px] bg-surface-secondary border border-surface-tertiary rounded-lg focus:ring-2 focus:ring-brand-400 focus:border-transparent text-text-primary touch-manipulation"
                       placeholder="e.g., Greater London"
                     />
                   </div>
@@ -339,7 +339,7 @@ export default function AddressesPage() {
                       required
                       value={formData.postal_code}
                       onChange={(e) => setFormData(prev => ({ ...prev, postal_code: e.target.value.toUpperCase() }))}
-                      className="w-full px-3 py-2 bg-surface-secondary border border-surface-tertiary rounded-lg focus:ring-2 focus:ring-brand-400 focus:border-transparent text-text-primary font-mono"
+                      className="w-full px-3 py-3 min-h-[44px] bg-surface-secondary border border-surface-tertiary rounded-lg focus:ring-2 focus:ring-brand-400 focus:border-transparent text-text-primary font-mono touch-manipulation"
                       placeholder="e.g., SW1A 1AA"
                     />
                     <p className="text-xs text-text-muted mt-1">
@@ -355,7 +355,7 @@ export default function AddressesPage() {
                     <select
                       value={formData.country}
                       onChange={(e) => setFormData(prev => ({ ...prev, country: e.target.value }))}
-                      className="w-full px-3 py-2 bg-surface-secondary border border-surface-tertiary rounded-lg focus:ring-2 focus:ring-brand-400 focus:border-transparent text-text-primary"
+                      className="w-full px-3 py-3 min-h-[44px] bg-surface-secondary border border-surface-tertiary rounded-lg focus:ring-2 focus:ring-brand-400 focus:border-transparent text-text-primary touch-manipulation"
                     >
                       <option value="United Kingdom">United Kingdom</option>
                       <option value="England">England</option>

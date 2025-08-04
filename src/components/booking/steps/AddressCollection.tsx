@@ -129,27 +129,6 @@ export function AddressCollection() {
         </p>
       </div>
 
-      {/* Service Info */}
-      {formData.service && (
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-semibold text-text-primary">{formData.service.name}</h3>
-                <p className="text-sm text-text-secondary">
-                  Mobile service - we come to you!
-                </p>
-              </div>
-              <div className="text-right">
-                <p className="text-sm text-text-secondary">Estimated Duration</p>
-                <p className="font-semibold text-text-primary">
-                  ~{Math.round(formData.service.duration / 60)} hours
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Existing Addresses (for returning customers) */}
       {isExistingUser && userAddresses.length > 0 && !showNewAddressForm && (
@@ -280,23 +259,6 @@ export function AddressCollection() {
         </Card>
       )}
 
-      {/* Important Notes */}
-      <Card>
-        <CardContent className="p-6">
-          <div className="flex items-start gap-3">
-            <MapPinIcon className="w-5 h-5 text-brand-400 mt-0.5" />
-            <div>
-              <h4 className="font-medium text-text-primary mb-2">Service Requirements</h4>
-              <ul className="text-sm text-text-secondary space-y-1">
-                <li>• Access to water and electricity required</li>
-                <li>• Suitable parking space for our equipment</li>
-                <li>• Clear access to your vehicle</li>
-                <li>• We bring all cleaning supplies and equipment</li>
-              </ul>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Error Display */}
       {error && (
@@ -307,43 +269,6 @@ export function AddressCollection() {
         </Card>
       )}
 
-      {/* Selected Address Summary */}
-      {formData.address && (
-        <Card>
-          <CardHeader>
-            <h3 className="text-lg font-semibold text-text-primary">Selected Service Location</h3>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between bg-surface-tertiary rounded-lg p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-brand-600 flex items-center justify-center">
-                  <MapPinIcon className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <h4 className="font-semibold text-text-primary">Service Address</h4>
-                  <p className="text-sm text-text-secondary">
-                    {formData.address.addressLine1}
-                  </p>
-                  {formData.address.addressLine2 && (
-                    <p className="text-sm text-text-secondary">
-                      {formData.address.addressLine2}
-                    </p>
-                  )}
-                  <p className="text-sm text-text-secondary">
-                    {formData.address.city}, {formData.address.postcode}
-                  </p>
-                </div>
-              </div>
-              <div className="text-right">
-                <p className="text-sm text-text-secondary">
-                  {formData.address.isExisting ? 'Saved Address' : 'New Address'}
-                </p>
-                <p className="text-xs text-brand-400">Ready for service</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Navigation */}
       <div className="flex justify-between items-center pt-6">

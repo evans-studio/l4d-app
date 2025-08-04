@@ -205,7 +205,7 @@ function AdminAnalyticsPage() {
                 const range = dateRanges[parseInt(e.target.value)]
                 if (range) setSelectedRange(range)
               }}
-              className="px-4 py-2 bg-surface-secondary border border-border-secondary rounded-md text-text-primary focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-600/20"
+              className="min-h-[44px] px-4 py-3 bg-surface-secondary border border-border-secondary rounded-md text-text-primary focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-600/20 touch-manipulation"
             >
               {dateRanges.map((range, index) => (
                 <option key={index} value={index}>{range.label}</option>
@@ -235,7 +235,7 @@ function AdminAnalyticsPage() {
         {analyticsData && (
           <>
             {/* Key Metrics */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
               {/* Revenue */}
               <div className="bg-surface-secondary rounded-lg border border-border-primary p-6">
                 <div className="flex items-center justify-between">

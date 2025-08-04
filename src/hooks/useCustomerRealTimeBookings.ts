@@ -7,6 +7,11 @@ export interface CustomerBooking {
   scheduled_start_time: string
   status: 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'rescheduled' | 'declined'
   total_price: number
+  // Customer information now included for consistency with admin view
+  customer_id: string
+  customer_name: string
+  customer_email: string
+  customer_phone: string
   service: {
     name: string
     short_description?: string

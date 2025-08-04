@@ -132,6 +132,39 @@ export const BookingDetailsModal: React.FC<BaseOverlayProps> = ({
   const [isLoading, setIsLoading] = useState(!data?.booking)
   const [error, setError] = useState('')
 
+
+  // Helper function to normalize customer data from different formats
+  const getCustomerData = (booking: BookingDetails) => {
+    // Check if we have the flattened format (API response format)
+    if (booking.customer_name && booking.customer_email !== undefined) {
+      return {
+        name: booking.customer_name,
+        email: booking.customer_email || 'Email not available',
+        phone: booking.customer_phone || 'Not provided'
+      }
+    }
+    
+    // Check if we have the nested customer object format
+    if (booking.customer) {
+      const fullName = booking.customer.first_name && booking.customer.last_name 
+        ? `${booking.customer.first_name} ${booking.customer.last_name}`
+        : booking.customer.first_name || booking.customer.last_name || 'Customer details unavailable'
+      
+      return {
+        name: fullName,
+        email: booking.customer.email || 'Email not available',
+        phone: booking.customer.phone || 'Not provided'
+      }
+    }
+    
+    // Fallback - no customer data available
+    return {
+      name: 'Customer details unavailable',
+      email: 'Email not available', 
+      phone: 'Not provided'
+    }
+  }
+
   useEffect(() => {
     if (isOpen && data?.bookingId && !data?.booking) {
       loadBookingDetails()
@@ -241,6 +274,7 @@ export const BookingDetailsModal: React.FC<BaseOverlayProps> = ({
 
   const config = statusConfig[booking.status] || statusConfig.pending
   const StatusIcon = config.icon
+  const customerData = getCustomerData(booking)
 
   return (
     <BaseModal
@@ -372,12 +406,7 @@ export const BookingDetailsModal: React.FC<BaseOverlayProps> = ({
             <div>
               <p className="text-sm font-medium text-text-secondary mb-2">Customer Name</p>
               <p className="text-lg font-semibold text-text-primary">
-                {(() => {
-                  const firstName = booking.customer_name || booking.customer?.first_name || ''
-                  const lastName = booking.customer?.last_name || ''
-                  const fullName = `${firstName} ${lastName}`.trim()
-                  return fullName || 'Customer details being loaded...'
-                })()}
+                {customerData.name}
               </p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -385,30 +414,16 @@ export const BookingDetailsModal: React.FC<BaseOverlayProps> = ({
                 <p className="text-sm font-medium text-text-secondary mb-2">Email Address</p>
                 <p className="text-base text-text-primary flex items-center gap-2">
                   <Mail className="w-4 h-4 text-text-secondary" />
-                  {(() => {
-                    const email = booking.customer_email || booking.customer?.email
-                    return email || 'Email being loaded...'
-                  })()}
+                  {customerData.email}
                 </p>
               </div>
-              {(booking.customer_phone || booking.customer?.phone) && (
-                <div>
-                  <p className="text-sm font-medium text-text-secondary mb-2">Phone Number</p>
-                  <p className="text-base text-text-primary flex items-center gap-2">
-                    <Phone className="w-4 h-4 text-text-secondary" />
-                    {booking.customer_phone || booking.customer?.phone}
-                  </p>
-                </div>
-              )}
-              {!(booking.customer_phone || booking.customer?.phone) && (
-                <div>
-                  <p className="text-sm font-medium text-text-secondary mb-2">Phone Number</p>
-                  <p className="text-base text-text-muted flex items-center gap-2">
-                    <Phone className="w-4 h-4 text-text-secondary" />
-                    Not provided
-                  </p>
-                </div>
-              )}
+              <div>
+                <p className="text-sm font-medium text-text-secondary mb-2">Phone Number</p>
+                <p className="text-base text-text-primary flex items-center gap-2">
+                  <Phone className="w-4 h-4 text-text-secondary" />
+                  {customerData.phone}
+                </p>
+              </div>
             </div>
           </div>
         </div>

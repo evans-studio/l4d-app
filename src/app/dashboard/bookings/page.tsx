@@ -240,7 +240,7 @@ export default function MyBookingsPage() {
                 placeholder="Search by booking reference or vehicle..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 bg-surface-secondary border border-border-secondary rounded-md text-text-primary placeholder-text-muted focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-600/20 transition-colors"
+                className="w-full pl-10 pr-4 py-2 min-h-[44px] touch-manipulation bg-surface-secondary border border-border-secondary rounded-md text-text-primary placeholder-text-muted focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-600/20 transition-colors"
               />
             </div>
             
@@ -251,7 +251,7 @@ export default function MyBookingsPage() {
                   <button
                     key={filter}
                     onClick={() => setActiveFilter(filter)}
-                    className={`px-3 py-1 rounded-md text-sm font-medium transition-colors capitalize ${
+                    className={`px-3 py-1 min-h-[44px] flex items-center justify-center touch-manipulation rounded-md text-sm font-medium transition-colors capitalize ${
                       activeFilter === filter
                         ? 'bg-brand-600 text-white'
                         : 'text-text-secondary hover:text-text-primary'
@@ -376,6 +376,7 @@ export default function MyBookingsPage() {
                           })}
                           variant="outline"
                           size="sm"
+                          className="min-h-[44px] touch-manipulation"
                           leftIcon={<Eye className="w-4 h-4" />}
                         >
                           View Details
@@ -389,6 +390,7 @@ export default function MyBookingsPage() {
                             })}
                             variant="outline"
                             size="sm"
+                            className="min-h-[44px] touch-manipulation"
                             leftIcon={<Edit className="w-4 h-4" />}
                           >
                             Reschedule
@@ -400,6 +402,7 @@ export default function MyBookingsPage() {
                             onClick={() => handleRebook(booking.id)}
                             variant="outline"
                             size="sm"
+                            className="min-h-[44px] touch-manipulation"
                             leftIcon={rebookingBookingId === booking.id ? 
                               <div className="w-4 h-4 animate-spin rounded-full border-2 border-brand-400 border-t-transparent" /> :
                               <Calendar className="w-4 h-4" />

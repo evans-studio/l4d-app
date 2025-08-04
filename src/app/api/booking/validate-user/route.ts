@@ -79,10 +79,10 @@ export async function POST(request: NextRequest) {
         license_plate,
         registration,
         is_primary,
-        is_default
+        is_default,
+        vehicle_size_id
       `)
       .eq('user_id', userProfile.id)
-      .eq('is_active', true)
       .order('is_primary', { ascending: false })
       .order('created_at', { ascending: false })
 
@@ -108,7 +108,6 @@ export async function POST(request: NextRequest) {
         is_default
       `)
       .eq('user_id', userProfile.id)
-      .eq('is_active', true)
       .order('is_primary', { ascending: false })
       .order('created_at', { ascending: false })
 
@@ -150,6 +149,42 @@ export async function POST(request: NextRequest) {
       console.error('Bookings fetch error:', bookingsError)
     }
 
+    // Transform vehicles to include vehicle_size objects (since vehicle_sizes table was removed)
+    const transformedVehicles = (vehicles || []).map(vehicle => {
+      // Create a default vehicle_size object based on make/model or fallback to medium
+      let vehicleSize = {
+        id: 'medium',
+        name: 'Medium',
+        price_multiplier: 1.0,
+        description: 'Medium sized vehicle'
+      }
+
+      // Try to determine size based on make/model if available
+      if (vehicle.make && vehicle.model) {
+        const makeModel = `${vehicle.make} ${vehicle.model}`.toLowerCase()
+        if (makeModel.includes('mini') || makeModel.includes('smart') || makeModel.includes('fiat 500')) {
+          vehicleSize = {
+            id: 'small',
+            name: 'Small',
+            price_multiplier: 0.8,
+            description: 'Small sized vehicle'
+          }
+        } else if (makeModel.includes('suv') || makeModel.includes('range rover') || makeModel.includes('bmw x') || makeModel.includes('audi q')) {
+          vehicleSize = {
+            id: 'large',
+            name: 'Large',
+            price_multiplier: 1.2,
+            description: 'Large sized vehicle'
+          }
+        }
+      }
+
+      return {
+        ...vehicle,
+        vehicle_size: vehicleSize
+      }
+    })
+
     return NextResponse.json({
       success: true,
       data: {
@@ -160,7 +195,7 @@ export async function POST(request: NextRequest) {
           name: `${userProfile.first_name} ${userProfile.last_name}`.trim(),
           phone: userProfile.phone
         },
-        vehicles: vehicles || [],
+        vehicles: transformedVehicles,
         addresses: addresses || [],
         recentBookings: recentBookings || [],
         message: 'Welcome back! We found your existing account'

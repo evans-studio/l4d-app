@@ -647,7 +647,7 @@ export const useBookingFlowStore = create<BookingFlowStore>()(
       // Load vehicle sizes - now returns hardcoded categories (vehicle_sizes table removed)
       loadVehicleSizes: async () => {
         try {
-          const response = await apiCall<VehicleSizeRow[]>('/api/vehicle-sizes')
+          const response = await apiCall<VehicleSizeRow[]>('/api/services/vehicle-sizes')
           
           if (response.success && response.data) {
             set({ vehicleSizes: response.data })

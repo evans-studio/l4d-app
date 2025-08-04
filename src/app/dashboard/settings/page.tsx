@@ -309,7 +309,7 @@ export default function AccountSettingsPage() {
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 transition-colors ${
+                    className={`min-h-[44px] py-3 px-4 border-b-2 font-medium text-sm flex items-center space-x-2 transition-colors touch-manipulation ${
                       activeTab === tab.id
                         ? 'border-brand-purple text-brand-purple'
                         : 'border-transparent text-text-secondary hover:text-text-primary hover:border-border-primary'
@@ -428,7 +428,7 @@ export default function AccountSettingsPage() {
                         <button
                           type="button"
                           onClick={() => setShowPasswords(prev => ({ ...prev, current: !prev.current }))}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary hover:text-text-primary transition-colors"
+                          className="absolute right-1 top-1/2 -translate-y-1/2 text-text-secondary hover:text-text-primary transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center rounded-md hover:bg-surface-hover touch-manipulation"
                         >
                           {showPasswords.current ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                         </button>
@@ -451,7 +451,7 @@ export default function AccountSettingsPage() {
                         <button
                           type="button"
                           onClick={() => setShowPasswords(prev => ({ ...prev, new: !prev.new }))}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary hover:text-text-primary transition-colors"
+                          className="absolute right-1 top-1/2 -translate-y-1/2 text-text-secondary hover:text-text-primary transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center rounded-md hover:bg-surface-hover touch-manipulation"
                         >
                           {showPasswords.new ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                         </button>
@@ -474,7 +474,7 @@ export default function AccountSettingsPage() {
                         <button
                           type="button"
                           onClick={() => setShowPasswords(prev => ({ ...prev, confirm: !prev.confirm }))}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary hover:text-text-primary transition-colors"
+                          className="absolute right-1 top-1/2 -translate-y-1/2 text-text-secondary hover:text-text-primary transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center rounded-md hover:bg-surface-hover touch-manipulation"
                         >
                           {showPasswords.confirm ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                         </button>

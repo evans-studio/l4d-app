@@ -16,10 +16,10 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
       }, { status: 401 })
     }
 
-    // Get user profile to get the actual customer ID
+    // Get user profile to get the actual customer ID and customer info
     const { data: profile, error: profileError } = await supabase
       .from('user_profiles')
-      .select('id, is_active')
+      .select('id, first_name, last_name, email, phone, is_active')
       .eq('id', user.id)
       .single()
 
@@ -94,6 +94,14 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
       pricing_breakdown: booking.pricing_breakdown,
       special_instructions: booking.special_instructions,
       created_at: booking.created_at,
+      
+      // Customer information - include the customer's own details for consistency with admin view
+      customer_id: profile.id,
+      customer_name: profile.first_name && profile.last_name 
+        ? `${profile.first_name} ${profile.last_name}` 
+        : profile.first_name || profile.last_name || 'Customer',
+      customer_email: profile.email || '',
+      customer_phone: profile.phone || '',
       
       // Service information from main service and booking services
       service: booking.services ? {

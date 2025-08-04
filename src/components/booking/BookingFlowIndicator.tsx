@@ -107,17 +107,28 @@ export function BookingFlowIndicator({ variant = 'default' }: BookingFlowIndicat
                 onClick={() => handleStepClick(step.number)}
                 disabled={!isClickable}
                 className={`
+                  min-w-[44px] min-h-[44px] rounded-full transition-all duration-200 touch-manipulation
+                  flex items-center justify-center relative
+                  ${isCompleted 
+                    ? 'cursor-pointer hover:bg-brand-100' 
+                    : isActive 
+                      ? 'bg-brand-50' 
+                      : 'hover:bg-surface-hover'
+                  }
+                  ${isClickable ? 'cursor-pointer' : ''}
+                `}
+                aria-label={`Go to ${step.name}`}
+              >
+                <div className={`
                   w-8 h-2 rounded-full transition-all duration-200
                   ${isCompleted 
-                    ? 'bg-brand-600 cursor-pointer hover:bg-brand-700' 
+                    ? 'bg-brand-600' 
                     : isActive 
                       ? 'bg-brand-600' 
                       : 'bg-surface-tertiary'
                   }
-                  ${isClickable ? 'cursor-pointer hover:bg-brand-700' : ''}
-                `}
-                aria-label={`Go to ${step.name}`}
-              />
+                `} />
+              </button>
             );
           })}
         </div>
@@ -141,8 +152,8 @@ export function BookingFlowIndicator({ variant = 'default' }: BookingFlowIndicat
                   <button
                     onClick={() => handleStepClick(step.number)}
                     disabled={!isClickable}
-                    className={`flex items-center gap-3 transition-all ${
-                      isClickable ? 'cursor-pointer hover:opacity-80' : ''
+                    className={`flex items-center gap-3 min-h-[44px] px-2 py-2 rounded-lg transition-all touch-manipulation ${
+                      isClickable ? 'cursor-pointer hover:bg-surface-hover' : ''
                     }`}
                     aria-label={isClickable ? `Go to ${step.name}` : undefined}
                   >
@@ -199,8 +210,8 @@ export function BookingFlowIndicator({ variant = 'default' }: BookingFlowIndicat
                 <button
                   onClick={() => handleStepClick(step.number)}
                   disabled={!isClickable}
-                  className={`flex flex-col items-center text-center max-w-[120px] transition-all ${
-                    isClickable ? 'cursor-pointer hover:opacity-80' : ''
+                  className={`flex flex-col items-center text-center max-w-[120px] min-h-[44px] px-2 py-2 rounded-lg transition-all touch-manipulation ${
+                    isClickable ? 'cursor-pointer hover:bg-surface-hover' : ''
                   }`}
                   aria-label={isClickable ? `Go to ${step.name}` : undefined}
                 >

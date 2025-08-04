@@ -13,7 +13,7 @@ import { QuickRebookWidget } from '@/components/customer/widgets/QuickRebookWidg
 import { BookingStatsWidget } from '@/components/customer/widgets/BookingStatsWidget'
 import { RecentActivityWidget } from '@/components/customer/widgets/RecentActivityWidget'
 import { Card, CardContent, CardHeader } from '@/components/ui/composites/Card'
-import { ArrowRight, Calendar, Car, MapPin, Star } from 'lucide-react'
+import { ArrowRight, Calendar, Car, MapPin, Star, AlertCircle, RefreshCw } from 'lucide-react'
 
 interface DashboardBooking {
   id: string
@@ -72,6 +72,7 @@ export default function DashboardPage() {
   const [bookings, setBookings] = useState<DashboardBooking[]>([])
   const [customerStats, setCustomerStats] = useState<CustomerStats | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -80,6 +81,7 @@ export default function DashboardPage() {
       }
 
       try {
+        setError(null) // Clear any previous errors
         // Fetch bookings with credentials to include cookies
         const bookingsResponse = await fetch('/api/customer/bookings', {
           credentials: 'include',
@@ -141,6 +143,7 @@ export default function DashboardPage() {
 
       } catch (error) {
         console.error('Dashboard data error:', error)
+        setError('Unable to load dashboard data. Please try refreshing the page.')
         setBookings([])
         setCustomerStats(null)
       } finally {
@@ -175,6 +178,41 @@ export default function DashboardPage() {
           <Container>
             <div className="flex items-center justify-center py-20">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-600"></div>
+            </div>
+          </Container>
+        </CustomerLayout>
+      </CustomerRoute>
+    )
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <CustomerRoute>
+        <CustomerLayout>
+          <Container>
+            <div className="flex items-center justify-center py-20">
+              <Card className="max-w-md w-full">
+                <CardContent className="text-center py-8">
+                  <AlertCircle className="w-12 h-12 text-error-500 mx-auto mb-4" />
+                  <h2 className="text-lg font-semibold text-text-primary mb-2">
+                    Unable to Load Dashboard
+                  </h2>
+                  <p className="text-text-secondary mb-6">
+                    {error}
+                  </p>
+                  <Button
+                    onClick={() => window.location.reload()}
+                    variant="primary"
+                    size="md"
+                    className="min-h-[48px] touch-manipulation"
+                    leftIcon={<RefreshCw className="w-4 h-4" />}
+                    fullWidth
+                  >
+                    Refresh Page
+                  </Button>
+                </CardContent>
+              </Card>
             </div>
           </Container>
         </CustomerLayout>

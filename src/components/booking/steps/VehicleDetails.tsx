@@ -398,78 +398,69 @@ export function VehicleDetails() {
               return (
                 <Card
                   key={vehicle.id}
-                  className={`cursor-pointer transition-all duration-300 transform hover:scale-[1.02] ${
+                  className={`cursor-pointer transition-all duration-300 transform hover:scale-[1.02] min-h-[120px] ${
                     isSelected
                       ? 'border-brand-500 bg-brand-600/10 shadow-brand-lg ring-2 ring-brand-500/20'
                       : 'hover:border-brand-400 hover:shadow-purple hover:bg-brand-600/5'
                   }`}
                   onClick={() => handleExistingVehicleSelect(vehicle.id)}
                 >
-                  <CardContent className="p-5">
+                  <CardContent className="p-6">
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex items-center gap-4">
-                        <div className={`w-14 h-14 rounded-xl flex items-center justify-center ${
+                        <div className={`w-16 h-16 rounded-xl flex items-center justify-center min-h-[48px] min-w-[48px] touch-manipulation ${
                           isSelected ? 'bg-brand-600 text-white' : 'bg-brand-600/10 text-brand-400'
                         }`}>
-                          <CarIcon className="w-7 h-7" />
+                          <CarIcon className="w-8 h-8" />
                         </div>
                         <div className="flex-1">
-                          <h4 className="font-semibold text-text-primary text-lg leading-tight">
+                          <h4 className="font-semibold text-text-primary text-xl leading-tight mb-2">
                             {vehicle.year} {vehicle.make} {vehicle.model}
                           </h4>
-                          <div className="flex items-center gap-2 mt-1">
-                            <span className="inline-flex items-center gap-1 px-2 py-1 bg-surface-tertiary rounded-full text-xs font-medium text-text-secondary">
+                          <div className="flex items-center gap-2">
+                            <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-surface-tertiary rounded-full text-sm font-medium text-text-secondary min-h-[32px]">
                               {sizeInfo.label} Vehicle
                             </span>
                             {vehicle.color && (
-                              <span className="text-sm text-text-secondary">• {vehicle.color}</span>
+                              <span className="text-base text-text-secondary">• {vehicle.color}</span>
                             )}
                           </div>
                         </div>
                       </div>
                       {isSelected && (
                         <div className="flex-shrink-0">
-                          <div className="w-6 h-6 bg-brand-600 rounded-full flex items-center justify-center">
-                            <CheckIcon className="w-4 h-4 text-white" />
+                          <div className="w-8 h-8 bg-brand-600 rounded-full flex items-center justify-center min-h-[48px] min-w-[48px] touch-manipulation">
+                            <CheckIcon className="w-5 h-5 text-white" />
                           </div>
                         </div>
                       )}
                     </div>
                     
                     {/* Vehicle Details */}
-                    <div className="space-y-2">
+                    <div className="space-y-3 mt-4">
                       {vehicle.registration && (
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-medium text-text-secondary uppercase tracking-wide">Registration:</span>
-                          <span className="text-sm font-mono bg-surface-secondary px-2 py-1 rounded text-text-primary">
+                        <div className="flex items-center gap-3">
+                          <span className="text-sm font-medium text-text-secondary uppercase tracking-wide min-w-[100px]">Registration:</span>
+                          <span className="text-base font-mono bg-surface-secondary px-3 py-2 rounded text-text-primary min-h-[36px] flex items-center">
                             {vehicle.registration}
                           </span>
                         </div>
                       )}
                       
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-medium text-text-secondary uppercase tracking-wide">Size:</span>
-                        <span className="text-sm text-text-primary">{sizeInfo.label}</span>
-                        <span className="text-xs text-text-muted">({sizeInfo.multiplier} pricing)</span>
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm font-medium text-text-secondary uppercase tracking-wide min-w-[100px]">Size:</span>
+                        <span className="text-base text-text-primary">{sizeInfo.label}</span>
+                        <span className="text-sm text-text-muted">({sizeInfo.multiplier} pricing)</span>
                       </div>
                       
                       {vehicle.notes && (
-                        <div className="pt-2 border-t border-border-secondary/50">
-                          <span className="text-xs font-medium text-text-secondary uppercase tracking-wide">Notes:</span>
-                          <p className="text-sm text-text-secondary mt-1 line-clamp-2">{vehicle.notes}</p>
+                        <div className="pt-3 border-t border-border-secondary/50">
+                          <span className="text-sm font-medium text-text-secondary uppercase tracking-wide block mb-2">Notes:</span>
+                          <p className="text-base text-text-secondary line-clamp-2">{vehicle.notes}</p>
                         </div>
                       )}
                     </div>
                     
-                    {/* Selection Indicator */}
-                    {isSelected && (
-                      <div className="mt-4 pt-3 border-t border-brand-200">
-                        <div className="flex items-center gap-2 text-brand-600">
-                          <CheckIcon className="w-4 h-4" />
-                          <span className="text-sm font-medium">Selected for this booking</span>
-                        </div>
-                      </div>
-                    )}
                   </CardContent>
                 </Card>
               )
@@ -686,32 +677,6 @@ export function VehicleDetails() {
         </Card>
       )}
 
-      {/* Selected Vehicle Summary */}
-      {formData.vehicle && (
-        <Card>
-          <CardHeader>
-            <h3 className="text-lg font-semibold text-text-primary">Selected Vehicle</h3>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-3 bg-surface-tertiary rounded-lg p-4">
-              <div className="w-12 h-12 rounded-full bg-brand-600 flex items-center justify-center">
-                <CarIcon className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h4 className="font-semibold text-text-primary">
-                  {formData.vehicle.year} {formData.vehicle.make} {formData.vehicle.model}
-                </h4>
-                <p className="text-sm text-text-secondary">
-                  {getSizeInfo(formData.vehicle.size).label} Vehicle • {formData.vehicle.color}
-                </p>
-                {formData.vehicle.registration && (
-                  <p className="text-sm text-text-muted">Reg: {formData.vehicle.registration}</p>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Navigation */}
       <div className="flex justify-between items-center pt-6">

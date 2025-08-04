@@ -144,12 +144,12 @@ export function AddressCard({
 
             {/* Quick Actions */}
             {showActions && (
-              <div className="flex gap-1">
+              <div className="flex gap-2">
                 <Button
                   variant="ghost"
-                  size="sm"
+                  size="md"
                   onClick={() => onEdit?.(address)}
-                  className="p-2"
+                  className="min-h-[44px] min-w-[44px] p-2 touch-manipulation flex items-center justify-center"
                 >
                   <Edit className="w-4 h-4" />
                 </Button>
@@ -270,13 +270,13 @@ export function AddressCard({
 
           {/* Actions */}
           {showActions && (
-            <div className="flex flex-row lg:flex-col gap-2 lg:min-w-[140px]">
+            <div className="flex flex-col sm:flex-row lg:flex-col gap-3 lg:min-w-[160px]">
               <Button
                 onClick={() => onEdit?.(address)}
                 variant="outline"
-                size="sm"
+                size="md"
                 leftIcon={<Edit className="w-4 h-4" />}
-                className="flex-1 lg:w-full"
+                className="w-full min-h-[44px] touch-manipulation"
               >
                 Edit Address
               </Button>
@@ -285,13 +285,13 @@ export function AddressCard({
                 <Button
                   onClick={handleSetDefault}
                   variant="outline"
-                  size="sm"
+                  size="md"
                   disabled={isSettingDefault}
                   leftIcon={isSettingDefault ? 
                     <div className="w-4 h-4 animate-spin rounded-full border-2 border-brand-400 border-t-transparent" /> :
                     <Star className="w-4 h-4" />
                   }
-                  className="flex-1 lg:w-full"
+                  className="w-full min-h-[44px] touch-manipulation"
                 >
                   {isSettingDefault ? 'Setting...' : 'Set Default'}
                 </Button>
@@ -300,13 +300,13 @@ export function AddressCard({
               <Button
                 onClick={handleDelete}
                 variant="outline"
-                size="sm"
+                size="md"
                 disabled={isDeleting || address.is_default}
                 leftIcon={isDeleting ? 
                   <div className="w-4 h-4 animate-spin rounded-full border-2 border-error-400 border-t-transparent" /> :
                   <Trash2 className="w-4 h-4" />
                 }
-                className="flex-1 lg:w-full text-error-600 hover:text-error-700 hover:border-error-300"
+                className="w-full min-h-[44px] touch-manipulation text-error-600 hover:text-error-700 hover:border-error-300"
               >
                 {isDeleting ? 'Deleting...' : 'Delete'}
               </Button>
