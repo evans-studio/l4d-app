@@ -274,7 +274,7 @@ function AdminBookingsContent() {
 
   return (
     <AdminLayout>
-      <div className="max-w-7xl mx-auto space-y-6">
+      <div className="w-full max-w-full mx-auto space-y-6 overflow-hidden">
         {/* Header - Mobile Optimized */}
         <div className="space-y-4">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -382,7 +382,7 @@ function AdminBookingsContent() {
               
               {/* Mobile Scrollable Tabs */}
               <div className="lg:hidden">
-                <div className="flex overflow-x-auto gap-2 pb-2" style={{scrollbarWidth: 'none', msOverflowStyle: 'none'}}>
+                <div className="flex overflow-x-auto gap-2 pb-2 -mx-4 px-4" style={{scrollbarWidth: 'none', msOverflowStyle: 'none'}}>
                   {[
                     { key: 'all', label: 'All', count: bookings.length },
                     { key: 'pending', label: 'Pending', count: bookings.filter(b => b.status === 'pending').length },
@@ -720,58 +720,58 @@ function BookingCard({ booking, onStatusUpdate, onConfirm, onDecline, onReschedu
   }
 
   return (
-    <Card className="hover:shadow-md transition-shadow">
-      <CardContent className="p-6">
+    <Card className="hover:shadow-md transition-shadow w-full min-w-0">
+      <CardContent className="p-4 sm:p-6 min-w-0">
         {/* Header */}
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex-1">
-            <h3 className="text-lg font-semibold text-text-primary mb-2">
+        <div className="flex items-start justify-between mb-4 gap-3 min-w-0">
+          <div className="flex-1 min-w-0">
+            <h3 className="text-lg font-semibold text-text-primary mb-2 truncate">
               #{booking.booking_reference}
             </h3>
             <StatusBadge status={booking.status} />
           </div>
-          <div className="text-right">
-            <p className="text-xl font-bold text-brand-500">£{booking.total_price}</p>
-            <p className="text-sm text-text-muted">
+          <div className="text-right flex-shrink-0">
+            <p className="text-xl font-bold text-brand-500 whitespace-nowrap">£{booking.total_price}</p>
+            <p className="text-sm text-text-muted whitespace-nowrap">
               {booking.services?.length || 0} service{(booking.services?.length || 0) !== 1 ? 's' : ''}
             </p>
           </div>
         </div>
 
         {/* Date & Time */}
-        <div className="flex items-center gap-4 mb-4 text-text-primary">
-          <div className="flex items-center gap-2">
-            <Calendar className="w-4 h-4 text-text-secondary" />
-            <span className="font-medium">{formatDate(booking.scheduled_date)}</span>
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mb-4 text-text-primary min-w-0">
+          <div className="flex items-center gap-2 min-w-0">
+            <Calendar className="w-4 h-4 text-text-secondary flex-shrink-0" />
+            <span className="font-medium truncate">{formatDate(booking.scheduled_date)}</span>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="font-medium">{formatTime(booking.start_time)}</span>
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="font-medium truncate">{formatTime(booking.start_time)}</span>
           </div>
         </div>
 
         {/* Customer & Vehicle Info - Mobile Optimized */}
-        <div className="space-y-4 sm:space-y-0 sm:grid sm:grid-cols-2 sm:gap-4 mb-4">
-          <div className="bg-surface-tertiary rounded-lg p-3">
+        <div className="space-y-3 sm:space-y-0 sm:grid sm:grid-cols-2 sm:gap-4 mb-4">
+          <div className="bg-surface-tertiary rounded-lg p-3 min-w-0">
             <p className="text-xs text-text-secondary mb-2 font-medium uppercase tracking-wide">Customer</p>
-            <div className="space-y-1">
-              <p className="font-semibold text-text-primary">{booking.customer_name}</p>
-              <p className="text-sm text-text-secondary break-all">{booking.customer_email}</p>
+            <div className="space-y-1 min-w-0">
+              <p className="font-semibold text-text-primary truncate">{booking.customer_name}</p>
+              <p className="text-sm text-text-secondary break-words line-clamp-1 sm:break-all">{booking.customer_email}</p>
               {booking.customer_phone && (
-                <p className="text-sm text-text-secondary">{booking.customer_phone}</p>
+                <p className="text-sm text-text-secondary break-words">{booking.customer_phone}</p>
               )}
             </div>
           </div>
-          <div className="bg-surface-tertiary rounded-lg p-3">
+          <div className="bg-surface-tertiary rounded-lg p-3 min-w-0">
             <p className="text-xs text-text-secondary mb-2 font-medium uppercase tracking-wide">Vehicle</p>
-            <div className="space-y-1">
-              <p className="font-semibold text-text-primary">
+            <div className="space-y-1 min-w-0">
+              <p className="font-semibold text-text-primary break-words line-clamp-1">
                 {booking.vehicle?.make && booking.vehicle?.model 
                   ? `${booking.vehicle.make} ${booking.vehicle.model}`
                   : 'No vehicle info'
                 }
               </p>
               {booking.vehicle?.year && (
-                <p className="text-sm text-text-secondary">
+                <p className="text-sm text-text-secondary break-words">
                   {booking.vehicle.year}{booking.vehicle?.color ? ` • ${booking.vehicle.color}` : ''}
                 </p>
               )}
@@ -780,15 +780,16 @@ function BookingCard({ booking, onStatusUpdate, onConfirm, onDecline, onReschedu
         </div>
 
         {/* Services */}
-        <div className="mb-4">
+        <div className="mb-4 min-w-0">
           <p className="text-xs text-text-secondary mb-2">Services</p>
-          <div className="flex flex-wrap gap-1">
+          <div className="flex flex-wrap gap-1 min-w-0">
             {booking.services?.map((service, index) => (
               <span
                 key={`${booking.id}-service-${index}-${service.name}`}
-                className="px-2 py-1 bg-surface-tertiary rounded text-xs text-text-primary"
+                className="px-2 py-1 bg-surface-tertiary rounded text-xs text-text-primary break-words max-w-full"
+                title={service.name}
               >
-                {service.name}
+                <span className="line-clamp-1">{service.name}</span>
               </span>
             )) || <span className="text-text-muted text-xs">No services</span>}
           </div>
@@ -796,9 +797,9 @@ function BookingCard({ booking, onStatusUpdate, onConfirm, onDecline, onReschedu
 
         {/* Special Instructions */}
         {booking.special_instructions && (
-          <div className="mb-4 p-3 bg-surface-tertiary rounded-md">
+          <div className="mb-4 p-3 bg-surface-tertiary rounded-md min-w-0">
             <p className="text-xs text-text-secondary mb-1">Special Instructions</p>
-            <p className="text-sm text-text-primary">{booking.special_instructions}</p>
+            <p className="text-sm text-text-primary break-words line-clamp-3">{booking.special_instructions}</p>
           </div>
         )}
 
