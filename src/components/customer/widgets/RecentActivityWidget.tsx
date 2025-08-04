@@ -116,8 +116,8 @@ export function RecentActivityWidget({ recentBookings }: RecentActivityWidgetPro
           </p>
           <Button
             onClick={() => router.push('/book')}
-            size="sm"
-            className="w-full min-h-[40px]"
+            size="md"
+            className="w-full min-h-[48px] touch-manipulation"
             fullWidth
           >
             Book Your First Service
@@ -146,7 +146,7 @@ export function RecentActivityWidget({ recentBookings }: RecentActivityWidgetPro
           )}
         </div>
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className="space-y-4">
         {displayBookings.map((booking) => {
           const config = statusConfig[booking.status] || statusConfig.pending
           const StatusIcon = config.icon
@@ -154,57 +154,62 @@ export function RecentActivityWidget({ recentBookings }: RecentActivityWidgetPro
           return (
             <div
               key={booking.id}
-              className="flex items-center gap-3 p-3 rounded-lg bg-surface-tertiary hover:bg-surface-secondary transition-colors cursor-pointer min-h-[60px] touch-manipulation"
+              className="flex flex-col gap-3 p-4 rounded-lg bg-surface-tertiary hover:bg-surface-secondary transition-colors cursor-pointer min-h-[80px] touch-manipulation"
               onClick={() => openOverlay({
                 type: 'booking-view',
                 data: { bookingId: booking.id, booking }
               })}
             >
-              {/* Status Icon */}
-              <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                config.color === 'brand' ? 'bg-brand-600/10' :
-                config.color === 'success' ? 'bg-success-600/10' :
-                config.color === 'warning' ? 'bg-warning-600/10' :
-                config.color === 'error' ? 'bg-error-600/10' :
-                'bg-surface-tertiary'
-              }`}>
-                <StatusIcon className={`w-4 h-4 ${
-                  config.color === 'brand' ? 'text-brand-400' :
-                  config.color === 'success' ? 'text-success-400' :
-                  config.color === 'warning' ? 'text-warning-400' :
-                  config.color === 'error' ? 'text-error-400' :
-                  'text-text-muted'
-                }`} />
-              </div>
+              {/* Header Row */}
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  {/* Status Icon */}
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                    config.color === 'brand' ? 'bg-brand-600/10' :
+                    config.color === 'success' ? 'bg-success-600/10' :
+                    config.color === 'warning' ? 'bg-warning-600/10' :
+                    config.color === 'error' ? 'bg-error-600/10' :
+                    'bg-surface-tertiary'
+                  }`}>
+                    <StatusIcon className={`w-5 h-5 ${
+                      config.color === 'brand' ? 'text-brand-400' :
+                      config.color === 'success' ? 'text-success-400' :
+                      config.color === 'warning' ? 'text-warning-400' :
+                      config.color === 'error' ? 'text-error-400' :
+                      'text-text-muted'
+                    }`} />
+                  </div>
+                  
+                  {/* Service Name */}
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-text-primary text-base truncate">
+                      {booking.service?.name || 'Service details pending'}
+                    </p>
+                  </div>
+                </div>
 
-              {/* Booking Details */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                  <p className="font-medium text-text-primary text-sm truncate">
-                    {booking.service?.name || 'Service details pending'}
-                  </p>
-                  <Badge 
-                    variant={config.color as any}
-                    size="sm"
-                  >
+                <div className="flex items-center gap-2">
+                  <Badge variant={config.color as any} size="sm">
                     {config.label}
                   </Badge>
-                </div>
-                <div className="flex items-center gap-2 text-xs text-text-secondary">
-                  <Car className="w-3 h-3" />
-                  <span>
-                    {booking.vehicle ? `${booking.vehicle.year || ''} ${booking.vehicle.make} ${booking.vehicle.model}`.trim() : 'Vehicle details pending'}
-                  </span>
-                  <span>•</span>
-                  <span>{formatDate(booking.scheduled_date)}</span>
+                  <p className="font-bold text-brand-600 text-lg">
+                    £{booking.total_price || 0}
+                  </p>
                 </div>
               </div>
 
-              {/* Price */}
-              <div className="text-right">
-                <p className="font-bold text-text-primary text-sm">
-                  £{booking.total_price || 0}
-                </p>
+              {/* Details Row */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pl-13">
+                <div className="flex items-center gap-2 text-text-secondary">
+                  <Car className="w-4 h-4 flex-shrink-0" />
+                  <span className="text-sm truncate">
+                    {booking.vehicle ? `${booking.vehicle.year || ''} ${booking.vehicle.make} ${booking.vehicle.model}`.trim() : 'Vehicle details pending'}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 text-text-secondary">
+                  <Calendar className="w-4 h-4 flex-shrink-0" />
+                  <span className="text-sm">{formatDate(booking.scheduled_date)}</span>
+                </div>
               </div>
             </div>
           )
@@ -216,7 +221,7 @@ export function RecentActivityWidget({ recentBookings }: RecentActivityWidgetPro
           <Button
             variant="outline"
             onClick={() => router.push('/dashboard/bookings')}
-            className="w-full min-h-[44px]"
+            className="w-full min-h-[48px] touch-manipulation"
             rightIcon={<ChevronRight className="w-4 h-4" />}
             fullWidth
           >
