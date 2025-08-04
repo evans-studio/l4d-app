@@ -367,31 +367,31 @@ export default function VehiclesPage() {
                   {/* Year */}
                   <Select
                     label="Year"
-                    required
+                    optional
                     placeholder="Select year"
                     options={availableYears.map(year => ({ value: year.toString(), label: year.toString() }))}
                     value={formData.year.toString()}
                     onChange={(e) => handleFormChange('year', parseInt(e.target.value))}
                     leftIcon={<Calendar className="w-4 h-4" />}
-                    helperText={!formData.model ? "Select a model first" : "Manufacturing year"}
+                    helperText={!formData.model ? "Select a model first" : "Manufacturing year (optional)"}
                     disabled={!formData.model}
                   />
 
                   {/* Color */}
                   <Input
                     label="Color"
-                    required
+                    optional
                     value={formData.color}
                     onChange={(e) => setFormData(prev => ({ ...prev, color: e.target.value }))}
                     placeholder="e.g., Black, White, Silver"
                     leftIcon={<Palette className="w-4 h-4" />}
-                    helperText="Primary vehicle color"
+                    helperText="Primary vehicle color (optional)"
                   />
 
                   {/* License Plate */}
                   <Input
                     label="License Plate"
-                    optional
+                    required
                     value={formData.license_plate}
                     onChange={(e) => setFormData(prev => ({ ...prev, license_plate: e.target.value }))}
                     placeholder="e.g., AB12 CDE"
