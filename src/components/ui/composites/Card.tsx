@@ -422,13 +422,33 @@ const CardGrid = React.forwardRef<HTMLDivElement, CardGridProps>(
       lg: 'gap-8',
     }[gap]
     
-    const gridClasses = cn(
-      'grid',
-      gapClasses,
-      `grid-cols-${columns.mobile || 1}`,
-      `sm:grid-cols-${columns.tablet || 2}`,
-      `md:grid-cols-${columns.desktop || 3}`
-    )
+    // Use predefined classes to avoid Tailwind purging issues
+    const getGridClasses = () => {
+      const mobileClass = {
+        1: 'grid-cols-1',
+        2: 'grid-cols-2', 
+        3: 'grid-cols-3',
+        4: 'grid-cols-4'
+      }[columns.mobile || 1] || 'grid-cols-1'
+      
+      const tabletClass = {
+        1: 'sm:grid-cols-1',
+        2: 'sm:grid-cols-2',
+        3: 'sm:grid-cols-3', 
+        4: 'sm:grid-cols-4'
+      }[columns.tablet || 2] || 'sm:grid-cols-2'
+      
+      const desktopClass = {
+        1: 'md:grid-cols-1',
+        2: 'md:grid-cols-2', 
+        3: 'md:grid-cols-3',
+        4: 'md:grid-cols-4'
+      }[columns.desktop || 3] || 'md:grid-cols-3'
+      
+      return cn('grid', gapClasses, mobileClass, tabletClass, desktopClass)
+    }
+    
+    const gridClasses = getGridClasses()
     
     return (
       <div

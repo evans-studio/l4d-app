@@ -275,7 +275,7 @@ function AdminBookingsContent() {
 
   return (
     <AdminLayout>
-      <Container size="2xl" className="space-y-6">
+      <Container size="2xl" padding="none" className="space-y-6">
         {/* Header - Mobile Optimized */}
         <div className="space-y-4">
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
@@ -731,9 +731,9 @@ function BookingCard({ booking, onStatusUpdate, onConfirm, onDecline, onReschedu
             </h3>
             <StatusBadge status={booking.status} />
           </div>
-          <div className="text-right flex-shrink-0">
-            <p className="text-xl font-bold text-brand-500 whitespace-nowrap">£{booking.total_price}</p>
-            <p className="text-sm text-text-muted whitespace-nowrap">
+          <div className="text-right flex-shrink-0 min-w-0">
+            <p className="text-xl font-bold text-brand-500 truncate">£{booking.total_price}</p>
+            <p className="text-sm text-text-muted truncate">
               {booking.services?.length || 0} service{(booking.services?.length || 0) !== 1 ? 's' : ''}
             </p>
           </div>
@@ -756,7 +756,7 @@ function BookingCard({ booking, onStatusUpdate, onConfirm, onDecline, onReschedu
             <p className="text-xs text-text-secondary mb-2 font-medium uppercase tracking-wide">Customer</p>
             <div className="space-y-1 min-w-0">
               <p className="font-semibold text-text-primary truncate">{booking.customer_name}</p>
-              <p className="text-sm text-text-secondary break-words line-clamp-1 sm:break-all">{booking.customer_email}</p>
+              <p className="text-sm text-text-secondary truncate">{booking.customer_email}</p>
               {booking.customer_phone && (
                 <p className="text-sm text-text-secondary break-words">{booking.customer_phone}</p>
               )}
@@ -765,14 +765,14 @@ function BookingCard({ booking, onStatusUpdate, onConfirm, onDecline, onReschedu
           <div className="bg-surface-tertiary rounded-lg p-3 min-w-0">
             <p className="text-xs text-text-secondary mb-2 font-medium uppercase tracking-wide">Vehicle</p>
             <div className="space-y-1 min-w-0">
-              <p className="font-semibold text-text-primary break-words line-clamp-1">
+              <p className="font-semibold text-text-primary truncate">
                 {booking.vehicle?.make && booking.vehicle?.model 
                   ? `${booking.vehicle.make} ${booking.vehicle.model}`
                   : 'No vehicle info'
                 }
               </p>
               {booking.vehicle?.year && (
-                <p className="text-sm text-text-secondary break-words">
+                <p className="text-sm text-text-secondary truncate">
                   {booking.vehicle.year}{booking.vehicle?.color ? ` • ${booking.vehicle.color}` : ''}
                 </p>
               )}
@@ -787,10 +787,10 @@ function BookingCard({ booking, onStatusUpdate, onConfirm, onDecline, onReschedu
             {booking.services?.map((service, index) => (
               <span
                 key={`${booking.id}-service-${index}-${service.name}`}
-                className="px-2 py-1 bg-surface-tertiary rounded text-xs text-text-primary break-words max-w-full"
+                className="px-2 py-1 bg-surface-tertiary rounded text-xs text-text-primary truncate max-w-full inline-block"
                 title={service.name}
               >
-                <span className="line-clamp-1">{service.name}</span>
+                {service.name}
               </span>
             )) || <span className="text-text-muted text-xs">No services</span>}
           </div>
@@ -800,7 +800,7 @@ function BookingCard({ booking, onStatusUpdate, onConfirm, onDecline, onReschedu
         {booking.special_instructions && (
           <div className="mb-4 p-3 bg-surface-tertiary rounded-md min-w-0">
             <p className="text-xs text-text-secondary mb-1">Special Instructions</p>
-            <p className="text-sm text-text-primary break-words line-clamp-3">{booking.special_instructions}</p>
+            <p className="text-sm text-text-primary break-words overflow-hidden">{booking.special_instructions}</p>
           </div>
         )}
 
