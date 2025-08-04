@@ -161,10 +161,10 @@ export function RecentActivityWidget({ recentBookings }: RecentActivityWidgetPro
               })}
             >
               {/* Header Row */}
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-3 flex-1 min-w-0">
                   {/* Status Icon */}
-                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
                     config.color === 'brand' ? 'bg-brand-600/10' :
                     config.color === 'success' ? 'bg-success-600/10' :
                     config.color === 'warning' ? 'bg-warning-600/10' :
@@ -180,19 +180,20 @@ export function RecentActivityWidget({ recentBookings }: RecentActivityWidgetPro
                     }`} />
                   </div>
                   
-                  {/* Service Name */}
+                  {/* Service Name & Status */}
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-text-primary text-base truncate">
+                    <p className="font-semibold text-text-primary text-base truncate mb-1">
                       {booking.service?.name || 'Service details pending'}
                     </p>
+                    <Badge variant={config.color as any} size="sm">
+                      {config.label}
+                    </Badge>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <Badge variant={config.color as any} size="sm">
-                    {config.label}
-                  </Badge>
-                  <p className="font-bold text-brand-600 text-lg">
+                {/* Price - Fixed Width */}
+                <div className="flex-shrink-0 text-right">
+                  <p className="font-bold text-brand-600 text-lg whitespace-nowrap">
                     £{booking.total_price || 0}
                   </p>
                 </div>
