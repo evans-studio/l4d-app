@@ -334,7 +334,7 @@ function AdminCustomersPage() {
                   placeholder="Search customers by name, email, or phone..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 bg-surface-primary border border-border-secondary rounded-md text-text-primary placeholder-text-muted focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-600/20"
+                  className="w-full pl-10 pr-4 py-3 min-h-[48px] bg-surface-primary border border-border-secondary rounded-md text-text-primary placeholder-text-muted focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-600/20 touch-manipulation"
                 />
               </div>
             </div>
@@ -344,7 +344,7 @@ function AdminCustomersPage() {
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="px-4 py-2 bg-surface-primary border border-border-secondary rounded-md text-text-primary focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-600/20"
+                className="px-4 py-3 min-h-[48px] bg-surface-primary border border-border-secondary rounded-md text-text-primary focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-600/20 touch-manipulation"
               >
                 <option value="all">All Status</option>
                 <option value="active">Active</option>
@@ -357,7 +357,7 @@ function AdminCustomersPage() {
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as 'name' | 'date' | 'spent' | 'bookings')}
-                className="px-4 py-2 bg-surface-primary border border-border-secondary rounded-md text-text-primary focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-600/20"
+                className="px-4 py-3 min-h-[48px] bg-surface-primary border border-border-secondary rounded-md text-text-primary focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-600/20 touch-manipulation"
               >
                 <option value="name">Sort by Name</option>
                 <option value="date">Sort by Date</option>
@@ -450,13 +450,13 @@ function AdminCustomersPage() {
                         <div className="flex gap-2">
                           <a
                             href={`tel:${customer.phone}`}
-                            className="flex-1 flex items-center justify-center p-2 border border-border-secondary rounded hover:bg-surface-hover transition-colors"
+                            className="flex-1 flex items-center justify-center p-3 min-h-[48px] border border-border-secondary rounded hover:bg-surface-hover transition-colors touch-manipulation"
                           >
                             <PhoneIcon className="w-4 h-4 text-text-secondary" />
                           </a>
                           <a
                             href={`mailto:${customer.email}`}
-                            className="flex-1 flex items-center justify-center p-2 border border-border-secondary rounded hover:bg-surface-hover transition-colors"
+                            className="flex-1 flex items-center justify-center p-3 min-h-[48px] border border-border-secondary rounded hover:bg-surface-hover transition-colors touch-manipulation"
                           >
                             <MailIcon className="w-4 h-4 text-text-secondary" />
                           </a>

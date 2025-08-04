@@ -220,9 +220,8 @@ function MobileWidgetCarousel({ stats, router }: MobileWidgetCarouselProps) {
               <Button 
                 onClick={() => router.push('/admin/bookings')}
                 variant="primary"
-                size="sm" 
-                className="w-full text-sm"
-                style={{ minHeight: '44px' }}
+                size="md" 
+                className="w-full min-h-[48px] touch-manipulation"
               >
                 Take Action
               </Button>
@@ -255,9 +254,8 @@ function MobileWidgetCarousel({ stats, router }: MobileWidgetCarouselProps) {
               <Button 
                 onClick={() => router.push('/admin/schedule')}
                 variant="outline" 
-                size="sm" 
-                className="w-full text-sm"
-                style={{ minHeight: '44px' }}
+                size="md" 
+                className="w-full min-h-[48px] touch-manipulation"
               >
                 View Schedule
               </Button>
@@ -298,9 +296,8 @@ function MobileWidgetCarousel({ stats, router }: MobileWidgetCarouselProps) {
               <Button 
                 onClick={() => router.push('/admin/schedule')}
                 variant="outline" 
-                size="sm" 
-                className="w-full text-sm"
-                style={{ minHeight: '44px' }}
+                size="md" 
+                className="w-full min-h-[48px] touch-manipulation"
               >
                 View Day
               </Button>
@@ -629,12 +626,12 @@ function AdminDashboard() {
                         <span className="text-blue-600 font-medium">{stats.requiresAction.toConfirm} to confirm</span>
                       </div>
                     )}
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                       <Button 
                         onClick={() => router.push('/admin/bookings')}
                         variant="primary"
-                        size="sm" 
-                        className="w-full text-xs"
+                        size="md" 
+                        className="w-full min-h-[48px] touch-manipulation"
                       >
                         Manage Bookings
                       </Button>
@@ -642,8 +639,8 @@ function AdminDashboard() {
                         <Button 
                           onClick={() => router.push('/admin/reschedule-requests')}
                           variant="outline"
-                          size="sm" 
-                          className="w-full text-xs"
+                          size="md" 
+                          className="w-full min-h-[48px] touch-manipulation"
                         >
                           View Reschedule Requests
                         </Button>
@@ -679,8 +676,8 @@ function AdminDashboard() {
                   <Button 
                     onClick={() => router.push('/admin/schedule')}
                     variant="outline" 
-                    size="sm" 
-                    className="w-full text-xs"
+                    size="md" 
+                    className="w-full min-h-[48px] touch-manipulation"
                   >
                     View Schedule
                   </Button>
@@ -721,8 +718,8 @@ function AdminDashboard() {
                   <Button 
                     onClick={() => router.push('/admin/schedule')}
                     variant="outline" 
-                    size="sm" 
-                    className="w-full text-xs"
+                    size="md" 
+                    className="w-full min-h-[48px] touch-manipulation"
                   >
                     View Day
                   </Button>
