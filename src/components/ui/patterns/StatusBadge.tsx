@@ -4,7 +4,7 @@ import { cva, type VariantProps } from 'class-variance-authority'
 import { Clock, CheckCircle, AlertCircle, XCircle, PlayCircle, Calendar } from 'lucide-react'
 
 const statusBadgeVariants = cva(
-  'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors',
+  'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors max-w-full min-w-0',
   {
     variants: {
       status: {
@@ -36,6 +36,7 @@ export interface StatusBadgeProps extends Omit<VariantProps<typeof statusBadgeVa
   status: 'draft' | 'pending' | 'confirmed' | 'rescheduled' | 'in_progress' | 'completed' | 'paid' | 'cancelled' | 'declined' | 'no_show' | string
   showIcon?: boolean
   className?: string
+  truncate?: boolean
 }
 
 const statusConfig = {
@@ -85,7 +86,8 @@ export function StatusBadge({
   status, 
   size = 'md', 
   showIcon = true, 
-  className = '' 
+  className = '',
+  truncate = true
 }: StatusBadgeProps) {
   const config = statusConfig[status as keyof typeof statusConfig]
   
@@ -98,10 +100,14 @@ export function StatusBadge({
   
   // Fallback for undefined or unknown status values
   if (!config) {
+    const fallbackText = status || 'Unknown'
     return (
-      <span className={statusBadgeVariants({ status: 'pending', size, className })}>
-        {showIcon && <AlertCircle className={iconSize} />}
-        {status || 'Unknown'}
+      <span 
+        className={statusBadgeVariants({ status: 'pending', size, className })}
+        title={fallbackText}
+      >
+        {showIcon && <AlertCircle className={`${iconSize} flex-shrink-0`} />}
+        <span className={truncate ? 'truncate' : ''}>{fallbackText}</span>
       </span>
     )
   }
@@ -109,9 +115,12 @@ export function StatusBadge({
   const Icon = config.icon
 
   return (
-    <span className={statusBadgeVariants({ status: status as any, size, className })}>
-      {showIcon && <Icon className={iconSize} />}
-      {config.label}
+    <span 
+      className={statusBadgeVariants({ status: status as any, size, className })}
+      title={config.label}
+    >
+      {showIcon && <Icon className={`${iconSize} flex-shrink-0`} />}
+      <span className={truncate ? 'truncate' : ''}>{config.label}</span>
     </span>
   )
 }
