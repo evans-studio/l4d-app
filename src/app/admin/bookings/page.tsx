@@ -17,6 +17,7 @@ import { StatusBadge } from '@/components/ui/patterns/StatusBadge'
 // Layout Components
 import { AdminLayout } from '@/components/layouts/AdminLayout'
 import { AdminRoute } from '@/components/ProtectedRoute'
+import { Container } from '@/components/layout/templates/PageLayout'
 import { TodaysSchedule } from '@/components/admin/TodaysSchedule'
 import { ConfirmBookingModal, DeclineBookingModal, RescheduleBookingModal, CancelBookingModal } from '@/components/admin/BookingActionModals'
 
@@ -274,7 +275,7 @@ function AdminBookingsContent() {
 
   return (
     <AdminLayout>
-      <div className="w-full max-w-full mx-auto space-y-6 overflow-hidden">
+      <Container size="2xl" className="space-y-6">
         {/* Header - Mobile Optimized */}
         <div className="space-y-4">
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
@@ -465,7 +466,7 @@ function AdminBookingsContent() {
             </div>
           </>
         )}
-      </div>
+      </Container>
 
       {/* Action Modals */}
       {confirmModal.booking && (
