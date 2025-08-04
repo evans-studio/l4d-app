@@ -277,7 +277,7 @@ function AdminBookingsContent() {
       <div className="w-full max-w-full mx-auto space-y-6 overflow-hidden">
         {/* Header - Mobile Optimized */}
         <div className="space-y-4">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold text-text-primary">Bookings</h1>
               <div className="flex items-center gap-2">
@@ -307,12 +307,12 @@ function AdminBookingsContent() {
               )}
             </div>
             
-            <div className="flex items-center gap-2 w-full sm:w-auto">
+            <div className="flex items-center gap-2 w-full md:w-auto">
               <Button
                 onClick={refreshBookings}
                 variant="outline"
                 size="sm"
-                className="flex-1 sm:flex-none min-h-[44px] touch-manipulation"
+                className="flex-1 md:flex-none min-h-[44px] touch-manipulation"
                 disabled={isLoading}
               >
                 <Search className="w-4 h-4 mr-2" />
@@ -322,7 +322,7 @@ function AdminBookingsContent() {
                 onClick={() => setViewMode(viewMode === 'today' ? 'all' : 'today')}
                 variant="outline"
                 size="sm"
-                className="flex-1 sm:flex-none min-h-[44px] touch-manipulation"
+                className="flex-1 md:flex-none min-h-[44px] touch-manipulation"
               >
                 <Calendar className="w-4 h-4 mr-2" />
                 <span className="hidden xs:inline">{viewMode === 'today' ? 'All Bookings' : "Today's Schedule"}</span>
@@ -332,7 +332,7 @@ function AdminBookingsContent() {
                 onClick={() => router.push('/admin')}
                 variant="outline"
                 size="sm"
-                className="flex-1 sm:flex-none min-h-[44px] touch-manipulation"
+                className="flex-1 md:flex-none min-h-[44px] touch-manipulation"
               >
                 <span className="hidden xs:inline">Dashboard</span>
                 <span className="xs:hidden">Home</span>
@@ -532,7 +532,7 @@ function BookingCard({ booking, onStatusUpdate, onConfirm, onDecline, onReschedu
         return (
           <div className="space-y-3">
             {/* Primary Actions */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
               <Button
                 onClick={onConfirm}
                 size="sm"
@@ -552,7 +552,7 @@ function BookingCard({ booking, onStatusUpdate, onConfirm, onDecline, onReschedu
               </Button>
             </div>
             {/* Secondary Actions */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
               <Button
                 onClick={onReschedule}
                 variant="outline"
@@ -587,7 +587,7 @@ function BookingCard({ booking, onStatusUpdate, onConfirm, onDecline, onReschedu
               Start Service
             </Button>
             {/* Secondary Actions */}
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
               <Button
                 onClick={onReschedule}
                 variant="outline"
@@ -622,7 +622,7 @@ function BookingCard({ booking, onStatusUpdate, onConfirm, onDecline, onReschedu
               Start Service
             </Button>
             {/* Secondary Actions */}
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
               <Button
                 onClick={onReschedule}
                 variant="outline"
@@ -630,8 +630,8 @@ function BookingCard({ booking, onStatusUpdate, onConfirm, onDecline, onReschedu
                 className="text-blue-600 border-blue-200 hover:bg-blue-50 min-h-[44px] touch-manipulation"
               >
                 <CalendarIcon className="w-4 h-4 mr-2" />
-                <span className="hidden xs:inline">Reschedule Again</span>
-                <span className="xs:hidden">Reschedule</span>
+                <span className="hidden md:inline">Reschedule Again</span>
+                <span className="md:hidden">Reschedule</span>
               </Button>
               <Button
                 onClick={onCancel}
@@ -739,7 +739,7 @@ function BookingCard({ booking, onStatusUpdate, onConfirm, onDecline, onReschedu
         </div>
 
         {/* Date & Time */}
-        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mb-4 text-text-primary min-w-0">
+        <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4 mb-4 text-text-primary min-w-0">
           <div className="flex items-center gap-2 min-w-0">
             <Calendar className="w-4 h-4 text-text-secondary flex-shrink-0" />
             <span className="font-medium truncate">{formatDate(booking.scheduled_date)}</span>
@@ -750,7 +750,7 @@ function BookingCard({ booking, onStatusUpdate, onConfirm, onDecline, onReschedu
         </div>
 
         {/* Customer & Vehicle Info - Mobile Optimized */}
-        <div className="space-y-3 sm:space-y-0 sm:grid sm:grid-cols-2 sm:gap-4 mb-4">
+        <div className="space-y-3 md:space-y-0 md:grid md:grid-cols-2 md:gap-4 mb-4">
           <div className="bg-surface-tertiary rounded-lg p-3 min-w-0">
             <p className="text-xs text-text-secondary mb-2 font-medium uppercase tracking-wide">Customer</p>
             <div className="space-y-1 min-w-0">
