@@ -94,7 +94,7 @@ export function StatusBadge({
     sm: 'w-3 h-3',
     md: 'w-3.5 h-3.5', 
     lg: 'w-4 h-4'
-  }[size] || 'w-3 h-3'
+  }[size || 'md'] || 'w-3 h-3'
   
   // Fallback for undefined or unknown status values
   if (!config) {
