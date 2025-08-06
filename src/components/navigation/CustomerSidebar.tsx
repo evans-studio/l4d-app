@@ -57,12 +57,6 @@ export function CustomerSidebar({ isOpen, onClose }: CustomerSidebarProps) {
       description: 'Manage service locations'
     },
     {
-      name: 'Account Settings',
-      href: '/dashboard/settings',
-      icon: UserIcon,
-      description: 'Profile & preferences'
-    },
-    {
       name: 'Help & Support',
       href: '/dashboard/support',
       icon: HelpCircleIcon,

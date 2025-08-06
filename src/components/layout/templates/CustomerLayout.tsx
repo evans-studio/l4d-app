@@ -9,7 +9,6 @@ import {
   Calendar, 
   Car, 
   MapPin, 
-  Settings,
   Plus
 } from 'lucide-react';
 import { Button } from '@/components/ui/primitives/Button';
@@ -40,11 +39,6 @@ const navigationItems = [
     name: 'My Addresses',
     href: '/dashboard/addresses',
     icon: MapPin,
-  },
-  {
-    name: 'Settings',
-    href: '/dashboard/settings',
-    icon: Settings,
   },
 ];
 
@@ -116,8 +110,8 @@ export const CustomerLayout: React.FC<CustomerLayoutProps> = ({ children }) => {
       {/* PWA Bottom Navigation - Enhanced for mobile-first thumb access */}
       <div className="lg:hidden bg-surface-secondary/95 backdrop-blur-md border-t border-border-secondary/50 fixed bottom-0 left-0 right-0 z-50">
         <div className="safe-area-inset-bottom">
-          <div className="grid grid-cols-5 gap-1 py-1 px-2">
-            {/* All navigation items in a 5-column grid */}
+          <div className="grid grid-cols-4 gap-1 py-1 px-2">
+            {/* All navigation items in a 4-column grid */}
             {navigationItems.map((item) => {
               const Icon = item.icon;
               const isActive = pathname === item.href || 

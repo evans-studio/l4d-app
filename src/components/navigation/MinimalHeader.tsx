@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useRouter, usePathname } from 'next/navigation'
 import { useAuth } from '@/lib/auth-compat'
 import { Button } from '@/components/ui/primitives/Button'
-import { Menu, X, User, Settings, LogOut, Home, Calendar, ChevronDown } from 'lucide-react'
+import { Menu, X, User, Settings, LogOut, Home, Calendar } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface MinimalHeaderProps {
@@ -24,7 +24,7 @@ const UserMenu: React.FC<{
   const router = useRouter()
   const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin'
 
-  const handleProfileClick = () => {
+  const handleSettingsClick = () => {
     router.push(isAdmin ? '/admin/settings' : '/dashboard/settings')
     setIsOpen(false)
   }
@@ -90,32 +90,21 @@ const UserMenu: React.FC<{
       {/* User Avatar Button */}
       <Button
         variant="ghost"
-        size="sm"
+        size="icon"
         onClick={() => {
           if (!isOpen) {
             calculateDropdownPosition()
           }
           setIsOpen(!isOpen)
         }}
-        className="flex items-center gap-2 px-2 py-1.5 hover:bg-surface-hover transition-colors min-h-[44px] touch-manipulation"
+        className="min-h-[44px] min-w-[44px] hover:bg-surface-hover transition-colors touch-manipulation"
         aria-expanded={isOpen}
         aria-haspopup="true"
       >
         {/* Avatar Circle */}
-        <div className="w-8 h-8 rounded-full bg-brand-600 text-white flex items-center justify-center text-sm font-medium">
+        <div className="w-8 h-8 rounded-full bg-brand-600 text-white flex items-center justify-center text-sm font-medium flex-shrink-0">
           {getInitials()}
         </div>
-        
-        {/* Name (desktop only) */}
-        <span className="hidden sm:block text-sm font-medium text-text-primary max-w-24 truncate">
-          {profile?.first_name || 'User'}
-        </span>
-        
-        {/* Dropdown Arrow */}
-        <ChevronDown className={cn(
-          "w-4 h-4 text-text-secondary transition-transform duration-200",
-          isOpen && "rotate-180"
-        )} />
       </Button>
 
       {/* Dropdown Menu */}
@@ -152,11 +141,11 @@ const UserMenu: React.FC<{
             </button>
             
             <button
-              onClick={handleProfileClick}
+              onClick={handleSettingsClick}
               className="w-full flex items-center gap-3 px-4 py-3 text-sm text-text-secondary hover:bg-surface-hover hover:text-text-primary transition-colors min-h-[44px] touch-manipulation"
             >
               <Settings className="w-4 h-4" />
-              Settings
+              Account Settings
             </button>
           </div>
 
@@ -273,14 +262,6 @@ const MobileMenu: React.FC<{
                 </Button>
                 
                 
-                <Button
-                  variant="ghost"
-                  onClick={() => handleNavigation(isAdmin ? '/admin/settings' : '/dashboard/settings')}
-                  className="w-full justify-start gap-3 min-h-[48px]"
-                >
-                  <Settings className="w-5 h-5" />
-                  Settings
-                </Button>
               </>
             ) : (
               // Unauthenticated Navigation
