@@ -14,8 +14,8 @@ import { MainLayout } from '@/components/layouts/MainLayout'
 
 // Import new homepage components
 import { HeroSection } from '@/components/home/HeroSection'
-import { WhatWeDoSection } from '@/components/home/WhatWeDoSection'
 import { DashboardPreview } from '@/components/home/DashboardPreview'
+import { HowItWorksSection } from '@/components/home/HowItWorksSection'
 import { FAQSection } from '@/components/home/FAQSection'
 import { ServiceAreaCheck } from '@/components/home/ServiceAreaCheck'
 
@@ -65,13 +65,9 @@ export default function HomePage() {
         <HeroSection />
       </div>
 
-      {/* New What We Do Section */}
-      <div className="relative z-10 bg-surface-primary">
-        <WhatWeDoSection />
-      </div>
 
       {/* Enhanced Services Section */}
-      <div id="services" className="relative z-10 bg-surface-primary">
+      <div id="services" className="relative z-10 mb-32">
         <Section background="transparent" padding="xl">
         <Container>
           <div className="text-center mb-16">
@@ -104,7 +100,7 @@ export default function HomePage() {
               ))}
             </GridLayout>
           ) : (
-            <GridLayout columns={{ default: 1, sm: 2, md: 3 }} gap="md" className="lg:gap-8">
+            <GridLayout columns={{ default: 1, sm: 2, md: 3 }} gap="lg" className="lg:gap-10">
               {services.slice(0, 3).map((service, index) => {
                 const isPopular = service.name.toLowerCase().includes('full valet') // Make Full Valet popular
                 const ServiceIcon = index === 0 ? Sparkles : index === 1 ? Palette : Shield
@@ -145,8 +141,17 @@ export default function HomePage() {
                         )}
                       </div>
                       <div className="flex items-center gap-2 mb-2">
-                        <Text size="sm" color="secondary">From</Text>
-                        <Text size="2xl" weight="bold" color="accent">£{service.basePrice}</Text>
+                        <Text size="sm" color="secondary">
+                          {service.basePrice === 0 ? 'Price:' : 'From'}
+                        </Text>
+                        <Text size="2xl" weight="bold" color="accent">
+                          {service.basePrice === 0 ? (
+                            // Check if this is a testing service or genuinely free
+                            service.name.toLowerCase().includes('test') 
+                              ? 'Test Service' 
+                              : 'Free'
+                          ) : `£${service.basePrice}`}
+                        </Text>
                       </div>
                     </CardContent>
                     <CardFooter>
@@ -169,27 +174,32 @@ export default function HomePage() {
       </div>
 
       {/* New Dashboard Preview Section */}
-      <div className="relative z-10 bg-surface-primary">
+      <div className="relative z-10">
         <DashboardPreview />
       </div>
 
+      {/* How It Works Section */}
+      <div className="relative z-10">
+        <HowItWorksSection />
+      </div>
+
       {/* New Service Area Check */}
-      <div className="relative z-10 bg-surface-primary">
+      <div className="relative z-10">
         <ServiceAreaCheck />
       </div>
 
       {/* New FAQ Section */}
-      <div className="relative z-10 bg-surface-primary">
+      <div className="relative z-10">
         <FAQSection />
       </div>
 
       {/* Final CTA Section */}
-      <div id="contact" className="relative z-10 bg-surface-primary">
+      <div id="contact" className="relative z-10">
         <Section background="transparent" padding="xl">
         <Container>
           <div className="text-center">
-            <Heading size="h2" align="center" className="mb-4">Ready to Transform Your Car?</Heading>
-            <Text size="xl" color="secondary" align="center" className="mb-8">Book your professional mobile detailing service today</Text>
+            <Heading size="h2" align="center" className="mb-4">Ready for Proper Car Care?</Heading>
+            <Text size="xl" color="secondary" align="center" className="mb-8">Join customers across South London who trust Love 4 Detailing</Text>
             <div className="flex flex-col sm:flex-row gap-4 justify-center max-w-sm sm:max-w-none mx-auto">
               <Link href="/book" className="w-full sm:w-auto">
                 <Button 

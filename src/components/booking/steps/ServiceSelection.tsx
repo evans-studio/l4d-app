@@ -28,6 +28,7 @@ export function ServiceSelection(): React.JSX.Element {
     formData.service?.serviceId || null
   )
   const [servicesWithPricing, setServicesWithPricing] = useState<any[]>([])
+  const [localLoading, setLocalLoading] = useState(true)
 
   // Set hydration flag after component mounts
   useEffect(() => {
@@ -38,6 +39,8 @@ export function ServiceSelection(): React.JSX.Element {
   useEffect(() => {
     const loadData = async () => {
       try {
+        setLocalLoading(true)
+        
         // Load services with pricing information
         const servicesResponse = await fetch('/api/services')
         if (servicesResponse.ok) {
@@ -51,6 +54,8 @@ export function ServiceSelection(): React.JSX.Element {
         await loadAvailableServices()
       } catch (error) {
         console.error('Error loading services:', error)
+      } finally {
+        setLocalLoading(false)
       }
     }
 
@@ -121,14 +126,15 @@ export function ServiceSelection(): React.JSX.Element {
 
       {/* Services Grid - Mobile First Responsive */}
       <div className="px-4 sm:px-0">
-        {isLoading ? (
+        {isLoading || localLoading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {[...Array(3)].map((_, i) => (
               <Card key={i} className="animate-pulse">
-                <CardContent>
-                  <div className="h-4 bg-surface-tertiary rounded mb-4"></div>
+                <CardContent className="p-4 sm:p-6">
+                  <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-surface-tertiary mx-auto mb-4"></div>
+                  <div className="h-4 bg-surface-tertiary rounded mb-2"></div>
                   <div className="h-3 bg-surface-tertiary rounded mb-2"></div>
-                  <div className="h-3 bg-surface-tertiary rounded w-2/3 mb-4"></div>
+                  <div className="h-3 bg-surface-tertiary rounded w-2/3 mb-4 mx-auto"></div>
                   <div className="h-8 bg-surface-tertiary rounded"></div>
                 </CardContent>
               </Card>
@@ -137,7 +143,7 @@ export function ServiceSelection(): React.JSX.Element {
         ) : servicesToDisplay.length === 0 ? (
           <div className="text-center py-8">
             <p className="text-text-secondary">
-              {isLoading ? 'Loading services...' : 'No services available.'}
+              No services available.
             </p>
           </div>
         ) : (
@@ -146,7 +152,7 @@ export function ServiceSelection(): React.JSX.Element {
               const isSelected = selectedService === service.id;
               const serviceName = service.name.toLowerCase();
               const isPremium = serviceName.includes('full') || serviceName.includes('complete') || serviceName.includes('premium');
-              const hasValidPricing = service.priceRange && service.priceRange.min && service.priceRange.max;
+              const hasValidPricing = service.priceRange && service.priceRange.min !== null && service.priceRange.min !== undefined && service.priceRange.max !== null && service.priceRange.max !== undefined;
               
               return (
                 <Card
@@ -205,7 +211,7 @@ export function ServiceSelection(): React.JSX.Element {
                   <CardContent className="p-4 sm:p-6 pt-0">
                     <div className="text-center space-y-2">
                       {/* Dynamic Price Display */}
-                      {service.priceRange && service.priceRange.min && service.priceRange.max ? (
+                      {service.priceRange && service.priceRange.min !== null && service.priceRange.min !== undefined && service.priceRange.max !== null && service.priceRange.max !== undefined ? (
                         service.priceRange.min !== service.priceRange.max ? (
                           <div className="space-y-1">
                             <div className="text-lg sm:text-xl font-bold text-brand-400">
@@ -287,7 +293,7 @@ export function ServiceSelection(): React.JSX.Element {
             rightIcon={<ChevronRightIcon className="w-4 h-4" />}
             className="min-h-[48px]"
           >
-            Continue to Service Location
+            Continue
           </Button>
           <Button
             variant="outline"
@@ -296,7 +302,7 @@ export function ServiceSelection(): React.JSX.Element {
             fullWidth
             className="min-h-[48px]"
           >
-            Back to Vehicle Details
+            Back
           </Button>
         </div>
         
@@ -307,7 +313,7 @@ export function ServiceSelection(): React.JSX.Element {
             onClick={previousStep}
             leftIcon={<ChevronLeftIcon className="w-4 h-4" />}
           >
-            Back to Vehicle Details
+            Back
           </Button>
           
           <Button
@@ -316,7 +322,7 @@ export function ServiceSelection(): React.JSX.Element {
             size="lg"
             rightIcon={<ChevronRightIcon className="w-4 h-4" />}
           >
-            Continue to Service Location
+            Continue
           </Button>
         </div>
       </div>

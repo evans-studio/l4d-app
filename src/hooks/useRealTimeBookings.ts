@@ -15,7 +15,8 @@ export interface AdminBooking {
   customer_phone?: string
   scheduled_date: string
   start_time: string
-  status: 'pending' | 'confirmed' | 'rescheduled' | 'in_progress' | 'completed' | 'cancelled' | 'declined'
+  status: 'pending' | 'processing' | 'payment_failed' | 'confirmed' | 'rescheduled' | 'in_progress' | 'completed' | 'declined' | 'cancelled' | 'no_show'
+  payment_status?: 'pending' | 'paid' | 'failed' | 'refunded'
   total_price: number
   special_instructions?: string
   services: Array<{
@@ -34,6 +35,8 @@ export interface AdminBooking {
     postal_code: string
   }
   created_at: string
+  payment_link?: string
+  payment_deadline?: string
 }
 
 interface UseRealTimeBookingsOptions {
@@ -217,12 +220,17 @@ export function useRealTimeBookings({
 
       const { data: updatedBooking } = await response.json()
       
-      // Update with server response
+      // Update with server response, merging with current booking data to prevent blank cards
       setBookings(currentBookings => 
         currentBookings.map(booking => 
-          booking.id === bookingId ? updatedBooking : booking
+          booking.id === bookingId 
+            ? { ...booking, ...updatedBooking.booking || updatedBooking }
+            : booking
         )
       )
+
+      // Trigger immediate refresh to sync with server
+      setTimeout(() => fetchBookings(false), 100)
 
       return true
     } catch (err) {
@@ -233,7 +241,7 @@ export function useRealTimeBookings({
       setError(errorMessage)
       return false
     }
-  }, [bookings])
+  }, [bookings, fetchBookings])
 
   /**
    * Confirm a booking
@@ -269,12 +277,17 @@ export function useRealTimeBookings({
 
       const { data: updatedBooking } = await response.json()
       
-      // Update with server response
+      // Update with server response, merging with current booking data to prevent blank cards
       setBookings(currentBookings => 
         currentBookings.map(booking => 
-          booking.id === bookingId ? updatedBooking : booking
+          booking.id === bookingId 
+            ? { ...booking, ...updatedBooking.booking || updatedBooking }
+            : booking
         )
       )
+
+      // Trigger immediate refresh to sync with server
+      setTimeout(() => fetchBookings(false), 100)
 
       return true
     } catch (err) {
@@ -285,7 +298,7 @@ export function useRealTimeBookings({
       setError(errorMessage)
       return false
     }
-  }, [bookings])
+  }, [bookings, fetchBookings])
 
   /**
    * Cancel a booking
@@ -321,12 +334,17 @@ export function useRealTimeBookings({
 
       const { data: updatedBooking } = await response.json()
       
-      // Update with server response
+      // Update with server response, merging with current booking data to prevent blank cards
       setBookings(currentBookings => 
         currentBookings.map(booking => 
-          booking.id === bookingId ? updatedBooking : booking
+          booking.id === bookingId 
+            ? { ...booking, ...updatedBooking.booking || updatedBooking }
+            : booking
         )
       )
+
+      // Trigger immediate refresh to sync with server
+      setTimeout(() => fetchBookings(false), 100)
 
       return true
     } catch (err) {
@@ -337,7 +355,7 @@ export function useRealTimeBookings({
       setError(errorMessage)
       return false
     }
-  }, [bookings])
+  }, [bookings, fetchBookings])
 
   /**
    * Reschedule a booking
@@ -378,12 +396,17 @@ export function useRealTimeBookings({
 
       const { data: updatedBooking } = await response.json()
       
-      // Update with server response
+      // Update with server response, merging with current booking data to prevent blank cards
       setBookings(currentBookings => 
         currentBookings.map(booking => 
-          booking.id === bookingId ? updatedBooking : booking
+          booking.id === bookingId 
+            ? { ...booking, ...updatedBooking.booking || updatedBooking }
+            : booking
         )
       )
+
+      // Trigger immediate refresh to sync with server
+      setTimeout(() => fetchBookings(false), 100)
 
       return true
     } catch (err) {
@@ -394,7 +417,7 @@ export function useRealTimeBookings({
       setError(errorMessage)
       return false
     }
-  }, [bookings])
+  }, [bookings, fetchBookings])
 
   /**
    * Get booking by ID
@@ -508,10 +531,15 @@ export function useBookingMetrics(bookings: AdminBooking[]) {
   const [metrics, setMetrics] = useState({
     totalBookings: 0,
     pendingBookings: 0,
+    processingBookings: 0,
+    paymentFailedBookings: 0,
     confirmedBookings: 0,
     completedBookings: 0,
     cancelledBookings: 0,
+    declinedBookings: 0,
+    noShowBookings: 0,
     totalRevenue: 0,
+    pendingRevenue: 0,
     todaysBookings: 0,
     weeklyBookings: 0,
     monthlyBookings: 0
@@ -531,11 +559,18 @@ export function useBookingMetrics(bookings: AdminBooking[]) {
     const newMetrics = {
       totalBookings: bookings.length,
       pendingBookings: bookings.filter(b => b.status === 'pending').length,
+      processingBookings: bookings.filter(b => b.status === 'processing').length,
+      paymentFailedBookings: bookings.filter(b => b.status === 'payment_failed').length,
       confirmedBookings: bookings.filter(b => b.status === 'confirmed').length,
       completedBookings: bookings.filter(b => b.status === 'completed').length,
       cancelledBookings: bookings.filter(b => b.status === 'cancelled').length,
+      declinedBookings: bookings.filter(b => b.status === 'declined').length,
+      noShowBookings: bookings.filter(b => b.status === 'no_show').length,
       totalRevenue: bookings
         .filter(b => b.status === 'completed')
+        .reduce((sum, b) => sum + b.total_price, 0),
+      pendingRevenue: bookings
+        .filter(b => ['pending', 'processing', 'confirmed', 'rescheduled', 'in_progress'].includes(b.status))
         .reduce((sum, b) => sum + b.total_price, 0),
       todaysBookings: bookings.filter(b => b.scheduled_date === today).length,
       weeklyBookings: bookings.filter(b => b.scheduled_date >= weekStart).length,

@@ -5,16 +5,21 @@ import { BookingService } from '@/lib/services/booking'
 import { z } from 'zod'
 
 const statusUpdateSchema = z.object({
-  status: z.enum(['pending', 'confirmed', 'in_progress', 'completed', 'cancelled'])
+  status: z.enum(['pending', 'processing', 'payment_failed', 'confirmed', 'rescheduled', 'in_progress', 'completed', 'declined', 'cancelled', 'no_show'])
 })
 
 function getStatusMessage(status: string): string {
   const messages = {
-    pending: 'Your booking is pending confirmation.',
+    pending: 'Your booking has been received and is being reviewed.',
+    processing: 'Your booking is currently being processed. Please complete payment to confirm.',
+    payment_failed: 'Payment was unsuccessful. Please try again or contact us for assistance.',
     confirmed: 'Your booking has been confirmed! We look forward to servicing your vehicle.',
+    rescheduled: 'Your booking has been rescheduled. Check your email for the new details.',
     in_progress: 'Our team has started working on your vehicle.',
     completed: 'Your vehicle detailing service has been completed!',
-    cancelled: 'Your booking has been cancelled. If you have any questions, please contact us.'
+    declined: 'Your booking request has been declined. We will contact you with alternative options.',
+    cancelled: 'Your booking has been cancelled. If you have any questions, please contact us.',
+    no_show: 'We were unable to complete your booking due to customer unavailability.'
   }
   return messages[status as keyof typeof messages] || 'Your booking status has been updated.'
 }

@@ -78,7 +78,6 @@ export const useAuthStore = create<AuthState>()(
       setUser: (user) => set({ user }),
       setProfile: (profile) => set({ profile }),
       setLoading: (isLoading) => {
-        console.log('🔄 Auth loading state changed:', isLoading)
         set({ isLoading })
       },
       setError: (error) => {
@@ -89,7 +88,7 @@ export const useAuthStore = create<AuthState>()(
       // Profile operations
       fetchProfile: async (userId: string) => {
         try {
-          console.log('🔵 Fetching profile for user via API:', userId)
+          
           
           const response = await fetch(`/api/auth/profile?userId=${userId}`, {
             credentials: 'include',
@@ -98,7 +97,7 @@ export const useAuthStore = create<AuthState>()(
             }
           })
           
-          console.log('🔵 Profile API response status:', response.status)
+          
           
           const result = await response.json()
           
@@ -106,7 +105,7 @@ export const useAuthStore = create<AuthState>()(
             console.error('🔴 Profile fetch API error:', result.error)
             
             if (result.error.code === 'PROFILE_NOT_FOUND') {
-              console.log('🟡 Profile not found, will need to create one')
+              
               set({ error: null }) // Don't set this as an error
               return null
             }
@@ -115,7 +114,7 @@ export const useAuthStore = create<AuthState>()(
             return null
           }
 
-          console.log('🟢 Profile fetched successfully via API:', result.data)
+           
           set({ profile: result.data, error: null })
           return result.data
         } catch (error) {
@@ -127,7 +126,7 @@ export const useAuthStore = create<AuthState>()(
       
       createProfile: async (userId: string, email: string, firstName?: string, lastName?: string, phone?: string) => {
         try {
-          console.log('Creating profile via API:', { userId, email, firstName, lastName, phone })
+          
           
           const response = await fetch('/api/auth/profile', {
             method: 'POST',
@@ -143,7 +142,7 @@ export const useAuthStore = create<AuthState>()(
             return null
           }
           
-          console.log('Profile created successfully via API:', result.data)
+          
           set({ profile: result.data })
           return result.data
         } catch (error) {
@@ -179,17 +178,17 @@ export const useAuthStore = create<AuthState>()(
           const { data, error } = await Promise.race([loginPromise, timeoutPromise]) as any
 
           if (error) {
-            console.error('🔴 Auth login error:', error)
+          console.error('🔴 Auth login error:', error)
             set({ isLoading: false, error: error.message })
             return { success: false, error: error.message }
           }
 
           if (data.user) {
-            console.log('🟢 Login successful, setting user:', data.user.id, data.user.email)
+            
             set({ user: data.user })
             
             // Fetch or create profile with timeout
-            console.log('🔵 Fetching profile for user:', data.user.id)
+            
             
             try {
               let profile = await Promise.race([
@@ -198,7 +197,7 @@ export const useAuthStore = create<AuthState>()(
               ]) as any
               
               if (!profile) {
-                console.log('🔵 Profile not found, creating new profile')
+                
                 profile = await Promise.race([
                   get().createProfile(
                     data.user.id,
@@ -211,12 +210,7 @@ export const useAuthStore = create<AuthState>()(
                 ]) as any
               }
               
-              console.log('🟢 Login method complete, final state:', {
-                hasUser: !!get().user,
-                hasProfile: !!get().profile,
-                profileRole: get().profile?.role,
-                isAuthenticated: !!get().user && !!get().profile
-              })
+              
               
             } catch (profileError) {
               console.error('🔴 Profile operation failed:', profileError)
@@ -232,7 +226,7 @@ export const useAuthStore = create<AuthState>()(
           set({ isLoading: false, error: 'Login failed' })
           return { success: false, error: 'Login failed' }
         } catch (error) {
-          console.error('🔴 Login exception:', error)
+           console.error('🔴 Login exception:', error)
           set({ isLoading: false, error: error instanceof Error && error.message === 'Login timeout' 
             ? 'Login is taking too long. Please try again.' 
             : 'Network error. Please try again.' })
@@ -244,7 +238,7 @@ export const useAuthStore = create<AuthState>()(
       
       register: async (email: string, password: string, firstName: string, lastName: string, phone?: string) => {
         try {
-          console.log('🔵 Starting registration process for:', email)
+          
           set({ isLoading: true, error: null })
           
           const { data: authData, error: authError } = await supabase.auth.signUp({
@@ -259,17 +253,7 @@ export const useAuthStore = create<AuthState>()(
             }
           })
 
-          console.log('🔍 Registration Response Debug:', {
-            hasUser: !!authData.user,
-            userId: authData.user?.id,
-            email: authData.user?.email,
-            email_confirmed_at: authData.user?.email_confirmed_at,
-            created_at: authData.user?.created_at,
-            isEmailConfirmed: !!authData.user?.email_confirmed_at,
-            hasSession: !!authData.session,
-            sessionAccessToken: authData.session ? 'present' : 'null',
-            authError: authError?.message || 'none'
-          })
+          
 
           if (authError) {
             console.error('🔴 Registration auth error:', authError)
@@ -284,19 +268,10 @@ export const useAuthStore = create<AuthState>()(
           }
 
           // Log the exact user state after registration
-          console.log('🔍 User created with details:', {
-            id: authData.user.id,
-            email: authData.user.email,
-            email_confirmed_at: authData.user.email_confirmed_at,
-            created_at: authData.user.created_at,
-            role: authData.user.role,
-            app_metadata: authData.user.app_metadata,
-            user_metadata: authData.user.user_metadata,
-            identities: authData.user.identities?.length || 0
-          })
+          
 
           // Store user metadata for profile creation after email verification
-          console.log('🔵 Storing user metadata for post-verification profile creation')
+          
           const userMetadata = {
             first_name: firstName,
             last_name: lastName,
@@ -305,24 +280,18 @@ export const useAuthStore = create<AuthState>()(
           }
 
           // Check if email confirmation is immediately set (indicates disabled confirmation)
-          if (authData.user.email_confirmed_at) {
-            console.log('🚨 WARNING: email_confirmed_at is SET immediately after registration!')
-            console.log('🚨 This suggests Supabase email confirmation is DISABLED in project settings')
-            console.log('🚨 User will be auto-authenticated without email verification')
-          } else {
-            console.log('✅ email_confirmed_at is NULL - email verification required as expected')
-          }
+          
 
           // Don't create profile during registration - wait for email verification
           // Profile will be created in AuthProvider when email is confirmed
-          console.log('🔵 Registration complete - user must verify email before profile creation')
+          
           set({ isLoading: false, user: null, profile: null })
           return {
             success: true,
             error: 'Registration successful! Please check your email to verify your account.'
           }
         } catch (error) {
-          console.error('🔴 Registration exception:', error)
+            console.error('🔴 Registration exception:', error)
           set({ isLoading: false, error: 'Network error' })
           return { success: false, error: 'Network error. Please try again.' }
         }
@@ -349,20 +318,20 @@ export const useAuthStore = create<AuthState>()(
       // Session management
       initializeAuth: async () => {
         try {
-          console.log('🔄 Initializing auth state...')
+          
           set({ isLoading: true })
           
           const { data: { session } } = await supabase.auth.getSession()
           
           if (session?.user && session.user.email_confirmed_at) {
-            console.log('✅ Found verified user session during init:', session.user.id)
+            
             set({ user: session.user })
             
             try {
               let profile = await get().fetchProfile(session.user.id)
               
               if (!profile && session.user.email) {
-                console.log('📝 Creating profile during auth init for verified user')
+                
                 profile = await get().createProfile(
                   session.user.id,
                   session.user.email,
@@ -372,17 +341,13 @@ export const useAuthStore = create<AuthState>()(
                 )
               }
               
-              console.log('🔄 Auth initialization complete:', {
-                hasUser: !!get().user,
-                hasProfile: !!get().profile,
-                isAuthenticated: !!get().user && !!get().profile
-              })
+              
             } catch (profileError) {
               console.error('❌ Profile operations failed during init:', profileError)
               // Keep user authenticated even if profile operations fail
             }
           } else {
-            console.log('❌ No verified user session found during init')
+            
             // Clear state for unverified users
             set({ user: null, profile: null })
           }
@@ -396,15 +361,15 @@ export const useAuthStore = create<AuthState>()(
       
       checkAuthState: async () => {
         try {
-          console.log('🔍 Checking current auth state...')
+          
           const { data: { session } } = await supabase.auth.getSession()
           
           if (session?.user && session.user.email_confirmed_at) {
-            console.log('✅ Found verified user in auth check:', session.user.id)
+            
             set({ user: session.user })
             await get().fetchProfile(session.user.id)
           } else {
-            console.log('❌ No verified user found in auth check')
+            
             set({ user: null, profile: null })
           }
         } catch (error) {

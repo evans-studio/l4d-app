@@ -5,7 +5,7 @@ import { useBookingFlowStore, useBookingStep } from '@/lib/store/bookingFlowStor
 import { Button } from '@/components/ui/primitives/Button'
 import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/composites/Card'
 import { ChevronLeftIcon, ChevronRightIcon, CalendarIcon, ClockIcon, CheckCircleIcon, AlertCircleIcon } from 'lucide-react'
-import { addDays, format, startOfWeek, endOfWeek, isSameDay, isAfter, startOfDay } from 'date-fns'
+import { addDays, format, startOfWeek, endOfWeek, isSameDay, isAfter, startOfDay, startOfMonth, endOfMonth, addMonths, isSameMonth } from 'date-fns'
 
 export function TimeSlotSelection() {
   const {
@@ -26,9 +26,11 @@ export function TimeSlotSelection() {
     formData.slot?.slot_date || format(addDays(new Date(), 1), 'yyyy-MM-dd')
   )
   
-  const [currentWeekStart, setCurrentWeekStart] = useState<Date>(
-    startOfWeek(new Date(), { weekStartsOn: 1 }) // Monday start
-  )
+  const [currentMonth, setCurrentMonth] = useState<Date>(() => {
+    // Start from next month for booking (users can't book same day)
+    const today = new Date()
+    return startOfMonth(addDays(today, 1))
+  })
 
   const [timeSlots, setTimeSlots] = useState<any[]>([])
   const [slotsLoading, setSlotsLoading] = useState(false)
@@ -65,26 +67,35 @@ export function TimeSlotSelection() {
     }
   }, [isCurrentStep, selectedDate])
 
-  // Generate calendar weeks
+  // Generate standard calendar month view (6 weeks to accommodate all months)
   const generateCalendarWeeks = () => {
     const weeks = []
     const today = startOfDay(new Date())
+    const monthStart = startOfMonth(currentMonth)
+    const monthEnd = endOfMonth(currentMonth)
     
-    for (let week = 0; week < 4; week++) {
-      const weekStart = addDays(currentWeekStart, week * 7)
-      const weekEnd = endOfWeek(weekStart, { weekStartsOn: 1 })
+    // Start from the Monday of the week containing the first day of the month
+    const calendarStart = startOfWeek(monthStart, { weekStartsOn: 1 })
+    
+    // Generate 6 weeks to ensure we always show complete month
+    for (let week = 0; week < 6; week++) {
+      const weekStart = addDays(calendarStart, week * 7)
       const days = []
       
       for (let day = 0; day < 7; day++) {
         const currentDay = addDays(weekStart, day)
         const dayString = format(currentDay, 'yyyy-MM-dd')
         const isPast = !isAfter(currentDay, today) && !isSameDay(currentDay, today)
+        const isCurrentMonth = isSameMonth(currentDay, currentMonth)
+        const isToday = isSameDay(currentDay, today)
         
         days.push({
           date: currentDay,
           dateString: dayString,
           isPast,
           isSelected: dayString === selectedDate,
+          isCurrentMonth, // Track if date belongs to current viewing month
+          isToday,
           hasSlots: false // We'll update this with real data
         })
       }
@@ -166,9 +177,19 @@ export function TimeSlotSelection() {
     return format(date, 'EEEE, MMMM d')
   }
 
-  const navigateWeek = (direction: 'prev' | 'next') => {
-    const change = direction === 'next' ? 7 : -7
-    setCurrentWeekStart(prev => addDays(prev, change))
+  const navigateMonth = (direction: 'prev' | 'next') => {
+    setCurrentMonth(prev => {
+      const newMonth = addMonths(prev, direction === 'next' ? 1 : -1)
+      // Don't allow navigation to months in the past
+      const today = new Date()
+      const currentMonthStart = startOfMonth(today)
+      
+      if (direction === 'prev' && newMonth < currentMonthStart) {
+        return currentMonthStart // Don't go before current month
+      }
+      
+      return newMonth
+    })
   }
 
   if (!isCurrentStep) {
@@ -226,26 +247,48 @@ export function TimeSlotSelection() {
 
       {/* Calendar View */}
         <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-text-primary">Select Date</h3>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => navigateWeek('prev')}
-                  leftIcon={<ChevronLeftIcon className="w-4 h-4" />}
-                >
-                  Previous
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => navigateWeek('next')}
-                  rightIcon={<ChevronRightIcon className="w-4 h-4" />}
-                >
-                  Next
-                </Button>
+          <CardHeader className="pb-4">
+            {/* Mobile-First Responsive Header */}
+            <div className="space-y-4 sm:space-y-3">
+              {/* Section Title */}
+              <div className="text-center sm:text-left">
+                <h3 className="text-xl sm:text-lg font-semibold text-text-primary">Select Date</h3>
+              </div>
+              
+              {/* Month Navigation - Mobile Centered, Desktop Justified */}
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                {/* Month Display */}
+                <div className="flex items-center justify-center sm:justify-start">
+                  <h4 className="text-2xl sm:text-xl font-bold text-text-primary">
+                    {format(currentMonth, 'MMMM yyyy')}
+                  </h4>
+                </div>
+                
+                {/* Navigation Buttons */}
+                <div className="flex items-center justify-center gap-3 sm:gap-2">
+                  <Button
+                    variant="outline"
+                    size="md"
+                    onClick={() => navigateMonth('prev')}
+                    disabled={isSameMonth(currentMonth, new Date())}
+                    leftIcon={<ChevronLeftIcon className="w-4 h-4" />}
+                    className="whitespace-nowrap min-w-[120px] min-h-[44px] touch-manipulation sm:min-w-[40px] sm:min-h-[36px]"
+                    aria-label="Previous month"
+                  >
+                    <span className="sm:hidden">Previous</span>
+                  </Button>
+                  <Button
+                    variant="outline" 
+                    size="md"
+                    onClick={() => navigateMonth('next')}
+                    disabled={isSameMonth(currentMonth, new Date())}
+                    rightIcon={<ChevronRightIcon className="w-4 h-4" />}
+                    className="whitespace-nowrap min-w-[120px] min-h-[44px] touch-manipulation sm:min-w-[40px] sm:min-h-[36px]"
+                    aria-label="Next month"
+                  >
+                    <span className="sm:hidden">Next</span>
+                  </Button>
+                </div>
               </div>
             </div>
           </CardHeader>
@@ -270,24 +313,33 @@ export function TimeSlotSelection() {
                   {week.map((day, dayIndex) => (
                     <button
                       key={dayIndex}
-                      onClick={() => !day.isPast && handleDateSelect(day.dateString)}
-                      disabled={day.isPast}
+                      onClick={() => !day.isPast && day.isCurrentMonth && handleDateSelect(day.dateString)}
+                      disabled={day.isPast || !day.isCurrentMonth}
                       className={`
-                        p-3 rounded-lg text-center transition-all duration-200 border
-                        ${day.isPast 
-                          ? 'bg-surface-tertiary text-text-muted border-border-secondary cursor-not-allowed' 
-                          : day.isSelected
-                            ? 'bg-brand-600 text-white border-brand-600 shadow-purple-lg'
-                            : 'bg-surface-secondary border-border-secondary hover:border-brand-400 hover:bg-brand-600/5'
+                        min-h-[80px] p-4 rounded-lg transition-all duration-200 border
+                        flex flex-col items-center justify-center gap-1 touch-manipulation
+                        ${!day.isCurrentMonth
+                          ? 'bg-surface-tertiary/50 text-text-muted/50 border-border-secondary/50 cursor-not-allowed'
+                          : day.isPast 
+                            ? 'bg-surface-tertiary text-text-muted border-border-secondary cursor-not-allowed' 
+                            : day.isToday
+                              ? 'bg-blue-100 text-blue-800 border-blue-300 font-semibold'
+                              : day.isSelected
+                                ? 'bg-brand-600 text-white border-brand-600 shadow-purple-lg'
+                                : 'bg-surface-secondary border-border-secondary hover:border-brand-400 hover:bg-brand-600/5'
                         }
                       `}
                     >
-                      <div className="text-lg font-semibold">
+                      <div className={`text-xl font-bold leading-none ${
+                        day.isToday ? 'text-blue-800' : ''
+                      }`}>
                         {format(day.date, 'd')}
                       </div>
-                      <div className="text-xs">
-                        {format(day.date, 'MMM')}
-                      </div>
+                      {!day.isCurrentMonth && (
+                        <div className="text-xs font-medium leading-none opacity-60">
+                          {format(day.date, 'MMM')}
+                        </div>
+                      )}
                     </button>
                   ))}
                 </div>
@@ -421,7 +473,7 @@ export function TimeSlotSelection() {
             rightIcon={<ChevronRightIcon className="w-4 h-4" />}
             className="min-h-[48px]"
           >
-            Continue to Service Address
+            Continue
           </Button>
           <Button
             variant="outline"
@@ -430,7 +482,7 @@ export function TimeSlotSelection() {
             fullWidth
             className="min-h-[48px]"
           >
-            Back to Vehicle Details
+            Back
           </Button>
         </div>
         
@@ -441,7 +493,7 @@ export function TimeSlotSelection() {
             onClick={previousStep}
             leftIcon={<ChevronLeftIcon className="w-4 h-4" />}
           >
-            Back to Vehicle Details
+            Back
           </Button>
           
           <Button
@@ -450,7 +502,7 @@ export function TimeSlotSelection() {
             size="lg"
             rightIcon={<ChevronRightIcon className="w-4 h-4" />}
           >
-            Continue to Service Address
+            Continue
           </Button>
         </div>
       </div>

@@ -73,7 +73,7 @@ export class PricingService extends BaseService {
       }
 
       const sizeInfo = sizeMapping[request.vehicleSize]
-      if (!sizeInfo || !servicePricing[sizeInfo.column]) {
+      if (!sizeInfo || servicePricing[sizeInfo.column] === null || servicePricing[sizeInfo.column] === undefined) {
         return { data: null, error: new Error(`No pricing found for vehicle size: ${request.vehicleSize}`) }
       }
 

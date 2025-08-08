@@ -7,7 +7,7 @@ import { AddressCard } from '@/components/customer/components/AddressCard'
 import { CustomerLayout } from '@/components/layout/templates/CustomerLayout'
 import { CustomerRoute } from '@/components/ProtectedRoute'
 import { Plus, MapPin, AlertCircle } from 'lucide-react'
-import { ConfirmationModal } from '@/components/ui/composites/ConfirmationModal'
+import { useOverlay } from '@/lib/overlay/context'
 
 interface Address {
   id: string
@@ -30,8 +30,7 @@ export default function AddressesPage() {
   const [addresses, setAddresses] = useState<Address[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [showAddForm, setShowAddForm] = useState(false)
-  const [editingAddress, setEditingAddress] = useState<Address | null>(null)
+  const { openOverlay } = useOverlay()
 
   // Add/Edit form state
   const [formData, setFormData] = useState({
@@ -45,8 +44,7 @@ export default function AddressesPage() {
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   
-  // Confirmation modal state
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  // Deletion overlay local state
   const [addressToDelete, setAddressToDelete] = useState<Address | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
 
@@ -71,71 +69,43 @@ export default function AddressesPage() {
   }
 
   const handleAddAddress = () => {
-    setEditingAddress(null)
-    setFormData({
-      address_line_1: '',
-      address_line_2: '',
-      city: '',
-      county: '',
-      postal_code: '',
-      country: 'United Kingdom',
-      set_as_default: addresses.length === 0
+    openOverlay({
+      type: 'address-create',
+      data: {},
+      onConfirm: async () => {
+        await fetchAddresses()
+      }
     })
-    setShowAddForm(true)
   }
 
   const handleEditAddress = (address: Address) => {
-    setEditingAddress(address)
-    setFormData({
-      address_line_1: address.address_line_1,
-      address_line_2: address.address_line_2 || '',
-      city: address.city,
-      county: address.county || '',
-      postal_code: address.postal_code,
-      country: address.country,
-      set_as_default: address.is_default
-    })
-    setShowAddForm(true)
-  }
-
-  const handleSubmitAddress = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsSubmitting(true)
-
-    try {
-      const url = editingAddress 
-        ? `/api/customer/addresses/${editingAddress.id}`
-        : '/api/customer/addresses'
-      
-      const method = editingAddress ? 'PUT' : 'POST'
-      
-      const response = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
-      })
-      
-      const result = await response.json()
-      
-      if (result.success) {
+    openOverlay({
+      type: 'address-edit',
+      data: { addressId: address.id, address },
+      onConfirm: async () => {
         await fetchAddresses()
-        setShowAddForm(false)
-        setEditingAddress(null)
-      } else {
-        setError(result.error?.message || 'Failed to save address')
       }
-    } catch (err) {
-      setError('Failed to save address')
-    } finally {
-      setIsSubmitting(false)
-    }
+    })
   }
+
+  // Submission handled in overlay components; keep helper for default toggle
 
   const handleDeleteAddress = (addressId: string) => {
     const address = addresses.find(a => a.id === addressId)
     if (address) {
       setAddressToDelete(address)
-      setShowDeleteConfirm(true)
+      openOverlay({
+        type: 'confirm-delete',
+        data: {
+          title: 'Delete Address',
+          message: `Are you sure you want to delete the address at ${address.address_line_1}, ${address.city}? This action cannot be undone.`,
+          confirmText: 'Delete Address',
+          itemName: 'address'
+        },
+        onConfirm: async () => {
+          await confirmDeleteAddress()
+        }
+      })
     }
   }
 
@@ -152,7 +122,6 @@ export default function AddressesPage() {
       
       if (result.success) {
         await fetchAddresses()
-        setShowDeleteConfirm(false)
         setAddressToDelete(null)
       } else {
         setError(result.error?.message || 'Failed to delete address')
@@ -196,8 +165,6 @@ export default function AddressesPage() {
   }
 
   const closeForm = () => {
-    setShowAddForm(false)
-    setEditingAddress(null)
     setError(null)
   }
 
@@ -256,161 +223,7 @@ export default function AddressesPage() {
           </Card>
         )}
 
-        {/* Add/Edit Form */}
-        {showAddForm && (
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-semibold text-text-primary">
-                  {editingAddress ? 'Edit Address' : 'Add New Address'}
-                </h2>
-                <Button variant="ghost" size="sm" onClick={closeForm}>
-                  ✕
-                </Button>
-              </div>
-
-              <form onSubmit={handleSubmitAddress} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Address Line 1 */}
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-text-primary mb-2">
-                      Address Line 1 *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={formData.address_line_1}
-                      onChange={(e) => setFormData(prev => ({ ...prev, address_line_1: e.target.value }))}
-                      className="w-full px-3 py-3 min-h-[44px] bg-surface-secondary border border-surface-tertiary rounded-lg focus:ring-2 focus:ring-brand-400 focus:border-transparent text-text-primary touch-manipulation"
-                      placeholder="e.g., 123 Main Street"
-                    />
-                  </div>
-
-                  {/* Address Line 2 */}
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-text-primary mb-2">
-                      Address Line 2
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.address_line_2}
-                      onChange={(e) => setFormData(prev => ({ ...prev, address_line_2: e.target.value }))}
-                      className="w-full px-3 py-3 min-h-[44px] bg-surface-secondary border border-surface-tertiary rounded-lg focus:ring-2 focus:ring-brand-400 focus:border-transparent text-text-primary touch-manipulation"
-                      placeholder="e.g., Apartment 4B, Building Name"
-                    />
-                  </div>
-
-                  {/* City */}
-                  <div>
-                    <label className="block text-sm font-medium text-text-primary mb-2">
-                      City *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={formData.city}
-                      onChange={(e) => setFormData(prev => ({ ...prev, city: e.target.value }))}
-                      className="w-full px-3 py-3 min-h-[44px] bg-surface-secondary border border-surface-tertiary rounded-lg focus:ring-2 focus:ring-brand-400 focus:border-transparent text-text-primary touch-manipulation"
-                      placeholder="e.g., London"
-                    />
-                  </div>
-
-                  {/* County */}
-                  <div>
-                    <label className="block text-sm font-medium text-text-primary mb-2">
-                      County
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.county}
-                      onChange={(e) => setFormData(prev => ({ ...prev, county: e.target.value }))}
-                      className="w-full px-3 py-3 min-h-[44px] bg-surface-secondary border border-surface-tertiary rounded-lg focus:ring-2 focus:ring-brand-400 focus:border-transparent text-text-primary touch-manipulation"
-                      placeholder="e.g., Greater London"
-                    />
-                  </div>
-
-                  {/* Postal Code */}
-                  <div>
-                    <label className="block text-sm font-medium text-text-primary mb-2">
-                      Postal Code *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={formData.postal_code}
-                      onChange={(e) => setFormData(prev => ({ ...prev, postal_code: e.target.value.toUpperCase() }))}
-                      className="w-full px-3 py-3 min-h-[44px] bg-surface-secondary border border-surface-tertiary rounded-lg focus:ring-2 focus:ring-brand-400 focus:border-transparent text-text-primary font-mono touch-manipulation"
-                      placeholder="e.g., SW1A 1AA"
-                    />
-                    <p className="text-xs text-text-muted mt-1">
-                      Used to calculate distance and travel surcharge automatically
-                    </p>
-                  </div>
-
-                  {/* Country */}
-                  <div>
-                    <label className="block text-sm font-medium text-text-primary mb-2">
-                      Country
-                    </label>
-                    <select
-                      value={formData.country}
-                      onChange={(e) => setFormData(prev => ({ ...prev, country: e.target.value }))}
-                      className="w-full px-3 py-3 min-h-[44px] bg-surface-secondary border border-surface-tertiary rounded-lg focus:ring-2 focus:ring-brand-400 focus:border-transparent text-text-primary touch-manipulation"
-                    >
-                      <option value="United Kingdom">United Kingdom</option>
-                      <option value="England">England</option>
-                      <option value="Scotland">Scotland</option>
-                      <option value="Wales">Wales</option>
-                      <option value="Northern Ireland">Northern Ireland</option>
-                    </select>
-                  </div>
-                </div>
-
-                {/* Set as Default */}
-                {!editingAddress && addresses.length > 0 && (
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="checkbox"
-                      id="set_as_default"
-                      checked={formData.set_as_default}
-                      onChange={(e) => setFormData(prev => ({ ...prev, set_as_default: e.target.checked }))}
-                      className="w-4 h-4 text-brand-400 bg-surface-secondary border-surface-tertiary rounded focus:ring-brand-400"
-                    />
-                    <label htmlFor="set_as_default" className="text-sm text-text-primary">
-                      Set as default address for bookings
-                    </label>
-                  </div>
-                )}
-
-                {/* Form Actions */}
-                <div className="flex flex-col sm:flex-row gap-3 sm:justify-end">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={closeForm}
-                    className="sm:w-auto w-full"
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="submit"
-                    disabled={isSubmitting}
-                    leftIcon={isSubmitting ? 
-                      <div className="w-4 h-4 animate-spin rounded-full border-2 border-white border-t-transparent" /> :
-                      <MapPin className="w-4 h-4" />
-                    }
-                    className="sm:w-auto w-full"
-                  >
-                    {isSubmitting 
-                      ? (editingAddress ? 'Updating...' : 'Adding...') 
-                      : (editingAddress ? 'Update Address' : 'Add Address')
-                    }
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-        )}
+        {/* Add/Edit handled by overlays */}
 
         {/* Addresses List */}
         {addresses.length === 0 ? (
@@ -463,24 +276,7 @@ export default function AddressesPage() {
         </Card>
         </div>
 
-        {/* Delete Confirmation Modal */}
-        <ConfirmationModal
-          isOpen={showDeleteConfirm}
-          onClose={() => {
-            setShowDeleteConfirm(false)
-            setAddressToDelete(null)
-          }}
-          onConfirm={confirmDeleteAddress}
-          title="Delete Address"
-          message={
-            addressToDelete
-              ? `Are you sure you want to delete the address at ${addressToDelete.address_line_1}, ${addressToDelete.city}? This action cannot be undone.`
-              : 'Are you sure you want to delete this address?'
-          }
-          confirmText="Delete Address"
-          confirmVariant="danger"
-          isLoading={isDeleting}
-        />
+        {/* Deletion handled by overlay */}
       </CustomerLayout>
     </CustomerRoute>
   )

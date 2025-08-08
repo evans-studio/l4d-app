@@ -27,14 +27,15 @@ export async function POST(request: NextRequest) {
       return ApiResponseHandler.serverError('Email service not configured')
     }
 
-    console.log('RESEND_API_KEY exists:', process.env.RESEND_API_KEY ? 'YES' : 'NO')
-    console.log('RESEND_API_KEY length:', process.env.RESEND_API_KEY?.length || 0)
-
-    console.log('=== SENDING EMAIL VIA RESEND ===')
-    console.log('To:', to)
-    console.log('Subject:', subject)
-    console.log('From: Love 4 Detailing <zell@love4detailing.com>')
-    console.log('===============================')
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('RESEND_API_KEY exists:', process.env.RESEND_API_KEY ? 'YES' : 'NO')
+      console.log('RESEND_API_KEY length:', process.env.RESEND_API_KEY?.length || 0)
+      console.log('=== SENDING EMAIL VIA RESEND ===')
+      console.log('To:', to)
+      console.log('Subject:', subject)
+      console.log('From: Love 4 Detailing <zell@love4detailing.com>')
+      console.log('===============================')
+    }
 
     try {
       // Send email using Resend
@@ -51,9 +52,11 @@ export async function POST(request: NextRequest) {
         return ApiResponseHandler.serverError(`Email send failed: ${error.message}`)
       }
 
-      console.log('✅ Email sent successfully via Resend')
-      console.log('Email ID:', data?.id)
-      console.log('Full Resend Response:', data)
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('✅ Email sent successfully via Resend')
+        console.log('Email ID:', data?.id)
+        console.log('Full Resend Response:', data)
+      }
 
       return ApiResponseHandler.success({
         message: 'Email sent successfully',

@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
     // Get user profile
     const { data: profile, error: profileError } = await supabase
       .from('user_profiles')
-      .select('id, email, first_name, last_name, phone, role, is_active')
+      .select('id, email, first_name, last_name, phone, role, is_active, email_verified')
       .eq('id', session.user.id)
       .single()
 
@@ -69,7 +69,8 @@ export async function GET(request: NextRequest) {
           first_name: profile.first_name,
           last_name: profile.last_name,
           phone: profile.phone,
-          role: profile.role
+          role: profile.role,
+          email_verified: profile.email_verified ?? true // Default to true if field doesn't exist
         }
       }
     })

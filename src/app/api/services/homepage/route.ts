@@ -34,25 +34,30 @@ export async function GET(request: NextRequest) {
 
         // Build pricing array from the pricing columns
         const pricingOptions = []
+        let hasPricingData = false
         
         if (pricingData && !pricingError) {
-          // Extract prices from the columns, filtering out null/zero values
-          if (pricingData.small && pricingData.small > 0) {
+          hasPricingData = true
+          // Extract prices from the columns, allowing zero values for testing
+          if (pricingData.small !== null && pricingData.small !== undefined) {
             pricingOptions.push({ vehicleSize: 'Small', price: pricingData.small, sizeOrder: 1 })
           }
-          if (pricingData.medium && pricingData.medium > 0) {
+          if (pricingData.medium !== null && pricingData.medium !== undefined) {
             pricingOptions.push({ vehicleSize: 'Medium', price: pricingData.medium, sizeOrder: 2 })
           }
-          if (pricingData.large && pricingData.large > 0) {
+          if (pricingData.large !== null && pricingData.large !== undefined) {
             pricingOptions.push({ vehicleSize: 'Large', price: pricingData.large, sizeOrder: 3 })
           }
-          if (pricingData.extra_large && pricingData.extra_large > 0) {
+          if (pricingData.extra_large !== null && pricingData.extra_large !== undefined) {
             pricingOptions.push({ vehicleSize: 'Extra Large', price: pricingData.extra_large, sizeOrder: 4 })
           }
         }
 
-        // If no pricing data available, provide fallback pricing based on service name
-        if (pricingOptions.length === 0) {
+        // Conditional fallback system
+        let basePrice = 0
+        
+        if (!hasPricingData) {
+          // No pricing row exists - use fallback pricing based on service name
           if (service.name.toLowerCase().includes('full valet')) {
             pricingOptions.push(
               { vehicleSize: 'Small', price: 35, sizeOrder: 1 },
@@ -75,7 +80,7 @@ export async function GET(request: NextRequest) {
               { vehicleSize: 'Extra Large', price: 35, sizeOrder: 4 }
             )
           } else {
-            // Generic fallback
+            // Generic fallback for services without pricing data
             pricingOptions.push(
               { vehicleSize: 'Small', price: 25, sizeOrder: 1 },
               { vehicleSize: 'Medium', price: 30, sizeOrder: 2 },
@@ -83,12 +88,12 @@ export async function GET(request: NextRequest) {
               { vehicleSize: 'Extra Large', price: 40, sizeOrder: 4 }
             )
           }
+          basePrice = Math.min(...pricingOptions.map(p => p.price))
+        } else {
+          // Pricing data exists - use actual values (including 0 for testing)
+          const prices = pricingOptions.map(p => p.price).filter(price => price >= 0)
+          basePrice = prices.length > 0 ? Math.min(...prices) : 0
         }
-
-        // Use the smallest price as base price
-        const basePrice = pricingOptions.length > 0 
-          ? Math.min(...pricingOptions.map(p => p.price))
-          : 25
 
         return {
           id: service.id,

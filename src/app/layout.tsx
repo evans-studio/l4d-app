@@ -6,6 +6,7 @@ import { AuthProvider } from '@/lib/auth-compat'
 import { ZustandAuthInitializer } from '@/providers/AuthProvider'
 import { OverlayProvider } from '@/lib/overlay/context'
 import { OverlayManager } from '@/components/ui/overlays/OverlayManager'
+import { CookieConsentBanner } from '@/components/ui/patterns/CookieConsentBanner'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -68,6 +69,7 @@ export default function RootLayout({
             <OverlayProvider>
               {children}
               <OverlayManager />
+              <CookieConsentBanner />
             </OverlayProvider>
           </AuthProvider>
         </ZustandAuthInitializer>

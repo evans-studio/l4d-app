@@ -78,7 +78,7 @@ function AdminCustomersPage() {
   const loadCustomerData = async () => {
     try {
       setIsLoading(true)
-      console.log('Loading customer data...')
+      
       
       // Load customers and stats in parallel
       const [customersResponse, statsResponse] = await Promise.all([
@@ -86,17 +86,14 @@ function AdminCustomersPage() {
         fetch('/api/admin/customers/stats')
       ])
       
-      console.log('Customers response status:', customersResponse.status)
-      console.log('Stats response status:', statsResponse.status)
+      
 
       // Handle customers data
       if (customersResponse.ok) {
         const customersData = await customersResponse.json()
-        console.log('Customers data:', customersData)
         
         if (customersData.success) {
           setCustomers(customersData.data)
-          console.log('Set customers:', customersData.data.length, 'customers')
         } else {
           console.error('API returned success: false', customersData.error)
         }
@@ -107,11 +104,9 @@ function AdminCustomersPage() {
       // Handle stats data
       if (statsResponse.ok) {
         const statsData = await statsResponse.json()
-        console.log('Stats data:', statsData)
         
         if (statsData.success) {
           setStats(statsData.data)
-          console.log('Set stats:', statsData.data)
         } else {
           console.error('Stats API returned success: false', statsData.error)
         }

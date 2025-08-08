@@ -16,22 +16,10 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-const dashboardFeatures = [
-  {
-    icon: Calendar,
-    title: 'Easy Online Booking',
-    description: 'Book your service in minutes. Choose your service, preferred date, and location across SW9 and surrounding areas.'
-  },
-  {
-    icon: BarChart3,
-    title: 'Service Management',
-    description: 'Track your bookings, view service history, and manage multiple vehicles all in one convenient dashboard.'
-  },
-  {
-    icon: CreditCard,
-    title: 'Transparent Pricing',
-    description: 'See exact pricing upfront with no hidden fees. Secure online payment with location-based pricing for South London.'
-  }
+const dashboardBenefits = [
+  'Book and reschedule services instantly',
+  'Track your complete service history', 
+  'Manage multiple vehicles in one account'
 ]
 
 
@@ -63,7 +51,7 @@ export function DashboardPreview() {
   return (
     <section 
       ref={sectionRef}
-      className="relative overflow-hidden py-16 lg:py-24"
+      className="relative overflow-hidden py-16 lg:py-24 bg-gradient-to-b from-surface-primary to-surface-secondary"
     >
       
       <Container>
@@ -76,55 +64,60 @@ export function DashboardPreview() {
             "transition-all duration-700"
           )}>
             <Heading size="h2" align="center" className="mb-6">
-              Modern Booking Experience
+              Manage Everything in One Place
             </Heading>
             <Text size="xl" color="secondary" leading="relaxed" align="center" className="max-w-2xl mx-auto">
-              Manage your car detailing services across SW9 and South London with ease. Everything you need in one place.
+              Your personal car care dashboard - accessible 24/7
             </Text>
           </div>
 
-          {/* Feature Grid */}
-          <GridLayout columns={{ default: 1, md: 2, lg: 3 }} gap="lg">
-            {dashboardFeatures.map((feature, index) => {
-              const Icon = feature.icon
-              return (
-                <div 
-                  key={feature.title}
-                  className={cn(
-                    "text-center p-4",
-                    inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8",
-                    "transition-all duration-500"
-                  )}
-                  style={{ transitionDelay: `${200 + index * 100}ms` }}
-                >
-                  <div className="w-12 h-12 bg-brand-600/10 rounded-lg flex items-center justify-center mx-auto mb-4">
-                    <Icon className="w-6 h-6 text-brand-600" />
-                  </div>
-                  <Heading size="h4" weight="semibold" className="mb-2">
-                    {feature.title}
-                  </Heading>
-                  <Text size="sm" color="secondary">
-                    {feature.description}
+          {/* Benefits as horizontal text list */}
+          <div className={cn(
+            "mb-16",
+            inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8",
+            "transition-all duration-500 delay-200"
+          )}>
+            <div className="flex flex-col md:flex-row items-center justify-center gap-8 md:gap-12 text-center md:text-left">
+              {dashboardBenefits.map((benefit, index) => (
+                <div key={index} className="flex items-center gap-3">
+                  <div className="w-2 h-2 bg-brand-600 rounded-full flex-shrink-0"></div>
+                  <Text size="lg" color="primary" className="font-medium">
+                    {benefit}
                   </Text>
                 </div>
-              )
-            })}
-          </GridLayout>
+              ))}
+            </div>
+          </div>
+
+          {/* Dashboard Mockup Placeholder */}
+          <div className={cn(
+            "mb-16",
+            inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8",
+            "transition-all duration-500 delay-400"
+          )}>
+            <div className="mockup-placeholder h-[500px] bg-gradient-to-br from-surface-tertiary to-surface-secondary rounded-xl border border-border-secondary flex items-center justify-center">
+              <Text color="secondary" className="text-center">
+                Dashboard Mockup
+                <br />
+                <span className="text-sm opacity-60">Screenshot placeholder - 500px height</span>
+              </Text>
+            </div>
+          </div>
 
           {/* CTA */}
           <div className={cn(
-            "text-center mt-16",
+            "text-center",
             inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8",
-            "transition-all duration-500 delay-800"
+            "transition-all duration-500 delay-600"
           )}>
-            <Link href="/book">
+            <Link href="/auth/register">
               <Button 
                 variant="primary" 
                 size="lg"
                 className="bg-brand-600 hover:bg-brand-700 shadow-purple-lg hover:shadow-purple-xl transition-all duration-300"
                 rightIcon={<ArrowRight className="w-5 h-5" />}
               >
-                Start Booking Today
+                Sign Up & Book
               </Button>
             </Link>
           </div>

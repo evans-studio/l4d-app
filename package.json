@@ -7,7 +7,13 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "create-admins": "tsx src/lib/scripts/create-admin-users.ts",
+    "test": "jest --ci --coverage --watchAll=false",
+    "analyze-bundle": "node scripts/analyze-bundle.js",
+    "performance-budget": "node scripts/enforce-performance-budget.js",
+    "lighthouse-ci": "lhci autorun",
+    "performance-check": "npm run build && npm run performance-budget && npm run lighthouse-ci",
+    "production-ready": "node scripts/production-readiness-check.js",
+    "reset-database": "psql $DATABASE_URL -f scripts/reset-database-for-production.sql",
     "generate-types": "npx supabase gen types typescript --project-id vwejbgfiddltdqwhfjmt > src/lib/db/database.types.ts"
   },
   "dependencies": {

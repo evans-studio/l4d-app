@@ -11,6 +11,7 @@ import {
   CreateBookingRequest,
   BookingCalendarDay
 } from '@/lib/utils/booking-types'
+import { AdminBooking } from '@/hooks/useRealTimeBookings'
 
 export interface BookingFilters {
   status?: BookingStatus[]
@@ -563,7 +564,7 @@ export class BookingService extends BaseService {
     reason?: string,
     notes?: string,
     sendEmail: boolean = true
-  ): Promise<ServiceResponse<Booking>> {
+  ): Promise<ServiceResponse<AdminBooking>> {
     return this.executeQuery(async () => {
       const supabase = this.supabase
       
@@ -595,10 +596,70 @@ export class BookingService extends BaseService {
         .from('bookings')
         .update(updateData)
         .eq('id', bookingId)
-        .select()
+        .select(`
+          id,
+          booking_reference,
+          customer_id,
+          scheduled_date,
+          scheduled_start_time,
+          scheduled_end_time,
+          status,
+          payment_status,
+          base_price,
+          vehicle_size_multiplier,
+          distance_surcharge,
+          total_price,
+          special_instructions,
+          vehicle_details,
+          service_address,
+          pricing_breakdown,
+          created_at,
+          updated_at,
+          booking_services (
+            id,
+            service_details,
+            price,
+            service_id
+          )
+        `)
         .single()
 
       if (updateError) return { data: null, error: updateError }
+
+      // Get customer profile data to match AdminBooking structure
+      let customerProfile = null
+      if (booking.customer_id) {
+        const { data: profile, error: profileError } = await supabase
+          .from('user_profiles')
+          .select('id, email, first_name, last_name, phone')
+          .eq('id', booking.customer_id)
+          .single()
+
+        if (!profileError && profile) {
+          customerProfile = profile
+        }
+      }
+
+      // Transform booking data to AdminBooking structure
+      const adminBooking = {
+        ...booking,
+        customer_name: customerProfile 
+          ? [customerProfile.first_name, customerProfile.last_name].filter(Boolean).join(' ') || 'Customer'
+          : 'Customer',
+        customer_email: customerProfile?.email || '',
+        customer_phone: customerProfile?.phone || '',
+        vehicle: booking.vehicle_details || { make: 'Unknown', model: 'Vehicle', year: null, color: '' },
+        address: booking.service_address || { address_line_1: '', city: 'Unknown', postal_code: '' },
+        services: booking.booking_services?.map((bs: any) => ({
+          name: bs.service_details?.name || 'Vehicle Detailing Service',
+          base_price: bs.price || 0
+        })) || [{
+          name: 'Vehicle Detailing Service',
+          base_price: booking.total_price || 0
+        }],
+        start_time: booking.scheduled_start_time,
+        end_time: booking.scheduled_start_time // We don't have end_time in the basic structure
+      }
 
       // Add status history
       await supabase
@@ -613,7 +674,7 @@ export class BookingService extends BaseService {
         })
 
       // Send email notification if requested and status is significant
-      if (sendEmail && ['confirmed', 'cancelled', 'completed'].includes(status)) {
+      if (sendEmail && ['processing', 'payment_failed', 'confirmed', 'declined', 'cancelled', 'completed', 'rescheduled', 'in_progress'].includes(status)) {
         try {
           const userProfile = await getUserProfile(currentBooking.customer_id)
           if (userProfile) {
@@ -627,7 +688,7 @@ export class BookingService extends BaseService {
               currentBooking.status,
               reason
             )
-            console.log(`Status update email sent for booking ${booking.booking_reference}`)
+  
           }
         } catch (emailError) {
           console.error('Failed to send status update email:', emailError)
@@ -635,7 +696,7 @@ export class BookingService extends BaseService {
         }
       }
 
-      return { data: booking, error: null }
+      return { data: adminBooking, error: null }
     }, 'Failed to update booking status')
   }
 

@@ -171,17 +171,17 @@ export function VehicleCard({
   if (variant === 'compact') {
     return (
       <Card className="overflow-hidden">
-        <CardContent className="p-4">
-          <div className="flex items-center gap-3">
+        <CardContent className="p-5">
+          <div className="flex items-start gap-4">
             {/* Vehicle Icon */}
-            <div className="w-12 h-12 rounded-lg bg-brand-600/10 flex items-center justify-center flex-shrink-0">
-              <Car className="w-6 h-6 text-brand-400" />
+            <div className="w-14 h-14 rounded-xl bg-brand-600/10 flex items-center justify-center flex-shrink-0">
+              <Car className="w-7 h-7 text-brand-400" />
             </div>
 
             {/* Vehicle Info */}
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1">
-                <h3 className="font-semibold text-text-primary truncate">
+              <div className="flex items-center gap-2 mb-2">
+                <h3 className="font-semibold text-text-primary text-base truncate">
                   {vehicle.year} {vehicle.make} {vehicle.model}
                 </h3>
                 {vehicle.is_default && (
@@ -191,22 +191,24 @@ export function VehicleCard({
                   </Badge>
                 )}
               </div>
-              <div className="flex items-center gap-2 text-xs text-text-secondary">
-                <span className={sizeInfo.color}>Size {vehicleSize}</span>
-                <span>•</span>
-                <span>{vehicle.color}</span>
-                {vehicle.license_plate && (
-                  <>
-                    <span>•</span>
-                    <span>{vehicle.license_plate}</span>
-                  </>
-                )}
+              
+              {/* Color and Size Row */}
+              <div className="flex items-center gap-3 text-sm text-text-secondary mb-1">
+                <span className="font-medium">{vehicle.color}</span>
+                <span className={`${sizeInfo.color} font-medium`}>Size {vehicleSize}</span>
               </div>
+              
+              {/* Registration Row */}
+              {vehicle.license_plate && (
+                <div className="text-sm text-text-secondary font-mono">
+                  {vehicle.license_plate}
+                </div>
+              )}
             </div>
 
             {/* Quick Actions */}
             {showActions && (
-              <div className="flex gap-1">
+              <div className="flex gap-2">
                 <Button
                   variant="ghost"
                   size="sm"
@@ -254,45 +256,46 @@ export function VehicleCard({
             </div>
 
             {/* Details Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Size Info */}
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-surface-tertiary flex items-center justify-center">
-                  <Gauge className="w-5 h-5 text-text-secondary" />
-                </div>
-                <div>
-                  <p className="font-medium text-text-primary">
-                    {sizeInfo.label} ({vehicleSize})
-                  </p>
-                  <p className="text-sm text-text-secondary">
-                    {sizeMultiplier}x price multiplier
-                  </p>
-                </div>
-              </div>
-
-              {/* Color & Registration */}
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-surface-tertiary flex items-center justify-center">
-                  <Car className="w-5 h-5 text-text-secondary" />
-                </div>
-                <div>
-                  <p className="font-medium text-text-primary">{vehicle.color}</p>
-                  {vehicle.license_plate && (
-                    <p className="text-sm text-text-secondary font-mono">
-                      {vehicle.license_plate}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {/* Usage Stats */}
-              {(vehicle.last_used || vehicle.booking_count) && (
-                <div className="flex items-center gap-3 sm:col-span-2">
-                  <div className="w-10 h-10 rounded-lg bg-surface-tertiary flex items-center justify-center">
-                    <Calendar className="w-5 h-5 text-text-secondary" />
+            <div className="space-y-4">
+              {/* Vehicle Details Row */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-xl bg-surface-tertiary flex items-center justify-center">
+                    <Car className="w-6 h-6 text-text-secondary" />
                   </div>
                   <div>
-                    <p className="font-medium text-text-primary">
+                    <p className="font-semibold text-text-primary">{vehicle.color}</p>
+                    {vehicle.license_plate && (
+                      <p className="text-sm text-text-secondary font-mono">
+                        {vehicle.license_plate}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-xl bg-surface-tertiary flex items-center justify-center">
+                    <Gauge className="w-6 h-6 text-text-secondary" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-text-primary">
+                      Size {vehicleSize} ({sizeInfo.label})
+                    </p>
+                    <p className="text-sm text-text-secondary">
+                      {sizeMultiplier}x pricing
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Usage Stats - Only if data exists */}
+              {(vehicle.last_used || vehicle.booking_count) && (
+                <div className="flex items-center gap-3 p-4 bg-surface-tertiary rounded-xl">
+                  <div className="w-12 h-12 rounded-xl bg-surface-secondary flex items-center justify-center">
+                    <Calendar className="w-6 h-6 text-text-secondary" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-text-primary">
                       {formatLastUsed(vehicle.last_used)}
                     </p>
                     {vehicle.booking_count && (
@@ -305,13 +308,6 @@ export function VehicleCard({
               )}
             </div>
 
-            {/* Size Examples */}
-            <div className="bg-surface-tertiary rounded-lg p-3">
-              <p className="text-xs font-medium text-text-secondary uppercase tracking-wide mb-1">
-                {sizeInfo.label} Vehicle Examples
-              </p>
-              <p className="text-sm text-text-primary">{sizeInfo.examples}</p>
-            </div>
           </div>
 
           {/* Actions */}

@@ -158,7 +158,7 @@ export function ServiceAreaCheck() {
   return (
     <section 
       ref={sectionRef}
-      className="relative overflow-hidden py-16 lg:py-24"
+      className="relative overflow-hidden py-12 lg:py-16"
     >
       
       <Container>
@@ -192,28 +192,27 @@ export function ServiceAreaCheck() {
             <CardContent className="p-4 sm:p-8">
               
               {!showResult ? (
-                // Input State - Mobile Optimized
-                <div className="space-y-6">
-                  <div className="relative w-full max-w-md mx-auto">
-                    <MapPin className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-text-muted" />
-                    <input
-                      type="text"
-                      placeholder="Enter your postcode (e.g., SW9 1AA)"
-                      value={postcode}
-                      onChange={(e) => setPostcode(e.target.value.toUpperCase())}
-                      onKeyPress={handleKeyPress}
-                      className="w-full pl-12 pr-4 py-5 sm:py-4 bg-white border border-border-secondary rounded-lg text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand-600 focus:border-transparent transition-all duration-200 text-lg touch-manipulation"
-                      disabled={isChecking}
-                    />
-                  </div>
-                  
-                  <div className="w-full max-w-md mx-auto">
+                // Input State - Inline Layout
+                <div className="max-w-lg mx-auto">
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <div className="relative flex-1">
+                      <MapPin className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-text-muted" />
+                      <input
+                        type="text"
+                        placeholder="Enter postcode (SW9 1AA)"
+                        value={postcode}
+                        onChange={(e) => setPostcode(e.target.value.toUpperCase())}
+                        onKeyPress={handleKeyPress}
+                        className="w-full pl-12 pr-4 py-4 bg-white border border-border-secondary rounded-lg text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand-600 focus:border-transparent transition-all duration-200 text-base touch-manipulation"
+                        disabled={isChecking}
+                      />
+                    </div>
                     <Button
                       variant="primary"
                       size="lg"
                       onClick={handleCheck}
                       disabled={!postcode.trim() || isChecking}
-                      className="w-full bg-brand-600 hover:bg-brand-700 py-4 min-h-[56px] touch-manipulation"
+                      className="bg-brand-600 hover:bg-brand-700 py-4 px-6 whitespace-nowrap touch-manipulation"
                       rightIcon={
                         isChecking ? (
                           <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -222,7 +221,7 @@ export function ServiceAreaCheck() {
                         )
                       }
                     >
-                      {isChecking ? 'Checking...' : 'Check Coverage'}
+                      {isChecking ? 'Checking...' : 'Check'}
                     </Button>
                   </div>
                 </div>
@@ -390,45 +389,15 @@ export function ServiceAreaCheck() {
             </CardContent>
           </Card>
 
-          {/* Info Section - Mobile Optimized */}
+          {/* Service Info Line */}
           <div className={cn(
-            "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-12",
+            "text-center mt-8",
             inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8",
             "transition-all duration-700 delay-400"
           )}>
-            <div className="flex items-start gap-4">
-              <div className="flex-shrink-0 w-12 h-12 bg-brand-600/10 rounded-lg flex items-center justify-center">
-                <MapPin className="w-6 h-6 text-brand-600" />
-              </div>
-              <div>
-                <Heading size="h5" weight="semibold" className="mb-2">5 Mile Free Radius</Heading>
-                <Text size="sm" color="secondary">
-                  No travel charges within 5 miles of SW9 area
-                </Text>
-              </div>
-            </div>
-            <div className="flex items-start gap-4">
-              <div className="flex-shrink-0 w-12 h-12 bg-brand-600/10 rounded-lg flex items-center justify-center">
-                <Clock className="w-6 h-6 text-brand-600" />
-              </div>
-              <div>
-                <Heading size="h5" weight="semibold" className="mb-2">Quick Response</Heading>
-                <Text size="sm" color="secondary">
-                  Same-day availability often possible within SW9 and nearby areas
-                </Text>
-              </div>
-            </div>
-            <div className="flex items-start gap-4">
-              <div className="flex-shrink-0 w-12 h-12 bg-brand-600/10 rounded-lg flex items-center justify-center">
-                <Map className="w-6 h-6 text-brand-600" />
-              </div>
-              <div>
-                <Heading size="h5" weight="semibold" className="mb-2">London Coverage</Heading>
-                <Text size="sm" color="secondary">
-                  Serving South London and expanding across Greater London areas
-                </Text>
-              </div>
-            </div>
+            <Text color="secondary" className="text-lg">
+              Based in SW9 · 5 miles free · Covering South London
+            </Text>
           </div>
         </div>
       </Container>

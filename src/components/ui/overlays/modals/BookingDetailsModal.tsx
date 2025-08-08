@@ -16,6 +16,7 @@ interface BookingDetails {
   estimated_duration: number
   total_price: number
   status: 'draft' | 'pending' | 'confirmed' | 'rescheduled' | 'in_progress' | 'completed' | 'paid' | 'cancelled' | 'no_show'
+  payment_status?: 'pending' | 'paid' | 'failed' | 'refunded'
   created_at: string
   // Support both API response formats
   service?: {
@@ -291,11 +292,24 @@ export const BookingDetailsModal: React.FC<BaseOverlayProps> = ({
               <h2 className="text-2xl font-bold text-text-primary mb-3">
                 {booking.services?.[0]?.name || booking.service?.name || 'Service Details'}
               </h2>
-              <div className="flex items-center gap-3 mb-2">
+              <div className="flex flex-wrap items-center gap-3 mb-2">
                 <Badge variant={config.color as any} size="md">
                   <StatusIcon className="w-4 h-4 mr-2" />
                   {config.label}
                 </Badge>
+                {/* Payment Status Badge */}
+                {booking.payment_status && (
+                  <Badge 
+                    variant={booking.payment_status === 'paid' ? 'success' : booking.payment_status === 'failed' ? 'error' : 'warning'} 
+                    size="md"
+                  >
+                    <DollarSign className="w-4 h-4 mr-2" />
+                    {booking.payment_status === 'paid' ? 'Paid' :
+                     booking.payment_status === 'failed' ? 'Payment Failed' :
+                     booking.payment_status === 'refunded' ? 'Refunded' :
+                     'Payment Pending'}
+                  </Badge>
+                )}
                 <span className="text-lg font-semibold text-text-secondary">
                   #{booking.booking_reference}
                 </span>
@@ -395,6 +409,47 @@ export const BookingDetailsModal: React.FC<BaseOverlayProps> = ({
             )}
           </div>
         </div>
+
+        {/* Payment Information */}
+        {booking.payment_status && (
+          <div className="bg-surface-secondary rounded-lg p-6 border border-border-secondary">
+            <h3 className="text-lg font-semibold text-text-primary mb-4 flex items-center gap-2">
+              <DollarSign className="w-5 h-5 text-brand-400" />
+              Payment Information
+            </h3>
+            <div className="space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-text-secondary mb-2">Payment Status</p>
+                  <div className={`inline-flex items-center gap-2 px-3 py-2 rounded-full text-sm font-medium border min-h-[44px] touch-manipulation ${
+                    booking.payment_status === 'paid' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                    booking.payment_status === 'failed' ? 'bg-red-50 text-red-700 border-red-200' :
+                    booking.payment_status === 'refunded' ? 'bg-gray-50 text-gray-700 border-gray-200' :
+                    'bg-yellow-50 text-yellow-700 border-yellow-200'
+                  }`}>
+                    <DollarSign className="w-4 h-4" />
+                    {booking.payment_status === 'paid' ? 'Payment Completed' :
+                     booking.payment_status === 'failed' ? 'Payment Failed' :
+                     booking.payment_status === 'refunded' ? 'Payment Refunded' :
+                     'Awaiting Payment'}
+                  </div>
+                </div>
+                <div className="text-center sm:text-right">
+                  <p className="text-sm font-medium text-text-secondary mb-1">Total Amount</p>
+                  <p className="text-2xl sm:text-3xl font-bold text-text-primary">{formatPrice(booking.total_price)}</p>
+                </div>
+              </div>
+              {booking.payment_status === 'paid' && (
+                <div className="bg-emerald-50 border border-emerald-200 rounded-md p-3">
+                  <p className="text-emerald-800 text-sm font-medium">Payment Successfully Received</p>
+                  <p className="text-emerald-700 text-xs mt-1">
+                    This booking has been fully paid and confirmed.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Customer Details */}
         <div className="bg-surface-secondary rounded-lg p-6 border border-border-secondary">

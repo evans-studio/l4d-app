@@ -1,0 +1,256 @@
+name: Performance Budget Enforcement
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'public/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'next.config.ts'
+      - 'performance.config.js'
+      - 'lighthouserc.js'
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'public/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'next.config.ts'
+      - 'performance.config.js'
+      - 'lighthouserc.js'
+
+jobs:
+  performance-budget:
+    name: Enforce Performance Budget
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    strategy:
+      matrix:
+        node-version: [18.x]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline --no-audit
+
+      - name: Create environment file
+        run: |
+          echo "NODE_ENV=production" >> .env.local
+          echo "NEXT_PUBLIC_SUPABASE_URL=https://example.supabase.co" >> .env.local
+          echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=placeholder_key" >> .env.local
+          echo "SUPABASE_SERVICE_ROLE_KEY=placeholder_service_key" >> .env.local
+          echo "ACCESS_TOKEN_SECRET=placeholder_access_token_secret_min_32_chars" >> .env.local
+          echo "REFRESH_TOKEN_SECRET=placeholder_refresh_token_secret_min_32_chars" >> .env.local
+          echo "RESEND_API_KEY=re_placeholder_resend_api_key" >> .env.local
+          echo "NEXT_PUBLIC_FROM_EMAIL=test@example.com" >> .env.local
+          echo "ADMIN_EMAIL=admin@example.com" >> .env.local
+          echo "EMAIL_REPLY_TO=noreply@example.com" >> .env.local
+          echo "PAYPAL_ME_USERNAME=testuser" >> .env.local
+          echo "PAYPAL_BUSINESS_EMAIL=test@paypal.com" >> .env.local
+          echo "NEXTAUTH_URL=http://localhost:3000" >> .env.local
+          echo "NEXTAUTH_SECRET=placeholder_nextauth_secret_min_32_chars" >> .env.local
+
+      - name: Build application
+        run: npm run build
+
+      - name: Run performance budget checks
+        run: npm run performance-budget
+
+      - name: Install Lighthouse CI
+        run: npm install -g @lhci/cli@0.12.x
+
+      - name: Run Lighthouse CI
+        run: lhci autorun
+        env:
+          LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
+
+      - name: Upload Lighthouse results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: lighthouse-results
+          path: .lighthouseci/
+          retention-days: 7
+
+      - name: Comment PR with results
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            
+            // Read Lighthouse CI results
+            let lighthouseComment = '## 🚀 Performance Budget Results\n\n';
+            
+            try {
+              // Find the latest Lighthouse CI results
+              const resultsPath = '.lighthouseci';
+              if (fs.existsSync(resultsPath)) {
+                lighthouseComment += '✅ Lighthouse CI audit completed successfully!\n\n';
+                lighthouseComment += 'See the full report in the workflow artifacts.\n\n';
+                
+                // Add performance tips
+                lighthouseComment += '### 💡 Performance Tips:\n';
+                lighthouseComment += '- Keep bundle sizes under budget limits\n';
+                lighthouseComment += '- Optimize images (WebP format recommended)\n';
+                lighthouseComment += '- Use font-display: swap for custom fonts\n';
+                lighthouseComment += '- Minimize third-party scripts\n';
+                lighthouseComment += '- Implement lazy loading for images\n\n';
+              } else {
+                lighthouseComment += '⚠️ Lighthouse CI results not found\n\n';
+              }
+            } catch (error) {
+              lighthouseComment += `❌ Error reading Lighthouse CI results: ${error.message}\n\n`;
+            }
+            
+            lighthouseComment += '---\n';
+            lighthouseComment += '*This comment was generated automatically by the Performance Budget workflow.*';
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: lighthouseComment
+            });
+
+  bundle-analysis:
+    name: Bundle Size Analysis
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline --no-audit
+
+      - name: Create environment file
+        run: |
+          echo "NODE_ENV=production" >> .env.local
+          echo "NEXT_PUBLIC_SUPABASE_URL=https://example.supabase.co" >> .env.local
+          echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=placeholder_key" >> .env.local
+          echo "SUPABASE_SERVICE_ROLE_KEY=placeholder_service_key" >> .env.local
+          echo "ACCESS_TOKEN_SECRET=placeholder_access_token_secret_min_32_chars" >> .env.local
+          echo "REFRESH_TOKEN_SECRET=placeholder_refresh_token_secret_min_32_chars" >> .env.local
+          echo "RESEND_API_KEY=re_placeholder_resend_api_key" >> .env.local
+          echo "NEXT_PUBLIC_FROM_EMAIL=test@example.com" >> .env.local
+          echo "ADMIN_EMAIL=admin@example.com" >> .env.local
+          echo "EMAIL_REPLY_TO=noreply@example.com" >> .env.local
+          echo "PAYPAL_ME_USERNAME=testuser" >> .env.local
+          echo "PAYPAL_BUSINESS_EMAIL=test@paypal.com" >> .env.local
+          echo "NEXTAUTH_URL=http://localhost:3000" >> .env.local
+          echo "NEXTAUTH_SECRET=placeholder_nextauth_secret_min_32_chars" >> .env.local
+
+      - name: Build and analyze bundle
+        run: |
+          npm run build
+          npm run analyze-bundle > bundle-analysis.txt
+
+      - name: Comment PR with bundle analysis
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            
+            let bundleComment = '## 📦 Bundle Size Analysis\n\n';
+            
+            try {
+              const analysis = fs.readFileSync('bundle-analysis.txt', 'utf8');
+              bundleComment += '```\n' + analysis + '\n```\n\n';
+            } catch (error) {
+              bundleComment += `❌ Could not read bundle analysis: ${error.message}\n\n`;
+            }
+            
+            bundleComment += '### Bundle Size Guidelines:\n';
+            bundleComment += '- 📱 **Main Bundle**: < 250KB\n';
+            bundleComment += '- 🎨 **CSS Bundle**: < 50KB\n';
+            bundleComment += '- 📄 **Page Bundle**: < 150KB per page\n';
+            bundleComment += '- 🖼️ **Images**: < 500KB per image\n';
+            bundleComment += '- 🔤 **Fonts**: < 200KB total\n\n';
+            bundleComment += '---\n';
+            bundleComment += '*Bundle analysis generated automatically by GitHub Actions.*';
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: bundleComment
+            });
+
+  security-audit:
+    name: Security & Performance Audit
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline --no-audit
+
+      - name: Run security audit
+        run: |
+          echo "## 🔒 Security Audit Results" > security-audit.md
+          echo "" >> security-audit.md
+          
+          # Run npm audit and capture output
+          if npm audit --audit-level=moderate --json > audit.json 2>&1; then
+            echo "✅ No security vulnerabilities found!" >> security-audit.md
+          else
+            echo "⚠️ Security vulnerabilities detected:" >> security-audit.md
+            echo "" >> security-audit.md
+            echo '```json' >> security-audit.md
+            cat audit.json >> security-audit.md
+            echo '```' >> security-audit.md
+          fi
+
+      - name: Check for performance anti-patterns
+        run: |
+          echo "" >> security-audit.md
+          echo "## ⚡ Performance Anti-patterns Check" >> security-audit.md
+          echo "" >> security-audit.md
+          
+          # Check for common performance issues
+          if grep -r "console\.log" src/ --exclude-dir=node_modules; then
+            echo "⚠️ Found console.log statements that should be removed in production" >> security-audit.md
+          else
+            echo "✅ No console.log statements found" >> security-audit.md
+          fi
+          
+          if grep -r "debugger" src/ --exclude-dir=node_modules; then
+            echo "⚠️ Found debugger statements that should be removed" >> security-audit.md
+          else
+            echo "✅ No debugger statements found" >> security-audit.md
+          fi
+
+      - name: Upload security audit results
+        uses: actions/upload-artifact@v3
+        with:
+          name: security-audit-results
+          path: security-audit.md

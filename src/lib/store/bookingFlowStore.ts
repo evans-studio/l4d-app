@@ -124,6 +124,10 @@ interface BookingFlowState {
   isExistingUser: boolean
   isRebooking: boolean
   
+  // Session management
+  sessionTimestamp: number
+  sessionExpiry: number // 30 minutes in milliseconds
+  
   // Loading states
   isLoading: boolean
   isSubmitting: boolean
@@ -213,6 +217,9 @@ interface BookingFlowActions {
 // Combined store type
 type BookingFlowStore = BookingFlowState & BookingFlowActions
 
+// Session expiry time: 30 minutes
+const SESSION_EXPIRY_MS = 30 * 60 * 1000;
+
 // Initial state
 const initialState: BookingFlowState = {
   currentStep: 1,
@@ -226,6 +233,8 @@ const initialState: BookingFlowState = {
   calculatedPrice: null,
   isExistingUser: false,
   isRebooking: false,
+  sessionTimestamp: Date.now(),
+  sessionExpiry: SESSION_EXPIRY_MS,
   isLoading: false,
   isSubmitting: false,
   error: null,
@@ -237,10 +246,15 @@ const initialState: BookingFlowState = {
   recentBookings: [],
 }
 
+// Session utility functions
+const isSessionExpired = (sessionTimestamp: number, sessionExpiry: number): boolean => {
+  const now = Date.now();
+  return (now - sessionTimestamp) > sessionExpiry;
+};
+
 // API utility functions
 const apiCall = async <T>(url: string, options?: RequestInit): Promise<ApiResponse<T>> => {
   try {
-    console.log(`BookingFlowStore: Making API call to ${url}`, { method: options?.method || 'GET' })
     
     const response = await fetch(url, {
       headers: {
@@ -250,34 +264,29 @@ const apiCall = async <T>(url: string, options?: RequestInit): Promise<ApiRespon
       ...options,
     })
     
-    console.log(`BookingFlowStore: API response from ${url}`, { 
-      status: response.status, 
-      statusText: response.statusText,
-      ok: response.ok 
-    })
+    
     
     if (!response.ok) {
       // Try to get error details from response
       let errorDetails = `HTTP error! status: ${response.status}`
       try {
         const errorBody = await response.text()
-        console.error(`BookingFlowStore: Error response body from ${url}:`, errorBody)
+        
         if (errorBody) {
           const parsedError = JSON.parse(errorBody)
           errorDetails = parsedError.error?.message || errorDetails
         }
       } catch (parseError) {
-        console.error('BookingFlowStore: Could not parse error response:', parseError)
+        
       }
       
       throw new Error(errorDetails)
     }
     
     const data = await response.json()
-    console.log(`BookingFlowStore: Successful response from ${url}:`, data)
     return data
   } catch (error) {
-    console.error(`BookingFlowStore: API call failed for ${url}:`, error)
+    
     return {
       success: false,
       error: {
@@ -365,7 +374,24 @@ export const useBookingFlowStore = create<BookingFlowStore>()(
       calculatePrice: async () => {
         const { formData, setLoading, setError } = get()
         
+        console.log('💰 Starting price calculation with data:', {
+          service: formData.service ? {
+            id: formData.service.serviceId,
+            name: formData.service.name,
+            basePrice: formData.service.basePrice
+          } : null,
+          vehicle: formData.vehicle ? {
+            make: formData.vehicle.make,
+            model: formData.vehicle.model,
+            size: formData.vehicle.size
+          } : null,
+          address: formData.address ? {
+            postcode: formData.address.postcode
+          } : null
+        })
+        
         if (!formData.service || !formData.vehicle) {
+          console.error('❌ Missing required data for pricing')
           setError('Service and vehicle data required for pricing')
           return
         }
@@ -375,6 +401,8 @@ export const useBookingFlowStore = create<BookingFlowStore>()(
         try {
           // If we have address data, use comprehensive pricing calculator
           if (formData.address && formData.address.postcode) {
+            console.log('🏠 Using comprehensive pricing with address')
+            
             const serviceDetails = {
               id: formData.service.serviceId,
               name: formData.service.name,
@@ -396,28 +424,51 @@ export const useBookingFlowStore = create<BookingFlowStore>()(
               postcode: formData.address.postcode
             }
             
+            console.log('🔄 Calling calculateBookingPrice with:', {
+              serviceDetails,
+              vehicleDetails,
+              addressDetails
+            })
+            
             const priceBreakdown = await calculateBookingPrice(
               serviceDetails,
               vehicleDetails,
               addressDetails
             )
             
-            // Convert to store format
+            console.log('📊 Price breakdown result:', priceBreakdown)
+            
+            // Convert to store format with fallback calculation
+            const servicePrice = priceBreakdown.servicePrice || priceBreakdown.serviceBasePrice || 0
+            const travelSurcharge = priceBreakdown.travelSurcharge || 0
+            const fallbackFinalPrice = servicePrice + travelSurcharge
+            
             const calculatedPrice: PriceCalculation = {
               basePrice: priceBreakdown.serviceBasePrice,
               sizeMultiplier: priceBreakdown.vehicleSizeMultiplier,
-              servicePrice: priceBreakdown.servicePrice,
+              servicePrice: servicePrice,
               travelDistance: priceBreakdown.travelDistance,
-              travelSurcharge: priceBreakdown.travelSurcharge,
-              finalPrice: priceBreakdown.totalPrice,
+              travelSurcharge: travelSurcharge,
+              finalPrice: priceBreakdown.totalPrice || fallbackFinalPrice,
               currency: 'GBP',
               breakdown: priceBreakdown,
               withinFreeRadius: priceBreakdown.breakdown.travel.withinFreeRadius
             }
             
+            console.log('🔍 Store conversion details:', {
+              'priceBreakdown.totalPrice': priceBreakdown.totalPrice,
+              'fallbackFinalPrice': fallbackFinalPrice,
+              'calculatedPrice.finalPrice': calculatedPrice.finalPrice,
+              'servicePrice': servicePrice,
+              'travelSurcharge': travelSurcharge
+            })
+            
+            console.log('✅ Setting calculated price:', calculatedPrice)
             set({ calculatedPrice })
           } else {
             // Fallback to basic service pricing without address
+            console.log('🔧 Using fallback pricing without address')
+            
             const response = await apiCall<PriceCalculation>('/api/pricing/calculate', {
               method: 'POST',
               body: JSON.stringify({
@@ -426,14 +477,18 @@ export const useBookingFlowStore = create<BookingFlowStore>()(
               }),
             })
             
+            console.log('📡 Fallback API response:', response)
+            
             if (response.success && response.data) {
+              console.log('✅ Setting fallback calculated price:', response.data)
               set({ calculatedPrice: response.data })
             } else {
+              console.error('❌ Fallback pricing failed:', response.error)
               setError(response.error?.message || 'Failed to calculate price')
             }
           }
         } catch (error) {
-          console.error('Price calculation error:', error)
+          console.error('❌ Price calculation error:', error)
           setError('Failed to calculate price')
         } finally {
           setLoading(false)
@@ -444,6 +499,16 @@ export const useBookingFlowStore = create<BookingFlowStore>()(
       loadExistingUserData: async (email: string, phone: string) => {
         const { setLoading, setError } = get()
         setLoading(true)
+        
+        // Clear any previous user validation state before making new API call
+        console.log('🔍 Starting user validation for:', { email, phone })
+        set({
+          isExistingUser: false,
+          userVehicles: [],
+          userAddresses: [],
+          recentBookings: [],
+          error: null
+        })
         
         try {
           const response = await apiCall<{
@@ -484,13 +549,21 @@ export const useBookingFlowStore = create<BookingFlowStore>()(
           })
           
           if (response.success && response.data) {
+            console.log('✅ User validation API response:', response.data)
+            console.log('📊 Setting isExistingUser to:', response.data.isExistingUser)
+            
             set({
               isExistingUser: response.data.isExistingUser,
               userVehicles: response.data.vehicles || [],
               userAddresses: response.data.addresses || [],
               recentBookings: response.data.recentBookings || [],
             })
+            
+            // Verify the state was set correctly
+            const currentState = get()
+            console.log('🔄 State after update - isExistingUser:', currentState.isExistingUser)
           } else {
+            console.error('❌ User validation API failed:', response.error)
             setError(response.error?.message || 'Failed to validate user')
           }
         } catch (error) {
@@ -614,24 +687,17 @@ export const useBookingFlowStore = create<BookingFlowStore>()(
         setLoading(true)
         
         try {
-          console.log(`BookingFlowStore: Loading slots for date ${date}`)
-          
           // Use the time-slots availability API
           const response = await apiCall<TimeSlotRow[]>(`/api/time-slots/availability?date=${date}`)
-          
-          console.log('BookingFlowStore: Availability API response:', response)
           
           if (response.success && response.data) {
             // Filter slots that are available
             const availableSlots = response.data.filter(slot => slot.is_available)
-            console.log(`BookingFlowStore: Found ${availableSlots.length} available slots out of ${response.data.length} total slots`)
             set({ availableSlots })
           } else {
-            console.error('BookingFlowStore: API error:', response.error)
             setError(response.error?.message || 'Failed to load available slots')
           }
         } catch (error) {
-          console.error('BookingFlowStore: Exception loading slots:', error)
           setError('Failed to load available slots')
         } finally {
           setLoading(false)
@@ -725,7 +791,28 @@ export const useBookingFlowStore = create<BookingFlowStore>()(
                 slotId: formData.slot.slotId
               },
               specialRequests: '', // TODO: Add special requests field
-              totalPrice: get().calculatedPrice?.finalPrice || 0
+              totalPrice: (() => {
+                const calculatedPrice = get().calculatedPrice
+                if (!calculatedPrice) return 0
+                
+                // Try multiple ways to get the total price
+                const finalPrice = calculatedPrice.finalPrice
+                const servicePrice = calculatedPrice.servicePrice || calculatedPrice.basePrice || 0
+                const travelSurcharge = calculatedPrice.travelSurcharge || 0
+                const fallbackTotal = servicePrice + travelSurcharge
+                
+                const totalPrice = finalPrice || fallbackTotal || 0
+                
+                console.log('🎯 Booking submission total price calculation:', {
+                  'calculatedPrice.finalPrice': finalPrice,
+                  'servicePrice': servicePrice,
+                  'travelSurcharge': travelSurcharge,
+                  'fallbackTotal': fallbackTotal,
+                  'submitting totalPrice': totalPrice
+                })
+                
+                return totalPrice
+              })()
             }),
           })
           
@@ -758,7 +845,10 @@ export const useBookingFlowStore = create<BookingFlowStore>()(
       setSubmitting: (submitting: boolean) => set({ isSubmitting: submitting }),
       setError: (error: string | null) => set({ error }),
       
-      resetFlow: () => set(initialState),
+      resetFlow: () => set({
+        ...initialState,
+        sessionTimestamp: Date.now(), // Refresh session timestamp on reset
+      }),
       
       // Validation
       validateCurrentStep: () => {
@@ -792,16 +882,30 @@ export const useBookingFlowStore = create<BookingFlowStore>()(
       name: 'love4detailing-booking-flow',
       storage: createJSONStorage(() => sessionStorage),
       // Only persist form data and current step, not loading states or cached data
+      // Note: isExistingUser is intentionally NOT persisted to prevent old validation results
+      // from affecting new email/phone validations
       partialize: (state) => ({
         currentStep: state.currentStep,
         formData: state.formData,
         calculatedPrice: state.calculatedPrice,
-        isExistingUser: state.isExistingUser,
+        sessionTimestamp: state.sessionTimestamp,
+        sessionExpiry: state.sessionExpiry,
       }),
-      // Clear session storage on successful booking completion
+      // Check for expired sessions on rehydration
       onRehydrateStorage: () => (state, error) => {
         if (error) {
           console.warn('Failed to rehydrate booking flow state:', error)
+          return
+        }
+        
+        // Check if session has expired
+        if (state && isSessionExpired(state.sessionTimestamp || 0, state.sessionExpiry || SESSION_EXPIRY_MS)) {
+          console.log('📅 Booking session expired, resetting to fresh state')
+          // Reset to initial state if session has expired
+          Object.assign(state, {
+            ...initialState,
+            sessionTimestamp: Date.now(),
+          })
         }
       },
     }

@@ -16,7 +16,7 @@ interface Booking {
   customer_phone?: string
   scheduled_date: string
   start_time: string
-  status: 'pending' | 'confirmed' | 'rescheduled' | 'in_progress' | 'completed' | 'cancelled' | 'declined'
+  status: 'pending' | 'processing' | 'payment_failed' | 'confirmed' | 'rescheduled' | 'in_progress' | 'completed' | 'cancelled' | 'declined' | 'no_show'
   total_price: number
   special_instructions?: string
   services: Array<{

@@ -130,32 +130,36 @@ export function DayCard({ day, isToday, onAddSlot, onSlotUpdate }: DayCardProps)
     <>
       <div className="p-6 min-h-[500px]">
         {/* Day Header */}
-        <div className={`text-center mb-6 pb-4 border-b border-[var(--border-secondary)] ${
+        <div className={`text-center mb-6 pb-6 border-b border-[var(--border-secondary)] ${
           isToday ? 'border-[var(--primary)]' : ''
         }`}>
-          <div className={`text-2xl font-bold mb-1 ${
+          <div className={`text-2xl font-bold mb-2 flex flex-col items-center justify-center ${
             isToday ? 'text-[var(--primary)]' : 'text-[var(--text-primary)]'
           }`}>
-            {formatDate(day.date)}
+            <div className="leading-none">
+              {formatDate(day.date)}
+            </div>
           </div>
           {isToday && (
-            <div className="text-sm text-[var(--primary)] font-medium mb-2">
-              Today
+            <div className="text-sm text-[var(--primary)] font-medium mb-3 flex items-center justify-center">
+              <div className="px-3 py-1 bg-[var(--primary)]/10 rounded-full">
+                Today
+              </div>
             </div>
           )}
-          <div className="text-sm text-[var(--text-secondary)] flex items-center justify-center gap-4">
-            <span className="flex items-center gap-1">
+          <div className="text-sm text-[var(--text-secondary)] flex items-center justify-center gap-4 flex-wrap">
+            <span className="flex items-center gap-2 min-h-[24px]">
               <ClockIcon className="w-4 h-4" />
-              {day.stats.total} slots
+              <span>{day.stats.total} slots</span>
             </span>
-            <span className="flex items-center gap-1">
+            <span className="flex items-center gap-2 min-h-[24px]">
               <UsersIcon className="w-4 h-4" />
-              {day.stats.booked} booked
+              <span>{day.stats.booked} booked</span>
             </span>
             {day.stats.completed > 0 && (
-              <span className="flex items-center gap-1">
+              <span className="flex items-center gap-2 min-h-[24px]">
                 <CheckCircleIcon className="w-4 h-4" />
-                {day.stats.completed} done
+                <span>{day.stats.completed} done</span>
               </span>
             )}
           </div>

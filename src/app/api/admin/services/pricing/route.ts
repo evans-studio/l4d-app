@@ -74,7 +74,7 @@ export async function GET(request: NextRequest) {
           
           Object.entries(priceMap).forEach(([sizeName, price]) => {
             const vehicleSizeId = sizeNameToId[sizeName]
-            if (vehicleSizeId && price > 0 && pricingMatrix[serviceId]) {
+            if (vehicleSizeId && price >= 0 && pricingMatrix[serviceId]) {
               pricingMatrix[serviceId][vehicleSizeId] = {
                 service_id: serviceId,
                 vehicle_size_id: vehicleSizeId,

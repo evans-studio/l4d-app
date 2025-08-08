@@ -1,22 +1,22 @@
 'use client'
 
 import { cva, type VariantProps } from 'class-variance-authority'
-import { Clock, CheckCircle, AlertCircle, XCircle, PlayCircle, Calendar } from 'lucide-react'
+import { Clock, CheckCircle, AlertCircle, XCircle, PlayCircle, Calendar, CreditCard, AlertTriangle } from 'lucide-react'
 
 const statusBadgeVariants = cva(
   'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors max-w-full min-w-0',
   {
     variants: {
       status: {
-        draft: 'bg-gray-100 text-gray-800 border border-gray-200',
         pending: 'bg-yellow-100 text-yellow-800 border border-yellow-200',
-        confirmed: 'bg-blue-100 text-blue-800 border border-blue-200',
+        processing: 'bg-blue-100 text-blue-800 border border-blue-200',
+        payment_failed: 'bg-red-100 text-red-800 border border-red-200',
+        confirmed: 'bg-green-100 text-green-800 border border-green-200',
         rescheduled: 'bg-purple-100 text-purple-800 border border-purple-200',
         in_progress: 'bg-orange-100 text-orange-800 border border-orange-200',
-        completed: 'bg-green-100 text-green-800 border border-green-200',
-        paid: 'bg-emerald-100 text-emerald-800 border border-emerald-200',
+        completed: 'bg-emerald-100 text-emerald-800 border border-emerald-200',
+        declined: 'bg-yellow-100 text-yellow-800 border border-yellow-200',
         cancelled: 'bg-red-100 text-red-800 border border-red-200',
-        declined: 'bg-gray-100 text-gray-800 border border-gray-200',
         no_show: 'bg-gray-100 text-gray-800 border border-gray-200'
       },
       size: {
@@ -33,20 +33,24 @@ const statusBadgeVariants = cva(
 )
 
 export interface StatusBadgeProps extends Omit<VariantProps<typeof statusBadgeVariants>, 'status'> {
-  status: 'draft' | 'pending' | 'confirmed' | 'rescheduled' | 'in_progress' | 'completed' | 'paid' | 'cancelled' | 'declined' | 'no_show' | string
+  status: 'pending' | 'processing' | 'payment_failed' | 'confirmed' | 'rescheduled' | 'in_progress' | 'completed' | 'declined' | 'cancelled' | 'no_show' | string
   showIcon?: boolean
   className?: string
   truncate?: boolean
 }
 
 const statusConfig = {
-  draft: {
-    icon: Clock,
-    label: 'Draft'
-  },
   pending: {
     icon: Clock,
-    label: 'Pending Confirmation'
+    label: 'Pending Payment'
+  },
+  processing: {
+    icon: Clock,
+    label: 'Processing Payment'
+  },
+  payment_failed: {
+    icon: XCircle,
+    label: 'Payment Failed'
   },
   confirmed: {
     icon: CheckCircle,
@@ -64,17 +68,13 @@ const statusConfig = {
     icon: CheckCircle,
     label: 'Completed'
   },
-  paid: {
-    icon: CheckCircle,
-    label: 'Paid'
+  declined: {
+    icon: XCircle,
+    label: 'Declined'
   },
   cancelled: {
     icon: XCircle,
     label: 'Cancelled'
-  },
-  declined: {
-    icon: XCircle,
-    label: 'Declined'
   },
   no_show: {
     icon: AlertCircle,
@@ -158,6 +158,51 @@ export function PaymentStatusBadge({
 
   return (
     <span className={`inline-flex items-center gap-1.5 rounded-full font-medium border transition-colors ${colorClasses[config.color]} ${sizeClasses[size]} ${className}`}>
+      <CreditCard className="w-3 h-3 flex-shrink-0" />
+      {config.label}
+    </span>
+  )
+}
+
+// Payment deadline warning badge
+export function PaymentDeadlineBadge({
+  deadline,
+  className = ''
+}: {
+  deadline: string
+  className?: string
+}) {
+  const deadlineDate = new Date(deadline)
+  const now = new Date()
+  const hoursUntilDeadline = Math.ceil((deadlineDate.getTime() - now.getTime()) / (1000 * 60 * 60))
+  
+  let config: { color: string; label: string; icon: any }
+  
+  if (hoursUntilDeadline <= 0) {
+    config = {
+      color: 'bg-red-100 text-red-800 border-red-200',
+      label: 'Payment Overdue',
+      icon: AlertTriangle
+    }
+  } else if (hoursUntilDeadline <= 24) {
+    config = {
+      color: 'bg-orange-100 text-orange-800 border-orange-200',
+      label: `Due in ${hoursUntilDeadline}h`,
+      icon: Clock
+    }
+  } else {
+    config = {
+      color: 'bg-blue-100 text-blue-800 border-blue-200',
+      label: `Due ${deadlineDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`,
+      icon: Clock
+    }
+  }
+  
+  const Icon = config.icon
+  
+  return (
+    <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border transition-colors ${config.color} ${className}`}>
+      <Icon className="w-3 h-3 flex-shrink-0" />
       {config.label}
     </span>
   )

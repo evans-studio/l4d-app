@@ -11,38 +11,49 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
   try {
     const supabase = createClientFromRequest(request)
     
-    // Get current user (this also validates the session)
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
-    
-    if (userError || !user) {
-      return NextResponse.json({
-        success: false,
-        error: { message: 'Authentication required', code: 'UNAUTHORIZED' }
-      }, { status: 401 })
-    }
-
-    // Get user profile to check role
-    const { data: profile, error: profileError } = await supabase
-      .from('user_profiles')
-      .select('id, email, role, is_active')
-      .eq('id', user.id)
-      .single()
-
-    if (profileError || !profile || profile.is_active === false) {
-      return NextResponse.json({
-        success: false,
-        error: { message: 'User account not found or inactive', code: 'USER_INACTIVE' }
-      }, { status: 401 })
-    }
-
-    // Determine if user is admin
-    const isAdmin = profile.role === 'admin' || ADMIN_EMAILS.includes(profile.email.toLowerCase())
-
-    // Parse query parameters
+    // Parse query parameters first
     const { searchParams } = new URL(request.url)
+    const reference = searchParams.get('reference')
     const status = searchParams.get('status')
     const dateFrom = searchParams.get('dateFrom')
     const dateTo = searchParams.get('dateTo')
+
+    // Allow public access when querying by reference (for booking confirmation)
+    let user = null
+    let profile = null
+    let isAdmin = false
+
+    if (!reference) {
+      // Get current user (this also validates the session)
+      const { data: { user: authUser }, error: userError } = await supabase.auth.getUser()
+      
+      if (userError || !authUser) {
+        return NextResponse.json({
+          success: false,
+          error: { message: 'Authentication required', code: 'UNAUTHORIZED' }
+        }, { status: 401 })
+      }
+
+      user = authUser
+
+      // Get user profile to check role
+      const { data: userProfile, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('id, email, role, is_active')
+        .eq('id', user.id)
+        .single()
+
+      if (profileError || !userProfile || userProfile.is_active === false) {
+        return NextResponse.json({
+          success: false,
+          error: { message: 'User account not found or inactive', code: 'USER_INACTIVE' }
+        }, { status: 401 })
+      }
+
+      profile = userProfile
+      // Determine if user is admin
+      isAdmin = profile.role === 'admin' || ADMIN_EMAILS.includes(profile.email.toLowerCase())
+    }
 
     // Build query
     let query = supabase
@@ -63,11 +74,11 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
           model,
           year,
           color,
-          license_number,
-          vehicle_size
+          license_plate,
+          registration
         ),
         customer_addresses (
-          label,
+          name,
           address_line_1,
           address_line_2,
           city,
@@ -77,18 +88,23 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
         ),
         booking_services (
           service_id,
-          service_name,
+          service_details,
           price,
-          duration
+          estimated_duration
         )
       `)
 
-    // If not admin, only show user's own bookings
-    if (!isAdmin) {
+    // If not admin and authenticated AND no reference, only show user's own bookings
+    // Skip customer filter when querying by reference to allow public booking confirmation
+    if (!isAdmin && profile && !reference) {
       query = query.eq('customer_id', profile.id)
     }
 
     // Apply filters
+    if (reference) {
+      query = query.eq('booking_reference', reference)
+    }
+
     if (status) {
       const statusArray = status.split(',')
       query = query.in('status', statusArray)
@@ -128,20 +144,20 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
       special_requests: booking.special_requests,
       created_at: booking.created_at,
       services: booking.booking_services?.map((service: any) => ({
-        name: service.service_name,
+        name: service.service_details?.name || 'Vehicle Detailing Service',
         price: service.price,
-        duration: service.duration
+        duration: service.estimated_duration
       })) || [],
       vehicle: booking.customer_vehicles && booking.customer_vehicles.length > 0 ? {
         make: booking.customer_vehicles[0]?.make,
         model: booking.customer_vehicles[0]?.model,
         year: booking.customer_vehicles[0]?.year,
         color: booking.customer_vehicles[0]?.color,
-        license_number: booking.customer_vehicles[0]?.license_number,
+        license_plate: booking.customer_vehicles[0]?.license_plate || booking.customer_vehicles[0]?.registration,
         vehicle_size: booking.customer_vehicles[0]?.vehicle_size
       } : null,
       address: booking.customer_addresses && booking.customer_addresses.length > 0 ? {
-        label: booking.customer_addresses[0]?.label,
+        name: booking.customer_addresses[0]?.name,
         address_line_1: booking.customer_addresses[0]?.address_line_1,
         address_line_2: booking.customer_addresses[0]?.address_line_2,
         city: booking.customer_addresses[0]?.city,

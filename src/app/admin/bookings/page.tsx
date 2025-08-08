@@ -2,10 +2,13 @@
 
 import { useEffect, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Search, Calendar, Plus, CheckIcon, XIcon, CalendarIcon, ClockIcon } from 'lucide-react'
+import { Search, Calendar, Plus, CheckIcon, XIcon, CalendarIcon, ClockIcon, CopyIcon, CreditCard, Loader2 } from 'lucide-react'
 
 // Real-time hooks
 import { useRealTimeBookings, type AdminBooking } from '@/hooks/useRealTimeBookings'
+
+// Status transition validation
+import { validateTransition, type BookingStatus } from '@/lib/utils/status-transitions'
 
 // UI Components
 import { Button } from '@/components/ui/primitives/Button'
@@ -19,6 +22,9 @@ import { AdminLayout } from '@/components/layouts/AdminLayout'
 import { AdminRoute } from '@/components/ProtectedRoute'
 import { Container } from '@/components/layout/templates/PageLayout'
 import { ConfirmBookingModal, DeclineBookingModal, RescheduleBookingModal, CancelBookingModal } from '@/components/admin/BookingActionModals'
+import { MarkAsPaidModal } from '@/components/admin/MarkAsPaidModal'
+import { PaymentSummary } from '@/components/admin/PaymentSummary'
+import { BookingCard } from '@/components/admin/BookingCard'
 
 // Use the booking type from the hook
 type Booking = AdminBooking
@@ -78,7 +84,25 @@ function AdminBookingsContent() {
     isOpen: false,
     booking: null
   })
+  const [markAsPaidModal, setMarkAsPaidModal] = useState<{ isOpen: boolean; booking: Booking | null }>({
+    isOpen: false,
+    booking: null
+  })
   const [actionLoading, setActionLoading] = useState(false)
+  const [statusUpdateLoading, setStatusUpdateLoading] = useState<string | null>(null)
+  const [confirmAction, setConfirmAction] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    action: () => Promise<void>;
+    destructive?: boolean;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    action: async () => {},
+    destructive: false
+  })
 
   // Filter bookings
   useEffect(() => {
@@ -127,6 +151,10 @@ function AdminBookingsContent() {
 
   const handleCancelClick = (booking: Booking) => {
     setCancelModal({ isOpen: true, booking })
+  }
+
+  const handleMarkAsPaidClick = (booking: Booking) => {
+    setMarkAsPaidModal({ isOpen: true, booking })
   }
 
   const handleConfirmBooking = async (sendEmail: boolean) => {
@@ -220,12 +248,81 @@ function AdminBookingsContent() {
     }
   }
 
-  // Update booking status using real-time hook
-  const updateBookingStatus = async (bookingId: string, newStatus: string) => {
-    try {
-      await realtimeUpdateStatus(bookingId, newStatus as Booking['status'])
-    } catch (error) {
-      console.error('Error updating booking status:', error)
+  const handleMarkAsPaidSuccess = async () => {
+    // Refresh bookings to sync with real-time hook after successful payment marking
+    await refreshBookings()
+    setMarkAsPaidModal({ isOpen: false, booking: null })
+  }
+
+  // Update booking status using real-time hook with validation and confirmation
+  const updateBookingStatus = async (bookingId: string, newStatus: string, skipValidation = false) => {
+    const booking = bookings.find(b => b.id === bookingId)
+    if (!booking) return
+
+    // Validate transition if not skipped
+    if (!skipValidation) {
+      const validation = validateTransition(
+        booking.status as BookingStatus, 
+        newStatus as BookingStatus,
+        booking.payment_status as 'pending' | 'completed' | 'failed' | undefined
+      )
+
+      if (!validation.valid) {
+        setConfirmAction({
+          isOpen: true,
+          title: 'Invalid Status Change',
+          message: validation.reason || 'This status change is not allowed.',
+          action: async () => {}, // No action - just show error
+          destructive: false
+        })
+        return
+      }
+    }
+
+    const statusAction = async () => {
+      setStatusUpdateLoading(bookingId)
+      try {
+        const success = await realtimeUpdateStatus(bookingId, newStatus as Booking['status'])
+        if (!success) {
+          throw new Error('Failed to update booking status')
+        }
+        // Success feedback could be added here
+      } catch (error) {
+        console.error('Error updating booking status:', error)
+        // Error feedback could be added here
+      } finally {
+        setStatusUpdateLoading(null)
+      }
+    }
+
+    // Check if confirmation is required
+    const validation = validateTransition(
+      booking.status as BookingStatus, 
+      newStatus as BookingStatus,
+      booking.payment_status as 'pending' | 'completed' | 'failed' | undefined
+    )
+
+    if (validation.requiresConfirmation || ['cancelled', 'declined', 'payment_failed', 'completed'].includes(newStatus)) {
+      const statusLabels: { [key: string]: string } = {
+        confirmed: 'confirm',
+        cancelled: 'cancel',
+        completed: 'complete',
+        payment_failed: 'mark payment as failed',
+        in_progress: 'start service',
+        declined: 'decline',
+        processing: 'mark as processing',
+        no_show: 'mark as no show'
+      }
+
+      setConfirmAction({
+        isOpen: true,
+        title: `${statusLabels[newStatus] ? statusLabels[newStatus].charAt(0).toUpperCase() + statusLabels[newStatus].slice(1) : 'Update'} Booking`,
+        message: `${validation.warning ? validation.warning + '\n\n' : ''}Are you sure you want to ${statusLabels[newStatus] || 'update'} booking ${booking.booking_reference}?`,
+        action: statusAction,
+        destructive: ['cancelled', 'declined', 'payment_failed'].includes(newStatus)
+      })
+    } else {
+      await statusAction()
     }
   }
 
@@ -329,18 +426,22 @@ function AdminBookingsContent() {
             >
               <option value="all">All Bookings ({bookings.length})</option>
               <option value="pending">Pending ({bookings.filter(b => b.status === 'pending').length})</option>
+              <option value="processing">Processing ({bookings.filter(b => b.status === 'processing').length})</option>
+              <option value="payment_failed">Payment Failed ({bookings.filter(b => b.status === 'payment_failed').length})</option>
               <option value="confirmed">Confirmed ({bookings.filter(b => b.status === 'confirmed').length})</option>
               <option value="rescheduled">Rescheduled ({bookings.filter(b => b.status === 'rescheduled').length})</option>
+              <option value="in_progress">In Progress ({bookings.filter(b => b.status === 'in_progress').length})</option>
               <option value="completed">Completed ({bookings.filter(b => b.status === 'completed').length})</option>
-              <option value="cancelled">Cancelled ({bookings.filter(b => b.status === 'cancelled').length})</option>
               <option value="declined">Declined ({bookings.filter(b => b.status === 'declined').length})</option>
+              <option value="cancelled">Cancelled ({bookings.filter(b => b.status === 'cancelled').length})</option>
+              <option value="no_show">No Show ({bookings.filter(b => b.status === 'no_show').length})</option>
             </select>
           </div>
 
           {/* Desktop: Horizontal Tabs */}
           <div className="hidden lg:block">
             <div className="inline-flex h-12 items-center justify-center rounded-lg bg-surface-secondary p-1 border border-border-secondary">
-              {['all', 'pending', 'confirmed', 'rescheduled', 'completed', 'cancelled', 'declined'].map((status) => (
+              {['all', 'pending', 'processing', 'payment_failed', 'confirmed', 'rescheduled', 'in_progress', 'completed', 'declined', 'cancelled', 'no_show'].map((status) => (
                 <button
                   key={status}
                   className={`inline-flex items-center justify-center whitespace-nowrap rounded-md px-4 py-2 text-sm font-medium transition-all duration-200 min-h-[44px] ${
@@ -356,6 +457,12 @@ function AdminBookingsContent() {
             </div>
           </div>
         </div>
+
+        {/* Payment Summary */}
+        <PaymentSummary 
+          bookings={bookings} 
+          onRefreshBookings={refreshBookings} 
+        />
 
         {/* Results */}
         <div className="w-full min-w-0">
@@ -391,12 +498,8 @@ function AdminBookingsContent() {
                     key={`${booking.id}-${booking.booking_reference}-${index}`}
                     booking={booking}
                     onStatusUpdate={updateBookingStatus}
-                    onConfirm={() => handleConfirmClick(booking)}
-                    onDecline={() => handleDeclineClick(booking)}
-                    onReschedule={() => handleRescheduleClick(booking)}
-                    onCancel={() => handleCancelClick(booking)}
-                    formatTime={formatTime}
-                    formatDate={formatDate}
+                    onMarkAsPaid={() => handleMarkAsPaidClick(booking)}
+                    variant="full"
                   />
                 ))}
               </CardGrid>
@@ -406,6 +509,16 @@ function AdminBookingsContent() {
       </Container>
 
       {/* Action Modals */}
+      {markAsPaidModal.booking && (
+        <MarkAsPaidModal
+          booking={markAsPaidModal.booking}
+          open={markAsPaidModal.isOpen}
+          onClose={() => setMarkAsPaidModal({ isOpen: false, booking: null })}
+          onSuccess={handleMarkAsPaidSuccess}
+          isLoading={actionLoading}
+        />
+      )}
+
       {confirmModal.booking && (
         <ConfirmBookingModal
           booking={confirmModal.booking}
@@ -445,318 +558,47 @@ function AdminBookingsContent() {
           isLoading={actionLoading}
         />
       )}
-    </AdminLayout>
-  )
-}
 
-// Booking Card Component
-interface BookingCardProps {
-  booking: Booking
-  onStatusUpdate: (bookingId: string, newStatus: string) => Promise<void>
-  onConfirm?: () => void
-  onDecline?: () => void
-  onReschedule?: () => void
-  onCancel?: () => void
-  formatTime: (time: string) => string
-  formatDate: (dateStr: string) => string
-}
-
-function BookingCard({ booking, onStatusUpdate, onConfirm, onDecline, onReschedule, onCancel, formatTime, formatDate }: BookingCardProps) {
-  const router = useRouter()
-
-  const getStatusActions = () => {
-    switch (booking.status) {
-      case 'pending':
-        return (
-          <div className="space-y-3">
-            {/* Primary Actions */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      {/* Confirmation Dialog */}
+      {confirmAction.isOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-surface-primary rounded-lg shadow-xl max-w-md w-full p-6 border border-border-secondary">
+            <h3 className="text-lg font-semibold text-text-primary mb-2">
+              {confirmAction.title}
+            </h3>
+            <p className="text-text-secondary mb-6">
+              {confirmAction.message}
+            </p>
+            <div className="flex gap-3 justify-end">
               <Button
-                onClick={onConfirm}
-                size="md"
-                className="bg-green-600 hover:bg-green-700 text-white min-h-[48px] touch-manipulation"
+                variant="outline"
+                onClick={() => setConfirmAction({ ...confirmAction, isOpen: false })}
+                className="min-w-[80px]"
               >
-                <CheckIcon className="w-4 h-4 mr-2" />
+                Cancel
+              </Button>
+              <Button
+                onClick={async () => {
+                  await confirmAction.action()
+                  setConfirmAction({ ...confirmAction, isOpen: false })
+                }}
+                className={`min-w-[80px] ${
+                  confirmAction.destructive 
+                    ? 'bg-red-600 hover:bg-red-700 text-white' 
+                    : 'bg-brand-600 hover:bg-brand-700 text-white'
+                }`}
+                disabled={statusUpdateLoading !== null}
+              >
+                {statusUpdateLoading !== null ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : null}
                 Confirm
               </Button>
-              <Button
-                onClick={onDecline}
-                variant="outline"
-                size="md"
-                className="text-red-600 border-red-200 hover:bg-red-50 min-h-[48px] touch-manipulation"
-              >
-                <XIcon className="w-4 h-4 mr-2" />
-                Decline
-              </Button>
-            </div>
-            {/* Secondary Actions */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <Button
-                onClick={onReschedule}
-                variant="outline"
-                size="md"
-                className="text-blue-600 border-blue-200 hover:bg-blue-50 min-h-[48px] touch-manipulation"
-              >
-                <CalendarIcon className="w-4 h-4 mr-2" />
-                Reschedule
-              </Button>
-              <Button
-                onClick={onCancel}
-                variant="outline"
-                size="md"
-                className="text-red-600 border-red-200 hover:bg-red-50 min-h-[48px] touch-manipulation"
-              >
-                <XIcon className="w-4 h-4 mr-2" />
-                Cancel
-              </Button>
-            </div>
-          </div>
-        )
-      case 'confirmed':
-        return (
-          <div className="space-y-2">
-            {/* Primary Action */}
-            <Button
-              onClick={() => onStatusUpdate(booking.id, 'in_progress')}
-              size="md"
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white min-h-[48px] touch-manipulation"
-            >
-              <ClockIcon className="w-4 h-4 mr-2" />
-              Start Service
-            </Button>
-            {/* Secondary Actions */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <Button
-                onClick={onReschedule}
-                variant="outline"
-                size="md"
-                className="text-blue-600 border-blue-200 hover:bg-blue-50 min-h-[48px] touch-manipulation"
-              >
-                <CalendarIcon className="w-4 h-4 mr-2" />
-                Reschedule
-              </Button>
-              <Button
-                onClick={onCancel}
-                variant="outline"
-                size="md"
-                className="text-red-600 border-red-200 hover:bg-red-50 min-h-[48px] touch-manipulation"
-              >
-                <XIcon className="w-4 h-4 mr-2" />
-                Cancel
-              </Button>
-            </div>
-          </div>
-        )
-      case 'rescheduled':
-        return (
-          <div className="space-y-2">
-            {/* Primary Action */}
-            <Button
-              onClick={() => onStatusUpdate(booking.id, 'in_progress')}
-              size="md"
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white min-h-[48px] touch-manipulation"
-            >
-              <ClockIcon className="w-4 h-4 mr-2" />
-              Start Service
-            </Button>
-            {/* Secondary Actions */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <Button
-                onClick={onReschedule}
-                variant="outline"
-                size="md"
-                className="text-blue-600 border-blue-200 hover:bg-blue-50 min-h-[48px] touch-manipulation"
-              >
-                <CalendarIcon className="w-4 h-4 mr-2" />
-                <span className="hidden sm:inline">Reschedule Again</span>
-                <span className="sm:hidden">Reschedule</span>
-              </Button>
-              <Button
-                onClick={onCancel}
-                variant="outline"
-                size="md"
-                className="text-red-600 border-red-200 hover:bg-red-50 min-h-[48px] touch-manipulation"
-              >
-                <XIcon className="w-4 h-4 mr-2" />
-                Cancel
-              </Button>
-            </div>
-          </div>
-        )
-      case 'in_progress':
-        return (
-          <div className="space-y-2">
-            {/* Primary Action */}
-            <Button
-              onClick={() => onStatusUpdate(booking.id, 'completed')}
-              size="md"
-              className="w-full bg-green-600 hover:bg-green-700 text-white min-h-[48px] touch-manipulation"
-            >
-              <CheckIcon className="w-4 h-4 mr-2" />
-              Complete Service
-            </Button>
-            {/* Emergency Actions */}
-            <Button
-              onClick={onCancel}
-              variant="outline"
-              size="md"
-              className="w-full text-red-600 border-red-200 hover:bg-red-50 min-h-[48px] touch-manipulation"
-            >
-              <XIcon className="w-4 h-4 mr-2" />
-              Emergency Cancel
-            </Button>
-          </div>
-        )
-      case 'completed':
-        return (
-          <div className="space-y-2">
-            {/* Status Change Actions */}
-            <Button
-              onClick={() => onStatusUpdate(booking.id, 'in_progress')}
-              variant="outline"
-              size="md"
-              className="w-full text-orange-600 border-orange-200 hover:bg-orange-50 min-h-[48px] touch-manipulation"
-            >
-              <ClockIcon className="w-4 h-4 mr-2" />
-              Mark In Progress
-            </Button>
-          </div>
-        )
-      case 'cancelled':
-        return (
-          <div className="space-y-2">
-            {/* Reactivation Actions */}
-            <Button
-              onClick={() => onStatusUpdate(booking.id, 'pending')}
-              variant="outline"
-              size="md"
-              className="w-full text-orange-600 border-orange-200 hover:bg-orange-50 min-h-[48px] touch-manipulation"
-            >
-              <ClockIcon className="w-4 h-4 mr-2" />
-              Reactivate
-            </Button>
-          </div>
-        )
-      case 'declined':
-        return (
-          <div className="space-y-2">
-            {/* Reactivation Actions */}
-            <Button
-              onClick={() => onStatusUpdate(booking.id, 'pending')}
-              variant="outline"
-              size="md"
-              className="w-full text-orange-600 border-orange-200 hover:bg-orange-50 min-h-[48px] touch-manipulation"
-            >
-              <ClockIcon className="w-4 h-4 mr-2" />
-              Reactivate
-            </Button>
-          </div>
-        )
-      default:
-        return null
-    }
-  }
-
-  return (
-    <Card className="hover:shadow-md transition-shadow w-full min-w-0">
-      <CardContent className="p-4 sm:p-6 min-w-0">
-        {/* Header */}
-        <div className="flex items-start justify-between mb-4 gap-3 min-w-0">
-          <div className="flex-1 min-w-0">
-            <h3 className="text-lg font-semibold text-text-primary mb-2 truncate">
-              #{booking.booking_reference}
-            </h3>
-            <StatusBadge status={booking.status} />
-          </div>
-          <div className="text-right flex-shrink-0 min-w-0">
-            <p className="text-xl font-bold text-brand-500 truncate">£{booking.total_price}</p>
-            <p className="text-sm text-text-muted truncate">
-              {booking.services?.length || 0} service{(booking.services?.length || 0) !== 1 ? 's' : ''}
-            </p>
-          </div>
-        </div>
-
-        {/* Date & Time */}
-        <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4 mb-4 text-text-primary min-w-0">
-          <div className="flex items-center gap-2 min-w-0">
-            <Calendar className="w-4 h-4 text-text-secondary flex-shrink-0" />
-            <span className="font-medium truncate">{formatDate(booking.scheduled_date)}</span>
-          </div>
-          <div className="flex items-center gap-2 min-w-0">
-            <span className="font-medium truncate">{formatTime(booking.start_time)}</span>
-          </div>
-        </div>
-
-        {/* Customer & Vehicle Info - Mobile Optimized */}
-        <div className="space-y-3 md:space-y-0 md:grid md:grid-cols-2 md:gap-4 mb-4">
-          <div className="bg-surface-tertiary rounded-lg p-3 min-w-0">
-            <p className="text-xs text-text-secondary mb-2 font-medium uppercase tracking-wide">Customer</p>
-            <div className="space-y-1 min-w-0">
-              <p className="font-semibold text-text-primary truncate">{booking.customer_name}</p>
-              <p className="text-sm text-text-secondary truncate">{booking.customer_email}</p>
-              {booking.customer_phone && (
-                <p className="text-sm text-text-secondary break-words">{booking.customer_phone}</p>
-              )}
-            </div>
-          </div>
-          <div className="bg-surface-tertiary rounded-lg p-3 min-w-0">
-            <p className="text-xs text-text-secondary mb-2 font-medium uppercase tracking-wide">Vehicle</p>
-            <div className="space-y-1 min-w-0">
-              <p className="font-semibold text-text-primary truncate">
-                {booking.vehicle?.make && booking.vehicle?.model 
-                  ? `${booking.vehicle.make} ${booking.vehicle.model}`
-                  : 'No vehicle info'
-                }
-              </p>
-              {booking.vehicle?.year && (
-                <p className="text-sm text-text-secondary truncate">
-                  {booking.vehicle.year}{booking.vehicle?.color ? ` • ${booking.vehicle.color}` : ''}
-                </p>
-              )}
             </div>
           </div>
         </div>
-
-        {/* Services */}
-        <div className="mb-4 min-w-0">
-          <p className="text-xs text-text-secondary mb-2">Services</p>
-          <div className="flex flex-wrap gap-1 min-w-0">
-            {booking.services?.map((service, index) => (
-              <span
-                key={`${booking.id}-service-${index}-${service.name}`}
-                className="px-2 py-1 bg-surface-tertiary rounded text-xs text-text-primary truncate max-w-full inline-block"
-                title={service.name}
-              >
-                {service.name}
-              </span>
-            )) || <span className="text-text-muted text-xs">No services</span>}
-          </div>
-        </div>
-
-        {/* Special Instructions */}
-        {booking.special_instructions && (
-          <div className="mb-4 p-3 bg-surface-tertiary rounded-md min-w-0">
-            <p className="text-xs text-text-secondary mb-1">Special Instructions</p>
-            <p className="text-sm text-text-primary break-words overflow-hidden">{booking.special_instructions}</p>
-          </div>
-        )}
-
-        {/* Actions - Mobile Optimized */}
-        <div className="space-y-3">
-          <Button
-            onClick={() => router.push(`/admin/bookings/${booking.id}`)}
-            variant="outline"
-            size="md"
-            className="w-full min-h-[48px] touch-manipulation"
-          >
-            View Details
-          </Button>
-          <div className="space-y-2">
-            {getStatusActions()}
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+      )}
+    </AdminLayout>
   )
 }
 

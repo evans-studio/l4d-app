@@ -48,9 +48,20 @@ export async function GET(request: NextRequest) {
     if (sizeColumn && serviceId && pricingData.length > 0) {
       const pricingRecord = pricingData[0]
       if (pricingRecord) {
+        const price = (pricingRecord as any)[sizeColumn]
+        console.log(`🔍 Service pricing API: service_id=${serviceId}, size=${sizeColumn}, price=${price}`)
+        
         return ApiResponseHandler.success({
           service_id: serviceId,
-          [sizeColumn]: (pricingRecord as any)[sizeColumn]
+          [sizeColumn]: price,
+          // Include all size data for debugging
+          small: pricingRecord.small,
+          medium: pricingRecord.medium,
+          large: pricingRecord.large,
+          extra_large: pricingRecord.extra_large,
+          service_name: Array.isArray(pricingRecord.services) 
+            ? pricingRecord.services[0]?.name 
+            : (pricingRecord.services as any)?.name
         })
       }
     }
@@ -92,7 +103,9 @@ export async function GET(request: NextRequest) {
               vehicleSize: sizeLetter, // Changed from vehicleSizeId to vehicleSize (letter)
               vehicleSizeName: sizeName,
               price: price,
-              serviceName: item.services?.name
+              serviceName: Array.isArray(item.services) 
+                ? item.services[0]?.name 
+                : (item.services as any)?.name
             })
           }
         }

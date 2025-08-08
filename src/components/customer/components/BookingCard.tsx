@@ -17,7 +17,11 @@ import {
   RefreshCw,
   CheckCircle,
   AlertCircle,
-  Clock as PendingIcon
+  Clock as PendingIcon,
+  CreditCard,
+  AlertTriangle,
+  Copy,
+  ExternalLink
 } from 'lucide-react'
 import { formatDistance } from 'date-fns'
 
@@ -27,7 +31,11 @@ interface BookingCardProps {
     booking_reference: string
     scheduled_date: string
     start_time: string
-    status: 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled'
+    status: 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'payment_failed'
+    payment_status?: 'pending' | 'paid' | 'failed' | 'refunded'
+    payment_method?: string
+    payment_deadline?: string
+    payment_link?: string
     total_price: number
     services: Array<{
       name: string
@@ -83,8 +91,52 @@ const statusConfig = {
     color: 'error',
     bgColor: 'bg-error-600/10',
     textColor: 'text-error-600'
+  },
+  rescheduled: {
+    label: 'Rescheduled',
+    icon: Calendar,
+    color: 'warning',
+    bgColor: 'bg-warning-600/10',
+    textColor: 'text-warning-600'
+  },
+  no_show: {
+    label: 'No Show',
+    icon: X,
+    color: 'error',
+    bgColor: 'bg-error-600/10',
+    textColor: 'text-error-600'
+  },
+  payment_failed: {
+    label: 'Payment Failed',
+    icon: X,
+    color: 'error',
+    bgColor: 'bg-error-600/10',
+    textColor: 'text-error-600'
+  },
+  processing: {
+    label: 'Processing',
+    icon: PendingIcon,
+    color: 'info',
+    bgColor: 'bg-info-600/10',
+    textColor: 'text-info-600'
+  },
+  declined: {
+    label: 'Declined',
+    icon: X,
+    color: 'error',
+    bgColor: 'bg-error-600/10',
+    textColor: 'text-error-600'
   }
 } as const
+
+// Default fallback status config
+const defaultStatusConfig = {
+  label: 'Unknown',
+  icon: AlertCircle,
+  color: 'neutral',
+  bgColor: 'bg-neutral-600/10',
+  textColor: 'text-neutral-600'
+}
 
 export function BookingCard({ 
   booking, 
@@ -94,8 +146,58 @@ export function BookingCard({
   const router = useRouter()
   const { initializeRebooking } = useBookingFlowStore()
   const { openOverlay } = useOverlay()
-  const config = statusConfig[booking.status]
+  const config = statusConfig[booking.status as keyof typeof statusConfig] || defaultStatusConfig
   const StatusIcon = config.icon
+
+  // Payment deadline helpers
+  const isPaymentOverdue = () => {
+    if (!booking.payment_deadline || booking.status !== 'pending') return false
+    return new Date(booking.payment_deadline) < new Date()
+  }
+
+  const getPaymentDeadlineDisplay = () => {
+    if (!booking.payment_deadline) return null
+    const deadline = new Date(booking.payment_deadline)
+    const now = new Date()
+    const hoursUntilDeadline = Math.ceil((deadline.getTime() - now.getTime()) / (1000 * 60 * 60))
+    
+    if (hoursUntilDeadline <= 0) {
+      return {
+        text: 'Payment Overdue',
+        isOverdue: true,
+        color: 'text-red-700',
+        bgColor: 'bg-red-50',
+        borderColor: 'border-red-200'
+      }
+    } else if (hoursUntilDeadline <= 24) {
+      return {
+        text: `Payment due in ${hoursUntilDeadline}h`,
+        isOverdue: false,
+        color: 'text-orange-700',
+        bgColor: 'bg-orange-50', 
+        borderColor: 'border-orange-200'
+      }
+    } else {
+      return {
+        text: `Payment due ${deadline.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}`,
+        isOverdue: false,
+        color: 'text-blue-700',
+        bgColor: 'bg-blue-50',
+        borderColor: 'border-blue-200'
+      }
+    }
+  }
+
+  const copyPaymentLink = async () => {
+    if (booking.payment_link) {
+      try {
+        await navigator.clipboard.writeText(booking.payment_link)
+        // Could add toast notification here
+      } catch (error) {
+        console.error('Failed to copy payment link:', error)
+      }
+    }
+  }
 
   const formatTime = (timeString: string) => {
     const [hours, minutes] = timeString.split(':')
@@ -154,10 +256,8 @@ export function BookingCard({
     openOverlay({
       type: 'booking-reschedule',
       data: { bookingId: booking.id, booking },
-      onConfirm: async (result) => {
-        // Refresh booking data or show success message
-        console.log('Reschedule confirmed:', result)
-        // You could trigger a refresh here
+      onConfirm: async () => {
+        // Optionally trigger a refresh from parent
       }
     })
   }
@@ -166,10 +266,8 @@ export function BookingCard({
     openOverlay({
       type: 'booking-cancel',
       data: { bookingId: booking.id, booking },
-      onConfirm: async (result) => {
-        // Refresh booking data or show success message
-        console.log('Booking cancelled:', result)
-        // You could trigger a refresh here
+      onConfirm: async () => {
+        // Optionally trigger a refresh from parent
       }
     })
   }
@@ -179,20 +277,20 @@ export function BookingCard({
   if (variant === 'compact') {
     return (
       <Card 
-        className="cursor-pointer hover:shadow-md transition-shadow"
+        className="cursor-pointer hover:shadow-purple-md hover:border-brand-400 transition-all duration-300"
         onClick={handleViewDetails}
       >
-        <CardContent className="p-4">
-          <div className="flex items-center gap-3">
+        <CardContent className="p-5">
+          <div className="flex items-start gap-4">
             {/* Status Icon */}
-            <div className={`w-10 h-10 rounded-lg ${config.bgColor} flex items-center justify-center flex-shrink-0`}>
-              <StatusIcon className={`w-5 h-5 ${config.textColor}`} />
+            <div className={`w-12 h-12 rounded-lg ${config.bgColor} flex items-center justify-center flex-shrink-0 shadow-sm`}>
+              <StatusIcon className={`w-6 h-6 ${config.textColor}`} />
             </div>
 
             {/* Booking Info */}
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1">
-                <h3 className="font-semibold text-text-primary text-sm truncate">
+              <div className="flex items-center gap-2 mb-2">
+                <h3 className="font-semibold text-text-primary text-base truncate">
                   {booking.services[0]?.name}
                   {booking.services.length > 1 && ` +${booking.services.length - 1} more`}
                 </h3>
@@ -200,22 +298,42 @@ export function BookingCard({
                   {config.label}
                 </Badge>
               </div>
-              <div className="flex items-center gap-4 text-xs text-text-secondary">
+              
+              {/* Date and Time Row */}
+              <div className="flex items-center gap-3 text-sm text-text-secondary mb-2">
                 <span className="flex items-center gap-1">
-                  <Calendar className="w-3 h-3" />
+                  <Calendar className="w-4 h-4" />
                   {dateInfo.primary}
                 </span>
                 <span className="flex items-center gap-1">
-                  <Clock className="w-3 h-3" />
+                  <Clock className="w-4 h-4" />
                   {formatTime(booking.start_time)}
                 </span>
               </div>
+
+              {/* Payment Warning Row - Only show if urgent */}
+              {(isPaymentOverdue() || (booking.payment_status && booking.payment_status === 'failed')) && (
+                <div className="flex items-center gap-2">
+                  {isPaymentOverdue() && (
+                    <Badge variant="error" size="sm" className="animate-pulse">
+                      <AlertTriangle className="w-3 h-3 mr-1" />
+                      Payment Overdue
+                    </Badge>
+                  )}
+                  {booking.payment_status === 'failed' && (
+                    <Badge variant="error" size="sm">
+                      <CreditCard className="w-3 h-3 mr-1" />
+                      Payment Failed
+                    </Badge>
+                  )}
+                </div>
+              )}
             </div>
 
-            {/* Price */}
+            {/* Price & Reference */}
             <div className="text-right flex-shrink-0">
-              <p className="font-bold text-text-primary">£{booking.total_price}</p>
-              <p className="text-xs text-text-secondary">#{booking.booking_reference}</p>
+              <p className="font-bold text-brand-500 text-xl drop-shadow-sm">£{booking.total_price}</p>
+              <p className="text-xs text-text-secondary font-medium mt-1">#{booking.booking_reference}</p>
             </div>
           </div>
         </CardContent>
@@ -225,7 +343,7 @@ export function BookingCard({
 
   // Detailed variant
   return (
-    <Card className="overflow-hidden">
+    <Card className="overflow-hidden hover:shadow-purple-lg hover:border-brand-400 transition-all duration-300">
       <CardContent className="p-6">
         <div className="flex flex-col lg:flex-row gap-6">
           {/* Main Content */}
@@ -238,42 +356,122 @@ export function BookingCard({
                     {booking.services[0]?.name}
                     {booking.services.length > 1 && ` +${booking.services.length - 1} more`}
                   </h3>
-                  <Badge variant={config.color as any}>
+                  <Badge variant={config.color as any} className="shadow-sm">
                     {config.label}
                   </Badge>
+                  {/* Payment Status Badge */}
+                  {booking.payment_status && (
+                    <Badge variant={booking.payment_status === 'paid' ? 'success' : booking.payment_status === 'failed' ? 'error' : 'warning'} className="shadow-sm">
+                      <CreditCard className="w-3 h-3 mr-1" />
+                      {booking.payment_status === 'paid' ? 'Paid' : booking.payment_status === 'failed' ? 'Payment Failed' : 'Payment Pending'}
+                    </Badge>
+                  )}
+                  {/* Payment Overdue Warning */}
+                  {isPaymentOverdue() && (
+                    <Badge variant="error" className="shadow-sm animate-pulse">
+                      <AlertTriangle className="w-3 h-3 mr-1" />
+                      OVERDUE
+                    </Badge>
+                  )}
                 </div>
                 <p className="text-sm text-text-secondary">
                   Booking #{booking.booking_reference}
                 </p>
               </div>
               <div className="text-right">
-                <p className="text-2xl font-bold text-text-primary">£{booking.total_price}</p>
+                <p className="text-3xl font-bold text-brand-500 drop-shadow-sm">£{booking.total_price}</p>
                 {dateInfo.secondary && (
                   <p className="text-sm text-brand-400 font-medium">{dateInfo.secondary}</p>
                 )}
               </div>
             </div>
 
+            {/* Payment Status Information - Show for pending bookings */}
+            {booking.status === 'pending' && (
+              <div className={`rounded-xl p-5 border ${ 
+                isPaymentOverdue() 
+                  ? 'bg-red-50 border-red-200' 
+                  : 'bg-blue-50 border-blue-200'
+              }`}>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <CreditCard className={`w-5 h-5 ${
+                      isPaymentOverdue() ? 'text-red-600' : 'text-blue-600'
+                    }`} />
+                    <h4 className={`font-semibold ${
+                      isPaymentOverdue() ? 'text-red-700' : 'text-blue-700'
+                    }`}>
+                      {isPaymentOverdue() ? 'Payment Overdue' : 'Payment Required'}
+                    </h4>
+                  </div>
+                  {(() => {
+                    const deadlineInfo = getPaymentDeadlineDisplay()
+                    return deadlineInfo && (
+                      <Badge variant={isPaymentOverdue() ? 'error' : 'warning'} size="sm">
+                        {deadlineInfo.text}
+                      </Badge>
+                    )
+                  })()}
+                </div>
+                
+                <p className={`text-sm mb-4 ${
+                  isPaymentOverdue() ? 'text-red-700' : 'text-blue-700'
+                }`}>
+                  {isPaymentOverdue() 
+                    ? 'Complete payment to secure your booking.' 
+                    : 'Complete payment to confirm your appointment.'}
+                </p>
+                
+                {booking.payment_link && (
+                  <div className="flex gap-3">
+                    <Button
+                      onClick={copyPaymentLink}
+                      variant="outline"
+                      size="sm"
+                      className="text-brand-600 border-brand-300 hover:bg-brand-50 hover:border-brand-400"
+                    >
+                      <Copy className="w-4 h-4 mr-2" />
+                      Copy Link
+                    </Button>
+                    <a 
+                      href={booking.payment_link} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="flex-1"
+                    >
+                      <Button
+                        size="sm"
+                        className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white"
+                      >
+                        <ExternalLink className="w-4 h-4 mr-2" />
+                        Pay £{booking.total_price}
+                      </Button>
+                    </a>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Details Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               {/* Date & Time */}
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-brand-600/10 flex items-center justify-center">
-                  <Calendar className="w-5 h-5 text-brand-400" />
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-brand-600/10 flex items-center justify-center">
+                  <Calendar className="w-6 h-6 text-brand-400" />
                 </div>
                 <div>
-                  <p className="font-medium text-text-primary">{dateInfo.primary}</p>
+                  <p className="font-semibold text-text-primary text-base">{dateInfo.primary}</p>
                   <p className="text-sm text-text-secondary">{formatTime(booking.start_time)}</p>
                 </div>
               </div>
 
               {/* Vehicle */}
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-surface-tertiary flex items-center justify-center">
-                  <Car className="w-5 h-5 text-text-secondary" />
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-surface-tertiary flex items-center justify-center">
+                  <Car className="w-6 h-6 text-text-secondary" />
                 </div>
                 <div>
-                  <p className="font-medium text-text-primary">
+                  <p className="font-semibold text-text-primary text-base">
                     {booking.vehicle.year} {booking.vehicle.make} {booking.vehicle.model}
                   </p>
                   {booking.vehicle.color && (
@@ -282,13 +480,13 @@ export function BookingCard({
                 </div>
               </div>
 
-              {/* Location */}
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-surface-tertiary flex items-center justify-center">
-                  <MapPin className="w-5 h-5 text-text-secondary" />
+              {/* Location - Full width for address */}
+              <div className="flex items-center gap-4 sm:col-span-2">
+                <div className="w-12 h-12 rounded-xl bg-surface-tertiary flex items-center justify-center">
+                  <MapPin className="w-6 h-6 text-text-secondary" />
                 </div>
                 <div>
-                  <p className="font-medium text-text-primary">{booking.address.address_line_1}</p>
+                  <p className="font-semibold text-text-primary text-base">{booking.address.address_line_1}</p>
                   <p className="text-sm text-text-secondary">
                     {booking.address.city}, {booking.address.postal_code}
                   </p>
@@ -299,13 +497,13 @@ export function BookingCard({
 
           {/* Actions */}
           {showActions && (
-            <div className="flex flex-row lg:flex-col gap-2 lg:min-w-[140px]">
+            <div className="flex flex-row lg:flex-col gap-3 lg:min-w-[160px]">
               <Button
                 onClick={handleViewDetails}
                 variant="outline"
                 size="sm"
                 leftIcon={<Eye className="w-4 h-4" />}
-                className="flex-1 lg:w-full"
+                className="flex-1 lg:w-full border-brand-300 text-brand-600 hover:bg-brand-50 hover:border-brand-400 hover:shadow-purple-sm transition-all duration-300 font-medium min-h-[44px] touch-manipulation"
               >
                 <span className="lg:hidden">View</span>
                 <span className="hidden lg:inline">View Details</span>
@@ -317,7 +515,7 @@ export function BookingCard({
                   variant="outline"
                   size="sm"
                   leftIcon={<X className="w-4 h-4" />}
-                  className="flex-1 lg:w-full"
+                  className="flex-1 lg:w-full border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400 hover:shadow-red-sm transition-all duration-300 font-medium min-h-[44px] touch-manipulation"
                 >
                   <span className="lg:hidden">Cancel</span>
                   <span className="hidden lg:inline">Cancel</span>
@@ -330,7 +528,7 @@ export function BookingCard({
                   variant="outline"
                   size="sm"
                   leftIcon={<RefreshCw className="w-4 h-4" />}
-                  className="flex-1 lg:w-full"
+                  className="flex-1 lg:w-full border-brand-300 text-brand-600 hover:bg-brand-50 hover:border-brand-400 hover:shadow-purple-sm transition-all duration-300 font-medium min-h-[44px] touch-manipulation"
                 >
                   <span className="lg:hidden">Reschedule</span>
                   <span className="hidden lg:inline">Reschedule</span>
@@ -343,7 +541,7 @@ export function BookingCard({
                   variant="outline"
                   size="sm"
                   leftIcon={<RefreshCw className="w-4 h-4" />}
-                  className="flex-1 lg:w-full"
+                  className="flex-1 lg:w-full border-emerald-300 text-emerald-600 hover:bg-emerald-50 hover:border-emerald-400 hover:shadow-emerald-sm transition-all duration-300 font-medium min-h-[44px] touch-manipulation"
                 >
                   <span className="lg:hidden">Rebook</span>
                   <span className="hidden lg:inline">Book Again</span>

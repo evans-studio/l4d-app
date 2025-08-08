@@ -127,17 +127,13 @@ async function handleSingleDateRequest(request: NextRequest, date: string) {
       return ApiResponseHandler.serverError('Failed to fetch availability')
     }
 
-    console.log(`Customer API: Fetching slots for date ${date}`)
-    console.log(`Customer API: Found ${timeSlots?.length || 0} raw time slots from database`)
+    
     
     // Transform data to match admin API format for consistency
     const transformedSlots = timeSlots?.map(slot => {
       const booking = slot.bookings?.[0]
       
-      // Debug log for first few slots
-      if (timeSlots.indexOf(slot) < 3) {
-        console.log(`Customer API: Slot ${slot.id} - Date: ${slot.slot_date}, Time: ${slot.start_time}, Available: ${slot.is_available}`)
-      }
+      
       
       return {
         id: slot.id,
@@ -154,7 +150,7 @@ async function handleSingleDateRequest(request: NextRequest, date: string) {
       }
     }) || []
 
-    console.log(`Customer API: Returning ${transformedSlots.length} transformed time slots for ${date}`)
+    
 
     return ApiResponseHandler.success(transformedSlots, `Found ${transformedSlots.length} time slots for ${date}`)
 

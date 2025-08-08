@@ -63,16 +63,22 @@ export async function POST(request: NextRequest) {
         return validation.error
       }
 
+      console.log('💰 Single service pricing calculation requested:', validation.data)
+      
       const pricingService = new PricingService()
       const result = await pricingService.calculateServicePrice(validation.data)
 
+      console.log('📊 Pricing service result:', result)
+
       if (!result.success) {
+        console.error('❌ Pricing calculation failed:', result.error)
         return ApiResponseHandler.error(
           result.error?.message || 'Failed to calculate pricing',
           'PRICING_CALCULATION_FAILED'
         )
       }
 
+      console.log('✅ Returning pricing data:', result.data)
       return ApiResponseHandler.success(result.data)
     }
 

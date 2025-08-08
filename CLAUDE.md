@@ -261,6 +261,31 @@ npm run test              # Run Jest tests
 npm run test:email        # Test email functionality
 ```
 
+## Required Environment Variables
+
+### Production Configuration
+```bash
+# PayPal Integration (Required for production)
+PAYPAL_ME_USERNAME=love4detailing
+PAYPAL_BUSINESS_EMAIL=zell@love4detailing.com
+
+# Email Service (Required)
+RESEND_API_KEY=re_your_resend_api_key
+NEXT_PUBLIC_FROM_EMAIL=zell@love4detailing.com
+ADMIN_EMAIL=zell@love4detailing.com
+EMAIL_REPLY_TO=zell@love4detailing.com
+
+# Database (Required)
+DATABASE_URL=your_supabase_database_url
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+
+# Authentication (Required)
+NEXTAUTH_SECRET=your_nextauth_secret
+NEXTAUTH_URL=https://your-production-domain.com
+```
+
 ---
 
 **These build system and architecture principles are non-negotiable. They ensure consistency, quality, and maintainability throughout the Love4Detailing platform. Any deviation requires explicit justification and documentation.**

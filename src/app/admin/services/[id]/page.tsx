@@ -452,9 +452,10 @@ function EditServicePage({ params }: { params: Promise<{ id: string }> }) {
                               type="number"
                               min="0"
                               step="0.01"
-                              value={formData.pricing[vehicleSize.id] || ''}
+                              value={formData.pricing[vehicleSize.id] !== undefined ? formData.pricing[vehicleSize.id] : ''}
                               onChange={(e) => {
-                                const value = parseFloat(e.target.value) || 0
+                                const inputValue = e.target.value
+                                const value = inputValue === '' ? 0 : parseFloat(inputValue) || 0
                                 setFormData(prev => ({
                                   ...prev,
                                   pricing: {

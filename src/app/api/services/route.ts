@@ -17,6 +17,7 @@ const createServiceSchema = z.object({
   longDescription: z.string().optional(),
   estimatedDuration: z.number().min(0, 'Duration must be non-negative'),
   isActive: z.boolean().default(true),
+  displayOrder: z.number().default(0),
 })
 
 export async function GET(request: NextRequest) {
@@ -78,13 +79,13 @@ export async function GET(request: NextRequest) {
           }
         }
 
-        // Extract prices from the columns, filtering out null/zero values
+        // Extract prices from the columns, filtering out only null/undefined values (allow 0)
         const prices = [
           pricingData.small,
           pricingData.medium, 
           pricingData.large,
           pricingData.extra_large
-        ].filter(price => price && price > 0)
+        ].filter(price => price !== null && price !== undefined)
 
         if (prices.length === 0) {
           return {
@@ -132,26 +133,36 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
+    console.log('Service creation request body:', body)
+
     const validation = await ApiValidation.validateBody(body, createServiceSchema)
     if (!validation.success) {
+      console.error('Service validation failed:', validation.error)
       return validation.error
     }
+
+    console.log('Validated service data:', validation.data)
 
     // Map frontend field names to database column names
     const serviceCreateData = {
       name: validation.data.name,
       short_description: validation.data.shortDescription,
-      full_description: validation.data.longDescription, // Correct: full_description
-      duration_minutes: validation.data.estimatedDuration, // Correct: duration_minutes
+      full_description: validation.data.longDescription || null,
+      duration_minutes: validation.data.estimatedDuration,
       is_active: validation.data.isActive,
-      base_price: 0, // Legacy field - actual pricing comes from service_pricing table
-      slug: validation.data.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') // Generate slug from name
+      display_order: validation.data.displayOrder,
+      slug: validation.data.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
     }
+
+    console.log('Mapped service data for database:', serviceCreateData)
 
     const servicesService = new ServicesService()
     const result = await servicesService.createService(serviceCreateData)
 
+    console.log('Service creation result:', result)
+
     if (!result.success) {
+      console.error('Service creation failed:', result.error)
       return ApiResponseHandler.error(
         result.error?.message || 'Failed to create service',
         'CREATE_SERVICE_FAILED'

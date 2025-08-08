@@ -86,7 +86,7 @@ function ServicePricingPage() {
       setIsLoading(true)
       const [servicesResponse, vehicleSizesResponse, pricingResponse, profitabilityResponse] = await Promise.all([
         fetch('/api/services'),
-        fetch('/api/vehicle-sizes'),
+        fetch('/api/services/vehicle-sizes'),
         fetch('/api/admin/services/pricing'),
         fetch('/api/admin/services/profitability')
       ])

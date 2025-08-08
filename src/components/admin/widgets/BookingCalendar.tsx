@@ -112,19 +112,24 @@ export function BookingCalendar({
     return (
       <div className="space-y-4">
         {/* Week header */}
-        <div className="grid grid-cols-7 gap-1">
+        <div className="grid grid-cols-7 gap-2">
           {weekDays.map((day, index) => (
             <div 
               key={index}
-              className={`p-2 text-center text-sm font-medium rounded cursor-pointer transition-colors
+              className={`min-h-[80px] p-3 rounded-lg cursor-pointer transition-colors touch-manipulation
+                flex flex-col items-center justify-center gap-1
                 ${day.toDateString() === new Date().toDateString() 
-                  ? 'bg-brand-purple text-white' 
-                  : 'text-text-secondary hover:bg-surface-hover'
+                  ? 'bg-brand-purple text-white shadow-lg' 
+                  : 'text-text-secondary hover:bg-surface-hover border border-border-secondary'
                 }`}
               onClick={() => onDateClick?.(day)}
             >
-              <div>{day.toLocaleDateString('en-GB', { weekday: 'short' })}</div>
-              <div className="text-lg">{day.getDate()}</div>
+              <div className="text-sm font-medium leading-none">
+                {day.toLocaleDateString('en-GB', { weekday: 'short' })}
+              </div>
+              <div className="text-xl font-bold leading-none">
+                {day.getDate()}
+              </div>
             </div>
           ))}
         </div>

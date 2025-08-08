@@ -45,13 +45,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // This prevents redirect loops when profile fetch fails due to RLS issues
     const authState = !!user && (!!profile || !isLoading)
     
-    console.log('Auth compatibility check:', { 
-      user: !!user, 
-      profile: !!profile, 
-      isLoading,
-      isAuthenticated: authState,
-      profileRole: profile?.role
-    })
+    
     
     return {
       user,

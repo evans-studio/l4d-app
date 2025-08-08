@@ -138,9 +138,7 @@ export async function POST(request: NextRequest) {
         if (verificationError) {
           console.error('Failed to send Supabase verification email:', verificationError)
           // Continue anyway - user can resend verification if needed
-        } else {
-          console.log('Supabase verification email sent to:', bookingData.customer.email)
-        }
+        } 
       } catch (emailError) {
         console.error('Failed to send Supabase verification email:', emailError)
         // Continue anyway - user can resend verification if needed
@@ -428,7 +426,7 @@ export async function POST(request: NextRequest) {
     
     const servicePrice = servicePricing[priceColumn] as number
     
-    if (!servicePrice || servicePrice <= 0) {
+    if (servicePrice === null || servicePrice === undefined) {
       console.error('No price found for service and vehicle size:', { serviceId: service.id, vehicleSize: bookingData.vehicle.vehicleSize })
       return NextResponse.json({
         success: false,
@@ -492,9 +490,10 @@ export async function POST(request: NextRequest) {
         })(),
         estimated_duration: service.duration_minutes,
         
-        // Status
-        status: 'confirmed' as Database["public"]["Enums"]["booking_status"],
+        // Status - Start as pending until payment is received
+        status: 'pending' as Database["public"]["Enums"]["booking_status"],
         payment_status: 'pending',
+        payment_deadline: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(), // 48 hours from now
         
         // Notes
         special_instructions: bookingData.specialRequests,
@@ -599,7 +598,7 @@ export async function POST(request: NextRequest) {
     // Create booking object for email template (used for both customer and admin emails)
     const bookingForEmail = {
         booking_reference: bookingReference,
-        scheduled_date: bookingData.timeSlot.slot_date,
+        scheduled_date: bookingData.timeSlot.date,
         scheduled_start_time: bookingData.timeSlot.startTime,
         status: 'pending' as Database["public"]["Enums"]["booking_status"],
         total_price: totalPrice,
@@ -623,28 +622,29 @@ export async function POST(request: NextRequest) {
         }
       }
     
-    // Send customer email (booking confirmation or welcome verification for new customers)
+    // Send customer email (differentiate between new user welcome vs existing user confirmation)
     const shouldSendCustomerEmail = notificationSettings?.email_bookings !== false // Default to true if no settings
     if (shouldSendCustomerEmail) {
       const customerName = `${bookingData.customer.firstName} ${bookingData.customer.lastName}`
+      const needsVerification = isNewCustomer && !bookingData.customer.password
       
       try {
         if (isNewCustomer) {
-          // For new customers, send welcome email + Supabase will send verification email
-          const customerEmailResult = await emailService.sendBookingWelcomeVerificationEmail(
+          console.log('📧 Sending welcome booking email to new user:', bookingData.customer.email)
+          // Send welcome email for new customers with verification reminder
+          const customerEmailResult = await emailService.sendWelcomeBookingConfirmation(
             bookingData.customer.email,
             customerName,
-            bookingReference,
-            userId
+            bookingForEmail as any,
+            needsVerification // Pass whether they need to verify email
           )
           
           if (!customerEmailResult.success) {
-            console.error('Failed to send booking welcome verification email:', customerEmailResult.error)
-          } else {
-            console.log('Booking welcome verification email sent successfully')
+            console.error('Failed to send welcome booking email:', customerEmailResult.error)
           }
         } else {
-          // Send regular booking confirmation for existing customers
+          console.log('📧 Sending standard booking confirmation to existing user:', bookingData.customer.email)
+          // Send standard booking confirmation for existing customers
           const customerEmailResult = await emailService.sendBookingConfirmation(
             bookingData.customer.email,
             customerName,
@@ -652,9 +652,7 @@ export async function POST(request: NextRequest) {
           )
           
           if (!customerEmailResult.success) {
-            console.error('Failed to send customer confirmation email:', customerEmailResult.error)
-          } else {
-            console.log('Customer confirmation email sent successfully')
+            console.error('Failed to send standard booking confirmation:', customerEmailResult.error)
           }
         }
       } catch (emailError) {
@@ -672,8 +670,6 @@ export async function POST(request: NextRequest) {
       
       if (!adminEmailResult.success) {
         console.error('Failed to send admin notification email:', adminEmailResult.error)
-      } else {
-        console.log('Admin notification email sent successfully')
       }
     } catch (emailError) {
       console.error('Error sending admin notification email:', emailError)
@@ -683,7 +679,7 @@ export async function POST(request: NextRequest) {
     // The frontend will detect requiresPasswordSetup: true and show setup modal
 
     const hasPassword = isNewCustomer && bookingData.customer.password
-    const needsVerification = isNewCustomer && !bookingData.customer.password
+    const needsVerificationForResponse = isNewCustomer && !bookingData.customer.password
     
     return ApiResponseHandler.success({
       bookingId: newBooking.id,
@@ -703,9 +699,9 @@ export async function POST(request: NextRequest) {
         : `/booking/success?ref=${bookingReference}`,
       isNewCustomer: isNewCustomer,
       accountReady: hasPassword, // New field to indicate account is ready to use
-      requiresEmailVerification: needsVerification,
-      requiresPasswordSetup: needsVerification && passwordSetupToken !== null,
-      passwordSetupToken: needsVerification ? passwordSetupToken : null
+      requiresEmailVerification: needsVerificationForResponse,
+      requiresPasswordSetup: needsVerificationForResponse && passwordSetupToken !== null,
+      passwordSetupToken: needsVerificationForResponse ? passwordSetupToken : null
     })
 
   } catch (error) {

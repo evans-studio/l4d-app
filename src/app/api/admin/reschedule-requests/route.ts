@@ -1,16 +1,15 @@
 import { NextRequest } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase/direct'
 import { ApiResponseHandler } from '@/lib/api/response'
+import { authenticateAdmin } from '@/lib/api/auth-handler'
 
 export async function GET(request: NextRequest) {
   try {
-    // TODO: Re-enable authentication after fixing session issues
-    // const authResult = await authenticateAdmin(request)
-    // if (!authResult.success) {
-    //   return authResult.error
-    // }
+    const authResult = await authenticateAdmin(request)
+    if (!authResult.success) {
+      return authResult.error
+    }
     
-    // Use admin client for now to bypass authentication issues
     const supabase = supabaseAdmin
 
     // Get all reschedule requests first (avoiding joins to prevent PGRST200 errors)

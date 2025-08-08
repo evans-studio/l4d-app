@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
+import { logger } from '@/lib/utils/logger'
 
 export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname
@@ -28,19 +29,14 @@ export async function middleware(request: NextRequest) {
     '/api/vehicle-sizes',
     '/api/vehicle-data',
     '/api/time-slots/availability',
-    '/api/email/test',
+    
     '/api/booking/calculate-price',
     '/api/booking/validate-user',
     '/api/bookings/create',
     '/api/auth/register',
     '/api/auth/forgot-password',
     '/api/auth/login',
-    '/api/admin/cleanup-users',
-    '/api/admin/simple-cleanup',
-    '/api/admin/direct-cleanup',
-    '/api/admin/drop-enterprise-tables',
-    '/api/admin/upgrade-user-role',
-    '/api/admin/stats-debug',
+    // Removed dev-only admin maintenance routes from public list
     '/api/admin/stats',
     '/api/admin/bookings/recent',
     '/api/admin/bookings/all',
@@ -90,7 +86,7 @@ export async function middleware(request: NextRequest) {
   // Create service client for profile lookup (bypasses RLS completely)
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!serviceKey) {
-    console.error('SUPABASE_SERVICE_ROLE_KEY is not defined in middleware!')
+    logger.error('SUPABASE_SERVICE_ROLE_KEY is not defined in middleware!')
   }
   
   const supabaseService = createServerClient(
@@ -126,11 +122,9 @@ export async function middleware(request: NextRequest) {
       .single()
       
     if (profileError) {
-      console.error('Middleware API profile fetch error:', {
-        error: profileError,
+      logger.error('Middleware API profile fetch error', profileError, {
         userId: user.id,
-        errorCode: profileError.code,
-        errorMessage: profileError.message
+        errorCode: profileError.code
       })
       
       // If we get infinite recursion error, return 500 to prevent further issues
@@ -164,24 +158,22 @@ export async function middleware(request: NextRequest) {
     .single()
     
   if (profileError) {
-    console.error('Middleware profile fetch error:', {
-      error: profileError,
+    logger.error('Middleware profile fetch error', profileError, {
       userId: user.id,
-      errorCode: profileError.code,
-      errorMessage: profileError.message
+      errorCode: profileError.code
     })
     
     // If we get infinite recursion error, redirect to a safe page
     if (profileError.code === '42P17') {
-      console.error('Database RLS recursion detected - redirecting to login for safety')
+      logger.error('Database RLS recursion detected - redirecting to login for safety')
       return NextResponse.redirect(new URL('/auth/login?error=db-config', request.url))
     }
   }
 
   const userRole = profile?.role || 'customer'
   
-  // Debug: Log the role information
-  console.log('Middleware role check:', {
+  // Debug: Log the role information (dev only)
+  logger.debug('Middleware role check', {
     userId: user.id,
     email: user.email,
     profileData: profile,
@@ -193,12 +185,14 @@ export async function middleware(request: NextRequest) {
   // Role-based access control
   if (path.startsWith('/admin/')) {
     // Temporarily bypass middleware check - let AdminRoute handle it
-    console.log('Middleware: Temporarily bypassing admin check, userRole:', userRole)
+    logger.debug('Middleware: Temporarily bypassing admin check', { userRole })
+    
     // if (userRole !== 'admin' && userRole !== 'super_admin') {
-    //   console.log('Middleware: Redirecting to dashboard - role not allowed:', userRole)
+    //   logger.debug('Middleware: Redirecting to dashboard - role not allowed', { userRole })
     //   return NextResponse.redirect(new URL('/dashboard', request.url))
     // }
-    console.log('Middleware: Admin access granted (bypassed) for role:', userRole)
+    
+    logger.debug('Middleware: Admin access granted (bypassed)', { userRole })
   }
 
   // If user is admin trying to access /dashboard, redirect to /admin

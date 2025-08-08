@@ -87,20 +87,37 @@ export function VehicleDetails() {
   // Get size for selected make/model (auto-detection on model selection)
   const getVehicleSize = (make: string, model: string): 'S' | 'M' | 'L' | 'XL' => {
     try {
+      console.log(`🔍 Getting vehicle size for: ${make} ${model}`)
+      
       if (!vehicleData?.vehicles || !make || !model) {
+        console.log('❌ Missing data for vehicle size detection:', { 
+          hasVehicleData: !!vehicleData?.vehicles,
+          make,
+          model
+        })
         return 'M' // Default fallback
       }
       
       const vehicleMake = vehicleData.vehicles.find(v => v.make === make)
+      console.log(`🔍 Found vehicle make: ${vehicleMake ? 'yes' : 'no'}`)
+      
       if (vehicleMake?.models) {
         const vehicleModel = vehicleMake.models.find(m => m.model === model)
+        console.log(`🔍 Found vehicle model: ${vehicleModel ? 'yes' : 'no'}`)
+        
         if (vehicleModel?.size) {
-          return vehicleModel.size as 'S' | 'M' | 'L' | 'XL'
+          const size = vehicleModel.size as 'S' | 'M' | 'L' | 'XL'
+          console.log(`✅ Detected vehicle size: ${size} for ${make} ${model}`)
+          return size
+        } else {
+          console.log(`❌ No size found for model: ${model}`)
         }
       }
     } catch (error) {
-      console.error('Error getting vehicle size:', error)
+      console.error('❌ Error getting vehicle size:', error)
     }
+    
+    console.log(`🔧 Using default size 'M' for ${make} ${model}`)
     return 'M' // Default fallback
   }
 
@@ -219,9 +236,16 @@ export function VehicleDetails() {
 
   const handleNext = async () => {
     // Calculate price when proceeding to next step
+    console.log('🚀 Vehicle Details - proceeding to next step')
+    console.log('🔍 Current vehicle data:', formData.vehicle)
+    
     if (canProceedToNextStep()) {
+      console.log('✅ Can proceed to next step, calculating price...')
       await calculatePrice()
+      console.log('✅ Price calculation completed, moving to next step')
       nextStep()
+    } else {
+      console.log('❌ Cannot proceed to next step')
     }
   }
 
@@ -685,7 +709,7 @@ export function VehicleDetails() {
           onClick={previousStep}
           leftIcon={<ChevronLeftIcon className="w-4 h-4" />}
         >
-          Back to Service Selection
+          Back
         </Button>
         
         <Button
@@ -694,7 +718,7 @@ export function VehicleDetails() {
           size="lg"
           rightIcon={<ChevronRightIcon className="w-4 h-4" />}
         >
-          {isLoading ? 'Calculating Price...' : 'Continue to Time Selection'}
+          {isLoading ? 'Calculating Price...' : 'Continue'}
         </Button>
       </div>
     </div>

@@ -41,37 +41,51 @@ const statusConfig = {
   pending: {
     label: 'Pending',
     icon: Clock,
-    color: 'warning'
+    bgColor: 'bg-warning-600/10',
+    iconColor: 'text-warning-600',
+    badgeColor: 'warning'
   },
   confirmed: {
     label: 'Confirmed',
     icon: CheckCircle,
-    color: 'success'
+    bgColor: 'bg-success-600/10',
+    iconColor: 'text-success-600',
+    badgeColor: 'success'
   },
   rescheduled: {
     label: 'Rescheduled',
     icon: Calendar,
-    color: 'brand'
+    bgColor: 'bg-brand-600/10',
+    iconColor: 'text-brand-600',
+    badgeColor: 'brand'
   },
   in_progress: {
     label: 'In Progress',
     icon: Activity,
-    color: 'brand'
+    bgColor: 'bg-brand-600/10',
+    iconColor: 'text-brand-600',
+    badgeColor: 'brand'
   },
   completed: {
     label: 'Completed',
     icon: CheckCircle,
-    color: 'success'
+    bgColor: 'bg-success-600/10',
+    iconColor: 'text-success-600',
+    badgeColor: 'success'
   },
   cancelled: {
     label: 'Cancelled',
     icon: X,
-    color: 'error'
+    bgColor: 'bg-error-600/10',
+    iconColor: 'text-error-600',
+    badgeColor: 'error'
   },
   no_show: {
     label: 'No Show',
     icon: AlertCircle,
-    color: 'error'
+    bgColor: 'bg-error-600/10',
+    iconColor: 'text-error-600',
+    badgeColor: 'error'
   }
 } as const
 
@@ -154,62 +168,50 @@ export function RecentActivityWidget({ recentBookings }: RecentActivityWidgetPro
           return (
             <div
               key={booking.id}
-              className="flex flex-col gap-3 p-4 rounded-lg bg-surface-tertiary hover:bg-surface-secondary transition-colors cursor-pointer min-h-[80px] touch-manipulation"
+              className="flex flex-col gap-4 p-5 rounded-xl bg-surface-tertiary hover:bg-surface-secondary transition-all duration-200 cursor-pointer min-h-[100px] touch-manipulation"
               onClick={() => openOverlay({
                 type: 'booking-view',
                 data: { bookingId: booking.id, booking }
               })}
             >
               {/* Header Row */}
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-center gap-3 flex-1 min-w-0">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex items-center gap-4 flex-1 min-w-0">
                   {/* Status Icon */}
-                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                    config.color === 'brand' ? 'bg-brand-600/10' :
-                    config.color === 'success' ? 'bg-success-600/10' :
-                    config.color === 'warning' ? 'bg-warning-600/10' :
-                    config.color === 'error' ? 'bg-error-600/10' :
-                    'bg-surface-tertiary'
-                  }`}>
-                    <StatusIcon className={`w-5 h-5 ${
-                      config.color === 'brand' ? 'text-brand-400' :
-                      config.color === 'success' ? 'text-success-400' :
-                      config.color === 'warning' ? 'text-warning-400' :
-                      config.color === 'error' ? 'text-error-400' :
-                      'text-text-muted'
-                    }`} />
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${config.bgColor}`}>
+                    <StatusIcon className={`w-6 h-6 ${config.iconColor}`} />
                   </div>
                   
-                  {/* Service Name & Status */}
+                  {/* Service Name */}
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-text-primary text-base truncate mb-1">
+                    <h4 className="font-semibold text-text-primary text-lg truncate mb-1">
                       {booking.service?.name || 'Service details pending'}
-                    </p>
-                    <Badge variant={config.color as any} size="sm">
-                      {config.label}
-                    </Badge>
+                    </h4>
                   </div>
                 </div>
 
-                {/* Price - Fixed Width */}
+                {/* Price & Status */}
                 <div className="flex-shrink-0 text-right">
-                  <p className="font-bold text-brand-600 text-lg whitespace-nowrap">
+                  <p className="font-bold text-brand-600 text-xl whitespace-nowrap mb-1">
                     £{booking.total_price || 0}
                   </p>
+                  <Badge variant={config.badgeColor as any} size="sm">
+                    {config.label}
+                  </Badge>
                 </div>
               </div>
 
               {/* Details Row */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pl-13">
-                <div className="flex items-center gap-2 text-text-secondary">
-                  <Car className="w-4 h-4 flex-shrink-0" />
-                  <span className="text-sm truncate">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6">
+                <div className="flex items-center gap-3 text-text-secondary">
+                  <Car className="w-5 h-5 flex-shrink-0" />
+                  <span className="text-sm font-medium truncate">
                     {booking.vehicle ? `${booking.vehicle.year || ''} ${booking.vehicle.make} ${booking.vehicle.model}`.trim() : 'Vehicle details pending'}
                   </span>
                 </div>
-                <div className="flex items-center gap-2 text-text-secondary">
-                  <Calendar className="w-4 h-4 flex-shrink-0" />
-                  <span className="text-sm">{formatDate(booking.scheduled_date)}</span>
+                <div className="flex items-center gap-3 text-text-secondary">
+                  <Calendar className="w-5 h-5 flex-shrink-0" />
+                  <span className="text-sm font-medium">{formatDate(booking.scheduled_date)}</span>
                 </div>
               </div>
             </div>

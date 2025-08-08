@@ -433,26 +433,26 @@ function AdminDashboard() {
       setIsLoading(true)
       setError('')
 
-      console.log('Loading admin dashboard data...')
+      
 
       // Load stats first
-      console.log('Fetching stats...')
+      
       const statsResponse = await fetch('/api/admin/stats')
-      console.log('Stats response status:', statsResponse.status)
+      
       
       if (statsResponse.status === 401) {
-        console.log('Got 401 error on stats, attempting session refresh...')
+        
         const refreshSuccess = await refreshSession()
         
         if (refreshSuccess) {
-          console.log('Session refreshed, retrying stats request...')
+          
           const retryStatsResponse = await fetch('/api/admin/stats')
           
           if (retryStatsResponse.ok) {
             const retryStatsData = await retryStatsResponse.json()
             if (retryStatsData.success) {
               setStats(retryStatsData.data)
-              console.log('Stats loaded successfully after retry')
+              
             }
           } else {
             throw new Error('Stats request failed after retry')
@@ -464,7 +464,7 @@ function AdminDashboard() {
         const statsData = await statsResponse.json()
         if (statsData.success) {
           setStats(statsData.data)
-          console.log('Stats loaded successfully')
+          
         } else {
           console.error('Stats API returned error:', statsData.error)
         }
@@ -473,23 +473,23 @@ function AdminDashboard() {
       }
 
       // Load recent bookings
-      console.log('Fetching recent bookings...')
+      
       const bookingsResponse = await fetch('/api/admin/bookings/recent')
-      console.log('Bookings response status:', bookingsResponse.status)
+      
       
       if (bookingsResponse.status === 401) {
-        console.log('Got 401 error on bookings, attempting session refresh...')
+        
         const refreshSuccess = await refreshSession()
         
         if (refreshSuccess) {
-          console.log('Session refreshed, retrying bookings request...')
+          
           const retryBookingsResponse = await fetch('/api/admin/bookings/recent')
           
           if (retryBookingsResponse.ok) {
             const retryBookingsData = await retryBookingsResponse.json()
             if (retryBookingsData.success) {
               setRecentBookings(retryBookingsData.data.bookings || [])
-              console.log('Bookings loaded successfully after retry:', retryBookingsData.data.bookings?.length || 0)
+              
             }
           } else {
             throw new Error('Bookings request failed after retry')
@@ -501,7 +501,7 @@ function AdminDashboard() {
         const bookingsData = await bookingsResponse.json()
         if (bookingsData.success) {
           setRecentBookings(bookingsData.data.bookings || [])
-          console.log('Bookings loaded successfully:', bookingsData.data.bookings?.length || 0)
+          
         } else {
           console.error('Bookings API returned error:', bookingsData.error)
         }
@@ -534,6 +534,25 @@ function AdminDashboard() {
       }
     } catch (error) {
       console.error('Status update error:', error)
+    }
+  }
+
+  const handleMarkAsPaid = async (booking: { id: string; booking_reference: string }) => {
+    try {
+      const response = await fetch(`/api/admin/bookings/${booking.id}/mark-paid`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+      })
+
+      if (response.ok) {
+        // Reload the data to reflect changes
+        loadDashboardData()
+      } else {
+        console.error('Failed to mark booking as paid')
+      }
+    } catch (error) {
+      console.error('Error marking booking as paid:', error)
     }
   }
 
@@ -788,6 +807,7 @@ function AdminDashboard() {
                     booking={booking}
                     variant="dashboard"
                     onStatusUpdate={handleBookingAction}
+                    onMarkAsPaid={handleMarkAsPaid}
                     showActions={true}
                   />
                 ))}

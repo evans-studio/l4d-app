@@ -22,7 +22,7 @@ export interface ServiceWithPricing extends Service {
     min: number
     max: number
   }
-  category: ServiceCategory
+  category?: ServiceCategory // Optional since categories are no longer used
 }
 
 export class ServicesService extends BaseService {
@@ -192,11 +192,26 @@ export class ServicesService extends BaseService {
   async createService(serviceData: Partial<Service>): Promise<ServiceResponse<Service>> {
     return this.executeQuery(async () => {
       const supabase = this.supabase
-      return supabase
+      console.log('ServicesService: Creating service with data:', serviceData)
+      
+      const result = await supabase
         .from('services')
         .insert(serviceData)
         .select()
         .single()
+      
+      console.log('ServicesService: Database insert result:', result)
+      
+      if (result.error) {
+        console.error('ServicesService: Database error details:', {
+          message: result.error.message,
+          code: result.error.code,
+          details: result.error.details,
+          hint: result.error.hint
+        })
+      }
+      
+      return result
     }, 'Failed to create service')
   }
 

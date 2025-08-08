@@ -19,32 +19,18 @@ export function ProtectedRoute({
   const router = useRouter()
 
   useEffect(() => {
-    console.log('ProtectedRoute check:', { 
-      isLoading, 
-      isAuthenticated, 
-      profile: !!profile, 
-      userRole: profile?.role,
-      allowedRoles,
-      currentPath: window.location.pathname
-    })
-    
     if (!isLoading) {
       if (!isAuthenticated) {
-        console.log('Not authenticated, redirecting to:', redirectTo)
         router.push(redirectTo)
         return
       }
 
       if (profile && !allowedRoles.includes(profile.role)) {
-        console.log('Role not allowed! User role:', profile.role, 'Allowed roles:', allowedRoles)
         // Redirect based on user's actual role
         const userRedirectTo = profile.role === 'admin' || profile.role === 'super_admin' ? '/admin' : '/dashboard'
-        console.log('Redirecting to appropriate dashboard:', userRedirectTo)
         router.push(userRedirectTo)
         return
       }
-      
-      console.log('Access granted to protected route for role:', profile?.role)
     }
   }, [user, profile, isAuthenticated, isLoading, router, allowedRoles, redirectTo])
 

@@ -1,13 +1,14 @@
 // Phase 3: Booking Flow & Customer Experience Types
 
 export type BookingStatus = 
-  | 'draft'
-  | 'pending' 
+  | 'pending'
+  | 'processing'
+  | 'payment_failed'
   | 'confirmed'
   | 'rescheduled'
   | 'in_progress'
   | 'completed'
-  | 'paid'
+  | 'declined'
   | 'cancelled'
   | 'no_show'
 

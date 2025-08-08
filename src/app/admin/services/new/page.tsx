@@ -114,24 +114,32 @@ function NewServicePage() {
     setIsSaving(true)
     try {
       // Create the service
+      const servicePayload = {
+        name: formData.name,
+        shortDescription: formData.short_description,
+        longDescription: formData.long_description,
+        estimatedDuration: formData.estimated_duration,
+        isActive: formData.is_active,
+        displayOrder: formData.display_order
+      }
+
+      console.log('Creating service with payload:', servicePayload)
+
       const serviceResponse = await fetch('/api/services', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: formData.name,
-          shortDescription: formData.short_description,
-          longDescription: formData.long_description,
-          // categoryId removed
-          estimatedDuration: formData.estimated_duration,
-          isActive: formData.is_active,
-          displayOrder: formData.display_order
-        })
+        body: JSON.stringify(servicePayload)
       })
 
       const serviceData = await serviceResponse.json()
+      console.log('Service creation response:', serviceData)
       
       if (!serviceData.success) {
-        setErrors({ submit: serviceData.error?.message || 'Failed to create service' })
+        console.error('Service creation failed with response:', serviceData)
+        setErrors({ 
+          submit: serviceData.error?.message || 
+                  `Failed to create service (${serviceResponse.status}: ${serviceResponse.statusText})` 
+        })
         return
       }
 

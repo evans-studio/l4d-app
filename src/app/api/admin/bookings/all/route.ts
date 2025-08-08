@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase/direct'
 import { ApiResponseHandler } from '@/lib/api/response'
 import { authenticateAdmin } from '@/lib/api/auth-handler'
+import { paypalService } from '@/lib/services/paypal'
 
 export async function GET(request: NextRequest) {
   try {
@@ -24,12 +25,14 @@ export async function GET(request: NextRequest) {
         scheduled_date,
         scheduled_start_time,
         status,
+        payment_status,
         total_price,
         special_instructions,
         vehicle_details,
         service_address,
         pricing_breakdown,
         created_at,
+        payment_deadline,
         booking_services (
           id,
           service_details,
@@ -88,6 +91,15 @@ export async function GET(request: NextRequest) {
         base_price: booking.total_price || 0
       }]
       
+      // Generate PayPal payment information for processing/payment_failed bookings
+      const paymentInfo = (['processing', 'payment_failed'].includes(booking.status)) 
+        ? paypalService.generatePaymentInstructions(
+            booking.total_price || 0, 
+            booking.booking_reference,
+            customerName
+          )
+        : null
+
       return {
         id: booking.id,
         booking_reference: booking.booking_reference,
@@ -98,6 +110,7 @@ export async function GET(request: NextRequest) {
         scheduled_date: booking.scheduled_date,
         start_time: booking.scheduled_start_time,
         status: booking.status,
+        payment_status: booking.payment_status || 'pending',
         total_price: booking.total_price || 0,
         special_instructions: booking.special_instructions,
         services: services,
@@ -112,7 +125,11 @@ export async function GET(request: NextRequest) {
           city: address.city || 'Unknown',
           postal_code: address.postal_code || ''
         },
-        created_at: booking.created_at
+        created_at: booking.created_at,
+        payment_link: paymentInfo?.paymentLink,
+        payment_deadline: booking.payment_deadline || paymentInfo?.deadline || (booking.created_at ? 
+          new Date(new Date(booking.created_at).getTime() + 48 * 60 * 60 * 1000).toISOString() : 
+          null)
       }
     })
 

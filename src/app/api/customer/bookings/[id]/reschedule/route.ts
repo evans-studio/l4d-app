@@ -126,22 +126,18 @@ export async function POST(
         const emailService = new EmailService()
         const customerName = `${customerProfile.first_name} ${customerProfile.last_name}`
         
-        // Send customer confirmation email
-        await emailService.sendRescheduleRequestConfirmation(
-          customerProfile.email,
-          customerName,
+        // Send admin notification about reschedule request
+        await emailService.sendAdminRescheduleRequestNotification(
           {
             ...booking,
             booking_reference: booking.booking_reference
           },
+          customerName,
+          customerProfile.email,
           date,
           time,
           reason
         )
-
-        // TODO: Send notification to admin about new reschedule request
-        // This could be implemented later as part of admin notification system
-        
       } catch (emailError) {
         console.error('Failed to send reschedule request confirmation:', emailError)
         // Don't fail the request if email fails

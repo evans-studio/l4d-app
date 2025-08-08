@@ -15,7 +15,7 @@ const supabaseService = createClient(supabaseUrl, supabaseServiceKey, {
 
 export async function GET(request: NextRequest) {
   try {
-    console.log('Service role key available:', !!supabaseServiceKey)
+    
     const supabase = createClientFromRequest(request)
     
     // Get current user

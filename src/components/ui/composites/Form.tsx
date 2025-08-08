@@ -377,7 +377,7 @@ export const FormDemo: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Form submitted:', formData);
+    // Demo handler; integrate with form submission logic as needed
   };
 
   return (

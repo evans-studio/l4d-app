@@ -14,7 +14,10 @@ import {
   MailIcon,
   AlertCircleIcon,
   CalendarCheckIcon,
-  CalendarXIcon
+  CalendarXIcon,
+  CreditCard,
+  AlertTriangle,
+  Copy
 } from 'lucide-react'
 
 interface BookingCardProps {
@@ -26,7 +29,11 @@ interface BookingCardProps {
     customer_phone?: string
     scheduled_date: string
     start_time: string
-    status: 'pending' | 'confirmed' | 'rescheduled' | 'in_progress' | 'completed' | 'cancelled'
+    status: 'pending' | 'confirmed' | 'rescheduled' | 'in_progress' | 'completed' | 'cancelled' | 'no_show' | 'processing' | 'payment_failed' | 'declined'
+    payment_status?: 'pending' | 'paid' | 'failed' | 'refunded'
+    payment_method?: string
+    payment_deadline?: string
+    payment_link?: string
     total_price: number
     services: Array<{
       name: string
@@ -53,67 +60,181 @@ interface BookingCardProps {
     } | null
   }
   onStatusUpdate?: (bookingId: string, newStatus: string) => Promise<void>
+  onMarkAsPaid?: (booking: BookingCardProps['booking']) => void
+  onConfirm?: () => void
+  onDecline?: () => void
+  onReschedule?: () => void
+  onCancel?: () => void
+  formatTime?: (time: string) => string
+  formatDate?: (date: string) => string
+  statusUpdateLoading?: string | null
   showActions?: boolean
   variant?: 'dashboard' | 'full'
 }
 
 const statusConfig = {
   pending: {
-    label: 'Pending',
+    label: 'Pending Payment',
     icon: ClockIcon,
-    color: 'text-yellow-700',
-    bgColor: 'bg-yellow-50',
-    borderColor: 'border-yellow-200'
+    color: 'text-brand-600',
+    bgColor: 'bg-brand-50',
+    borderColor: 'border-brand-200',
+    shadowColor: 'shadow-purple-sm'
   },
   confirmed: {
     label: 'Confirmed',
     icon: CheckCircleIcon,
-    color: 'text-blue-700',
-    bgColor: 'bg-blue-50',
-    borderColor: 'border-blue-200'
+    color: 'text-emerald-600',
+    bgColor: 'bg-emerald-50',
+    borderColor: 'border-emerald-200',
+    shadowColor: 'shadow-emerald-sm'
   },
   rescheduled: {
     label: 'Rescheduled',
     icon: CalendarIcon,
-    color: 'text-purple-700',
-    bgColor: 'bg-purple-50',
-    borderColor: 'border-purple-200'
+    color: 'text-brand-600',
+    bgColor: 'bg-brand-50',
+    borderColor: 'border-brand-200',
+    shadowColor: 'shadow-purple-sm'
   },
   in_progress: {
     label: 'In Progress',
     icon: AlertCircleIcon,
-    color: 'text-purple-700',
-    bgColor: 'bg-purple-50',
-    borderColor: 'border-purple-200'
+    color: 'text-brand-600',
+    bgColor: 'bg-brand-50',
+    borderColor: 'border-brand-200',
+    shadowColor: 'shadow-purple-sm animate-purple-pulse'
   },
   completed: {
     label: 'Completed',
     icon: CheckCircleIcon,
-    color: 'text-green-700',
-    bgColor: 'bg-green-50',
-    borderColor: 'border-green-200'
+    color: 'text-emerald-600',
+    bgColor: 'bg-emerald-50',
+    borderColor: 'border-emerald-200',
+    shadowColor: 'shadow-emerald-sm'
   },
   cancelled: {
     label: 'Cancelled',
     icon: XCircleIcon,
-    color: 'text-red-700',
+    color: 'text-red-600',
     bgColor: 'bg-red-50',
-    borderColor: 'border-red-200'
+    borderColor: 'border-red-200',
+    shadowColor: 'shadow-red-sm'
+  },
+  no_show: {
+    label: 'No Show',
+    icon: XCircleIcon,
+    color: 'text-red-600',
+    bgColor: 'bg-red-50',
+    borderColor: 'border-red-200',
+    shadowColor: 'shadow-red-sm'
+  },
+  processing: {
+    label: 'Processing',
+    icon: ClockIcon,
+    color: 'text-brand-600',
+    bgColor: 'bg-brand-50',
+    borderColor: 'border-brand-200',
+    shadowColor: 'shadow-purple-sm'
+  },
+  payment_failed: {
+    label: 'Payment Failed',
+    icon: XCircleIcon,
+    color: 'text-red-600',
+    bgColor: 'bg-red-50',
+    borderColor: 'border-red-200',
+    shadowColor: 'shadow-red-sm'
+  },
+  declined: {
+    label: 'Declined',
+    icon: XCircleIcon,
+    color: 'text-red-600',
+    bgColor: 'bg-red-50',
+    borderColor: 'border-red-200',
+    shadowColor: 'shadow-red-sm'
   }
+} as const
+
+// Default fallback status config
+const defaultStatusConfig = {
+  label: 'Unknown',
+  icon: AlertCircleIcon,
+  color: 'text-gray-700',
+  bgColor: 'bg-gray-50',
+  borderColor: 'border-gray-200'
 }
 
 export function BookingCard({ 
   booking, 
   onStatusUpdate, 
+  onMarkAsPaid,
+  onConfirm,
+  onDecline,
+  onReschedule,
+  onCancel,
+  formatTime: formatTimeProp,
+  formatDate: formatDateProp,
+  statusUpdateLoading,
   showActions = true,
   variant = 'full'
 }: BookingCardProps) {
   const router = useRouter()
   const { openOverlay } = useOverlay()
-  const statusInfo = statusConfig[booking.status]
+  const statusInfo = statusConfig[booking.status as keyof typeof statusConfig] || defaultStatusConfig
   const StatusIcon = statusInfo.icon
 
+  // Payment deadline helpers
+  const isPaymentOverdue = () => {
+    if (!booking.payment_deadline || booking.status !== 'pending') return false
+    return new Date(booking.payment_deadline) < new Date()
+  }
+
+  const getPaymentDeadlineDisplay = () => {
+    if (!booking.payment_deadline) return null
+    const deadline = new Date(booking.payment_deadline)
+    const now = new Date()
+    const hoursUntilDeadline = Math.ceil((deadline.getTime() - now.getTime()) / (1000 * 60 * 60))
+    
+    if (hoursUntilDeadline <= 0) {
+      return {
+        text: 'Payment Overdue',
+        isOverdue: true,
+        color: 'text-red-700',
+        bgColor: 'bg-red-50',
+        borderColor: 'border-red-200'
+      }
+    } else if (hoursUntilDeadline <= 24) {
+      return {
+        text: `Payment due in ${hoursUntilDeadline}h`,
+        isOverdue: false,
+        color: 'text-orange-700',
+        bgColor: 'bg-orange-50', 
+        borderColor: 'border-orange-200'
+      }
+    } else {
+      return {
+        text: `Payment due ${deadline.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}`,
+        isOverdue: false,
+        color: 'text-blue-700',
+        bgColor: 'bg-blue-50',
+        borderColor: 'border-blue-200'
+      }
+    }
+  }
+
+  const copyPaymentLink = async () => {
+    if (booking.payment_link) {
+      try {
+        await navigator.clipboard.writeText(booking.payment_link)
+        // Could add toast notification here
+      } catch (error) {
+        console.error('Failed to copy payment link:', error)
+      }
+    }
+  }
+
   const formatTime = (time: string | undefined | null) => {
+    if (formatTimeProp) return formatTimeProp(time || '')
     if (!time) return 'No time'
     const [hours, minutes] = time.split(':')
     const hour = parseInt(hours || '0')
@@ -123,6 +244,7 @@ export function BookingCard({
   }
 
   const formatDate = (dateStr: string | undefined | null) => {
+    if (formatDateProp) return formatDateProp(dateStr || '')
     if (!dateStr) return 'No date'
     const date = new Date(dateStr)
     if (isNaN(date.getTime())) return 'Invalid date'
@@ -150,7 +272,7 @@ export function BookingCard({
   }
 
   if (variant === 'dashboard') {
-    // Compact dashboard variant
+    // Compact dashboard variant with payment integration
     return (
       <div className="bg-surface-primary rounded-lg border border-border-secondary p-4 hover:border-border-primary transition-colors">
         {/* Header - Booking reference, price, and status */}
@@ -164,10 +286,31 @@ export function BookingCard({
                 £{booking.total_price}
               </span>
             </div>
-            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${statusInfo.bgColor} ${statusInfo.borderColor} ${statusInfo.color}`}>
-              <StatusIcon className="w-3 h-3 mr-1" />
-              {statusInfo.label}
-            </span>
+            <div className="flex flex-wrap items-center gap-1">
+              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${statusInfo.bgColor} ${statusInfo.borderColor} ${statusInfo.color}`}>
+                <StatusIcon className="w-3 h-3 mr-1" />
+                {statusInfo.label}
+              </span>
+              {/* Payment status for dashboard variant */}
+              {booking.payment_status && (
+                <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border ${
+                  booking.payment_status === 'paid' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                  booking.payment_status === 'failed' ? 'bg-red-50 text-red-700 border-red-200' :
+                  'bg-yellow-50 text-yellow-700 border-yellow-200'
+                }`}>
+                  <CreditCard className="w-3 h-3" />
+                  {booking.payment_status === 'paid' ? 'Paid' :
+                   booking.payment_status === 'failed' ? 'Payment Failed' :
+                   'Payment Pending'}
+                </span>
+              )}
+              {isPaymentOverdue() && (
+                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-red-50 border border-red-200 text-red-700">
+                  <AlertTriangle className="w-3 h-3" />
+                  OVERDUE
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
@@ -191,27 +334,40 @@ export function BookingCard({
         {/* Action button */}
         {showActions && (
           <div className="mt-3 pt-3 border-t border-border-secondary">
-            <Button
-              onClick={() => openOverlay({
-              type: 'booking-view',
-              data: { bookingId: booking.id, booking }
-            })}
-              variant="outline"
-              size="sm"
-              className="w-full text-xs"
-            >
-              <EyeIcon className="w-3 h-3 mr-1" />
-              View Details
-            </Button>
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+              <Button
+                onClick={() => openOverlay({
+                type: 'booking-view',
+                data: { bookingId: booking.id, booking }
+              })}
+                variant="outline"
+                size="sm"
+                className="w-full sm:w-auto sm:flex-1 text-xs"
+              >
+                <EyeIcon className="w-3 h-3 mr-1" />
+                View Details
+              </Button>
+              {/* Dashboard variant payment actions */}
+              {booking.status === 'pending' && onMarkAsPaid && (
+                <Button
+                  onClick={() => onMarkAsPaid(booking)}
+                  size="sm"
+                  className="w-full sm:w-auto sm:flex-1 text-xs bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-emerald-sm hover:shadow-emerald-md transition-all duration-300 font-medium min-h-[44px] touch-manipulation"
+                >
+                  <CreditCard className="w-3 h-3 mr-1" />
+                  Mark as Paid
+                </Button>
+              )}
+            </div>
           </div>
         )}
       </div>
     )
   }
 
-  // Full variant for bookings page
+  // Full variant for bookings page with enhanced payment tracking
   return (
-    <div className="bg-surface-secondary rounded-lg border border-border-secondary hover:border-border-primary transition-colors overflow-hidden">
+    <div className="bg-surface-secondary rounded-xl border border-border-secondary hover:border-brand-400 hover:shadow-purple-md transition-all duration-300 overflow-hidden">
       {/* Header */}
       <div className="p-4 border-b border-border-secondary">
         <div className="flex items-start justify-between mb-3">
@@ -227,25 +383,62 @@ export function BookingCard({
                 </span>
               )}
             </div>
-            <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm border ${statusInfo.bgColor} ${statusInfo.borderColor}`}>
-              <StatusIcon className={`w-4 h-4 ${statusInfo.color}`} />
-              <span className={statusInfo.color}>{statusInfo.label}</span>
-            </span>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium border transition-all ${statusInfo.bgColor} ${statusInfo.borderColor} ${statusInfo.shadowColor || ''}`}>
+                <StatusIcon className={`w-4 h-4 ${statusInfo.color}`} />
+                <span className={statusInfo.color}>{statusInfo.label}</span>
+              </span>
+              {/* Payment Status Badge */}
+              {booking.payment_status && (
+                <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium border ${
+                  booking.payment_status === 'paid' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                  booking.payment_status === 'failed' ? 'bg-red-50 text-red-700 border-red-200' :
+                  'bg-yellow-50 text-yellow-700 border-yellow-200'
+                }`}>
+                  <CreditCard className="w-3 h-3" />
+                  {booking.payment_status === 'paid' ? 'Paid' :
+                   booking.payment_status === 'failed' ? 'Payment Failed' :
+                   'Payment Pending'}
+                </span>
+              )}
+              {/* Payment Overdue Warning */}
+              {isPaymentOverdue() && (
+                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-red-50 border border-red-200 text-red-700">
+                  <AlertTriangle className="w-3 h-3" />
+                  OVERDUE
+                </span>
+              )}
+            </div>
           </div>
           <div className="text-right ml-3">
-            <p className="text-xl font-bold text-brand-purple">£{booking.total_price}</p>
-            <p className="text-text-muted text-xs">
+            <p className="text-2xl font-bold text-brand-500 drop-shadow-sm">£{booking.total_price}</p>
+            <p className="text-text-secondary text-sm font-medium">
               {booking.services.length} service{booking.services.length !== 1 ? 's' : ''}
             </p>
           </div>
         </div>
         
-        {/* Date/Time - Prominent */}
-        <div className="flex items-center gap-2 text-text-primary">
-          <CalendarIcon className="w-4 h-4 text-text-secondary" />
-          <span className="font-medium">{formatDate(booking.scheduled_date)}</span>
-          <ClockIcon className="w-4 h-4 text-text-secondary ml-2" />
-          <span className="font-medium">{formatTime(booking.start_time)}</span>
+        {/* Date/Time and Payment Deadline */}
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 text-text-primary">
+            <CalendarIcon className="w-4 h-4 text-text-secondary" />
+            <span className="font-medium">{formatDate(booking.scheduled_date)}</span>
+            <ClockIcon className="w-4 h-4 text-text-secondary ml-2" />
+            <span className="font-medium">{formatTime(booking.start_time)}</span>
+          </div>
+          {/* Payment deadline for pending bookings */}
+          {booking.status === 'pending' && (() => {
+            const deadlineInfo = getPaymentDeadlineDisplay()
+            return deadlineInfo && (
+              <div className={`flex items-center gap-2 text-xs px-2 py-1 rounded-md border ${deadlineInfo.bgColor} ${deadlineInfo.borderColor}`}>
+                <CreditCard className={`w-3 h-3 ${deadlineInfo.color}`} />
+                <span className={deadlineInfo.color}>{deadlineInfo.text}</span>
+                {deadlineInfo.isOverdue && (
+                  <AlertTriangle className="w-3 h-3 text-red-600 ml-1" />
+                )}
+              </div>
+            )
+          })()}
         </div>
       </div>
 
@@ -319,6 +512,66 @@ export function BookingCard({
           </div>
         </div>
 
+        {/* Payment Status Information */}
+        {booking.payment_status === 'paid' ? (
+          <div className="rounded-md p-3 border bg-emerald-50 border-emerald-200">
+            <div className="flex items-center gap-2">
+              <CreditCard className="w-4 h-4 text-emerald-600" />
+              <p className="text-sm font-semibold text-emerald-800">
+                Payment Completed
+              </p>
+            </div>
+            <p className="text-xs text-emerald-700 mt-1">
+              This booking has been successfully paid for.
+            </p>
+          </div>
+        ) : booking.status === 'pending' && (
+          <div className={`rounded-md p-3 border ${
+            isPaymentOverdue() 
+              ? 'bg-red-50 border-red-200' 
+              : 'bg-blue-50 border-blue-200'
+          }`}>
+            <div className="flex items-start justify-between mb-2">
+              <p className={`text-xs font-medium ${
+                isPaymentOverdue() ? 'text-red-700' : 'text-blue-700'
+              }`}>
+                {isPaymentOverdue() ? 'Payment Overdue' : 'Payment Required'}
+              </p>
+              {(() => {
+                const deadlineInfo = getPaymentDeadlineDisplay()
+                return deadlineInfo && (
+                  <span className={`text-xs px-2 py-1 rounded-full font-medium border ${deadlineInfo.bgColor} ${deadlineInfo.borderColor} ${deadlineInfo.color}`}>
+                    {deadlineInfo.text}
+                  </span>
+                )
+              })()}
+            </div>
+            <div className="space-y-2">
+              {booking.payment_link && (
+                <div className="flex items-center gap-2">
+                  <Button
+                    onClick={copyPaymentLink}
+                    variant="outline"
+                    size="sm"
+                    className="text-blue-600 border-blue-200 hover:bg-blue-50 h-7 text-xs"
+                  >
+                    <Copy className="w-3 h-3 mr-1" />
+                    Copy Payment Link
+                  </Button>
+                  <a 
+                    href={booking.payment_link} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-xs text-blue-600 hover:underline truncate flex-1"
+                  >
+                    {booking.payment_link}
+                  </a>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Special Instructions */}
         {booking.special_instructions && (
           <div className="bg-surface-tertiary rounded-md p-3">
@@ -374,7 +627,7 @@ export function BookingCard({
             })}
             variant="outline"
             size="sm"
-            className="w-full flex items-center justify-center gap-2"
+            className="w-full flex items-center justify-center gap-2 border-brand-300 text-brand-600 hover:bg-brand-50 hover:border-brand-400 hover:shadow-purple-sm transition-all duration-300 font-medium min-h-[44px] touch-manipulation"
           >
             <EyeIcon className="w-4 h-4" />
             View Details
@@ -417,26 +670,73 @@ export function BookingCard({
             </div>
           )}
 
-          {/* Regular Status Actions */}
-          {!booking.has_pending_reschedule && booking.status === 'pending' && onStatusUpdate && (
-            <div className="grid grid-cols-2 gap-2">
+          {/* Payment Actions for Pending Bookings */}
+          {!booking.has_pending_reschedule && booking.status === 'pending' && (
+            <div className="space-y-3">
+              {/* Primary Action - Mark as Paid */}
               <Button
-                onClick={() => handleStatusUpdate('confirmed')}
+                onClick={() => onMarkAsPaid ? onMarkAsPaid(booking) : handleStatusUpdate('confirmed')}
                 size="sm"
-                className="flex items-center justify-center gap-1 bg-green-600 hover:bg-green-700"
+                className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-emerald-md hover:shadow-emerald-lg transition-all duration-300 font-semibold min-h-[44px] touch-manipulation"
               >
-                <CheckCircleIcon className="w-3 h-3" />
-                Confirm
+                <CreditCard className="w-4 h-4" />
+                Mark as Paid
               </Button>
+              {/* Secondary Actions */}
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  onClick={() => handleStatusUpdate('payment_failed')}
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center justify-center gap-1 text-red-600 border-red-300 hover:bg-red-50 hover:border-red-400 hover:shadow-red-sm transition-all duration-300 min-h-[44px] touch-manipulation"
+                >
+                  <XCircleIcon className="w-4 h-4" />
+                  Payment Failed
+                </Button>
+                <Button
+                  onClick={() => handleStatusUpdate('cancelled')}
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center justify-center gap-1 text-red-600 border-red-300 hover:bg-red-50 hover:border-red-400 hover:shadow-red-sm transition-all duration-300 min-h-[44px] touch-manipulation"
+                >
+                  <XCircleIcon className="w-4 h-4" />
+                  Cancel Booking
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Payment Failed Actions */}
+          {booking.status === 'payment_failed' && (
+            <div className="space-y-3">
               <Button
-                onClick={() => handleStatusUpdate('cancelled')}
-                variant="outline"
+                onClick={() => onMarkAsPaid ? onMarkAsPaid(booking) : handleStatusUpdate('confirmed')}
                 size="sm"
-                className="flex items-center justify-center gap-1 text-red-600 border-red-200 hover:bg-red-50"
+                className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-emerald-md hover:shadow-emerald-lg transition-all duration-300 font-semibold min-h-[44px] touch-manipulation"
               >
-                <XCircleIcon className="w-3 h-3" />
-                Cancel
+                <CreditCard className="w-4 h-4" />
+                Mark as Paid
               </Button>
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  onClick={() => handleStatusUpdate('pending')}
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center justify-center gap-1 text-brand-600 border-brand-300 hover:bg-brand-50 hover:border-brand-400 hover:shadow-purple-sm transition-all duration-300 min-h-[44px] touch-manipulation"
+                >
+                  <ClockIcon className="w-4 h-4" />
+                  Retry Payment
+                </Button>
+                <Button
+                  onClick={() => handleStatusUpdate('cancelled')}
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center justify-center gap-1 text-red-600 border-red-300 hover:bg-red-50 hover:border-red-400 hover:shadow-red-sm transition-all duration-300 min-h-[44px] touch-manipulation"
+                >
+                  <XCircleIcon className="w-4 h-4" />
+                  Cancel Booking
+                </Button>
+              </div>
             </div>
           )}
 
@@ -444,7 +744,7 @@ export function BookingCard({
             <Button
               onClick={() => handleStatusUpdate('in_progress')}
               size="sm"
-              className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700"
+              className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 text-white shadow-purple-md hover:shadow-purple-lg transition-all duration-300 font-semibold min-h-[44px] touch-manipulation"
             >
               <ClockIcon className="w-4 h-4" />
               Start Service
@@ -455,7 +755,7 @@ export function BookingCard({
             <Button
               onClick={() => handleStatusUpdate('in_progress')}
               size="sm"
-              className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700"
+              className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 text-white shadow-purple-md hover:shadow-purple-lg transition-all duration-300 font-semibold min-h-[44px] touch-manipulation"
             >
               <ClockIcon className="w-4 h-4" />
               Start Service
@@ -463,14 +763,25 @@ export function BookingCard({
           )}
 
           {booking.status === 'in_progress' && onStatusUpdate && (
-            <Button
-              onClick={() => handleStatusUpdate('completed')}
-              size="sm"
-              className="w-full flex items-center justify-center gap-2"
-            >
-              <CheckCircleIcon className="w-4 h-4" />
-              Complete
-            </Button>
+            <div className="space-y-3">
+              <Button
+                onClick={() => handleStatusUpdate('completed')}
+                size="sm"
+                className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-emerald-md hover:shadow-emerald-lg transition-all duration-300 font-semibold min-h-[44px] touch-manipulation"
+              >
+                <CheckCircleIcon className="w-4 h-4" />
+                Complete Service
+              </Button>
+              <Button
+                onClick={() => handleStatusUpdate('no_show')}
+                variant="outline"
+                size="sm"
+                className="w-full flex items-center justify-center gap-2 text-red-600 border-red-300 hover:bg-red-50 hover:border-red-400 hover:shadow-red-sm transition-all duration-300 min-h-[44px] touch-manipulation"
+              >
+                <XCircleIcon className="w-4 h-4" />
+                Mark No Show
+              </Button>
+            </div>
           )}
         </div>
       )}

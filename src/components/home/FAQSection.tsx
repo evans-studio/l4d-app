@@ -18,19 +18,14 @@ const faqs = [
     answer: 'We cover SW9 and surrounding South London areas up to 17.5 miles radius, including Clapham, Battersea, Wandsworth, Brixton, and surrounding areas.'
   },
   {
-    id: 'pricing',
-    question: 'Are there any hidden fees?',
-    answer: 'No hidden fees! Our online booking shows exact pricing upfront, including any travel charges for locations beyond our free service radius.'
+    id: 'utilities',
+    question: 'Do you bring water and power?',
+    answer: 'Yes, we bring our own water supply and power equipment. We just need access to your location and a safe parking spot for our mobile detailing unit.'
   },
   {
-    id: 'duration',
-    question: 'How long does a service take?',
-    answer: 'Service times vary by package: Inside Only (1-2 hours), Outside Only (1.5-2 hours), Full Valet (2-3 hours). Times depend on vehicle size and condition.'
-  },
-  {
-    id: 'insurance',
-    question: 'Are you insured?',
-    answer: 'Yes, we carry full public liability insurance and are fully licensed. Your vehicle and property are protected during our service.'
+    id: 'payment',
+    question: 'How does payment work?',
+    answer: 'Payment is required upfront via secure PayPal link sent after booking confirmation. We accept all major payment methods through PayPal, with no additional fees.'
   }
 ]
 

@@ -34,8 +34,7 @@ export function UserDetails() {
   
   const [validationStatus, setValidationStatus] = useState<'idle' | 'checking' | 'found' | 'new'>('idle')
   const [showUserData, setShowUserData] = useState(false)
-  const [showPassword, setShowPassword] = useState(false)
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [showPasswords, setShowPasswords] = useState(false)
   const [passwordError, setPasswordError] = useState('')
 
   // Update form when store data changes
@@ -72,8 +71,18 @@ export function UserDetails() {
     
     // Reset validation status when user changes email or phone
     if (field === 'email' || field === 'phone') {
+      console.log('📝 User changed', field, '- resetting validation state')
       setValidationStatus('idle')
       setShowUserData(false)
+      
+      // Clear any existing user validation state in the store
+      // This prevents cached isExistingUser status from being displayed
+      setUserData({
+        email: field === 'email' ? value : userForm.email,
+        phone: field === 'phone' ? value : userForm.phone,
+        name: userForm.name,
+        isExistingUser: false, // Always reset to false for new validation
+      })
     }
     
     // Validate password in real-time for new users
@@ -106,15 +115,24 @@ export function UserDetails() {
 
   const handleValidateUser = async () => {
     if (!userForm.email || !userForm.phone) {
+      console.log('⚠️ Cannot validate - missing email or phone')
       return
     }
 
+    console.log('🔍 Starting user validation for:', userForm.email, userForm.phone)
     setValidationStatus('checking')
     
     try {
+      // Call the loadExistingUserData function which will update the store
       await loadExistingUserData(userForm.email, userForm.phone)
       
+      // Small delay to ensure state is updated before we check it
+      await new Promise(resolve => setTimeout(resolve, 100))
+      
+      console.log('🔄 After validation - isExistingUser:', isExistingUser)
+      
       if (isExistingUser) {
+        console.log('✅ Found existing user')
         setValidationStatus('found')
         setShowUserData(true)
         
@@ -126,6 +144,7 @@ export function UserDetails() {
           isExistingUser: true
         })
       } else {
+        console.log('👤 New user detected')
         setValidationStatus('new')
         setShowUserData(false)
         
@@ -279,63 +298,57 @@ export function UserDetails() {
 
               {/* Password Creation Fields for New Users */}
               <div className="space-y-4 p-4 bg-surface-secondary rounded-lg border border-border-secondary">
-                <div className="flex items-center gap-2 mb-3">
-                  <Lock className="w-4 h-4 text-brand-600" />
-                  <h4 className="font-medium text-text-primary">Create Your Password</h4>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Lock className="w-4 h-4 text-brand-600" />
+                    <h4 className="font-medium text-text-primary">Create Your Password</h4>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowPasswords(!showPasswords)}
+                    className="flex items-center gap-2 px-3 py-1.5 text-sm text-text-secondary hover:text-text-primary rounded-md hover:bg-surface-hover transition-colors min-h-[32px] touch-manipulation"
+                    aria-label={showPasswords ? 'Hide passwords' : 'Show passwords'}
+                  >
+                    {showPasswords ? (
+                      <>
+                        <EyeOff className="w-4 h-4" />
+                        <span className="hidden sm:inline">Hide</span>
+                      </>
+                    ) : (
+                      <>
+                        <Eye className="w-4 h-4" />
+                        <span className="hidden sm:inline">Show</span>
+                      </>
+                    )}
+                  </button>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-text-primary mb-2">
                     Password *
                   </label>
-                  <div className="relative">
-                    <Input
-                      type={showPassword ? 'text' : 'password'}
-                      value={userForm.password}
-                      onChange={(e) => handleFormChange('password', e.target.value)}
-                      placeholder="Enter your password"
-                      required
-                      className="pr-10"
-                    />
-                    <button
-                      type="button"
-                      className="absolute inset-y-0 right-0 flex items-center pr-3"
-                      onClick={() => setShowPassword(!showPassword)}
-                    >
-                      {showPassword ? (
-                        <EyeOff className="w-4 h-4 text-text-muted" />
-                      ) : (
-                        <Eye className="w-4 h-4 text-text-muted" />
-                      )}
-                    </button>
-                  </div>
+                  <Input
+                    type={showPasswords ? 'text' : 'password'}
+                    value={userForm.password}
+                    onChange={(e) => handleFormChange('password', e.target.value)}
+                    placeholder="Enter your password"
+                    required
+                    className="w-full"
+                  />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-text-primary mb-2">
                     Confirm Password *
                   </label>
-                  <div className="relative">
-                    <Input
-                      type={showConfirmPassword ? 'text' : 'password'}
-                      value={userForm.confirmPassword}
-                      onChange={(e) => handleFormChange('confirmPassword', e.target.value)}
-                      placeholder="Confirm your password"
-                      required
-                      className="pr-10"
-                    />
-                    <button
-                      type="button"
-                      className="absolute inset-y-0 right-0 flex items-center pr-3"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    >
-                      {showConfirmPassword ? (
-                        <EyeOff className="w-4 h-4 text-text-muted" />
-                      ) : (
-                        <Eye className="w-4 h-4 text-text-muted" />
-                      )}
-                    </button>
-                  </div>
+                  <Input
+                    type={showPasswords ? 'text' : 'password'}
+                    value={userForm.confirmPassword}
+                    onChange={(e) => handleFormChange('confirmPassword', e.target.value)}
+                    placeholder="Confirm your password"
+                    required
+                    className="w-full"
+                  />
                 </div>
 
                 {/* Password Requirements */}
@@ -480,7 +493,7 @@ export function UserDetails() {
             rightIcon={<ChevronRightIcon className="w-4 h-4" />}
             className="min-h-[48px]"
           >
-            Continue to Confirmation
+            Continue
           </Button>
           <Button
             variant="outline"
@@ -489,7 +502,7 @@ export function UserDetails() {
             fullWidth
             className="min-h-[48px]"
           >
-            Back to Service Address
+            Back
           </Button>
         </div>
         
@@ -500,7 +513,7 @@ export function UserDetails() {
             onClick={previousStep}
             leftIcon={<ChevronLeftIcon className="w-4 h-4" />}
           >
-            Back to Service Address
+            Back
           </Button>
           
           <Button
@@ -513,7 +526,7 @@ export function UserDetails() {
             size="lg"
             rightIcon={<ChevronRightIcon className="w-4 h-4" />}
           >
-            Continue to Confirmation
+            Continue
           </Button>
         </div>
       </div>

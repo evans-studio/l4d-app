@@ -44,7 +44,7 @@ export function HeroSection() {
                 alt="Love 4 Detailing"
                 width={400}
                 height={400}
-                className="w-60 h-60 sm:w-72 sm:h-72 md:w-80 md:h-80 lg:w-96 lg:h-96 object-contain drop-shadow-2xl"
+                className="w-72 h-72 sm:w-80 sm:h-80 md:w-96 md:h-96 lg:w-[448px] lg:h-[448px] xl:w-[512px] xl:h-[512px] object-contain drop-shadow-2xl"
                 priority
               />
               {/* Subtle glow effect */}
@@ -62,8 +62,8 @@ export function HeroSection() {
               align="center" 
               className="text-3xl sm:text-4xl md:text-5xl lg:text-7xl leading-tight"
             >
-              Premium Mobile
-              <span className="block text-brand-400">Car Detailing</span>
+              Mobile Car Detailing,
+              <span className="block text-brand-400">Done Right.</span>
             </Heading>
 
             {/* H2 - Supporting Statement */}
@@ -75,7 +75,7 @@ export function HeroSection() {
               align="center" 
               className="text-lg sm:text-xl md:text-2xl lg:text-3xl text-gray-300 max-w-3xl mx-auto px-4 sm:px-0"
             >
-              Professional-grade equipment and eco-friendly products brought directly to your location
+              South London based. We pull up to you.
             </Heading>
           </div>
 
@@ -89,7 +89,7 @@ export function HeroSection() {
                 className="text-base sm:text-lg px-6 sm:px-8 py-3 sm:py-4 h-auto min-w-[200px] bg-brand-600 hover:bg-brand-700 shadow-purple-lg hover:shadow-purple-xl transition-all duration-300 sm:w-auto"
                 rightIcon={<ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />}
               >
-                Book Your Service
+                Book Service
               </Button>
             </Link>
             <Button 
@@ -99,31 +99,10 @@ export function HeroSection() {
               className="text-base sm:text-lg px-6 sm:px-8 py-3 sm:py-4 h-auto min-w-[200px] border-white/30 text-white hover:bg-white/10 hover:border-white/50 transition-all duration-300 sm:w-auto"
               onClick={() => window.location.href = 'tel:+447908625581'}
             >
-              Call 07908 625581
+              Call
             </Button>
           </div>
 
-          {/* Trust Indicators */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-6 pt-8 text-gray-400">
-            <div className="flex items-center gap-2">
-              <div className="flex">
-                {[...Array(5)].map((_, i) => (
-                  <div key={i} className="w-5 h-5 text-yellow-400">★</div>
-                ))}
-              </div>
-              <Text weight="medium">5.0 Rating</Text>
-            </div>
-            <div className="hidden sm:block h-6 w-px bg-gray-600" />
-            <div className="flex items-center gap-2">
-              <div className="w-5 h-5 text-brand-400">🛡️</div>
-              <Text weight="medium">Fully Insured</Text>
-            </div>
-            <div className="hidden sm:block h-6 w-px bg-gray-600" />
-            <div className="flex items-center gap-2">
-              <div className="w-5 h-5 text-brand-400">📱</div>
-              <Text weight="medium">Mobile Service</Text>
-            </div>
-          </div>
         </div>
       </Container>
 

@@ -45,42 +45,27 @@ export function BookingStatsWidget({ stats }: BookingStatsWidgetProps) {
           Your Stats
         </h3>
       </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Total Bookings */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-brand-600/10 flex items-center justify-center">
-              <Calendar className="w-4 h-4 text-brand-400" />
-            </div>
-            <span className="text-sm text-text-secondary">Total Bookings</span>
+      <CardContent className="space-y-5">
+        {/* Key Stats Grid */}
+        <div className="grid grid-cols-2 gap-4">
+          <div className="text-center p-3 bg-surface-tertiary rounded-lg">
+            <div className="text-2xl font-bold text-brand-600 mb-1">{stats.totalBookings}</div>
+            <div className="text-xs text-text-secondary uppercase tracking-wide">Total Bookings</div>
           </div>
-          <span className="text-lg font-bold text-text-primary">{stats.totalBookings}</span>
+          <div className="text-center p-3 bg-surface-tertiary rounded-lg">
+            <div className="text-lg font-bold text-text-primary mb-1">
+              {formatCurrency(stats.totalSpent)}
+            </div>
+            <div className="text-xs text-text-secondary uppercase tracking-wide">Total Spent</div>
+          </div>
         </div>
 
         {/* Member Since */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-success-600/10 flex items-center justify-center">
-              <Clock className="w-4 h-4 text-success-400" />
-            </div>
-            <span className="text-sm text-text-secondary">Member Since</span>
+        <div className="flex items-center gap-3 p-3 bg-brand-600/5 rounded-lg border border-brand-600/10">
+          <Clock className="w-5 h-5 text-brand-400" />
+          <div>
+            <p className="text-sm font-medium text-text-primary">Member since {formatDate(stats.memberSince)}</p>
           </div>
-          <span className="text-sm font-medium text-text-primary">
-            {formatDate(stats.memberSince)}
-          </span>
-        </div>
-
-        {/* Total Spent */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-warning-600/10 flex items-center justify-center">
-              <PoundSterling className="w-4 h-4 text-warning-400" />
-            </div>
-            <span className="text-sm text-text-secondary">Total Spent</span>
-          </div>
-          <span className="text-lg font-bold text-text-primary">
-            {formatCurrency(stats.totalSpent)}
-          </span>
         </div>
 
         {/* Favorite Service */}
@@ -101,20 +86,6 @@ export function BookingStatsWidget({ stats }: BookingStatsWidgetProps) {
           </div>
         )}
 
-        {/* Achievement Badge */}
-        {stats.totalBookings >= 5 && (
-          <div className="bg-gradient-to-r from-brand-600/10 to-brand-400/10 rounded-lg p-3 border border-brand-500/20">
-            <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-full bg-brand-600 flex items-center justify-center">
-                <Star className="w-3 h-3 text-white" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-brand-400">Loyal Customer</p>
-                <p className="text-xs text-text-muted">5+ bookings completed</p>
-              </div>
-            </div>
-          </div>
-        )}
       </CardContent>
     </Card>
   )

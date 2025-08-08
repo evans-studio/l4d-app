@@ -1,11 +1,7 @@
 import { Resend } from 'resend'
 import { Booking } from '@/lib/utils/booking-types'
 import { formatDateForEmail, formatTimeForEmail } from '@/lib/utils/date-formatting'
-
-// Validate Resend API key on initialization
-if (!process.env.RESEND_API_KEY) {
-  console.warn('⚠️ RESEND_API_KEY not configured - email sending will fail')
-}
+import { paypalService } from '@/lib/services/paypal'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
@@ -17,7 +13,7 @@ export interface EmailServiceConfig {
 }
 
 const defaultConfig: EmailServiceConfig = {
-  fromEmail: process.env.NEXT_PUBLIC_FROM_EMAIL || 'zell@love4detailing.com',
+  fromEmail: process.env.EMAIL_FROM || 'zell@love4detailing.com',
   fromName: 'Love 4 Detailing - Zell',
   adminEmail: process.env.ADMIN_EMAIL || 'zell@love4detailing.com',
   replyToEmail: process.env.EMAIL_REPLY_TO
@@ -28,24 +24,7 @@ export class EmailService {
 
   constructor(config: Partial<EmailServiceConfig> = {}) {
     this.config = { ...defaultConfig, ...config }
-    
-    // Validate configuration
-    if (!process.env.RESEND_API_KEY) {
-      console.warn('⚠️ EmailService: RESEND_API_KEY not configured')
-    }
   }
-
-  // Validate email service is ready
-  private validateEmailService(): { valid: boolean; error?: string } {
-    if (!process.env.RESEND_API_KEY) {
-      return { valid: false, error: 'RESEND_API_KEY not configured' }
-    }
-    if (!this.config.fromEmail) {
-      return { valid: false, error: 'From email not configured' }
-    }
-    return { valid: true }
-  }
-
 
   // Send booking confirmation email to customer
   async sendBookingConfirmation(
@@ -53,13 +32,6 @@ export class EmailService {
     customerName: string,
     booking: Booking
   ): Promise<{ success: boolean; error?: string }> {
-    // Validate service configuration
-    const validation = this.validateEmailService()
-    if (!validation.valid) {
-      console.error('Email service validation failed:', validation.error)
-      return { success: false, error: validation.error }
-    }
-
     try {
       const { error } = await resend.emails.send({
         from: `${this.config.fromName} <${this.config.fromEmail}>`,
@@ -78,6 +50,38 @@ export class EmailService {
       return { success: true }
     } catch (error) {
       console.error('Email service error:', error)
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Unknown email error' 
+      }
+    }
+  }
+
+  // Send welcome booking confirmation to new customers
+  async sendWelcomeBookingConfirmation(
+    customerEmail: string,
+    customerName: string,
+    booking: Booking,
+    requiresEmailVerification: boolean = false
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      const { error } = await resend.emails.send({
+        from: `${this.config.fromName} <${this.config.fromEmail}>`,
+        to: [customerEmail],
+        replyTo: this.config.replyToEmail,
+        subject: `Welcome to Love 4 Detailing! Booking Confirmation - ${booking.booking_reference}`,
+        html: this.generateWelcomeBookingHTML(customerName, booking, requiresEmailVerification),
+        text: this.generateWelcomeBookingText(customerName, booking, requiresEmailVerification)
+      })
+
+      if (error) {
+        console.error('Welcome booking email send error:', error)
+        return { success: false, error: error.message }
+      }
+
+      return { success: true }
+    } catch (error) {
+      console.error('Welcome booking email service error:', error)
       return { 
         success: false, 
         error: error instanceof Error ? error.message : 'Unknown email error' 
@@ -109,69 +113,6 @@ export class EmailService {
       return { success: true }
     } catch (error) {
       console.error('Admin email service error:', error)
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown email error' 
-      }
-    }
-  }
-
-  // Send welcome email with verification link
-  async sendWelcomeVerificationEmail(
-    customerEmail: string,
-    customerName: string,
-    userId: string
-  ): Promise<{ success: boolean; error?: string }> {
-    try {
-      const { error } = await resend.emails.send({
-        from: `${this.config.fromName} <${this.config.fromEmail}>`,
-        to: [customerEmail],
-        replyTo: this.config.replyToEmail,
-        subject: 'Welcome to Love4Detailing - Verify Your Email',
-        html: this.generateWelcomeVerificationHTML(customerName, customerEmail),
-        text: this.generateWelcomeVerificationText(customerName, customerEmail)
-      })
-
-      if (error) {
-        console.error('Welcome verification email error:', error)
-        return { success: false, error: error.message }
-      }
-
-      return { success: true }
-    } catch (error) {
-      console.error('Welcome verification email service error:', error)
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown email error' 
-      }
-    }
-  }
-
-  // Send booking welcome verification email for users who book first
-  async sendBookingWelcomeVerificationEmail(
-    customerEmail: string,
-    customerName: string,
-    bookingReference: string,
-    userId: string
-  ): Promise<{ success: boolean; error?: string }> {
-    try {
-      const { error } = await resend.emails.send({
-        from: `${this.config.fromName} <${this.config.fromEmail}>`,
-        to: [customerEmail],
-        replyTo: this.config.replyToEmail,
-        subject: `Booking Confirmed! Verify Your Email - ${bookingReference}`,
-        html: this.generateBookingWelcomeVerificationHTML(customerName, bookingReference, customerEmail),
-        text: this.generateBookingWelcomeVerificationText(customerName, bookingReference, customerEmail)
-      })
-
-      if (error) {
-        console.error('Booking welcome verification email error:', error)
-        return { success: false, error: error.message }
-      }
-
-      return { success: true }
-    } catch (error) {
-      console.error('Booking welcome verification email service error:', error)
       return { 
         success: false, 
         error: error instanceof Error ? error.message : 'Unknown email error' 
@@ -258,8 +199,7 @@ export class EmailService {
         confirmed: 'Your booking has been confirmed!',
         cancelled: 'Your booking has been cancelled',
         completed: 'Your booking has been completed',
-        in_progress: 'Your booking is now in progress',
-        rescheduled: 'Your booking has been rescheduled!'
+        in_progress: 'Your booking is now in progress'
       }
 
       const subject = `Booking Update - ${booking.booking_reference}: ${statusMessages[booking.status as keyof typeof statusMessages] || 'Status Updated'}`
@@ -281,38 +221,6 @@ export class EmailService {
       return { success: true }
     } catch (error) {
       console.error('Status update email service error:', error)
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown email error' 
-      }
-    }
-  }
-
-  // Send reschedule decline notification to customer
-  async sendRescheduleDeclineNotification(
-    customerEmail: string,
-    customerName: string,
-    booking: Booking,
-    declineMessage: string
-  ): Promise<{ success: boolean; error?: string }> {
-    try {
-      const { error } = await resend.emails.send({
-        from: `${this.config.fromName} <${this.config.fromEmail}>`,
-        to: [customerEmail],
-        replyTo: this.config.replyToEmail,
-        subject: `Reschedule Request Update - ${booking.booking_reference}`,
-        html: this.generateRescheduleDeclineHTML(customerName, booking, declineMessage),
-        text: this.generateRescheduleDeclineText(customerName, booking, declineMessage)
-      })
-
-      if (error) {
-        console.error('Reschedule decline email error:', error)
-        return { success: false, error: error.message }
-      }
-
-      return { success: true }
-    } catch (error) {
-      console.error('Reschedule decline email service error:', error)
       return { 
         success: false, 
         error: error instanceof Error ? error.message : 'Unknown email error' 
@@ -347,42 +255,6 @@ export class EmailService {
       return { success: true }
     } catch (error) {
       console.error('Admin reschedule request email service error:', error)
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown email error' 
-      }
-    }
-  }
-
-  // Send customer confirmation that reschedule request has been submitted
-  async sendRescheduleRequestConfirmation(
-    customerEmail: string,
-    customerName: string,
-    booking: any,
-    requestedDate: string,
-    requestedTime: string,
-    reason?: string
-  ): Promise<{ success: boolean; error?: string }> {
-    try {
-      const subject = `Reschedule Request Submitted - ${booking.booking_reference}`
-
-      const { error } = await resend.emails.send({
-        from: `${this.config.fromName} <${this.config.fromEmail}>`,
-        to: [customerEmail],
-        replyTo: this.config.replyToEmail,
-        subject,
-        html: this.generateRescheduleRequestConfirmationHTML(customerName, booking, requestedDate, requestedTime, reason),
-        text: this.generateRescheduleRequestConfirmationText(customerName, booking, requestedDate, requestedTime, reason)
-      })
-
-      if (error) {
-        console.error('Reschedule request confirmation email error:', error)
-        return { success: false, error: error.message }
-      }
-
-      return { success: true }
-    } catch (error) {
-      console.error('Reschedule request confirmation email service error:', error)
       return { 
         success: false, 
         error: error instanceof Error ? error.message : 'Unknown email error' 
@@ -436,162 +308,73 @@ export class EmailService {
 
   // HTML Email Templates
   private generateBookingConfirmationHTML(customerName: string, booking: Booking): string {
+    // Generate PayPal payment link and instructions
+    const paypalPayment = paypalService.generatePaymentInstructions(
+      booking.total_price,
+      booking.booking_reference,
+      customerName
+    )
 
-    return `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta charset="utf-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Booking Confirmation - Love4Detailing</title>
-          <style>
-            * { box-sizing: border-box; }
-            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #ffffff; max-width: 600px; margin: 0 auto; padding: 0; background: #0a0a0a; }
-            .email-container { background: #0a0a0a; min-height: 100vh; }
-            .header { background: linear-gradient(135deg, #9747FF 0%, #B269FF 100%); color: white; padding: 40px 30px; text-align: center; }
-            .logo { display: inline-flex; align-items: center; gap: 12px; margin-bottom: 20px; }
-            .logo-icon { width: 40px; height: 40px; background: rgba(255, 255, 255, 0.2); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
-            .logo-text { font-size: 24px; font-weight: bold; background: linear-gradient(to right, #ffffff, #e5e7eb); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-            .tagline { color: rgba(255, 255, 255, 0.8); font-size: 14px; margin-top: 8px; }
-            .content { background: #1a1a1a; padding: 40px 30px; }
-            .welcome-message { text-align: center; margin-bottom: 30px; }
-            .booking-card { background: #252525; border-radius: 12px; overflow: hidden; margin: 25px 0; border: 1px solid rgba(151, 71, 255, 0.2); }
-            .booking-header { background: linear-gradient(135deg, rgba(151, 71, 255, 0.1), rgba(178, 105, 255, 0.1)); padding: 20px; border-bottom: 1px solid rgba(151, 71, 255, 0.2); }
-            .booking-ref { color: #9747FF; font-size: 18px; font-weight: bold; margin: 0; }
-            .booking-status { display: inline-block; background: rgba(151, 71, 255, 0.2); color: #B269FF; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 500; margin-top: 8px; }
-            .booking-details { padding: 25px; }
-            .detail-row { display: flex; align-items: flex-start; margin: 16px 0; padding: 12px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
-            .detail-row:last-child { border-bottom: none; }
-            .detail-icon { width: 20px; height: 20px; margin-right: 12px; color: #9747FF; flex-shrink: 0; margin-top: 2px; }
-            .detail-content { flex: 1; }
-            .detail-label { font-weight: 600; color: rgba(255, 255, 255, 0.7); font-size: 14px; margin-bottom: 4px; }
-            .detail-value { color: #ffffff; font-size: 16px; line-height: 1.4; }
-            .price-highlight { color: #9747FF; font-size: 20px; font-weight: bold; }
-            .info-card { background: rgba(151, 71, 255, 0.1); border: 1px solid rgba(151, 71, 255, 0.3); border-radius: 12px; padding: 25px; margin: 30px 0; }
-            .info-card h4 { color: #B269FF; margin: 0 0 15px 0; font-size: 18px; }
-            .info-card p { margin: 8px 0; color: rgba(255, 255, 255, 0.8); }
-            .instructions-card { background: #252525; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 20px; margin: 20px 0; }
-            .contact-info { background: #252525; border-radius: 12px; padding: 20px; margin: 25px 0; text-align: center; }
-            .contact-info h4 { color: #9747FF; margin-bottom: 15px; }
-            .contact-item { margin: 8px 0; color: rgba(255, 255, 255, 0.8); }
-            .footer { background: #0a0a0a; padding: 30px; text-align: center; border-top: 1px solid rgba(255, 255, 255, 0.05); }
-            .footer-brand { color: #9747FF; font-weight: 600; margin-bottom: 8px; }
-            .footer-text { color: rgba(255, 255, 255, 0.5); font-size: 12px; line-height: 1.5; }
-            @media (max-width: 480px) {
-              .header, .content, .footer { padding: 20px 15px; }
-              .booking-details { padding: 20px 15px; }
-              .detail-row { flex-direction: column; align-items: flex-start; }
-              .detail-icon { margin-bottom: 8px; }
-            }
-          </style>
-        </head>
-        <body>
-          <div class="email-container">
-            <div class="header">
-              <div class="logo">
-                <div class="logo-icon">🚗</div>
-                <div class="logo-text">Love4Detailing</div>
-              </div>
-              <h1 style="margin: 0; font-size: 28px; font-weight: 700;">Booking Confirmed!</h1>
-              <p class="tagline">Your premium car detailing experience awaits</p>
-            </div>
-            
-            <div class="content">
-              <div class="welcome-message">
-                <p style="color: rgba(255, 255, 255, 0.8); font-size: 16px; margin: 0;">Dear ${customerName},</p>
-                <p style="color: #ffffff; font-size: 18px; margin: 10px 0 0 0;">Thank you for choosing Love4Detailing! Your booking has been received and is being processed.</p>
-              </div>
-              
-              <div class="booking-card">
-                <div class="booking-header">
-                  <h3 class="booking-ref">${booking.booking_reference}</h3>
-                  <span class="booking-status">${booking.status === 'pending' ? 'Awaiting Confirmation' : booking.status}</span>
-                </div>
-                
-                <div class="booking-details">
-                  <div class="detail-row">
-                    <div class="detail-icon">📅</div>
-                    <div class="detail-content">
-                      <div class="detail-label">Scheduled Date</div>
-                      <div class="detail-value">${formatDateForEmail(booking.scheduled_date)}</div>
-                    </div>
-                  </div>
-                  
-                  <div class="detail-row">
-                    <div class="detail-icon">⏰</div>
-                    <div class="detail-content">
-                      <div class="detail-label">Scheduled Time</div>
-                      <div class="detail-value">${formatTimeForEmail(booking.scheduled_start_time)}</div>
-                    </div>
-                  </div>
-                  
-                  <div class="detail-row">
-                    <div class="detail-icon">🚗</div>
-                    <div class="detail-content">
-                      <div class="detail-label">Vehicle</div>
-                      <div class="detail-value">${booking.vehicle_details?.make} ${booking.vehicle_details?.model}${booking.vehicle_details?.year ? ` (${booking.vehicle_details.year})` : ''}${booking.vehicle_details?.color ? ` - ${booking.vehicle_details.color}` : ''}</div>
-                    </div>
-                  </div>
-                  
-                  <div class="detail-row">
-                    <div class="detail-icon">📍</div>
-                    <div class="detail-content">
-                      <div class="detail-label">Service Location</div>
-                      <div class="detail-value">
-                        ${booking.service_address?.address_line_1}<br>
-                        ${booking.service_address?.address_line_2 ? `${booking.service_address.address_line_2}<br>` : ''}
-                        ${booking.service_address?.city}, ${booking.service_address?.postcode}
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div class="detail-row">
-                    <div class="detail-icon">💰</div>
-                    <div class="detail-content">
-                      <div class="detail-label">Total Investment</div>
-                      <div class="detail-value price-highlight">£${booking.total_price}</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              <div class="info-card">
-                <h4>✨ What happens next?</h4>
-                <p><strong>Review & Confirmation:</strong> Our team will review your booking and contact you within 24 hours to confirm the appointment and discuss any specific requirements.</p>
-                <p><strong>Payment:</strong> Payment is due after service completion. We accept cash, card, and bank transfer for your convenience.</p>
-                <p><strong>Preparation:</strong> We'll bring all equipment needed. Please ensure access to water and electricity at your location.</p>
-              </div>
-              
-              ${booking.special_instructions ? `
-                <div class="instructions-card">
-                  <h4 style="color: #9747FF; margin-bottom: 12px;">📝 Your Special Instructions</h4>
-                  <p style="color: rgba(255, 255, 255, 0.8); margin: 0;">${booking.special_instructions}</p>
-                </div>
-              ` : ''}
-              
-              <div class="contact-info">
-                <h4>Need to get in touch?</h4>
-                <div class="contact-item">📧 Email: ${this.config.adminEmail}</div>
-                <div class="contact-item">📱 Phone: Available upon confirmation</div>
-                <p style="color: rgba(255, 255, 255, 0.6); font-size: 14px; margin-top: 15px;">We're here to make your experience exceptional!</p>
-              </div>
-            </div>
-            
-            <div class="footer">
-              <div class="footer-brand">Love4Detailing</div>
-              <div class="footer-text">
-                Professional Vehicle Detailing Services<br>
-                Transforming vehicles, exceeding expectations<br><br>
-                This is an automated confirmation email.<br>
-                Please do not reply directly to this message.
-              </div>
-            </div>
-          </div>
-        </body>
-      </html>
+    const content = `
+      <div style="text-align: center; margin-bottom: 32px;">
+        <p style="color: rgba(255, 255, 255, 0.8); font-size: 16px; margin: 0;">Dear ${customerName},</p>
+        <p style="color: #ffffff; font-size: 18px; margin: 16px 0 0 0; font-weight: 500;">Thank you for choosing Love 4 Detailing! Your booking has been confirmed and is ready for service.</p>
+      </div>
+      
+      ${this.generateBookingDetailsCard(booking)}
+      
+      <!-- PayPal Payment Section -->
+      <div class="highlight-card" style="background: linear-gradient(135deg, #0070ba 0%, #003d7a 100%); border: 2px solid #0070ba;">
+        <h4 style="color: #ffffff; margin-bottom: 16px;"> Secure Payment Required</h4>
+        <p style="color: rgba(255, 255, 255, 0.9); margin-bottom: 16px; font-size: 16px;">Complete your payment securely through PayPal to confirm your booking.</p>
+        
+        <div style="text-align: center; margin: 24px 0;">
+          <a href="${paypalPayment.paymentLink}" style="display: inline-block; background: #ffffff; color: #0070ba; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);">
+             Pay £${booking.total_price.toFixed(2)} with PayPal
+          </a>
+        </div>
+        
+        <div style="font-size: 14px; color: rgba(255, 255, 255, 0.8); margin-top: 16px;">
+          <p style="margin-bottom: 8px;"><strong>Payment Reference:</strong> ${booking.booking_reference}</p>
+          <p style="margin-bottom: 8px;"><strong>Payment Deadline:</strong> ${paypalPayment.deadline}</p>
+          <p style="margin-bottom: 0;">⚠️ Your booking will be automatically cancelled if payment is not received by the deadline.</p>
+        </div>
+      </div>
+      
+      <div class="highlight-card">
+        <h4> What happens next?</h4>
+        <p style="margin-bottom: 16px;"><strong>1. Complete Payment:</strong> Use the PayPal link above to secure your booking within 48 hours.</p>
+        <p style="margin-bottom: 16px;"><strong>2. Service Delivery:</strong> Our professional team will arrive at your location at the scheduled time with all equipment needed.</p>
+        <p style="margin-bottom: 0;"><strong>3. Preparation:</strong> Please ensure access to water and electricity at your location.</p>
+      </div>
+      
+      <div class="highlight-card">
+        <h4> Premium Service Guarantee</h4>
+        <p style="margin-bottom: 16px;">✓ Professional-grade equipment and products</p>
+        <p style="margin-bottom: 16px;">✓ Fully insured and experienced technicians</p>
+        <p style="margin-bottom: 16px;">✓ 100% satisfaction guarantee</p>
+        <p style="margin-bottom: 0;">✓ Before and after photos included</p>
+      </div>
+      
+      <div class="content-card" style="text-align: center;">
+        <div class="card-content">
+          <h4 style="color: #B269FF; margin-bottom: 16px;">Need assistance?</h4>
+          <p style="margin-bottom: 12px;"> <a href="mailto:${this.config.adminEmail}" class="footer-link">${this.config.adminEmail}</a></p>
+          <p style="margin-bottom: 0; color: rgba(255, 255, 255, 0.7); font-size: 14px;">We're here to make your experience exceptional!</p>
+        </div>
+      </div>
     `
-  }
 
+    return this.generateUnifiedEmailHTML({
+      title: 'Booking Confirmation - Love 4 Detailing',
+      header: {
+        title: 'Booking Confirmed!',
+        subtitle: 'Your premium car detailing experience awaits',
+        type: 'success'
+      },
+      content
+    })
+  }
 
   private generateBookingConfirmationText(customerName: string, booking: Booking): string {
     return `
@@ -628,6 +411,229 @@ This is an automated email. Please do not reply directly to this email.
     `
   }
 
+  // Welcome booking templates for new customers
+  private generateWelcomeBookingHTML(customerName: string, booking: Booking, requiresEmailVerification: boolean): string {
+    // Generate PayPal payment link and instructions
+    const paypalPayment = paypalService.generatePaymentInstructions(
+      booking.total_price,
+      booking.booking_reference,
+      customerName
+    )
+
+    const content = `
+      <div style="text-align: center; margin-bottom: 32px;">
+        <p style="color: rgba(255, 255, 255, 0.8); font-size: 16px; margin: 0;">Welcome to Love 4 Detailing, ${customerName}!</p>
+        <p style="color: #ffffff; font-size: 18px; margin: 16px 0 0 0; font-weight: 500;">Your account has been created and your booking is confirmed! We're excited to provide you with premium car detailing service.</p>
+      </div>
+
+      ${requiresEmailVerification ? `
+      <!-- Email Verification Reminder -->
+      <div class="highlight-card" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); border: 2px solid #f59e0b;">
+        <h4 style="color: #ffffff; margin-bottom: 16px;"> Email Verification Required</h4>
+        <p style="color: rgba(255, 255, 255, 0.9); margin-bottom: 16px; font-size: 16px;">To access your dashboard and manage your bookings, please verify your email address.</p>
+        
+        <div style="background: rgba(255, 255, 255, 0.15); border-radius: 8px; padding: 16px; margin: 16px 0;">
+          <p style="color: #ffffff; margin: 0; font-size: 14px;">
+            <strong>Check your inbox</strong> for a verification email and click the confirmation link.
+            <br>Don't see it? Check your spam folder.
+          </p>
+        </div>
+        
+        <p style="margin-bottom: 0; font-size: 14px; color: rgba(255, 255, 255, 0.8);">
+          ⚠️ You'll need to verify your email to access your customer dashboard after your service.
+        </p>
+      </div>
+      ` : ''}
+      
+      ${this.generateBookingDetailsCard(booking)}
+      
+      <!-- PayPal Payment Section -->
+      <div class="highlight-card" style="background: linear-gradient(135deg, #0070ba 0%, #003d7a 100%); border: 2px solid #0070ba;">
+        <h4 style="color: #ffffff; margin-bottom: 16px;"> Secure Your Booking with Payment</h4>
+        <p style="color: rgba(255, 255, 255, 0.9); margin-bottom: 16px; font-size: 16px;">Complete your payment securely through PayPal to guarantee your service slot.</p>
+        
+        <div style="text-align: center; margin: 24px 0;">
+          <a href="${paypalPayment.paymentLink}" style="display: inline-block; background: #ffffff; color: #0070ba; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);">
+             Pay £${booking.total_price.toFixed(2)} with PayPal
+          </a>
+        </div>
+        
+        <div style="font-size: 14px; color: rgba(255, 255, 255, 0.8); margin-top: 16px;">
+          <p style="margin-bottom: 8px;"><strong>Payment Reference:</strong> ${booking.booking_reference}</p>
+          <p style="margin-bottom: 8px;"><strong>Payment Deadline:</strong> ${paypalPayment.deadline}</p>
+          <p style="margin-bottom: 0;">⚠️ Your booking will be automatically cancelled if payment is not received by the deadline.</p>
+        </div>
+      </div>
+      
+      <div class="highlight-card">
+        <h4> Welcome to the Love 4 Detailing family!</h4>
+        <p style="margin-bottom: 16px;"><strong> Account Created:</strong> You now have access to your personal dashboard (after email verification) to track bookings and manage your account.</p>
+        <p style="margin-bottom: 16px;"><strong> Secure Payment:</strong> Complete payment using the PayPal link above within 48 hours to guarantee your service slot.</p>
+        <p style="margin-bottom: 16px;"><strong> Premium Service:</strong> Our professional team will arrive with all equipment and deliver exceptional results.</p>
+        <p style="margin-bottom: 0;"><strong>Stay Connected:</strong> After verification, log in to your dashboard to reschedule, view history, and book future services.</p>
+      </div>
+      
+      <div class="highlight-card">
+        <h4> What makes us special?</h4>
+        <p style="margin-bottom: 16px;">✓ Mobile service - we come to you</p>
+        <p style="margin-bottom: 16px;">✓ Professional-grade equipment and eco-friendly products</p>
+        <p style="margin-bottom: 16px;">✓ Fully insured with 100% satisfaction guarantee</p>
+        <p style="margin-bottom: 16px;">✓ Before and after photos for every service</p>
+        <p style="margin-bottom: 0;">✓ Personal dashboard to manage all your bookings</p>
+      </div>
+      
+      <div class="content-card" style="text-align: center;">
+        <div class="card-content">
+          <h4 style="color: #B269FF; margin-bottom: 16px;">Welcome aboard! Need help?</h4>
+          <p style="margin-bottom: 12px;"> <a href="mailto:${this.config.adminEmail}" class="footer-link">${this.config.adminEmail}</a></p>
+          <p style="margin-bottom: 0; color: rgba(255, 255, 255, 0.7); font-size: 14px;">We're here to make your first experience with us exceptional!</p>
+        </div>
+      </div>
+    `
+
+    return this.generateUnifiedEmailHTML({
+      title: 'Welcome to Love 4 Detailing - Booking Confirmed!',
+      header: {
+        title: ' Welcome & Booking Confirmed!',
+        subtitle: 'Your premium car detailing journey begins here',
+        type: 'success'
+      },
+      content
+    })
+  }
+
+  private generateWelcomeBookingText(customerName: string, booking: Booking, requiresEmailVerification: boolean): string {
+    // Generate PayPal payment link for text version
+    const paypalPayment = paypalService.generatePaymentInstructions(
+      booking.total_price,
+      booking.booking_reference,
+      customerName
+    )
+
+    return `
+WELCOME TO LOVE 4 DETAILING - BOOKING CONFIRMED!
+
+Dear ${customerName},
+
+ Welcome to the Love 4 Detailing family! Your account has been created and your booking is confirmed.
+
+${requiresEmailVerification ? `
+ EMAIL VERIFICATION REQUIRED:
+Please check your inbox for a verification email and click the confirmation link to activate your account. This will give you access to your customer dashboard.
+` : ''}
+
+BOOKING DETAILS:
+Reference: ${booking.booking_reference}
+Date: ${formatDateForEmail(booking.scheduled_date)}
+Time: ${formatTimeForEmail(booking.scheduled_start_time)}
+Vehicle: ${booking.vehicle_details?.make} ${booking.vehicle_details?.model}
+Service Address: ${booking.service_address?.address_line_1}, ${booking.service_address?.city}, ${booking.service_address?.postcode}
+Total Price: £${booking.total_price}
+Status: Confirmed - Payment Required
+
+${booking.special_instructions ? `Special Instructions: ${booking.special_instructions}` : ''}
+
+ SECURE PAYMENT REQUIRED:
+${paypalPayment.paymentLink}
+
+Payment Reference: ${booking.booking_reference}
+Payment Deadline: ${paypalPayment.deadline}
+
+⚠️ Important: Your booking will be automatically cancelled if payment is not received by the deadline.
+
+ WHAT HAPPENS NEXT:
+1. Complete payment using the PayPal link above within 48 hours
+2. Verify your email address (if required) to access your dashboard
+3. Our professional team will arrive at your scheduled time with all equipment
+4. Enjoy premium car detailing service with 100% satisfaction guarantee
+
+ WELCOME BENEFITS:
+✓ Personal dashboard to manage bookings (after email verification)
+✓ Mobile service - we come to your location
+✓ Professional-grade equipment and eco-friendly products
+✓ Fully insured with satisfaction guarantee
+✓ Before and after photos included
+✓ Easy rebooking and service history tracking
+
+NEED HELP?
+Email: ${this.config.adminEmail}
+Response time: Within 24 hours
+
+Thank you for choosing Love 4 Detailing! We're excited to deliver an exceptional experience.
+
+Best regards,
+The Love 4 Detailing Team
+
+---
+Love 4 Detailing - Premium Mobile Detailing Services
+    `.trim()
+  }
+
+  // Send payment confirmation to customer
+  async sendPaymentConfirmation(
+    customerEmail: string,
+    customerName: string,
+    booking: Booking,
+    paymentMethod: string,
+    paymentReference: string
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      const { error } = await resend.emails.send({
+        from: `${this.config.fromName} <${this.config.fromEmail}>`,
+        to: [customerEmail],
+        replyTo: this.config.replyToEmail,
+        subject: `Payment Confirmed - Booking ${booking.booking_reference}`,
+        html: this.generatePaymentConfirmationHTML(customerName, booking, paymentMethod, paymentReference),
+        text: this.generatePaymentConfirmationText(customerName, booking, paymentMethod, paymentReference)
+      })
+
+      if (error) {
+        console.error('Payment confirmation email error:', error)
+        return { success: false, error: error.message }
+      }
+
+      return { success: true }
+    } catch (error) {
+      console.error('Payment confirmation email service error:', error)
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Unknown email error' 
+      }
+    }
+  }
+
+  // Send admin notification about payment received
+  async sendAdminPaymentNotification(
+    booking: Booking,
+    customerEmail: string,
+    customerName: string,
+    paymentMethod: string,
+    paymentReference: string
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      const { error } = await resend.emails.send({
+        from: `${this.config.fromName} <${this.config.fromEmail}>`,
+        to: [this.config.adminEmail],
+        replyTo: customerEmail,
+        subject: ` Payment Received - ${booking.booking_reference}`,
+        html: this.generateAdminPaymentNotificationHTML(booking, customerEmail, customerName, paymentMethod, paymentReference),
+        text: this.generateAdminPaymentNotificationText(booking, customerEmail, customerName, paymentMethod, paymentReference)
+      })
+
+      if (error) {
+        console.error('Admin payment notification email error:', error)
+        return { success: false, error: error.message }
+      }
+
+      return { success: true }
+    } catch (error) {
+      console.error('Admin payment notification email service error:', error)
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Unknown email error' 
+      }
+    }
+  }
 
   private generateAdminNotificationHTML(booking: Booking, customerEmail: string, customerName: string): string {
 
@@ -672,7 +678,7 @@ This is an automated email. Please do not reply directly to this email.
             .action-card h4 { color: #B269FF; margin: 0 0 15px 0; font-size: 18px; }
             .action-list { list-style: none; padding: 0; margin: 0; }
             .action-list li { margin: 10px 0; padding: 8px 0; color: rgba(255, 255, 255, 0.8); position: relative; padding-left: 24px; }
-            .action-list li::before { content: '→'; position: absolute; left: 0; color: #9747FF; font-weight: bold; }
+            .action-list li::before { content: '- '; position: absolute; left: 0; color: #9747FF; font-weight: bold; }
             .footer { background: #0a0a0a; padding: 25px; text-align: center; border-top: 1px solid rgba(255, 255, 255, 0.05); }
             .footer-brand { color: #9747FF; font-weight: 600; margin-bottom: 8px; }
             .footer-text { color: rgba(255, 255, 255, 0.5); font-size: 12px; line-height: 1.5; }
@@ -685,8 +691,9 @@ This is an automated email. Please do not reply directly to this email.
         <body>
           <div class="email-container">
             <div class="header">
-              <div class="alert-badge">🔔 NEW BOOKING ALERT</div>
+              <div class="alert-badge"> NEW BOOKING ALERT</div>
               <div class="logo-section">
+                <img src="${process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://love4detailing.com'}/logo1.png" alt="Love 4 Detailing" style="width: 40px; height: 40px; object-fit: contain; border-radius: 8px; filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2)); margin-bottom: 8px;" />
                 <div class="logo-text">Love4Detailing Admin</div>
               </div>
               <h1 style="margin: 0; font-size: 24px; font-weight: 700;">Action Required</h1>
@@ -695,7 +702,7 @@ This is an automated email. Please do not reply directly to this email.
             
             <div class="content">
               <div class="priority-alert">
-                <h3>⚡ Priority: High</h3>
+                <h3> Priority: High</h3>
                 <p style="margin: 0; color: rgba(255, 255, 255, 0.8);">Please review and respond within 24 hours to maintain service excellence.</p>
               </div>
               
@@ -725,7 +732,7 @@ This is an automated email. Please do not reply directly to this email.
                 <div class="booking-details">
                   <div class="detail-grid">
                     <div class="detail-row">
-                      <div class="detail-icon">📅</div>
+                      <div class="detail-icon"></div>
                       <div class="detail-content">
                         <div class="detail-label">Service Date</div>
                         <div class="detail-value">${formatDateForEmail(booking.scheduled_date)}</div>
@@ -733,7 +740,7 @@ This is an automated email. Please do not reply directly to this email.
                     </div>
                     
                     <div class="detail-row">
-                      <div class="detail-icon">⏰</div>
+                      <div class="detail-icon">Time</div>
                       <div class="detail-content">
                         <div class="detail-label">Service Time</div>
                         <div class="detail-value">${formatTimeForEmail(booking.scheduled_start_time)} (${booking.estimated_duration} min duration)</div>
@@ -741,7 +748,7 @@ This is an automated email. Please do not reply directly to this email.
                     </div>
                     
                     <div class="detail-row">
-                      <div class="detail-icon">🚗</div>
+                      <div class="detail-icon"></div>
                       <div class="detail-content">
                         <div class="detail-label">Vehicle Details</div>
                         <div class="detail-value">
@@ -767,7 +774,7 @@ This is an automated email. Please do not reply directly to this email.
                     </div>
                     
                     <div class="detail-row">
-                      <div class="detail-icon">💰</div>
+                      <div class="detail-icon"></div>
                       <div class="detail-content">
                         <div class="detail-label">Service Value</div>
                         <div class="detail-value price-highlight">£${booking.total_price}</div>
@@ -788,7 +795,7 @@ This is an automated email. Please do not reply directly to this email.
               ` : ''}
               
               <div class="action-card">
-                <h4>🎯 Required Actions</h4>
+                <h4> Required Actions</h4>
                 <ul class="action-list">
                   <li>Review booking details and customer requirements</li>
                   <li>Check schedule availability for the requested time slot</li>
@@ -798,7 +805,7 @@ This is an automated email. Please do not reply directly to this email.
                 </ul>
                 
                 <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(255, 255, 255, 0.1); text-align: center;">
-                  <p style="color: #9747FF; font-weight: 600; margin: 0;">💡 Remember: Outstanding service starts with prompt communication!</p>
+                  <p style="color: #9747FF; font-weight: 600; margin: 0;">Remember: Outstanding service starts with prompt communication!</p>
                 </div>
               </div>
             </div>
@@ -837,38 +844,38 @@ This is an automated email. Please do not reply directly to this email.
     }
 
     return `
-🔔 NEW BOOKING ALERT - Love4Detailing Admin
+ NEW BOOKING ALERT - Love4Detailing Admin
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-⚡ PRIORITY: HIGH - Action Required Within 24 Hours
+ PRIORITY: HIGH - Action Required Within 24 Hours
 
 👤 CUSTOMER INFORMATION:
 Name: ${customerName}
 Email: ${customerEmail}
 
-🎯 BOOKING DETAILS:
+BOOKING DETAILS:
 Reference: ${booking.booking_reference}
 Date: ${formatDate(booking.scheduled_date)}
 Time: ${formatTime(booking.scheduled_start_time)}
 Duration: ${booking.estimated_duration} minutes
 
-🚗 VEHICLE INFORMATION:
+VEHICLE INFORMATION:
 ${booking.vehicle_details?.make} ${booking.vehicle_details?.model}${booking.vehicle_details?.year ? ` (${booking.vehicle_details.year})` : ''}${booking.vehicle_details?.color ? `\nColor: ${booking.vehicle_details.color}` : ''}${booking.vehicle_details?.registration ? `\nRegistration: ${booking.vehicle_details.registration}` : ''}
 
 📍 SERVICE LOCATION:
 ${booking.service_address?.address_line_1}${booking.service_address?.address_line_2 ? `\n${booking.service_address.address_line_2}` : ''}
 ${booking.service_address?.city}, ${booking.service_address?.postcode}${booking.distance_km ? `\nDistance: ${booking.distance_km} km` : ''}
 
-💰 SERVICE VALUE: £${booking.total_price}
+ SERVICE VALUE: £${booking.total_price}
 
 ${booking.special_instructions ? `📝 SPECIAL INSTRUCTIONS:\n${booking.special_instructions}\n\n` : ''}
-🎯 REQUIRED ACTIONS:
-→ Review booking details and customer requirements
-→ Check schedule availability for requested time slot
-→ Contact customer to confirm appointment details
-→ Update booking status in admin dashboard
-→ Prepare equipment and materials for service
+ REQUIRED ACTIONS:
+-  Review booking details and customer requirements
+-  Check schedule availability for requested time slot
+-  Contact customer to confirm appointment details
+- Update booking status in admin dashboard
+- Prepare equipment and materials for service
 
-💡 Remember: Outstanding service starts with prompt communication!
+Remember: Outstanding service starts with prompt communication!
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Love4Detailing Admin System
@@ -877,105 +884,149 @@ Professional Vehicle Detailing Services
   }
 
   private generateStatusUpdateHTML(customerName: string, booking: Booking, previousStatus: string, updateReason?: string): string {
-    const statusColors = {
-      confirmed: '#059669',
-      cancelled: '#dc2626', 
-      completed: '#0891b2',
-      in_progress: '#d97706'
-    }
-
     const statusMessages = {
-      confirmed: 'Your booking has been confirmed! 🎉',
-      cancelled: 'Your booking has been cancelled',
-      completed: 'Your booking has been completed! ✨',
-      in_progress: 'Your booking is now in progress'
+      confirmed: 'Booking Confirmed',
+      cancelled: 'Booking Cancelled',
+      completed: 'Service Completed',
+      in_progress: 'Service In Progress',
+      rescheduled: 'Booking Rescheduled',
+      declined: 'Booking Declined',
+      processing: 'Payment Processing',
+      payment_failed: 'Payment Issue',
+      no_show: 'Appointment Missed'
     }
 
-    const color = statusColors[booking.status as keyof typeof statusColors] || '#64748b'
-    const message = statusMessages[booking.status as keyof typeof statusMessages] || 'Your booking status has been updated'
+    const statusSubtitles = {
+      confirmed: 'Your appointment has been confirmed and scheduled',
+      cancelled: 'Your booking has been cancelled',
+      completed: 'Thank you for choosing Love 4 Detailing',
+      in_progress: 'Our team is currently working on your vehicle',
+      rescheduled: 'Your appointment has been moved to a new time',
+      declined: 'We apologize, but we cannot accommodate this booking',
+      processing: 'Your payment is being processed',
+      payment_failed: 'There was an issue with your payment',
+      no_show: 'We were unable to complete your appointment'
+    }
 
-    return `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta charset="utf-8">
-          <title>Booking Status Update</title>
-          <style>
-            * { box-sizing: border-box; }
-            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #ffffff; max-width: 600px; margin: 0 auto; padding: 0; background: #0a0a0a; }
-            .email-container { background: #0a0a0a; min-height: 100vh; }
-            .header { background: linear-gradient(135deg, ${color}, ${color}dd); color: white; padding: 40px 30px; text-align: center; }
-            .logo { display: inline-flex; align-items: center; gap: 12px; margin-bottom: 20px; }
-            .logo-icon { width: 40px; height: 40px; background: rgba(255, 255, 255, 0.2); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
-            .logo-text { font-size: 24px; font-weight: bold; background: linear-gradient(to right, #ffffff, #e5e7eb); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-            .content { background: #1a1a1a; padding: 40px 30px; }
-            .status-update { background: #252525; border-radius: 12px; padding: 25px; margin: 20px 0; border: 1px solid ${color}40; }
-            .highlight { background: rgba(151, 71, 255, 0.1); border: 1px solid rgba(151, 71, 255, 0.3); border-radius: 12px; padding: 20px; margin: 20px 0; }
-            .footer { background: #0a0a0a; padding: 30px; text-align: center; border-top: 1px solid rgba(255, 255, 255, 0.05); }
-            .footer-brand { color: #9747FF; font-weight: 600; margin-bottom: 8px; }
-            .footer-text { color: rgba(255, 255, 255, 0.5); font-size: 12px; line-height: 1.5; }
-            @media (max-width: 480px) {
-              .header, .content, .footer { padding: 20px 15px; }
-              .status-update, .highlight { padding: 20px 15px; }
-            }
-          </style>
-        </head>
-        <body>
-          <div class="email-container">
-            <div class="header">
-              <div class="logo">
-                <div class="logo-icon">🚗</div>
-                <div class="logo-text">Love4Detailing</div>
+    const headerType = (() => {
+      if (['confirmed', 'completed'].includes(booking.status)) return 'success'
+      if (['cancelled', 'declined', 'payment_failed', 'no_show'].includes(booking.status)) return 'error'
+      if (['processing', 'in_progress'].includes(booking.status)) return 'warning'
+      return 'default'
+    })()
+
+    const title = statusMessages[booking.status as keyof typeof statusMessages] || 'Booking Status Update'
+    const subtitle = statusSubtitles[booking.status as keyof typeof statusSubtitles] || 'Your booking status has been updated'
+
+    const content = `
+      <div style="text-align: center; margin-bottom: 32px;">
+        <p style="color: rgba(255, 255, 255, 0.8); font-size: 16px; margin: 0;">Dear ${customerName},</p>
+        <p style="color: #ffffff; font-size: 18px; margin: 16px 0 0 0; font-weight: 500;">We wanted to update you about your booking status.</p>
+      </div>
+      
+      <div class="content-card">
+        <div class="card-content">
+          <div class="detail-row" style="border-bottom: none; margin: 0;">
+            <div class="detail-icon"></div>
+            <div class="detail-content">
+              <div class="detail-label">Status Change</div>
+              <div class="detail-value">
+                <strong>${this.getStatusDisplayName(previousStatus)}</strong> 
+                <span style="color: rgba(255, 255, 255, 0.6); margin: 0 12px;">- </span>
+                <strong style="color: #9747FF;">${this.getStatusDisplayName(booking.status)}</strong>
               </div>
-              <h1 style="margin: 0; font-size: 28px; font-weight: 700;">Booking Status Update</h1>
-              <p style="color: rgba(255, 255, 255, 0.8); font-size: 16px; margin: 10px 0 0 0;">${message}</p>
-            </div>
-            
-            <div class="content">
-              <p style="color: rgba(255, 255, 255, 0.8); font-size: 16px; margin: 0 0 20px 0;">Dear ${customerName},</p>
-              
-              <div class="status-update">
-                <h3 style="color: #ffffff; margin: 0 0 15px 0;">Booking Reference: ${booking.booking_reference}</h3>
-                <p style="color: rgba(255, 255, 255, 0.9); margin: 8px 0;"><strong>Previous Status:</strong> ${previousStatus}</p>
-                <p style="color: rgba(255, 255, 255, 0.9); margin: 8px 0;"><strong>New Status:</strong> ${booking.status}</p>
-                ${updateReason ? `<p style="color: rgba(255, 255, 255, 0.9); margin: 8px 0;"><strong>Reason:</strong> ${updateReason}</p>` : ''}
-              </div>
-            
-            ${booking.status === 'confirmed' ? `
-              <div class="highlight">
-                <h4 style="color: #B269FF; margin: 0 0 15px 0;">Your booking is confirmed!</h4>
-                <p style="color: rgba(255, 255, 255, 0.8); margin: 0 0 15px 0;">We look forward to providing you with excellent service. Please ensure:</p>
-                <ul style="color: rgba(255, 255, 255, 0.8); margin: 0; padding-left: 20px;">
-                  <li style="margin: 8px 0;">Access to water and electricity is available</li>
-                  <li style="margin: 8px 0;">The vehicle is accessible at the scheduled time</li>
-                  <li style="margin: 8px 0;">Any special instructions have been noted</li>
-                </ul>
-              </div>
-            ` : ''}
-            
-            ${booking.status === 'completed' ? `
-              <div class="highlight">
-                <h4 style="color: #B269FF; margin: 0 0 15px 0;">Thank you for choosing Love4Detailing!</h4>
-                <p style="color: rgba(255, 255, 255, 0.8);">We hope you're delighted with the results. If you have any feedback or would like to book another service, please don't hesitate to contact us.</p>
-              </div>
-            ` : ''}
-            
-            <p style="color: rgba(255, 255, 255, 0.8); margin: 20px 0;">
-              If you have any questions, please contact us at ${this.config.adminEmail}
-            </p>
-            </div>
-            
-            <div class="footer">
-              <div class="footer-brand">Love4Detailing</div>
-              <p class="footer-text">
-                Professional vehicle detailing services<br>
-                Contact us: ${this.config.adminEmail}
-              </p>
+              ${updateReason ? `
+                <div style="margin-top: 12px; padding: 12px; background: rgba(151, 71, 255, 0.05); border-radius: 8px; border-left: 3px solid #9747FF;">
+                  <div style="font-size: 13px; color: rgba(255, 255, 255, 0.7); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">Reason</div>
+                  <div style="color: rgba(255, 255, 255, 0.9); font-style: italic;">${updateReason}</div>
+                </div>
+              ` : ''}
             </div>
           </div>
-        </body>
-      </html>
+        </div>
+      </div>
+      
+      ${this.generateBookingDetailsCard(booking)}
+      
+      ${this.getStatusSpecificContent(booking.status)}
+      
+      <div class="content-card" style="text-align: center;">
+        <div class="card-content">
+          <h4 style="color: #B269FF; margin-bottom: 16px;">Questions or concerns?</h4>
+          <p style="margin-bottom: 12px;"> <a href="mailto:${this.config.adminEmail}" class="footer-link">${this.config.adminEmail}</a></p>
+          <p style="margin-bottom: 0; color: rgba(255, 255, 255, 0.7); font-size: 14px;">We're always here to help!</p>
+        </div>
+      </div>
     `
+
+    return this.generateUnifiedEmailHTML({
+      title: 'Booking Status Update - Love 4 Detailing',
+      header: {
+        title,
+        subtitle,
+        type: headerType
+      },
+      content
+    })
+  }
+
+  private getStatusSpecificContent(status: string): string {
+    switch (status) {
+      case 'confirmed':
+        return `
+          <div class="highlight-card">
+            <h4> Your booking is confirmed!</h4>
+            <p style="margin-bottom: 16px;">We look forward to providing you with exceptional service. To ensure everything goes smoothly:</p>
+            <p style="margin-bottom: 12px;">✓ Ensure access to water and electricity is available</p>
+            <p style="margin-bottom: 12px;">✓ Make sure the vehicle is accessible at the scheduled time</p>
+            <p style="margin-bottom: 12px;">✓ Any special instructions have been noted</p>
+            <p style="margin-bottom: 0;">✓ Our team will arrive with all necessary equipment</p>
+          </div>
+        `
+      
+      case 'completed':
+        return `
+          <div class="highlight-card">
+            <h4>Thank you for choosing Love 4 Detailing!</h4>
+            <p style="margin-bottom: 16px;">We hope you're absolutely delighted with the results! Your vehicle should now look and feel amazing.</p>
+            <p style="margin-bottom: 12px;"> <strong>We'd love to hear from you:</strong> How did we do?</p>
+            <p style="margin-bottom: 12px;"><strong>Share your experience:</strong> Tag us on social media with before/after photos</p>
+            <p style="margin-bottom: 0;"> <strong>Future bookings:</strong> Regular maintenance keeps your vehicle looking its best</p>
+          </div>
+        `
+      
+      case 'in_progress':
+        return `
+          <div class="highlight-card">
+            <h4>Service in Progress!</h4>
+            <p style="margin-bottom: 16px;">Our professional team is currently working on your vehicle with care and attention to detail.</p>
+            <p style="margin-bottom: 12px;">⏱️ <strong>Estimated completion:</strong> We'll notify you when finished</p>
+            <p style="margin-bottom: 0;">📸 <strong>Progress updates:</strong> Before and after photos will be provided</p>
+          </div>
+        `
+      
+      case 'cancelled':
+        return `
+          <div class="highlight-card">
+            <h4>We're sorry your booking was cancelled</h4>
+            <p style="margin-bottom: 16px;">We understand this may be disappointing. If you'd like to reschedule or have any questions, please don't hesitate to contact us.</p>
+            <p style="margin-bottom: 0;">💜 We'd love to serve you in the future when the timing is right.</p>
+          </div>
+        `
+      
+      case 'declined':
+        return `
+          <div class="highlight-card">
+            <h4>Alternative booking options</h4>
+            <p style="margin-bottom: 16px;">While we couldn't accommodate this specific booking, we'd love to find an alternative that works for both of us.</p>
+            <p style="margin-bottom: 12px;"> <strong>Try different dates:</strong> We may have availability at other times</p>
+            <p style="margin-bottom: 0;"><strong>Contact us directly:</strong> Let's discuss options that might work better</p>
+          </div>
+        `
+      
+      default:
+        return ''
+    }
   }
 
   private generateStatusUpdateText(customerName: string, booking: Booking, previousStatus: string, updateReason?: string): string {
@@ -1019,450 +1070,6 @@ Love 4 Detailing - Professional Vehicle Detailing Services
     `
   }
 
-  private generateRescheduleDeclineHTML(customerName: string, booking: Booking, declineMessage: string): string {
-    return `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta charset="utf-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Reschedule Request Update - Love4Detailing</title>
-          <style>
-            * { box-sizing: border-box; }
-            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #ffffff; max-width: 600px; margin: 0 auto; padding: 0; background: #0a0a0a; }
-            .email-container { background: #0a0a0a; min-height: 100vh; }
-            .header { background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%); color: white; padding: 40px 30px; text-align: center; }
-            .logo { display: inline-flex; align-items: center; gap: 12px; margin-bottom: 20px; }
-            .logo-icon { width: 40px; height: 40px; background: rgba(255, 255, 255, 0.2); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
-            .logo-text { font-size: 24px; font-weight: bold; background: linear-gradient(to right, #ffffff, #e5e7eb); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-            .content { background: #1a1a1a; padding: 40px 30px; }
-            .decline-card { background: #252525; border-radius: 12px; padding: 25px; margin: 25px 0; border: 1px solid rgba(220, 38, 38, 0.2); }
-            .booking-details { background: rgba(151, 71, 255, 0.1); border: 1px solid rgba(151, 71, 255, 0.3); border-radius: 12px; padding: 20px; margin: 20px 0; }
-            .detail-row { display: flex; justify-content: space-between; margin: 8px 0; padding: 8px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
-            .detail-row:last-child { border-bottom: none; }
-            .footer { background: #0a0a0a; padding: 30px; text-align: center; border-top: 1px solid rgba(255, 255, 255, 0.05); }
-            .footer-brand { color: #9747FF; font-weight: 600; margin-bottom: 8px; }
-            .footer-text { color: rgba(255, 255, 255, 0.5); font-size: 12px; line-height: 1.5; }
-            @media (max-width: 480px) {
-              .header, .content, .footer { padding: 20px 15px; }
-              .decline-card, .booking-details { padding: 20px 15px; }
-            }
-          </style>
-        </head>
-        <body>
-          <div class="email-container">
-            <div class="header">
-              <div class="logo">
-                <div class="logo-icon">🚗</div>
-                <div class="logo-text">Love4Detailing</div>
-              </div>
-              <h1 style="margin: 0; font-size: 28px; font-weight: 700;">Reschedule Request Update</h1>
-            </div>
-            
-            <div class="content">
-              <p style="color: rgba(255, 255, 255, 0.8); font-size: 16px; margin: 0 0 20px 0;">Dear ${customerName},</p>
-              
-              <div class="decline-card">
-                <h3 style="color: #ef4444; margin: 0 0 15px 0;">Reschedule Request - ${booking.booking_reference}</h3>
-                <p style="color: rgba(255, 255, 255, 0.9); margin: 0 0 15px 0;">${declineMessage}</p>
-              </div>
-              
-              <div class="booking-details">
-                <h4 style="color: #B269FF; margin: 0 0 15px 0;">Current Booking Details</h4>
-                <div class="detail-row">
-                  <span style="color: rgba(255, 255, 255, 0.7);">Booking Reference:</span>
-                  <span style="color: #ffffff; font-weight: 600;">${booking.booking_reference}</span>
-                </div>
-                <div class="detail-row">
-                  <span style="color: rgba(255, 255, 255, 0.7);">Date:</span>
-                  <span style="color: #ffffff;">${formatDateForEmail(booking.scheduled_date)}</span>
-                </div>
-                <div class="detail-row">
-                  <span style="color: rgba(255, 255, 255, 0.7);">Time:</span>
-                  <span style="color: #ffffff;">${formatTimeForEmail(booking.scheduled_start_time)}</span>
-                </div>
-              </div>
-              
-              <p style="color: rgba(255, 255, 255, 0.8); margin: 20px 0;">
-                If you need to discuss alternative arrangements, please contact us directly. We're here to help make your car detailing experience as convenient as possible.
-              </p>
-            </div>
-            
-            <div class="footer">
-              <div class="footer-brand">Love4Detailing</div>
-              <p class="footer-text">
-                Professional vehicle detailing services<br>
-                Contact us: ${this.config.adminEmail}
-              </p>
-            </div>
-          </div>
-        </body>
-      </html>
-    `
-  }
-
-  private generateRescheduleDeclineText(customerName: string, booking: Booking, declineMessage: string): string {
-    return `
-RESCHEDULE REQUEST UPDATE - Love4Detailing
-
-Dear ${customerName},
-
-${declineMessage}
-
-CURRENT BOOKING DETAILS:
-Booking Reference: ${booking.booking_reference}
-Date: ${formatDateForEmail(booking.scheduled_date)}
-Time: ${formatTimeForEmail(booking.scheduled_start_time)}
-
-If you need to discuss alternative arrangements, please contact us directly. We're here to help make your car detailing experience as convenient as possible.
-
----
-Love4Detailing - Professional Vehicle Detailing Services
-Contact us: ${this.config.adminEmail}
-    `
-  }
-
-  private generateWelcomeVerificationHTML(customerName: string, customerEmail: string): string {
-    const verificationUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://l4d-app.vercel.app'}/auth/verify-email`
-
-    return `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta charset="utf-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Welcome to Love4Detailing</title>
-          <style>
-            * { box-sizing: border-box; }
-            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #ffffff; max-width: 600px; margin: 0 auto; padding: 0; background: #0a0a0a; }
-            .email-container { background: #0a0a0a; min-height: 100vh; }
-            .header { background: linear-gradient(135deg, #9747FF 0%, #B269FF 100%); color: white; padding: 40px 30px; text-align: center; }
-            .logo { display: inline-flex; align-items: center; gap: 12px; margin-bottom: 20px; }
-            .logo-icon { width: 40px; height: 40px; background: rgba(255, 255, 255, 0.2); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
-            .logo-text { font-size: 24px; font-weight: bold; background: linear-gradient(to right, #ffffff, #e5e7eb); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-            .tagline { color: rgba(255, 255, 255, 0.8); font-size: 14px; margin-top: 8px; }
-            .content { background: #1a1a1a; padding: 40px 30px; }
-            .welcome-card { background: #252525; border-radius: 12px; padding: 30px; margin: 25px 0; border: 1px solid rgba(151, 71, 255, 0.2); text-align: center; }
-            .verify-button { 
-              display: inline-block; 
-              background: linear-gradient(135deg, #9747FF, #B269FF); 
-              color: white; 
-              padding: 15px 30px; 
-              text-decoration: none; 
-              border-radius: 8px; 
-              font-weight: bold; 
-              margin: 20px 0;
-              transition: transform 0.2s;
-              font-size: 16px;
-            }
-            .verify-button:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(151, 71, 255, 0.3); }
-            .benefits-card { background: rgba(151, 71, 255, 0.1); border: 1px solid rgba(151, 71, 255, 0.3); border-radius: 12px; padding: 25px; margin: 25px 0; }
-            .benefits-card h4 { color: #B269FF; margin: 0 0 15px 0; font-size: 18px; }
-            .benefits-list { list-style: none; padding: 0; margin: 0; }
-            .benefits-list li { margin: 10px 0; padding: 8px 0; color: rgba(255, 255, 255, 0.8); position: relative; padding-left: 24px; }
-            .benefits-list li::before { content: '✨'; position: absolute; left: 0; color: #9747FF; font-weight: bold; }
-            .security-note { background: #252525; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 20px; margin: 20px 0; }
-            .footer { background: #0a0a0a; padding: 30px; text-align: center; border-top: 1px solid rgba(255, 255, 255, 0.05); }
-            .footer-brand { color: #9747FF; font-weight: 600; margin-bottom: 8px; }
-            .footer-text { color: rgba(255, 255, 255, 0.5); font-size: 12px; line-height: 1.5; }
-            @media (max-width: 480px) {
-              .header, .content, .footer { padding: 20px 15px; }
-              .welcome-card, .benefits-card { padding: 20px 15px; }
-            }
-          </style>
-        </head>
-        <body>
-          <div class="email-container">
-            <div class="header">
-              <div class="logo">
-                <div class="logo-icon">🚗</div>
-                <div class="logo-text">Love4Detailing</div>
-              </div>
-              <h1 style="margin: 0; font-size: 28px; font-weight: 700;">Welcome to Love4Detailing!</h1>
-              <p class="tagline">Your premium car detailing journey starts here</p>
-            </div>
-            
-            <div class="content">
-              <div class="welcome-card">
-                <h2 style="color: #9747FF; margin: 0 0 15px 0; font-size: 22px;">Hi ${customerName}! 👋</h2>
-                <p style="color: rgba(255, 255, 255, 0.8); font-size: 16px; margin: 0 0 20px 0;">
-                  Thank you for joining Love4Detailing! We're excited to help you keep your vehicle looking absolutely stunning.
-                </p>
-                
-                <div style="background: rgba(151, 71, 255, 0.1); border-radius: 8px; padding: 20px; margin: 20px 0;">
-                  <h3 style="color: #B269FF; margin: 0 0 10px 0; font-size: 18px;">⚡ One Quick Step</h3>
-                  <p style="color: rgba(255, 255, 255, 0.8); margin: 0 0 15px 0;">
-                    Please verify your email address to activate your account and start booking our premium services.
-                  </p>
-                  
-                  <a href="${verificationUrl}?email=${encodeURIComponent(customerEmail)}" class="verify-button">
-                    Verify My Email Address
-                  </a>
-                </div>
-              </div>
-              
-              <div class="benefits-card">
-                <h4>🎯 What You Get with Your Account:</h4>
-                <ul class="benefits-list">
-                  <li><strong>Quick Booking:</strong> Save your vehicle details for faster future bookings</li>
-                  <li><strong>Booking Management:</strong> View, reschedule, or cancel appointments easily</li>
-                  <li><strong>Service History:</strong> Track all your past detailing services</li>
-                  <li><strong>Exclusive Offers:</strong> Get member-only discounts and promotions</li>
-                  <li><strong>Priority Support:</strong> Fast customer service for account holders</li>
-                </ul>
-              </div>
-              
-              <div class="security-note">
-                <h4 style="color: #9747FF; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
-                  <span>🔒</span>
-                  <span>Security First</span>
-                </h4>
-                <p style="color: rgba(255, 255, 255, 0.8); margin: 0; font-size: 14px;">
-                  We take your privacy seriously. Your email verification helps us ensure account security and prevents unauthorized access. 
-                  If you didn't create this account, please ignore this email.
-                </p>
-              </div>
-              
-              <div style="text-align: center; margin: 30px 0; padding: 20px; background: #252525; border-radius: 12px;">
-                <h4 style="color: #B269FF; margin: 0 0 15px 0;">Need Help?</h4>
-                <p style="color: rgba(255, 255, 255, 0.8); margin: 0;">
-                  📧 Email: ${this.config.adminEmail}<br>
-                  🌐 Visit: ${process.env.NEXT_PUBLIC_APP_URL || 'https://l4d-app.vercel.app'}
-                </p>
-              </div>
-            </div>
-            
-            <div class="footer">
-              <div class="footer-brand">Love4Detailing</div>
-              <div class="footer-text">
-                Professional Mobile Car Detailing Services<br>
-                Transforming vehicles, exceeding expectations<br><br>
-                This is a welcome email for your new account.<br>
-                Please verify your email to get started.
-              </div>
-            </div>
-          </div>
-        </body>
-      </html>
-    `
-  }
-
-  private generateWelcomeVerificationText(customerName: string, customerEmail: string): string {
-    const verificationUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://l4d-app.vercel.app'}/auth/verify-email?email=${encodeURIComponent(customerEmail)}`
-
-    return `
-WELCOME TO LOVE4DETAILING!
-
-Hi ${customerName}!
-
-Thank you for joining Love4Detailing! We're excited to help you keep your vehicle looking absolutely stunning.
-
-VERIFY YOUR EMAIL ADDRESS:
-Please verify your email address to activate your account:
-${verificationUrl}
-
-WHAT YOU GET WITH YOUR ACCOUNT:
-✨ Quick Booking - Save your vehicle details for faster future bookings
-✨ Booking Management - View, reschedule, or cancel appointments easily  
-✨ Service History - Track all your past detailing services
-✨ Exclusive Offers - Get member-only discounts and promotions
-✨ Priority Support - Fast customer service for account holders
-
-SECURITY FIRST:
-We take your privacy seriously. Your email verification helps us ensure account security and prevents unauthorized access. If you didn't create this account, please ignore this email.
-
-NEED HELP?
-Email: ${this.config.adminEmail}
-Visit: ${process.env.NEXT_PUBLIC_APP_URL || 'https://l4d-app.vercel.app'}
-
-Welcome to the Love4Detailing family!
-
----
-Love4Detailing - Professional Mobile Car Detailing Services
-Transforming vehicles, exceeding expectations
-    `
-  }
-
-  private generateBookingWelcomeVerificationHTML(customerName: string, bookingReference: string, customerEmail: string): string {
-    const verificationUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://l4d-app.vercel.app'}/auth/verify-email`
-
-    return `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta charset="utf-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Booking Confirmed - Verify Your Email</title>
-          <style>
-            * { box-sizing: border-box; }
-            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #ffffff; max-width: 600px; margin: 0 auto; padding: 0; background: #0a0a0a; }
-            .email-container { background: #0a0a0a; min-height: 100vh; }
-            .header { background: linear-gradient(135deg, #9747FF 0%, #B269FF 100%); color: white; padding: 40px 30px; text-align: center; }
-            .logo { display: inline-flex; align-items: center; gap: 12px; margin-bottom: 20px; }
-            .logo-icon { width: 40px; height: 40px; background: rgba(255, 255, 255, 0.2); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
-            .logo-text { font-size: 24px; font-weight: bold; background: linear-gradient(to right, #ffffff, #e5e7eb); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-            .tagline { color: rgba(255, 255, 255, 0.8); font-size: 14px; margin-top: 8px; }
-            .content { background: #1a1a1a; padding: 40px 30px; }
-            .booking-confirmed-card { background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(5, 150, 105, 0.1)); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 12px; padding: 30px; margin: 25px 0; text-align: center; }
-            .booking-reference { background: #252525; border: 2px solid #10b981; border-radius: 8px; padding: 15px; margin: 20px 0; font-family: monospace; font-size: 18px; font-weight: bold; color: #10b981; letter-spacing: 1px; }
-            .verify-button { 
-              display: inline-block; 
-              background: linear-gradient(135deg, #9747FF, #B269FF); 
-              color: white; 
-              padding: 15px 30px; 
-              text-decoration: none; 
-              border-radius: 8px; 
-              font-weight: bold; 
-              margin: 20px 0;
-              transition: transform 0.2s;
-              font-size: 16px;
-            }
-            .verify-button:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(151, 71, 255, 0.3); }
-            .important-card { background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 12px; padding: 25px; margin: 25px 0; }
-            .important-card h4 { color: #f59e0b; margin: 0 0 15px 0; font-size: 18px; }
-            .steps-card { background: #252525; border: 1px solid rgba(151, 71, 255, 0.2); border-radius: 12px; padding: 25px; margin: 25px 0; }
-            .steps-list { list-style: none; padding: 0; margin: 0; }
-            .steps-list li { margin: 15px 0; padding: 15px; background: rgba(151, 71, 255, 0.1); border-radius: 8px; position: relative; padding-left: 50px; }
-            .steps-list li::before { content: attr(data-step); position: absolute; left: 15px; top: 15px; background: #9747FF; color: white; width: 25px; height: 25px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px; }
-            .footer { background: #0a0a0a; padding: 30px; text-align: center; border-top: 1px solid rgba(255, 255, 255, 0.05); }
-            .footer-brand { color: #9747FF; font-weight: 600; margin-bottom: 8px; }
-            .footer-text { color: rgba(255, 255, 255, 0.5); font-size: 12px; line-height: 1.5; }
-            @media (max-width: 480px) {
-              .header, .content, .footer { padding: 20px 15px; }
-              .booking-confirmed-card, .important-card, .steps-card { padding: 20px 15px; }
-            }
-          </style>
-        </head>
-        <body>
-          <div class="email-container">
-            <div class="header">
-              <div class="logo">
-                <div class="logo-icon">🚗</div>
-                <div class="logo-text">Love4Detailing</div>
-              </div>
-              <h1 style="margin: 0; font-size: 28px; font-weight: 700;">Booking Confirmed! 🎉</h1>
-              <p class="tagline">One quick step to complete your account setup</p>
-            </div>
-            
-            <div class="content">
-              <div class="booking-confirmed-card">
-                <h2 style="color: #10b981; margin: 0 0 15px 0; font-size: 22px;">✅ Your Booking is Confirmed!</h2>
-                <p style="color: rgba(255, 255, 255, 0.8); font-size: 16px; margin: 0 0 20px 0;">
-                  Hi ${customerName}! Thank you for choosing Love4Detailing. Your service has been successfully booked.
-                </p>
-                
-                <div class="booking-reference">
-                  ${bookingReference}
-                </div>
-                
-                <p style="color: rgba(255, 255, 255, 0.7); font-size: 14px; margin: 0;">
-                  Keep this reference number for your records
-                </p>
-              </div>
-              
-              <div class="important-card">
-                <h4>⚡ Quick Action Required</h4>
-                <p style="color: rgba(255, 255, 255, 0.8); margin: 0;">
-                  You'll receive a separate email verification link to activate your account and access your dashboard.
-                </p>
-              </div>
-              
-              <div style="text-align: center; margin: 30px 0; padding: 30px; background: #252525; border-radius: 12px; border: 2px solid rgba(151, 71, 255, 0.3);">
-                <h3 style="color: #B269FF; margin: 0 0 15px 0; font-size: 20px;">📧 Check Your Email</h3>
-                <p style="color: rgba(255, 255, 255, 0.8); margin: 0 0 20px 0;">
-                  We've sent you a verification email from Love4Detailing. Click the link in that email to verify your account and access your dashboard.
-                </p>
-                
-                <div style="background: rgba(151, 71, 255, 0.1); border-radius: 8px; padding: 15px; margin: 15px 0;">
-                  <p style="color: rgba(255, 255, 255, 0.7); font-size: 14px; margin: 0;">
-                    💡 <strong>Tip:</strong> Check your spam folder if you don't see the verification email within a few minutes.
-                  </p>
-                </div>
-              </div>
-              
-              <div class="steps-card">
-                <h4 style="color: #9747FF; margin: 0 0 20px 0; font-size: 18px;">📋 What Happens Next:</h4>
-                <ul class="steps-list">
-                  <li data-step="1">
-                    <strong>Check Your Email:</strong> Look for the verification email from Love4Detailing (check spam if needed)
-                  </li>
-                  <li data-step="2">
-                    <strong>Click Verification Link:</strong> Click the link in the verification email to activate your account
-                  </li>
-                  <li data-step="3">
-                    <strong>Access Dashboard:</strong> You'll be redirected to your dashboard with full account access
-                  </li>
-                  <li data-step="4">
-                    <strong>Get Notifications:</strong> Receive updates about your service appointment
-                  </li>
-                </ul>
-              </div>
-              
-              <div style="text-align: center; margin: 30px 0; padding: 20px; background: #252525; border-radius: 12px;">
-                <h4 style="color: #B269FF; margin: 0 0 15px 0;">Need Help?</h4>
-                <p style="color: rgba(255, 255, 255, 0.8); margin: 0;">
-                  📧 Email: ${this.config.adminEmail}<br>
-                  🌐 Visit: ${process.env.NEXT_PUBLIC_APP_URL || 'https://l4d-app.vercel.app'}
-                </p>
-              </div>
-            </div>
-            
-            <div class="footer">
-              <div class="footer-brand">Love4Detailing</div>
-              <div class="footer-text">
-                Professional Mobile Car Detailing Services<br>
-                Transforming vehicles, exceeding expectations<br><br>
-                Your booking is confirmed. Please verify your email to complete setup.<br>
-                Booking Reference: ${bookingReference}
-              </div>
-            </div>
-          </div>
-        </body>
-      </html>
-    `
-  }
-
-  private generateBookingWelcomeVerificationText(customerName: string, bookingReference: string, customerEmail: string): string {
-    const verificationUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://l4d-app.vercel.app'}/auth/verify-email?email=${encodeURIComponent(customerEmail)}`
-
-    return `
-BOOKING CONFIRMED - LOVE4DETAILING
-
-Hi ${customerName}!
-
-✅ YOUR BOOKING IS CONFIRMED!
-Thank you for choosing Love4Detailing. Your service has been successfully booked.
-
-Booking Reference: ${bookingReference}
-Keep this reference number for your records.
-
-⚡ QUICK ACTION REQUIRED:
-To access your booking dashboard and set up your account password, please verify your email address first.
-
-VERIFY YOUR EMAIL:
-Click this link to verify your email and setup your account:
-${verificationUrl}
-
-📋 WHAT HAPPENS NEXT:
-1. Verify Your Email - Click the link above to confirm your email address
-2. Set Your Password - Create a secure password for your account  
-3. Access Dashboard - View your booking details and manage future appointments
-4. Get Notifications - Receive updates about your service appointment
-
-NEED HELP?
-Email: ${this.config.adminEmail}
-Visit: ${process.env.NEXT_PUBLIC_APP_URL || 'https://l4d-app.vercel.app'}
-
-Welcome to the Love4Detailing family!
-
----
-Love4Detailing - Professional Mobile Car Detailing Services
-Transforming vehicles, exceeding expectations
-Your booking is confirmed. Please verify your email to complete setup.
-Booking Reference: ${bookingReference}
-    `
-  }
-
   private generatePasswordSetupHTML(customerName: string, setupUrl: string): string {
     return `
       <!DOCTYPE html>
@@ -1495,7 +1102,10 @@ Booking Reference: ${bookingReference}
         </head>
         <body>
           <div class="header">
-            <h1>🎉 Welcome to Love 4 Detailing!</h1>
+            <div style="text-align: center; margin-bottom: 20px;">
+              <img src="${process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://love4detailing.com'}/logo1.png" alt="Love 4 Detailing" style="width: 48px; height: 48px; object-fit: contain; border-radius: 12px; filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));" />
+            </div>
+            <h1> Welcome to Love 4 Detailing!</h1>
             <p>Complete your account setup to manage your bookings</p>
           </div>
           
@@ -1595,148 +1205,243 @@ ${setupUrl}
   }
 
   private generateBookingDeclineHTML(customerName: string, booking: Booking, declineReason: string, additionalNotes?: string): string {
+    // Format booking details for display (using any type for database objects with relations)
+    const bookingAny = booking as any;
+    const bookingDetails = {
+      reference: booking.booking_reference || 'N/A',
+      services: Array.isArray(bookingAny.services) 
+        ? bookingAny.services.map((s: any) => s.name || s).join(', ')
+        : bookingAny.service?.name || 'Vehicle Detailing Service',
+      vehicle: bookingAny.vehicle_details || bookingAny.vehicle
+        ? `${bookingAny.vehicle_details?.year || bookingAny.vehicle?.year || ''} ${bookingAny.vehicle_details?.make || bookingAny.vehicle?.make || ''} ${bookingAny.vehicle_details?.model || bookingAny.vehicle?.model || ''}`.trim()
+        : 'Vehicle not specified',
+      address: bookingAny.address
+        ? `${bookingAny.address.address_line_1}, ${bookingAny.address.city} ${bookingAny.address.postal_code}`
+        : 'Address not specified',
+      totalPrice: booking.total_price ? `£${Number(booking.total_price).toFixed(2)}` : null
+    }
 
-    return `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta charset="utf-8">
-          <title>Booking Declined</title>
-          <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
-            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #ffffff; max-width: 600px; margin: 0 auto; padding: 0; background: #0a0a0a; }
-            .header { background: linear-gradient(135deg, #ef4444, #dc2626); color: white; padding: 30px; text-align: center; }
-            .content { background: #1a1a1a; padding: 30px; }
-            .booking-details { background: #252525; border-radius: 12px; padding: 25px; margin: 20px 0; border: 1px solid rgba(239, 68, 68, 0.3); }
-            .detail-row { display: flex; justify-content: space-between; margin: 12px 0; padding: 10px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
-            .detail-label { font-weight: 600; color: rgba(255, 255, 255, 0.7); }
-            .detail-value { color: #ffffff; }
-            .decline-reason { background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 12px; padding: 20px; margin: 20px 0; }
-            .rebook-section { background: rgba(151, 71, 255, 0.1); border: 1px solid rgba(151, 71, 255, 0.3); border-radius: 12px; padding: 20px; margin: 20px 0; }
-            .footer { text-align: center; margin-top: 30px; color: rgba(255, 255, 255, 0.5); font-size: 12px; background: #0a0a0a; padding: 25px; }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <h1>Booking Update</h1>
-            <p>We're sorry, but we cannot accommodate your booking</p>
+    return this.generateUnifiedEmailHTML({
+      title: '😞 Booking Update Required',
+      header: {
+        title: '😞 Booking Update Required',
+        subtitle: `We need to discuss your booking ${bookingDetails.reference}`,
+        type: 'warning'
+      },
+      content: `
+        <!-- Empathetic Greeting -->
+        <p style="font-size: 16px; margin: 0 0 24px 0; color: #374151; font-weight: 400;">Dear ${customerName},</p>
+        
+        <!-- Empathetic Message -->
+        <div style="background: #fef2f2; border: 2px solid #fecaca; border-radius: 12px; padding: 24px; margin: 24px 0; text-align: center;">
+          <div style="font-size: 48px; margin: 0 0 16px 0;">💔</div>
+          <h2 style="color: #dc2626; margin: 0 0 12px 0; font-size: 20px; font-weight: 600;">We're Really Sorry</h2>
+          <p style="color: #374151; margin: 0; font-size: 16px; line-height: 1.6;">
+            Unfortunately, we're unable to fulfill your booking request as originally planned. We know this is disappointing, and we sincerely apologize for any inconvenience this causes.
+          </p>
+        </div>
+
+        <!-- Booking Details Card -->
+        <div style="background: #f8fafc; border: 2px solid #e5e7eb; border-radius: 12px; padding: 24px; margin: 32px 0;">
+          <h3 style="color: #111827; margin: 0 0 20px 0; font-size: 18px; font-weight: 600;"> Your Booking Details</h3>
+          <div style="space-y: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid #e5e7eb;">
+              <span style="font-weight: 500; color: #374151;">Booking Reference</span>
+              <span style="font-weight: 600; color: #111827; font-family: monospace; text-align: right;">${bookingDetails.reference}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid #e5e7eb;">
+              <span style="font-weight: 500; color: #374151;">Service Requested</span>
+              <span style="color: #111827; font-weight: 500; text-align: right; max-width: 200px;">${bookingDetails.services}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid #e5e7eb;">
+              <span style="font-weight: 500; color: #374151;">Vehicle</span>
+              <span style="color: #111827; font-weight: 500; text-align: right; max-width: 200px;">${bookingDetails.vehicle}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid #e5e7eb;">
+              <span style="font-weight: 500; color: #374151;">Requested Date & Time</span>
+              <span style="color: #6b7280; text-align: right; max-width: 200px;">
+                ${this.formatEmailDate(booking.scheduled_date)}<br>
+                <strong>${this.formatEmailTime(booking.scheduled_start_time)}</strong>
+              </span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid #e5e7eb;">
+              <span style="font-weight: 500; color: #374151;">Location</span>
+              <span style="color: #111827; font-weight: 500; text-align: right; max-width: 200px;">${bookingDetails.address}</span>
+            </div>
+            ${bookingDetails.totalPrice ? `
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid #e5e7eb;">
+              <span style="font-weight: 500; color: #374151;">Total Price</span>
+              <span style="color: #9747FF; font-weight: 700; font-size: 18px; text-align: right;">${bookingDetails.totalPrice}</span>
+            </div>
+            ` : ''}
+            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+              <span style="font-weight: 500; color: #374151;">Current Status</span>
+              <span style="color: #dc2626; font-weight: 600; text-align: right;">Unable to Fulfill</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Reason Card -->
+        <div style="background: #fef2f2; border: 2px solid #fca5a5; border-radius: 12px; padding: 24px; margin: 32px 0;">
+          <h3 style="color: #dc2626; margin: 0 0 16px 0; font-size: 18px; font-weight: 600;">📝 Why We Can't Fulfill This Booking</h3>
+          <div style="background: white; border-radius: 8px; padding: 20px; border-left: 4px solid #dc2626;">
+            <p style="color: #374151; margin: 0; font-size: 16px; font-weight: 600; font-style: italic;">
+              "${declineReason}"
+            </p>
+            ${additionalNotes ? `
+            <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid #e5e7eb;">
+              <p style="color: #6b7280; margin: 0; font-size: 14px; font-weight: 500;">
+                <strong>Additional Information:</strong><br>
+                ${additionalNotes}
+              </p>
+            </div>
+            ` : ''}
+          </div>
+        </div>
+
+        <!-- Solutions Section -->
+        <div style="background: #f0f9f4; border: 2px solid #86efac; border-radius: 12px; padding: 24px; margin: 32px 0;">
+          <h3 style="color: #059669; margin: 0 0 16px 0; font-size: 18px; font-weight: 600;"> Let's Find You a Solution!</h3>
+          <p style="color: #374151; margin: 0 0 20px 0; font-size: 16px;">
+            We're committed to providing you with exceptional service. Here are the best ways we can help:
+          </p>
+          
+          <div style="margin: 20px 0;">
+            <div style="display: flex; align-items: flex-start; margin-bottom: 16px;">
+              <span style="background: #059669; color: white; width: 24px; height: 24px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 600; font-size: 12px; margin-right: 12px; flex-shrink: 0;">1</span>
+              <div>
+                <h4 style="color: #059669; margin: 0 0 4px 0; font-size: 16px; font-weight: 600;">Try Alternative Dates & Times</h4>
+                <p style="color: #374151; margin: 0; font-size: 14px;">Visit our booking page to see all available slots that might work better for your schedule.</p>
+              </div>
+            </div>
+            
+            <div style="display: flex; align-items: flex-start; margin-bottom: 16px;">
+              <span style="background: #059669; color: white; width: 24px; height: 24px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 600; font-size: 12px; margin-right: 12px; flex-shrink: 0;">2</span>
+              <div>
+                <h4 style="color: #059669; margin: 0 0 4px 0; font-size: 16px; font-weight: 600;">Speak Directly With Our Team</h4>
+                <p style="color: #374151; margin: 0; font-size: 14px;">Contact us directly and we'll work together to find the perfect solution for your vehicle detailing needs.</p>
+              </div>
+            </div>
+            
+            <div style="display: flex; align-items: flex-start;">
+              <span style="background: #059669; color: white; width: 24px; height: 24px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 600; font-size: 12px; margin-right: 12px; flex-shrink: 0;">3</span>
+              <div>
+                <h4 style="color: #059669; margin: 0 0 4px 0; font-size: 16px; font-weight: 600;">Join Our Priority List</h4>
+                <p style="color: #374151; margin: 0; font-size: 14px;">We'll notify you first when slots open up that match your original preferences.</p>
+              </div>
+            </div>
           </div>
           
-          <div class="content">
-            <p>Dear ${customerName},</p>
-            
-            <p>We regret to inform you that we are unable to fulfill your booking request. We sincerely apologize for any inconvenience this may cause.</p>
-            
-            <div class="booking-details">
-              <h3>Booking Reference: ${booking.booking_reference}</h3>
-              
-              <div class="detail-row">
-                <span class="detail-label">Date:</span>
-                <span class="detail-value">${formatDateForEmail(booking.scheduled_date)}</span>
-              </div>
-              
-              <div class="detail-row">
-                <span class="detail-label">Time:</span>
-                <span class="detail-value">${formatTimeForEmail(booking.scheduled_start_time)}</span>
-              </div>
-              
-              <div class="detail-row">
-                <span class="detail-label">Vehicle:</span>
-                <span class="detail-value">${booking.vehicle_details?.make} ${booking.vehicle_details?.model}</span>
-              </div>
-              
-              <div class="detail-row">
-                <span class="detail-label">Status:</span>
-                <span class="detail-value">Declined</span>
-              </div>
-            </div>
-            
-            <div class="decline-reason">
-              <h4>Reason for Decline:</h4>
-              <p><strong>${declineReason}</strong></p>
-              ${additionalNotes ? `<p><strong>Additional Notes:</strong> ${additionalNotes}</p>` : ''}
-            </div>
-            
-            <div class="rebook-section">
-              <h4>We'd Love to Help You Reschedule! 🚗✨</h4>
-              <p>We understand this is disappointing, but we're committed to providing you with excellent service. Here's what you can do:</p>
-              <ul>
-                <li><strong>Try a different date/time:</strong> Visit our booking page to see alternative slots</li>
-                <li><strong>Contact us directly:</strong> Call or email us to discuss your options</li>
-                <li><strong>Join our waiting list:</strong> We'll notify you if a slot becomes available</li>
-              </ul>
-              <p><strong>Need immediate assistance?</strong> Reply to this email or contact us at ${this.config.adminEmail}</p>
-            </div>
-            
-            <p>We value your business and hope to serve you in the future. Thank you for considering Love 4 Detailing.</p>
-            
-            <p>Kind regards,<br>
-            The Love 4 Detailing Team</p>
+          <div style="text-align: center; margin: 24px 0 0 0; padding: 20px; background: white; border-radius: 8px;">
+            <p style="color: #374151; margin: 0 0 16px 0; font-size: 16px; font-weight: 600;">
+               <strong>Ready to get started?</strong>
+            </p>
+            <p style="color: #6b7280; margin: 0; font-size: 14px;">
+              Reply to this email or contact us at <a href="mailto:zell@love4detailing.com" style="color: #9747FF; text-decoration: none; font-weight: 600;">zell@love4detailing.com</a>
+            </p>
           </div>
-          
-          <div class="footer">
-            <p>Love 4 Detailing - Professional Vehicle Detailing Services</p>
-            <p>Visit our website to book a new appointment or contact us for assistance</p>
-          </div>
-        </body>
-      </html>
-    `
+        </div>
+
+        <!-- Personal Message -->
+        <div style="margin: 32px 0; padding: 24px; background: #f8f4ff; border-radius: 12px; border-left: 4px solid #9747FF;">
+          <p style="color: #374151; margin: 0 0 16px 0; font-size: 16px; line-height: 1.6;">
+            We genuinely appreciate you choosing Love 4 Detailing for your vehicle care needs. While we couldn't make this particular booking work, we're dedicated to finding a way to serve you.
+          </p>
+          <p style="color: #374151; margin: 0; font-size: 16px; line-height: 1.6;">
+            Your satisfaction is our priority, and we're confident we can find an arrangement that works perfectly for both of us.
+          </p>
+        </div>
+
+        <!-- Contact Information -->
+        <div style="border-top: 2px solid #e5e7eb; padding-top: 24px; margin-top: 40px;">
+          <h4 style="color: #111827; margin: 0 0 16px 0; font-size: 16px; font-weight: 600;">💬 Get In Touch</h4>
+          <p style="color: #6b7280; font-size: 14px; margin: 0; line-height: 1.6;">
+            Our team is standing by to help you reschedule:<br>
+            <strong style="color: #374151;"> Email:</strong> <a href="mailto:zell@love4detailing.com" style="color: #9747FF; text-decoration: none;">zell@love4detailing.com</a><br>
+            <strong style="color: #374151;">Response Time:</strong> Within 24 hours<br>
+            <strong style="color: #374151;">🌐 Website:</strong> <a href="https://love4detailing.com" style="color: #9747FF; text-decoration: none;">love4detailing.com</a>
+          </p>
+        </div>
+        
+        <p style="color: #374151; margin: 32px 0 0 0; font-size: 16px;">
+          Thank you for your understanding and patience.<br>
+          <strong>The Love 4 Detailing Team</strong>
+        </p>
+      `
+    })
   }
 
   private generateBookingDeclineText(customerName: string, booking: Booking, declineReason: string, additionalNotes?: string): string {
-    const formatDate = (dateStr: string) => {
-      return new Date(dateStr).toLocaleDateString('en-GB', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      })
-    }
-
-    const formatTime = (time: string) => {
-      const [hours, minutes] = time.split(':')
-      const hour = parseInt(hours || '0')
-      const ampm = hour >= 12 ? 'PM' : 'AM'
-      const displayHour = hour % 12 || 12
-      return `${displayHour}:${minutes || '00'} ${ampm}`
+    // Format booking details (using any type for database objects with relations)
+    const bookingAny = booking as any;
+    const bookingDetails = {
+      reference: booking.booking_reference || 'N/A',
+      services: Array.isArray(bookingAny.services) 
+        ? bookingAny.services.map((s: any) => s.name || s).join(', ')
+        : bookingAny.service?.name || 'Vehicle Detailing Service',
+      vehicle: bookingAny.vehicle_details || bookingAny.vehicle
+        ? `${bookingAny.vehicle_details?.year || bookingAny.vehicle?.year || ''} ${bookingAny.vehicle_details?.make || bookingAny.vehicle?.make || ''} ${bookingAny.vehicle_details?.model || bookingAny.vehicle?.model || ''}`.trim()
+        : 'Vehicle not specified',
+      address: bookingAny.address
+        ? `${bookingAny.address.address_line_1}, ${bookingAny.address.city} ${bookingAny.address.postal_code}`
+        : 'Address not specified',
+      totalPrice: booking.total_price ? `£${Number(booking.total_price).toFixed(2)}` : null
     }
 
     return `
-BOOKING UPDATE - Love 4 Detailing
+😞 BOOKING UPDATE REQUIRED - Love 4 Detailing
+We need to discuss your booking ${bookingDetails.reference}
 
 Dear ${customerName},
 
-We regret to inform you that we are unable to fulfill your booking request. We sincerely apologize for any inconvenience this may cause.
+💔 WE'RE REALLY SORRY
+Unfortunately, we're unable to fulfill your booking request as originally planned. We know this is disappointing, and we sincerely apologize for any inconvenience this causes.
 
-BOOKING DETAILS:
-Reference: ${booking.booking_reference}
-Date: ${formatDate(booking.scheduled_date)}
-Time: ${formatTime(booking.scheduled_start_time)}
-Vehicle: ${booking.vehicle_details?.make} ${booking.vehicle_details?.model}
-Status: Declined
+YOUR BOOKING DETAILS:
+- Reference: ${bookingDetails.reference}
+- Service: ${bookingDetails.services}
+- Vehicle: ${bookingDetails.vehicle}
+- Date: ${this.formatEmailDate(booking.scheduled_date)}
+- Time: ${this.formatEmailTime(booking.scheduled_start_time)}
+- Location: ${bookingDetails.address}
+${bookingDetails.totalPrice ? `- Total Price: ${bookingDetails.totalPrice}` : ''}
+- Current Status: Unable to Fulfill
 
-REASON FOR DECLINE:
-${declineReason}
-${additionalNotes ? `\nAdditional Notes: ${additionalNotes}` : ''}
+📝 WHY WE CAN'T FULFILL THIS BOOKING:
+"${declineReason}"
+${additionalNotes ? `\nAdditional Information: ${additionalNotes}` : ''}
 
-WE'D LOVE TO HELP YOU RESCHEDULE!
-We understand this is disappointing, but we're committed to providing you with excellent service. Here's what you can do:
+ LET'S FIND YOU A SOLUTION!
+We're committed to providing you with exceptional service. Here are the best ways we can help:
 
-• Try a different date/time: Visit our booking page to see alternative slots
-• Contact us directly: Call or email us to discuss your options  
-• Join our waiting list: We'll notify you if a slot becomes available
+1. Try Alternative Dates & Times
+   Visit our booking page to see all available slots that might work better for your schedule.
 
-Need immediate assistance? Reply to this email or contact us at ${this.config.adminEmail}
+2. Speak Directly With Our Team
+   Contact us directly and we'll work together to find the perfect solution for your vehicle detailing needs.
 
-We value your business and hope to serve you in the future. Thank you for considering Love 4 Detailing.
+3. Join Our Priority List
+   We'll notify you first when slots open up that match your original preferences.
 
-Kind regards,
+ READY TO GET STARTED?
+Reply to this email or contact us at zell@love4detailing.com
+
+PERSONAL MESSAGE FROM OUR TEAM:
+We genuinely appreciate you choosing Love 4 Detailing for your vehicle care needs. While we couldn't make this particular booking work, we're dedicated to finding a way to serve you. Your satisfaction is our priority, and we're confident we can find an arrangement that works perfectly for both of us.
+
+💬 GET IN TOUCH:
+ Email: zell@love4detailing.com
+Response Time: Within 24 hours
+🌐 Website: love4detailing.com
+
+Thank you for your understanding and patience.
+
+Best regards,
 The Love 4 Detailing Team
 
 ---
-Love 4 Detailing - Professional Vehicle Detailing Services
-Visit our website to book a new appointment or contact us for assistance
-    `
+Love 4 Detailing - Premium Mobile Detailing Services
+    `.trim()
   }
 
   // Admin reschedule request notification templates
@@ -1787,7 +1492,10 @@ Visit our website to book a new appointment or contact us for assistance
         </head>
         <body>
           <div class="header">
-            <h1>🔄 Reschedule Request</h1>
+            <div style="text-align: center; margin-bottom: 20px;">
+              <img src="${process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://love4detailing.com'}/logo1.png" alt="Love 4 Detailing" style="width: 48px; height: 48px; object-fit: contain; border-radius: 12px; filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));" />
+            </div>
+            <h1> Reschedule Request</h1>
             <p>Customer requesting to reschedule booking</p>
           </div>
           
@@ -1867,151 +1575,614 @@ Love 4 Detailing - Admin Notifications
     `
   }
 
-  // Customer reschedule request confirmation templates
-  private generateRescheduleRequestConfirmationHTML(
-    customerName: string,
-    booking: any,
-    requestedDate: string,
-    requestedTime: string,
-    reason?: string
-  ): string {
+  // Send custom email
+  async sendCustomEmail(
+    to: string,
+    subject: string,
+    html: string,
+    text?: string
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      const { error } = await resend.emails.send({
+        from: `${this.config.fromName} <${this.config.fromEmail}>`,
+        to: [to],
+        replyTo: this.config.replyToEmail,
+        subject,
+        html,
+        text: text || ''
+      })
+
+      if (error) {
+        console.error('Custom email send error:', error)
+        return { success: false, error: error.message }
+      }
+
+      return { success: true }
+    } catch (error) {
+      console.error('Custom email service error:', error)
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Unknown email error' 
+      }
+    }
+  }
+
+  // Unified email template system for consistent branding
+  private generateUnifiedEmailHTML({
+    title,
+    header,
+    content,
+    footer
+  }: {
+    title: string
+    header: {
+      title: string
+      subtitle?: string
+      type?: 'default' | 'success' | 'warning' | 'error'
+    }
+    content: string
+    footer?: string
+  }): string {
+    const headerGradient = {
+      default: 'linear-gradient(135deg, #9747FF 0%, #B269FF 100%)',
+      success: 'linear-gradient(135deg, #059669 0%, #10b981 100%)',
+      warning: 'linear-gradient(135deg, #d97706 0%, #f59e0b 100%)',
+      error: 'linear-gradient(135deg, #dc2626 0%, #ef4444 100%)'
+    }[header.type || 'default']
+
     return `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Reschedule Request Submitted</title>
-  <style>
-    * { box-sizing: border-box; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #ffffff; max-width: 600px; margin: 0 auto; padding: 0; background: #0a0a0a; }
-    .email-container { background: #0a0a0a; min-height: 100vh; }
-    .email-content { background: #1a1a1a; margin: 0; }
-    .header { background: linear-gradient(135deg, #9747FF 0%, #B269FF 100%); color: white; padding: 30px; text-align: center; }
-    .content { background: #1a1a1a; padding: 30px; }
-    .highlight { background: #252525; border-radius: 12px; padding: 25px; margin: 20px 0; border: 1px solid rgba(151, 71, 255, 0.3); }
-    .booking-details { background: #252525; border-radius: 12px; padding: 25px; margin: 20px 0; border: 1px solid rgba(151, 71, 255, 0.3); }
-    .next-steps { background: #252525; border-radius: 12px; padding: 25px; margin: 20px 0; border: 1px solid rgba(151, 71, 255, 0.3); }
-    .contact-info { background: #252525; border-radius: 12px; padding: 25px; margin: 20px 0; border: 1px solid rgba(151, 71, 255, 0.3); }
-    .detail-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #333; }
-    .detail-row:last-child { border-bottom: none; }
-    .detail-label { font-weight: 600; color: #9747FF; }
-    .detail-value { font-weight: 400; text-align: right; }
-    h1 { margin: 0 0 10px; font-size: 28px; font-weight: 700; }
-    h3 { color: #9747FF; margin: 0 0 15px; font-size: 18px; font-weight: 600; }
-    p { margin: 16px 0; color: #cccccc; }
-    ul { margin: 15px 0; padding-left: 20px; }
-    li { margin: 8px 0; color: #cccccc; }
-    .footer { background: #0a0a0a; padding: 30px; text-align: center; border-top: 1px solid rgba(255, 255, 255, 0.05); }
-    .footer-brand { color: #9747FF; font-weight: 600; margin-bottom: 8px; }
-    .footer-text { color: rgba(255, 255, 255, 0.5); font-size: 12px; line-height: 1.5; }
-  </style>
-</head>
-<body>
-  <div class="email-container">
-    <div class="email-content">
-      <div class="header">
-        <h1>📅 Reschedule Request Submitted</h1>
-        <p>We've received your request to reschedule your booking</p>
-      </div>
+      <!DOCTYPE html>
+      <html lang="en">
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <meta name="x-apple-disable-message-reformatting">
+          <meta name="color-scheme" content="dark">
+          <meta name="supported-color-schemes" content="dark">
+          <title>${title}</title>
+          <style>
+            ${this.getUnifiedEmailStyles()}
+          </style>
+        </head>
+        <body>
+          <div class="email-container">
+            <!-- Header Section -->
+            <div class="email-header" style="background: ${headerGradient};">
+              <div class="brand-logo">
+                <img src="${process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://love4detailing.com'}/logo1.png" alt="Love 4 Detailing" class="logo-icon" style="width: 48px; height: 48px; object-fit: contain;" />
+                <div class="logo-text">Love 4 Detailing</div>
+              </div>
+              <h1 class="header-title">${header.title}</h1>
+              ${header.subtitle ? `<p class="header-subtitle">${header.subtitle}</p>` : ''}
+            </div>
+            
+            <!-- Content Section -->
+            <div class="email-content">
+              ${content}
+            </div>
+            
+            <!-- Footer Section -->
+            <div class="email-footer">
+              ${footer || this.getDefaultFooter()}
+            </div>
+          </div>
+        </body>
+      </html>
+    `
+  }
+
+  private getUnifiedEmailStyles(): string {
+    return `
+      /* Reset and base styles */
+      * { 
+        box-sizing: border-box; 
+        margin: 0; 
+        padding: 0; 
+      }
       
-      <div class="content">
-        <p>Hello ${customerName},</p>
+      body { 
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif; 
+        line-height: 1.6; 
+        color: #ffffff; 
+        background: #0a0a0a; 
+        width: 100% !important;
+        -webkit-text-size-adjust: 100%;
+        -ms-text-size-adjust: 100%;
+      }
+      
+      /* Email container */
+      .email-container { 
+        max-width: 600px; 
+        margin: 0 auto; 
+        background: #0a0a0a; 
+        min-height: 100vh; 
+      }
+      
+      /* Header styles */
+      .email-header { 
+        padding: 40px 30px; 
+        text-align: center; 
+        color: white; 
+      }
+      
+      .brand-logo { 
+        display: inline-flex; 
+        align-items: center; 
+        gap: 12px; 
+        margin-bottom: 24px; 
+      }
+      
+      .logo-icon { 
+        width: 48px; 
+        height: 48px; 
+        border-radius: 12px; 
+        display: block;
+        object-fit: contain;
+        filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+      }
+      
+      .logo-text { 
+        font-size: 28px; 
+        font-weight: 800; 
+        background: linear-gradient(to right, #ffffff, #e5e7eb); 
+        background-clip: text; 
+        -webkit-background-clip: text; 
+        -webkit-text-fill-color: transparent; 
+        letter-spacing: -0.5px;
+      }
+      
+      .header-title { 
+        margin: 0 0 12px 0; 
+        font-size: 32px; 
+        font-weight: 700; 
+        line-height: 1.2;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+      
+      .header-subtitle { 
+        color: rgba(255, 255, 255, 0.85); 
+        font-size: 16px; 
+        margin: 0;
+        font-weight: 400;
+      }
+      
+      /* Content styles */
+      .email-content { 
+        background: #1a1a1a; 
+        padding: 40px 30px; 
+        border-top: 1px solid rgba(151, 71, 255, 0.1);
+      }
+      
+      /* Card components */
+      .content-card { 
+        background: #252525; 
+        border-radius: 16px; 
+        overflow: hidden; 
+        margin: 25px 0; 
+        border: 1px solid rgba(151, 71, 255, 0.15); 
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      }
+      
+      .card-header { 
+        background: linear-gradient(135deg, rgba(151, 71, 255, 0.08), rgba(178, 105, 255, 0.06)); 
+        padding: 24px; 
+        border-bottom: 1px solid rgba(151, 71, 255, 0.1); 
+      }
+      
+      .card-content { 
+        padding: 32px 24px; 
+      }
+      
+      /* Detail rows */
+      .detail-row { 
+        display: flex; 
+        align-items: flex-start; 
+        margin: 20px 0; 
+        padding: 16px 0; 
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05); 
+      }
+      
+      .detail-row:last-child { 
+        border-bottom: none; 
+      }
+      
+      .detail-icon { 
+        width: 24px; 
+        height: 24px; 
+        margin-right: 16px; 
+        font-size: 18px; 
+        flex-shrink: 0; 
+        margin-top: 2px; 
+        opacity: 0.8;
+      }
+      
+      .detail-content { 
+        flex: 1; 
+      }
+      
+      .detail-label { 
+        font-weight: 600; 
+        color: rgba(255, 255, 255, 0.7); 
+        font-size: 14px; 
+        margin-bottom: 6px; 
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+      
+      .detail-value { 
+        color: #ffffff; 
+        font-size: 16px; 
+        line-height: 1.5; 
+        font-weight: 500;
+      }
+      
+      /* Typography */
+      h1, h2, h3, h4, h5, h6 { 
+        margin: 0; 
+        color: #ffffff; 
+        font-weight: 700;
+        line-height: 1.3;
+      }
+      
+      p { 
+        margin: 16px 0; 
+        color: rgba(255, 255, 255, 0.9); 
+        font-size: 16px;
+        line-height: 1.6;
+      }
+      
+      /* Buttons */
+      .btn { 
+        display: inline-block; 
+        padding: 16px 32px; 
+        background: linear-gradient(135deg, #9747FF, #B269FF); 
+        color: white; 
+        text-decoration: none; 
+        border-radius: 12px; 
+        font-weight: 600; 
+        font-size: 16px; 
+        margin: 20px 0; 
+        box-shadow: 0 4px 14px rgba(151, 71, 255, 0.25);
+        transition: all 0.2s ease;
+        border: none;
+        cursor: pointer;
+        text-align: center;
+        min-height: 44px;
+      }
+      
+      .btn:hover { 
+        transform: translateY(-2px); 
+        box-shadow: 0 6px 20px rgba(151, 71, 255, 0.35); 
+        text-decoration: none;
+      }
+      
+      .btn-secondary { 
+        background: #252525; 
+        border: 2px solid rgba(151, 71, 255, 0.3); 
+        box-shadow: none;
+      }
+      
+      .btn-secondary:hover { 
+        border-color: rgba(151, 71, 255, 0.5); 
+        background: rgba(151, 71, 255, 0.1);
+      }
+      
+      /* Status and highlights */
+      .status-badge { 
+        display: inline-block; 
+        background: rgba(151, 71, 255, 0.15); 
+        color: #B269FF; 
+        padding: 8px 16px; 
+        border-radius: 20px; 
+        font-size: 13px; 
+        font-weight: 600; 
+        border: 1px solid rgba(151, 71, 255, 0.25);
+        text-transform: capitalize;
+      }
+      
+      .highlight-card { 
+        background: rgba(151, 71, 255, 0.08); 
+        border: 1px solid rgba(151, 71, 255, 0.2); 
+        border-radius: 16px; 
+        padding: 24px; 
+        margin: 24px 0; 
+      }
+      
+      .highlight-card h4 { 
+        color: #B269FF; 
+        margin: 0 0 16px 0; 
+        font-size: 18px; 
+      }
+      
+      .price-highlight { 
+        color: #9747FF; 
+        font-size: 24px; 
+        font-weight: 700; 
+      }
+      
+      /* Footer styles */
+      .email-footer { 
+        background: #0a0a0a; 
+        padding: 32px 30px; 
+        text-align: center; 
+        border-top: 1px solid rgba(255, 255, 255, 0.05); 
+      }
+      
+      .footer-brand { 
+        color: #9747FF; 
+        font-weight: 700; 
+        font-size: 18px;
+        margin-bottom: 12px; 
+      }
+      
+      .footer-text { 
+        color: rgba(255, 255, 255, 0.5); 
+        font-size: 13px; 
+        line-height: 1.6; 
+        margin: 8px 0;
+      }
+      
+      .footer-link { 
+        color: #B269FF; 
+        text-decoration: none; 
+      }
+      
+      .footer-link:hover { 
+        text-decoration: underline; 
+      }
+      
+      /* Mobile responsive styles */
+      @media only screen and (max-width: 480px) {
+        .email-header, .email-content, .email-footer { 
+          padding: 24px 20px !important; 
+        }
         
-        <div class="highlight">
-          <strong>Thank you!</strong> We've received your request to reschedule your booking. Our team will review your request and get back to you within 24 hours.
+        .card-content, .card-header { 
+          padding: 20px !important; 
+        }
+        
+        .header-title { 
+          font-size: 26px !important; 
+        }
+        
+        .logo-text { 
+          font-size: 22px !important; 
+        }
+        
+        .logo-icon { 
+          width: 40px !important; 
+          height: 40px !important; 
+        }
+        
+        .detail-row { 
+          flex-direction: column; 
+          align-items: flex-start; 
+        }
+        
+        .detail-icon { 
+          margin-bottom: 8px; 
+          margin-right: 0; 
+        }
+        
+        .btn { 
+          padding: 14px 24px !important; 
+          font-size: 15px !important; 
+          width: 100% !important;
+          text-align: center;
+        }
+        
+        p, .detail-value { 
+          font-size: 15px !important; 
+        }
+      }
+      
+      /* Dark mode support */
+      @media (prefers-color-scheme: dark) {
+        body { 
+          background: #0a0a0a !important; 
+          color: #ffffff !important; 
+        }
+      }
+    `
+  }
+
+  private getDefaultFooter(): string {
+    return `
+      <div class="footer-brand">Love 4 Detailing</div>
+      <p class="footer-text">
+        Premium Mobile Car Detailing Services<br>
+        Transforming vehicles, exceeding expectations
+      </p>
+      <p class="footer-text">
+         <a href="mailto:${this.config.adminEmail}" class="footer-link">${this.config.adminEmail}</a><br>
+        🌐 Professional car detailing at your location
+      </p>
+      <p class="footer-text" style="margin-top: 20px; padding-top: 16px; border-top: 1px solid rgba(255, 255, 255, 0.1);">
+        This email was sent from an automated system.<br>
+        Please do not reply directly to this message.
+      </p>
+    `
+  }
+
+  // Standardized data formatting utilities for emails
+  private formatEmailDate(dateStr: string | undefined | null): string {
+    if (!dateStr) return 'Date not specified'
+    
+    try {
+      const date = new Date(dateStr)
+      if (isNaN(date.getTime())) return 'Invalid date'
+      
+      return date.toLocaleDateString('en-GB', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      })
+    } catch {
+      return 'Invalid date'
+    }
+  }
+
+  private formatEmailTime(timeStr: string | undefined | null): string {
+    if (!timeStr) return 'Time not specified'
+    
+    try {
+      const [hours, minutes] = timeStr.split(':')
+      const hour = parseInt(hours || '0')
+      const ampm = hour >= 12 ? 'PM' : 'AM'
+      const displayHour = hour % 12 || 12
+      return `${displayHour}:${minutes || '00'} ${ampm}`
+    } catch {
+      return 'Invalid time'
+    }
+  }
+
+  private formatEmailPrice(price: number | string | undefined | null): string {
+    if (price === null || price === undefined) return 'Price not specified'
+    
+    const numericPrice = typeof price === 'string' ? parseFloat(price) : price
+    if (isNaN(numericPrice)) return 'Invalid price'
+    
+    return `£${numericPrice.toFixed(2)}`
+  }
+
+  private formatVehicleDetails(vehicle: any): string {
+    if (!vehicle) return 'Vehicle details not specified'
+    
+    const parts: string[] = []
+    
+    if (vehicle.make) parts.push(vehicle.make)
+    if (vehicle.model) parts.push(vehicle.model)
+    if (vehicle.year) parts.push(`(${vehicle.year})`)
+    if (vehicle.color) parts.push(`- ${vehicle.color}`)
+    
+    return parts.length > 0 ? parts.join(' ') : 'Vehicle details not specified'
+  }
+
+  private formatAddress(address: any): string {
+    if (!address) return 'Address not specified'
+    
+    const parts: string[] = []
+    
+    if (address.address_line_1) parts.push(address.address_line_1)
+    if (address.address_line_2) parts.push(address.address_line_2)
+    if (address.city && address.postcode) {
+      parts.push(`${address.city}, ${address.postcode}`)
+    } else if (address.city) {
+      parts.push(address.city)
+    } else if (address.postcode) {
+      parts.push(address.postcode)
+    }
+    
+    return parts.length > 0 ? parts.join('<br>') : 'Address not specified'
+  }
+
+  private formatServices(services: any[]): string {
+    if (!services || services.length === 0) return 'No services specified'
+    
+    return services
+      .map(service => {
+        if (typeof service === 'string') return service
+        if (service.name) {
+          const price = service.base_price || service.price
+          return price ? `${service.name} (${this.formatEmailPrice(price)})` : service.name
+        }
+        return 'Service not specified'
+      })
+      .join('<br>')
+  }
+
+  private getStatusDisplayName(status: string): string {
+    const statusMap: Record<string, string> = {
+      'pending': 'Awaiting Confirmation',
+      'confirmed': 'Confirmed',
+      'in_progress': 'In Progress',
+      'completed': 'Completed',
+      'cancelled': 'Cancelled',
+      'rescheduled': 'Rescheduled',
+      'no_show': 'No Show',
+      'processing': 'Processing Payment',
+      'payment_failed': 'Payment Failed',
+      'declined': 'Declined'
+    }
+    
+    return statusMap[status] || status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' ')
+  }
+
+  private generateBookingDetailsCard(booking: any): string {
+    return `
+      <div class="content-card">
+        <div class="card-header">
+          <h3 style="color: #9747FF; font-size: 20px; margin: 0 0 8px 0;">${booking.booking_reference || 'Reference not available'}</h3>
+          <div class="status-badge">${this.getStatusDisplayName(booking.status || 'unknown')}</div>
         </div>
         
-        <div class="booking-details">
-          <h3>Booking Details</h3>
+        <div class="card-content">
           <div class="detail-row">
-            <span class="detail-label">Booking Reference:</span>
-            <span class="detail-value">${booking.booking_reference}</span>
+            <div class="detail-icon"></div>
+            <div class="detail-content">
+              <div class="detail-label">Date</div>
+              <div class="detail-value">${this.formatEmailDate(booking.scheduled_date)}</div>
+            </div>
           </div>
+          
           <div class="detail-row">
-            <span class="detail-label">Current Date:</span>
-            <span class="detail-value">${formatDateForEmail(booking.scheduled_date)} at ${formatTimeForEmail(booking.scheduled_start_time)}</span>
+            <div class="detail-icon">Time</div>
+            <div class="detail-content">
+              <div class="detail-label">Time</div>
+              <div class="detail-value">${this.formatEmailTime(booking.scheduled_start_time)}</div>
+            </div>
           </div>
+          
           <div class="detail-row">
-            <span class="detail-label">Requested New Date:</span>
-            <span class="detail-value"><strong>${formatDateForEmail(requestedDate)} at ${formatTimeForEmail(requestedTime)}</strong></span>
+            <div class="detail-icon"></div>
+            <div class="detail-content">
+              <div class="detail-label">Vehicle</div>
+              <div class="detail-value">${this.formatVehicleDetails(booking.vehicle_details)}</div>
+            </div>
           </div>
-          ${reason ? `
+          
           <div class="detail-row">
-            <span class="detail-label">Reason:</span>
-            <span class="detail-value">${reason}</span>
+            <div class="detail-icon">📍</div>
+            <div class="detail-content">
+              <div class="detail-label">Location</div>
+              <div class="detail-value">${this.formatAddress(booking.service_address)}</div>
+            </div>
           </div>
+          
+          ${booking.services ? `
+            <div class="detail-row">
+              <div class="detail-icon"></div>
+              <div class="detail-content">
+                <div class="detail-label">Services</div>
+                <div class="detail-value">${this.formatServices(booking.services)}</div>
+              </div>
+            </div>
+          ` : ''}
+          
+          <div class="detail-row">
+            <div class="detail-icon"></div>
+            <div class="detail-content">
+              <div class="detail-label">Total Investment</div>
+              <div class="detail-value price-highlight">${this.formatEmailPrice(booking.total_price)}</div>
+            </div>
+          </div>
+          
+          ${booking.special_instructions ? `
+            <div class="detail-row" style="border-bottom: none;">
+              <div class="detail-icon">📝</div>
+              <div class="detail-content">
+                <div class="detail-label">Special Instructions</div>
+                <div class="detail-value" style="font-style: italic; opacity: 0.9;">${booking.special_instructions}</div>
+              </div>
+            </div>
           ` : ''}
         </div>
-
-        <div class="next-steps">
-          <h3>What Happens Next?</h3>
-          <ul>
-            <li>Our team will review your reschedule request</li>
-            <li>We'll check availability for your requested time slot</li>
-            <li>You'll receive a confirmation email within 24 hours</li>
-            <li>If the requested time isn't available, we'll suggest alternatives</li>
-          </ul>
-        </div>
-
-        <div class="contact-info">
-          <p>If you have any questions or need to make changes to your request, please contact us at:</p>
-          <p><strong>Email:</strong> ${this.config.adminEmail}</p>
-        </div>
       </div>
-      
-      <div class="footer">
-        <div class="footer-brand">Love4Detailing</div>
-        <div class="footer-text">
-          Professional Mobile Car Detailing Services<br>
-          Transforming vehicles, exceeding expectations<br><br>
-          Your reschedule request has been submitted successfully.<br>
-          We'll get back to you within 24 hours.
-        </div>
-      </div>
-    </div>
-  </div>
-</body>
-</html>
     `
   }
 
-  private generateRescheduleRequestConfirmationText(
-    customerName: string,
-    booking: any,
-    requestedDate: string,
-    requestedTime: string,
-    reason?: string
-  ): string {
-    return `
-RESCHEDULE REQUEST SUBMITTED
-
-Hello ${customerName},
-
-Thank you! We've received your request to reschedule your booking. Our team will review your request and get back to you within 24 hours.
-
-BOOKING DETAILS:
-Booking Reference: ${booking.booking_reference}
-Current Date: ${booking.scheduled_date} at ${booking.scheduled_start_time}
-Requested New Date: ${requestedDate} at ${requestedTime}
-${reason ? `Reason: ${reason}` : ''}
-
-WHAT HAPPENS NEXT:
-• Our team will review your reschedule request
-• We'll check availability for your requested time slot  
-• You'll receive a confirmation email within 24 hours
-• If the requested time isn't available, we'll suggest alternatives
-
-NEED HELP?
-If you have any questions or need to make changes to your request:
-Email: ${this.config.adminEmail}
-
----
-Love 4 Detailing - Premium Vehicle Care
-    `
-  }
-
-  // Customer reschedule response templates
+  // Customer reschedule response templates using unified Love4Detailing branding
   private generateRescheduleResponseHTML(
     customerName: string,
     booking: any,
@@ -2021,127 +2192,168 @@ Love 4 Detailing - Premium Vehicle Care
     proposedDate?: string,
     proposedTime?: string
   ): string {
-    const formatDate = (dateStr: string) => {
-      return new Date(dateStr).toLocaleDateString('en-GB', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      })
-    }
-
-    const formatTime = (time: string) => {
-      const [hours, minutes] = time.split(':')
-      const hour = parseInt(hours || '0')
-      const ampm = hour >= 12 ? 'PM' : 'AM'
-      const displayHour = hour % 12 || 12
-      return `${displayHour}:${minutes || '00'} ${ampm}`
-    }
-
     const statusColors = {
-      approve: '#10b981',
-      reject: '#dc2626',
-      propose: '#f59e0b'
+      approve: '#10b981', // Success green
+      reject: '#dc2626',  // Error red
+      propose: '#9747FF'  // Love4Detailing purple for proposals
     }
 
     const statusMessages = {
-      approve: 'Your reschedule request has been approved!',
-      reject: 'Your reschedule request has been declined',
-      propose: 'Alternative time proposed'
+      approve: 'Reschedule Request Approved',
+      reject: 'Reschedule Request Declined', 
+      propose: 'Alternative Time Proposed'
     }
 
-    const color = statusColors[action as keyof typeof statusColors] || '#6b7280'
-    const message = statusMessages[action as keyof typeof statusMessages] || 'Request updated'
+    const statusEmojis = {
+      approve: '',
+      reject: '', 
+      propose: '💭'
+    }
 
-    return `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta charset="utf-8">
-          <title>Reschedule Request Update</title>
-          <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
-            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #ffffff; max-width: 600px; margin: 0 auto; padding: 0; background: #0a0a0a; }
-            .header { background: linear-gradient(135deg, ${color}, ${color}dd); color: white; padding: 30px; text-align: center; }
-            .content { background: #1a1a1a; padding: 30px; }
-            .booking-details { background: #252525; border-radius: 12px; padding: 25px; margin: 20px 0; border: 1px solid ${color}40; }
-            .detail-row { display: flex; justify-content: space-between; margin: 12px 0; padding: 10px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
-            .detail-label { font-weight: 600; color: rgba(255, 255, 255, 0.7); }
-            .detail-value { color: #ffffff; }
-            .highlight { background: rgba(151, 71, 255, 0.1); border: 1px solid rgba(151, 71, 255, 0.3); border-radius: 12px; padding: 20px; margin: 20px 0; }
-            .footer { text-align: center; margin-top: 30px; color: rgba(255, 255, 255, 0.5); font-size: 12px; background: #0a0a0a; padding: 25px; }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <h1>${action === 'approve' ? '✅' : action === 'reject' ? '❌' : '💭'} ${message}</h1>
-            <p>Booking ${booking.booking_reference}</p>
-          </div>
-          
-          <div class="content">
-            <p>Dear ${customerName},</p>
-            
+    const actionColor = statusColors[action as keyof typeof statusColors] || '#9747FF'
+    const headerMessage = statusMessages[action as keyof typeof statusMessages] || 'Reschedule Update'
+    const headerEmoji = statusEmojis[action as keyof typeof statusEmojis] || ''
+
+    // Format booking details for display
+    const bookingDetails = {
+      reference: booking.booking_reference || 'N/A',
+      services: Array.isArray(booking.services) 
+        ? booking.services.map((s: any) => s.name || s).join(', ')
+        : 'Vehicle Detailing Service',
+      vehicle: booking.vehicle 
+        ? `${booking.vehicle.year || ''} ${booking.vehicle.make || ''} ${booking.vehicle.model || ''}`.trim()
+        : 'Vehicle not specified',
+      totalPrice: booking.total_price ? `£${Number(booking.total_price).toFixed(2)}` : null
+    }
+
+    return this.generateUnifiedEmailHTML({
+      title: `${headerEmoji} ${headerMessage}`,
+      header: {
+        title: `${headerEmoji} ${headerMessage}`,
+        subtitle: `Your reschedule request for booking ${bookingDetails.reference}`,
+        type: action === 'approve' ? 'success' : action === 'reject' ? 'error' : 'default'
+      },
+      content: `
+        <!-- Greeting -->
+        <p style="font-size: 16px; margin: 0 0 24px 0; color: #374151; font-weight: 400;">Dear ${customerName},</p>
+        
+        <!-- Status Message -->
+        <div style="background: ${action === 'approve' ? '#f0f9f4' : action === 'reject' ? '#fef2f2' : '#f8f4ff'}; border: 2px solid ${actionColor}; border-radius: 12px; padding: 24px; margin: 24px 0; text-align: center;">
+          <div style="font-size: 48px; margin: 0 0 16px 0;">${headerEmoji}</div>
+          <h2 style="color: ${actionColor}; margin: 0 0 12px 0; font-size: 20px; font-weight: 600;">${headerMessage}</h2>
+          <p style="color: #374151; margin: 0; font-size: 16px;">
+            ${action === 'approve' ? 
+              'Great news! Your reschedule request has been approved and your booking has been updated.' :
+              action === 'reject' ?
+              'We apologize, but we cannot accommodate your reschedule request at this time.' :
+              'We\'ve proposed an alternative time that works better with our schedule.'
+            }
+          </p>
+        </div>
+
+        <!-- Booking Details Card -->
+        <div style="background: #f8fafc; border: 2px solid #e5e7eb; border-radius: 12px; padding: 24px; margin: 32px 0;">
+          <h3 style="color: #111827; margin: 0 0 20px 0; font-size: 18px; font-weight: 600;">
+            ${action === 'approve' ? 'Updated Booking Details' : 'Booking Information'}
+          </h3>
+          <div style="space-y: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid #e5e7eb;">
+              <span style="font-weight: 500; color: #374151;">Booking Reference</span>
+              <span style="font-weight: 600; color: #111827; font-family: monospace; text-align: right;">${bookingDetails.reference}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid #e5e7eb;">
+              <span style="font-weight: 500; color: #374151;">Service</span>
+              <span style="color: #111827; font-weight: 500; text-align: right; max-width: 200px;">${bookingDetails.services}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid #e5e7eb;">
+              <span style="font-weight: 500; color: #374151;">Vehicle</span>
+              <span style="color: #111827; font-weight: 500; text-align: right; max-width: 200px;">${bookingDetails.vehicle}</span>
+            </div>
+            ${bookingDetails.totalPrice ? `
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid #e5e7eb;">
+              <span style="font-weight: 500; color: #374151;">Total Price</span>
+              <span style="color: #9747FF; font-weight: 700; font-size: 18px; text-align: right;">${bookingDetails.totalPrice}</span>
+            </div>
+            ` : ''}
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid #e5e7eb;">
+              <span style="font-weight: 500; color: #374151;">Original Date & Time</span>
+              <span style="color: #6b7280; text-align: right; max-width: 200px;">
+                ${this.formatEmailDate(rescheduleRequest.original_date)}<br>
+                <strong>${this.formatEmailTime(rescheduleRequest.original_time)}</strong>
+              </span>
+            </div>
             ${action === 'approve' ? `
-            <div class="highlight">
-              <strong>Great news!</strong> Your reschedule request has been approved. Your booking has been updated with the new date and time.
+            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+              <span style="font-weight: 500; color: #374151;">New Date & Time</span>
+              <span style="color: #10b981; font-weight: 700; text-align: right; max-width: 200px;">
+                ${this.formatEmailDate(rescheduleRequest.requested_date)}<br>
+                <strong>${this.formatEmailTime(rescheduleRequest.requested_time)}</strong>
+              </span>
             </div>
-            ` : action === 'reject' ? `
-            <div class="highlight">
-              <strong>We're sorry,</strong> but we cannot accommodate your reschedule request at this time.
-            </div>
-            ` : `
-            <div class="highlight">
-              <strong>Alternative Option:</strong> We've proposed a different time that works better for our schedule.
-            </div>
-            `}
-            
-            <div class="booking-details">
-              <h3>Booking Update</h3>
-              <div class="detail-row">
-                <span class="detail-label">Booking Reference:</span>
-                <span class="detail-value">${booking.booking_reference}</span>
-              </div>
-              <div class="detail-row">
-                <span class="detail-label">Original Date:</span>
-                <span class="detail-value">${formatDate(rescheduleRequest.original_date)} at ${formatTime(rescheduleRequest.original_time)}</span>
-              </div>
-              ${action === 'approve' ? `
-              <div class="detail-row">
-                <span class="detail-label">New Date:</span>
-                <span class="detail-value"><strong>${formatDate(rescheduleRequest.requested_date)} at ${formatTime(rescheduleRequest.requested_time)}</strong></span>
-              </div>
-              ` : action === 'propose' && proposedDate && proposedTime ? `
-              <div class="detail-row">
-                <span class="detail-label">Proposed Date:</span>
-                <span class="detail-value"><strong>${formatDate(proposedDate)} at ${formatTime(proposedTime)}</strong></span>
-              </div>
-              ` : ''}
-            </div>
-            
-            ${adminResponse ? `
-            <div class="booking-details">
-              <h3>Message from Love 4 Detailing</h3>
-              <p>${adminResponse}</p>
+            ` : action === 'propose' && proposedDate && proposedTime ? `
+            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+              <span style="font-weight: 500; color: #374151;">Proposed Date & Time</span>
+              <span style="color: #9747FF; font-weight: 700; text-align: right; max-width: 200px;">
+                ${this.formatEmailDate(proposedDate)}<br>
+                <strong>${this.formatEmailTime(proposedTime)}</strong>
+              </span>
             </div>
             ` : ''}
-            
-            ${action === 'propose' ? `
-            <p>If this alternative time works for you, please contact us to confirm. If not, feel free to request another time.</p>
-            ` : action === 'reject' ? `
-            <p>You can try requesting a different date/time or contact us directly to discuss other options.</p>
-            ` : ''}
-            
-            <p>If you have any questions, please don't hesitate to contact us.</p>
-            
-            <p>Best regards,<br>The Love 4 Detailing Team</p>
-            
-            <div class="footer">
-              <p>Love 4 Detailing - Professional Vehicle Detailing Services</p>
-            </div>
           </div>
-        </body>
-      </html>
-    `
+        </div>
+
+        ${adminResponse ? `
+        <!-- Admin Message Card -->
+        <div style="background: #f8fafc; border: 2px solid #e5e7eb; border-radius: 12px; padding: 24px; margin: 32px 0;">
+          <h3 style="color: #111827; margin: 0 0 16px 0; font-size: 18px; font-weight: 600;">📝 Message from Love 4 Detailing</h3>
+          <p style="color: #374151; margin: 0; font-size: 16px; line-height: 1.6; font-style: italic; border-left: 4px solid #9747FF; padding-left: 16px;">
+            "${adminResponse}"
+          </p>
+        </div>
+        ` : ''}
+
+        <!-- Next Steps -->
+        <div style="margin: 32px 0;">
+          ${action === 'approve' ? `
+          <p style="color: #374151; margin: 0 0 16px 0; font-size: 16px;">
+             <strong>You're all set!</strong> Your booking has been successfully rescheduled. We'll send you a reminder closer to your new appointment time.
+          </p>
+          <p style="color: #374151; margin: 0; font-size: 16px;">
+            If you need to make any further changes, please contact us as soon as possible.
+          </p>
+          ` : action === 'reject' ? `
+          <p style="color: #374151; margin: 0 0 16px 0; font-size: 16px;">
+             <strong>What you can do:</strong> You can submit a new reschedule request for a different date and time that might work better.
+          </p>
+          <p style="color: #374151; margin: 0; font-size: 16px;">
+            Alternatively, feel free to contact us directly and we'll do our best to find a solution that works for both of us.
+          </p>
+          ` : `
+          <p style="color: #374151; margin: 0 0 16px 0; font-size: 16px;">
+            ❓ <strong>Does this work for you?</strong> If the proposed time works, please contact us to confirm. If not, feel free to request another time.
+          </p>
+          <p style="color: #374151; margin: 0; font-size: 16px;">
+            We're flexible and want to find a time that works perfectly for your schedule.
+          </p>
+          `}
+        </div>
+
+        <!-- Contact Information -->
+        <div style="border-top: 2px solid #e5e7eb; padding-top: 24px; margin-top: 40px;">
+          <h4 style="color: #111827; margin: 0 0 16px 0; font-size: 16px; font-weight: 600;">Questions or Need Help?</h4>
+          <p style="color: #6b7280; font-size: 14px; margin: 0; line-height: 1.6;">
+            Our team is here to help with any questions about your reschedule request:<br>
+            <strong style="color: #374151;"> Email:</strong> <a href="mailto:zell@love4detailing.com" style="color: #9747FF; text-decoration: none;">zell@love4detailing.com</a><br>
+            <strong style="color: #374151;">Response Time:</strong> Within 24 hours
+          </p>
+        </div>
+        
+        <p style="color: #374151; margin: 32px 0 0 0; font-size: 16px;">
+          Thank you for choosing Love 4 Detailing!<br>
+          <strong>The Love 4 Detailing Team</strong>
+        </p>
+      `
+    })
   }
 
   private generateRescheduleResponseText(
@@ -2154,45 +2366,878 @@ Love 4 Detailing - Premium Vehicle Care
     proposedTime?: string
   ): string {
     const statusMessages = {
-      approve: 'APPROVED - Your reschedule request has been approved!',
-      reject: 'DECLINED - Your reschedule request has been declined',
-      propose: 'ALTERNATIVE PROPOSED - Different time suggested'
+      approve: ' APPROVED - Your reschedule request has been approved!',
+      reject: ' DECLINED - Your reschedule request has been declined',
+      propose: '💭 ALTERNATIVE PROPOSED - Different time suggested'
     }
 
-    const message = statusMessages[action as keyof typeof statusMessages] || 'REQUEST UPDATED'
+    const message = statusMessages[action as keyof typeof statusMessages] || ' REQUEST UPDATED'
+
+    // Format booking details
+    const bookingDetails = {
+      reference: booking.booking_reference || 'N/A',
+      services: Array.isArray(booking.services) 
+        ? booking.services.map((s: any) => s.name || s).join(', ')
+        : 'Vehicle Detailing Service',
+      vehicle: booking.vehicle 
+        ? `${booking.vehicle.year || ''} ${booking.vehicle.make || ''} ${booking.vehicle.model || ''}`.trim()
+        : 'Vehicle not specified',
+      totalPrice: booking.total_price ? `£${Number(booking.total_price).toFixed(2)}` : null
+    }
 
     return `
 ${message}
-Booking ${booking.booking_reference}
+Love 4 Detailing - Booking ${bookingDetails.reference}
 
 Dear ${customerName},
 
 ${action === 'approve' ? 
-`Great news! Your reschedule request has been approved. Your booking has been updated with the new date and time.` : 
+` Great news! Your reschedule request has been approved and your booking has been successfully updated with the new date and time.` : 
 action === 'reject' ? 
-`We're sorry, but we cannot accommodate your reschedule request at this time.` : 
-`We've proposed a different time that works better for our schedule.`}
+`We apologize, but we cannot accommodate your reschedule request at this time. This may be due to scheduling conflicts or availability constraints.` : 
+`We've reviewed your request and proposed an alternative time that works better with our schedule. We hope this alternative works for you!`}
 
-BOOKING UPDATE:
-Booking Reference: ${booking.booking_reference}
-Original Date: ${rescheduleRequest.original_date} at ${rescheduleRequest.original_time}
-${action === 'approve' ? `New Date: ${rescheduleRequest.requested_date} at ${rescheduleRequest.requested_time}` : ''}
-${action === 'propose' && proposedDate && proposedTime ? `Proposed Date: ${proposedDate} at ${proposedTime}` : ''}
+BOOKING DETAILS:
+- Reference: ${bookingDetails.reference}
+- Service: ${bookingDetails.services}
+- Vehicle: ${bookingDetails.vehicle}
+${bookingDetails.totalPrice ? `- Total Price: ${bookingDetails.totalPrice}` : ''}
 
-${adminResponse ? `MESSAGE FROM LOVE 4 DETAILING:\n${adminResponse}\n` : ''}
+SCHEDULING:
+- Original: ${this.formatEmailDate(rescheduleRequest.original_date)} at ${this.formatEmailTime(rescheduleRequest.original_time)}
+${action === 'approve' ? `- New Time: ${this.formatEmailDate(rescheduleRequest.requested_date)} at ${this.formatEmailTime(rescheduleRequest.requested_time)}` : ''}
+${action === 'propose' && proposedDate && proposedTime ? `- Proposed: ${this.formatEmailDate(proposedDate)} at ${this.formatEmailTime(proposedTime)}` : ''}
 
-${action === 'propose' ? 
-`If this alternative time works for you, please contact us to confirm. If not, feel free to request another time.` : 
+${adminResponse ? `MESSAGE FROM LOVE 4 DETAILING:\n"${adminResponse}"\n` : ''}
+
+NEXT STEPS:
+${action === 'approve' ? 
+` You're all set! We'll send you a reminder closer to your new appointment time. If you need to make any further changes, please contact us as soon as possible.` : 
 action === 'reject' ? 
-`You can try requesting a different date/time or contact us directly to discuss other options.` : ''}
+` You can submit a new reschedule request for a different date and time, or contact us directly to discuss other options that might work better.` : 
+`❓ If the proposed time works for you, please contact us to confirm. If not, feel free to request another time - we're flexible!`}
 
-If you have any questions, please don't hesitate to contact us.
+NEED HELP?
+ Email: zell@love4detailing.com
+Response Time: Within 24 hours
+
+Thank you for choosing Love 4 Detailing!
 
 Best regards,
 The Love 4 Detailing Team
 
 ---
-Love 4 Detailing - Professional Vehicle Detailing Services
-    `
+Love 4 Detailing - Premium Mobile Detailing Services
+    `.trim()
+  }
+
+  /**
+   * Generate HTML template for payment confirmation email
+   */
+  private generatePaymentConfirmationHTML(
+    customerName: string, 
+    booking: Booking, 
+    paymentMethod: string,
+    paymentReference: string
+  ): string {
+    // Format booking details (using any type for database objects with relations)
+    const bookingAny = booking as any;
+    const bookingDetails = {
+      reference: booking.booking_reference || 'N/A',
+      services: Array.isArray(bookingAny.services) 
+        ? bookingAny.services.map((s: any) => s.name || s).join(', ')
+        : bookingAny.service?.name || 'Vehicle Detailing Service',
+      vehicle: bookingAny.vehicle_details || bookingAny.vehicle
+        ? `${bookingAny.vehicle_details?.year || bookingAny.vehicle?.year || ''} ${bookingAny.vehicle_details?.make || bookingAny.vehicle?.make || ''} ${bookingAny.vehicle_details?.model || bookingAny.vehicle?.model || ''}`.trim()
+        : 'Vehicle not specified',
+      date: booking.scheduled_date ? this.formatEmailDate(booking.scheduled_date) : 'Date TBC',
+      time: bookingAny.time_slots?.start_time || booking.scheduled_start_time 
+        ? this.formatEmailTime(bookingAny.time_slots?.start_time || booking.scheduled_start_time)
+        : 'Time TBC',
+      address: bookingAny.address || bookingAny.service_address
+        ? `${(bookingAny.address || bookingAny.service_address).address_line_1}, ${(bookingAny.address || bookingAny.service_address).city} ${(bookingAny.address || bookingAny.service_address).postal_code}`
+        : 'Address not specified',
+      totalPrice: booking.total_price ? `£${Number(booking.total_price).toFixed(2)}` : 'N/A'
+    }
+
+    const paymentMethodDisplay = {
+      'paypal': 'PayPal',
+      'cash': 'Cash',
+      'card': 'Card',
+      'bank_transfer': 'Bank Transfer'
+    }[paymentMethod] || paymentMethod
+
+    return this.generateUnifiedEmailHTML({
+      title: ' Payment Confirmed!',
+      header: {
+        title: ' Payment Received Successfully!',
+        subtitle: `Your booking ${bookingDetails.reference} is fully confirmed`,
+        type: 'success'
+      },
+      content: `
+        <!-- Confirmation Message -->
+        <p style="font-size: 16px; margin: 0 0 24px 0; color: #374151; font-weight: 400;">Dear ${customerName},</p>
+        
+        <!-- Success Celebration -->
+        <div style="background: #f0fdf4; border: 2px solid #bbf7d0; border-radius: 12px; padding: 24px; margin: 24px 0; text-align: center;">
+          <div style="font-size: 48px; margin: 0 0 16px 0;"></div>
+          <h2 style="color: #16a34a; margin: 0 0 12px 0; font-size: 20px; font-weight: 600;">Payment Successfully Received!</h2>
+          <p style="color: #374151; margin: 0; font-size: 16px; line-height: 1.6;">
+            Thank you for your payment! Your booking is now fully confirmed and we're excited to provide you with exceptional vehicle detailing service.
+          </p>
+        </div>
+
+        <!-- Payment Details -->
+        <div style="background: #f8fafc; border: 2px solid #e5e7eb; border-radius: 12px; padding: 24px; margin: 32px 0;">
+          <h3 style="color: #111827; margin: 0 0 20px 0; font-size: 18px; font-weight: 600;"> Payment Details</h3>
+          <div style="space-y: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid #e5e7eb;">
+              <span style="font-weight: 500; color: #374151;">Payment Method</span>
+              <span style="font-weight: 600; color: #16a34a;">${paymentMethodDisplay}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid #e5e7eb;">
+              <span style="font-weight: 500; color: #374151;">Payment Reference</span>
+              <span style="font-weight: 600; color: #111827; font-family: monospace;">${paymentReference}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid #e5e7eb;">
+              <span style="font-weight: 500; color: #374151;">Amount Paid</span>
+              <span style="font-weight: 700; color: #16a34a; font-size: 18px;">${bookingDetails.totalPrice}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+              <span style="font-weight: 500; color: #374151;">Payment Status</span>
+              <span style="background: #16a34a; color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;">CONFIRMED</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Booking Summary -->
+        <div style="background: #fefce8; border: 2px solid #fde047; border-radius: 12px; padding: 24px; margin: 32px 0;">
+          <h3 style="color: #111827; margin: 0 0 20px 0; font-size: 18px; font-weight: 600;"> Your Confirmed Booking</h3>
+          <div style="space-y: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid #fde047;">
+              <span style="font-weight: 500; color: #374151;">Booking Reference</span>
+              <span style="font-weight: 600; color: #111827; font-family: monospace;">${bookingDetails.reference}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid #fde047;">
+              <span style="font-weight: 500; color: #374151;">Service</span>
+              <span style="font-weight: 600; color: #111827; text-align: right; max-width: 60%;">${bookingDetails.services}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid #fde047;">
+              <span style="font-weight: 500; color: #374151;">Vehicle</span>
+              <span style="font-weight: 600; color: #111827; text-align: right; max-width: 60%;">${bookingDetails.vehicle}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid #fde047;">
+              <span style="font-weight: 500; color: #374151;">Date & Time</span>
+              <span style="font-weight: 600; color: #111827; text-align: right;">${bookingDetails.date} at ${bookingDetails.time}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+              <span style="font-weight: 500; color: #374151;">Location</span>
+              <span style="font-weight: 600; color: #111827; text-align: right; max-width: 60%;">${bookingDetails.address}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- What's Next -->
+        <div style="background: #eff6ff; border: 2px solid #bfdbfe; border-radius: 12px; padding: 24px; margin: 32px 0;">
+          <h3 style="color: #1e40af; margin: 0 0 16px 0; font-size: 18px; font-weight: 600;"> What Happens Next?</h3>
+          <ul style="color: #374151; line-height: 1.8; margin: 0; padding-left: 20px;">
+            <li style="margin: 8px 0;"><strong>Service Reminder:</strong> We'll send you a reminder 24 hours before your appointment</li>
+            <li style="margin: 8px 0;"><strong>Team Arrival:</strong> Our professional team will arrive at your location at the scheduled time</li>
+            <li style="margin: 8px 0;"><strong>Quality Service:</strong> We'll provide exceptional detailing service for your vehicle</li>
+            <li style="margin: 8px 0;"><strong>Completion Notification:</strong> You'll receive confirmation once the service is complete</li>
+          </ul>
+        </div>
+
+        <!-- Contact Information -->
+        <div style="text-align: center; margin: 32px 0; padding: 20px; background: #f8fafc; border-radius: 8px;">
+          <p style="color: #374151; margin: 0 0 12px 0; font-size: 16px; font-weight: 500;">Need to make changes or have questions?</p>
+          <div style="margin: 16px 0;">
+            <a href="mailto:${this.config.adminEmail}" style="color: #7c3aed; text-decoration: none; font-weight: 600; margin: 0 16px;"> Email Support</a>
+            <a href="tel:${'+447908625581'}" style="color: #7c3aed; text-decoration: none; font-weight: 600; margin: 0 16px;">Call Us</a>
+          </div>
+          <p style="color: #64748b; margin: 8px 0 0 0; font-size: 14px;">We typically respond within 2-4 hours</p>
+        </div>
+
+        <p style="color: #374151; margin: 32px 0 16px 0; font-size: 16px; font-weight: 400; line-height: 1.6;">
+          Thank you for trusting Love 4 Detailing with your vehicle care needs. We're committed to delivering exceptional results that exceed your expectations!
+        </p>
+      `    })
+  }
+
+  /**
+   * Generate text template for payment confirmation email
+   */
+  private generatePaymentConfirmationText(
+    customerName: string, 
+    booking: Booking, 
+    paymentMethod: string,
+    paymentReference: string
+  ): string {
+    // Format booking details (using any type for database objects with relations)
+    const bookingAny = booking as any;
+    const bookingDetails = {
+      reference: booking.booking_reference || 'N/A',
+      services: Array.isArray(bookingAny.services) 
+        ? bookingAny.services.map((s: any) => s.name || s).join(', ')
+        : bookingAny.service?.name || 'Vehicle Detailing Service',
+      vehicle: bookingAny.vehicle_details || bookingAny.vehicle
+        ? `${bookingAny.vehicle_details?.year || bookingAny.vehicle?.year || ''} ${bookingAny.vehicle_details?.make || bookingAny.vehicle?.make || ''} ${bookingAny.vehicle_details?.model || bookingAny.vehicle?.model || ''}`.trim()
+        : 'Vehicle not specified',
+      date: booking.scheduled_date ? this.formatEmailDate(booking.scheduled_date) : 'Date TBC',
+      time: bookingAny.time_slots?.start_time || booking.scheduled_start_time 
+        ? this.formatEmailTime(bookingAny.time_slots?.start_time || booking.scheduled_start_time)
+        : 'Time TBC',
+      address: bookingAny.address || bookingAny.service_address
+        ? `${(bookingAny.address || bookingAny.service_address).address_line_1}, ${(bookingAny.address || bookingAny.service_address).city} ${(bookingAny.address || bookingAny.service_address).postal_code}`
+        : 'Address not specified',
+      totalPrice: booking.total_price ? `£${Number(booking.total_price).toFixed(2)}` : 'N/A'
+    }
+
+    const paymentMethodDisplay = {
+      'paypal': 'PayPal',
+      'cash': 'Cash',
+      'card': 'Card',
+      'bank_transfer': 'Bank Transfer'
+    }[paymentMethod] || paymentMethod
+
+    return `
+PAYMENT CONFIRMED! - Love 4 Detailing
+
+Dear ${customerName},
+
+ PAYMENT SUCCESSFULLY RECEIVED!
+
+Thank you for your payment! Your booking is now fully confirmed and we're excited to provide you with exceptional vehicle detailing service.
+
+PAYMENT DETAILS:
+- Payment Method: ${paymentMethodDisplay}
+- Payment Reference: ${paymentReference}
+- Amount Paid: ${bookingDetails.totalPrice}
+- Payment Status: CONFIRMED
+
+YOUR CONFIRMED BOOKING:
+- Booking Reference: ${bookingDetails.reference}
+- Service: ${bookingDetails.services}
+- Vehicle: ${bookingDetails.vehicle}
+- Date & Time: ${bookingDetails.date} at ${bookingDetails.time}
+- Location: ${bookingDetails.address}
+
+WHAT HAPPENS NEXT:
+✓ Service Reminder: We'll send you a reminder 24 hours before your appointment
+✓ Team Arrival: Our professional team will arrive at your location at the scheduled time
+✓ Quality Service: We'll provide exceptional detailing service for your vehicle
+✓ Completion Notification: You'll receive confirmation once the service is complete
+
+NEED HELP?
+ Email: ${this.config.adminEmail}
+Phone: ${'+447908625581'}
+Response Time: Within 2-4 hours
+
+Thank you for trusting Love 4 Detailing with your vehicle care needs. We're committed to delivering exceptional results that exceed your expectations!
+
+Best regards,
+The Love 4 Detailing Team
+
+---
+Love 4 Detailing - Premium Mobile Detailing Services
+    `.trim()
+  }
+
+  /**
+   * Generate HTML template for admin payment notification email
+   */
+  private generateAdminPaymentNotificationHTML(
+    booking: Booking,
+    customerEmail: string,
+    customerName: string,
+    paymentMethod: string,
+    paymentReference: string
+  ): string {
+    // Format booking details (using any type for database objects with relations)
+    const bookingAny = booking as any;
+    const bookingDetails = {
+      reference: booking.booking_reference || 'N/A',
+      services: Array.isArray(bookingAny.services) 
+        ? bookingAny.services.map((s: any) => s.name || s).join(', ')
+        : bookingAny.service?.name || 'Vehicle Detailing Service',
+      vehicle: bookingAny.vehicle_details || bookingAny.vehicle
+        ? `${bookingAny.vehicle_details?.year || bookingAny.vehicle?.year || ''} ${bookingAny.vehicle_details?.make || bookingAny.vehicle?.make || ''} ${bookingAny.vehicle_details?.model || bookingAny.vehicle?.model || ''}`.trim()
+        : 'Vehicle not specified',
+      date: booking.scheduled_date ? this.formatEmailDate(booking.scheduled_date) : 'Date TBC',
+      time: bookingAny.time_slots?.start_time || booking.scheduled_start_time 
+        ? this.formatEmailTime(bookingAny.time_slots?.start_time || booking.scheduled_start_time)
+        : 'Time TBC',
+      address: bookingAny.address || bookingAny.service_address
+        ? `${(bookingAny.address || bookingAny.service_address).address_line_1}, ${(bookingAny.address || bookingAny.service_address).city} ${(bookingAny.address || bookingAny.service_address).postal_code}`
+        : 'Address not specified',
+      totalPrice: booking.total_price ? `£${Number(booking.total_price).toFixed(2)}` : 'N/A'
+    }
+
+    const paymentMethodDisplay = {
+      'paypal': 'PayPal',
+      'cash': 'Cash',
+      'card': 'Card',
+      'bank_transfer': 'Bank Transfer'
+    }[paymentMethod] || paymentMethod
+
+    return this.generateUnifiedEmailHTML({
+      title: ' Payment Received!',
+      header: {
+        title: ' Payment Received!',
+        subtitle: `Booking ${bookingDetails.reference} - ${customerName}`,
+        type: 'default'
+      },
+      content: `
+        <!-- Admin Alert -->
+        <div style="background: #f0f9ff; border: 2px solid #0ea5e9; border-radius: 12px; padding: 24px; margin: 24px 0;">
+          <h2 style="color: #0369a1; margin: 0 0 12px 0; font-size: 20px; font-weight: 600;"> Payment Successfully Processed</h2>
+          <p style="color: #374151; margin: 0; font-size: 16px; line-height: 1.6;">
+            A payment has been confirmed for booking ${bookingDetails.reference}. The booking status has been automatically updated and the customer has been notified.
+          </p>
+        </div>
+
+        <!-- Payment Summary -->
+        <div style="background: #f8fafc; border: 2px solid #e5e7eb; border-radius: 12px; padding: 24px; margin: 32px 0;">
+          <h3 style="color: #111827; margin: 0 0 20px 0; font-size: 18px; font-weight: 600;"> Payment Information</h3>
+          <div style="space-y: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid #e5e7eb;">
+              <span style="font-weight: 500; color: #374151;">Payment Method</span>
+              <span style="font-weight: 600; color: #16a34a;">${paymentMethodDisplay}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid #e5e7eb;">
+              <span style="font-weight: 500; color: #374151;">Payment Reference</span>
+              <span style="font-weight: 600; color: #111827; font-family: monospace;">${paymentReference}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid #e5e7eb;">
+              <span style="font-weight: 500; color: #374151;">Amount Received</span>
+              <span style="font-weight: 700; color: #16a34a; font-size: 18px;">${bookingDetails.totalPrice}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+              <span style="font-weight: 500; color: #374151;">Processed On</span>
+              <span style="font-weight: 600; color: #111827;">${new Date().toLocaleDateString('en-GB', {
+                day: 'numeric',
+                month: 'long', 
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+              })}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Customer & Booking Details -->
+        <div style="background: #fefce8; border: 2px solid #fde047; border-radius: 12px; padding: 24px; margin: 32px 0;">
+          <h3 style="color: #111827; margin: 0 0 20px 0; font-size: 18px; font-weight: 600;">👤 Customer & Booking Details</h3>
+          <div style="space-y: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid #fde047;">
+              <span style="font-weight: 500; color: #374151;">Customer</span>
+              <div style="text-align: right;">
+                <div style="font-weight: 600; color: #111827;">${customerName}</div>
+                <div style="font-weight: 400; color: #64748b; font-size: 14px;">${customerEmail}</div>
+              </div>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid #fde047;">
+              <span style="font-weight: 500; color: #374151;">Booking Reference</span>
+              <span style="font-weight: 600; color: #111827; font-family: monospace;">${bookingDetails.reference}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid #fde047;">
+              <span style="font-weight: 500; color: #374151;">Service</span>
+              <span style="font-weight: 600; color: #111827; text-align: right; max-width: 60%;">${bookingDetails.services}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid #fde047;">
+              <span style="font-weight: 500; color: #374151;">Vehicle</span>
+              <span style="font-weight: 600; color: #111827; text-align: right; max-width: 60%;">${bookingDetails.vehicle}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid #fde047;">
+              <span style="font-weight: 500; color: #374151;">Scheduled</span>
+              <span style="font-weight: 600; color: #111827; text-align: right;">${bookingDetails.date} at ${bookingDetails.time}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+              <span style="font-weight: 500; color: #374151;">Location</span>
+              <span style="font-weight: 600; color: #111827; text-align: right; max-width: 60%;">${bookingDetails.address}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Admin Actions -->
+        <div style="background: #eff6ff; border: 2px solid #bfdbfe; border-radius: 12px; padding: 24px; margin: 32px 0;">
+          <h3 style="color: #1e40af; margin: 0 0 16px 0; font-size: 18px; font-weight: 600;"> Automatic Actions Completed</h3>
+          <ul style="color: #374151; line-height: 1.8; margin: 0; padding-left: 20px;">
+            <li style="margin: 8px 0;"><strong> Booking Status:</strong> Updated to "Confirmed"</li>
+            <li style="margin: 8px 0;"><strong> Payment Status:</strong> Updated to "Paid"</li>
+            <li style="margin: 8px 0;"><strong> Customer Notification:</strong> Payment confirmation email sent</li>
+            <li style="margin: 8px 0;"><strong> Schedule:</strong> Booking is now ready for service delivery</li>
+          </ul>
+        </div>
+
+        <p style="color: #374151; margin: 32px 0 16px 0; font-size: 16px; font-weight: 400; line-height: 1.6;">
+          The payment has been successfully processed and all necessary updates have been completed automatically. You can view the full booking details in your admin dashboard.
+        </p>
+      `    })
+  }
+
+  /**
+   * Generate text template for admin payment notification email
+   */
+  private generateAdminPaymentNotificationText(
+    booking: Booking,
+    customerEmail: string,
+    customerName: string,
+    paymentMethod: string,
+    paymentReference: string
+  ): string {
+    // Format booking details (using any type for database objects with relations)
+    const bookingAny = booking as any;
+    const bookingDetails = {
+      reference: booking.booking_reference || 'N/A',
+      services: Array.isArray(bookingAny.services) 
+        ? bookingAny.services.map((s: any) => s.name || s).join(', ')
+        : bookingAny.service?.name || 'Vehicle Detailing Service',
+      vehicle: bookingAny.vehicle_details || bookingAny.vehicle
+        ? `${bookingAny.vehicle_details?.year || bookingAny.vehicle?.year || ''} ${bookingAny.vehicle_details?.make || bookingAny.vehicle?.make || ''} ${bookingAny.vehicle_details?.model || bookingAny.vehicle?.model || ''}`.trim()
+        : 'Vehicle not specified',
+      date: booking.scheduled_date ? this.formatEmailDate(booking.scheduled_date) : 'Date TBC',
+      time: bookingAny.time_slots?.start_time || booking.scheduled_start_time 
+        ? this.formatEmailTime(bookingAny.time_slots?.start_time || booking.scheduled_start_time)
+        : 'Time TBC',
+      address: bookingAny.address || bookingAny.service_address
+        ? `${(bookingAny.address || bookingAny.service_address).address_line_1}, ${(bookingAny.address || bookingAny.service_address).city} ${(bookingAny.address || bookingAny.service_address).postal_code}`
+        : 'Address not specified',
+      totalPrice: booking.total_price ? `£${Number(booking.total_price).toFixed(2)}` : 'N/A'
+    }
+
+    const paymentMethodDisplay = {
+      'paypal': 'PayPal',
+      'cash': 'Cash',
+      'card': 'Card',
+      'bank_transfer': 'Bank Transfer'
+    }[paymentMethod] || paymentMethod
+
+    return `
+ADMIN ALERT: PAYMENT RECEIVED - Love 4 Detailing
+
+ PAYMENT SUCCESSFULLY PROCESSED
+
+A payment has been confirmed for booking ${bookingDetails.reference}. The booking status has been automatically updated and the customer has been notified.
+
+PAYMENT INFORMATION:
+- Payment Method: ${paymentMethodDisplay}
+- Payment Reference: ${paymentReference}
+- Amount Received: ${bookingDetails.totalPrice}
+- Processed On: ${new Date().toLocaleDateString('en-GB', {
+      day: 'numeric',
+      month: 'long', 
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })}
+
+CUSTOMER & BOOKING DETAILS:
+- Customer: ${customerName} (${customerEmail})
+- Booking Reference: ${bookingDetails.reference}
+- Service: ${bookingDetails.services}
+- Vehicle: ${bookingDetails.vehicle}
+- Scheduled: ${bookingDetails.date} at ${bookingDetails.time}
+- Location: ${bookingDetails.address}
+
+AUTOMATIC ACTIONS COMPLETED:
+ Booking Status: Updated to "Confirmed"
+ Payment Status: Updated to "Paid"
+Customer Notification: Payment confirmation email sent
+Schedule: Booking is now ready for service delivery
+
+The payment has been successfully processed and all necessary updates have been completed automatically. You can view the full booking details in your admin dashboard.
+
+---
+Love 4 Detailing Admin System
+    `.trim()
+  }
+
+  /**
+   * Send payment failed notification to customer
+   */
+  async sendPaymentFailedNotification(
+    customerEmail: string,
+    customerName: string,
+    booking: Booking
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      const subject = ` Payment Required - Booking ${booking.booking_reference}`
+      const htmlContent = this.generatePaymentFailedCustomerHTML(customerName, booking)
+      const textContent = this.generatePaymentFailedCustomerText(customerName, booking)
+
+      const { error } = await resend.emails.send({
+        from: `${this.config.fromName} <${this.config.fromEmail}>`,
+        to: [customerEmail],
+        subject,
+        html: htmlContent,
+        text: textContent
+      })
+
+      if (error) {
+        console.error('Payment failed notification email error:', error)
+        return { success: false, error: error.message }
+      }
+      
+      return { success: true }
+    } catch (error) {
+      console.error('Payment failed notification error:', error)
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to send payment failed notification'
+      }
+    }
+  }
+
+  /**
+   * Send admin notification about automatic payment failure
+   */
+  async sendAdminPaymentFailedNotification(
+    booking: Booking,
+    customerEmail: string,
+    customerName: string
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      const subject = `⚠️ Payment Deadline Exceeded - ${booking.booking_reference}`
+      const htmlContent = this.generatePaymentFailedAdminHTML(booking, customerEmail, customerName)
+      const textContent = this.generatePaymentFailedAdminText(booking, customerEmail, customerName)
+
+      const { error } = await resend.emails.send({
+        from: `${this.config.fromName} <${this.config.fromEmail}>`,
+        to: [this.config.adminEmail],
+        subject,
+        html: htmlContent,
+        text: textContent
+      })
+
+      if (error) {
+        console.error('Admin payment failed notification email error:', error)
+        return { success: false, error: error.message }
+      }
+      
+      return { success: true }
+    } catch (error) {
+      console.error('Admin payment failed notification error:', error)
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to send admin payment failed notification'
+      }
+    }
+  }
+
+  /**
+   * Generate HTML template for customer payment failed notification
+   */
+  private generatePaymentFailedCustomerHTML(customerName: string, booking: Booking): string {
+    const bookingAny = booking as any
+    const bookingDetails = {
+      reference: booking.booking_reference || 'N/A',
+      services: Array.isArray(bookingAny.services) 
+        ? bookingAny.services.map((s: any) => s.name || s).join(', ')
+        : bookingAny.service?.name || 'Vehicle Detailing Service',
+      vehicle: bookingAny.vehicle_details || bookingAny.customer_vehicles
+        ? `${bookingAny.vehicle_details?.year || bookingAny.customer_vehicles?.year || ''} ${bookingAny.vehicle_details?.make || bookingAny.customer_vehicles?.make || ''} ${bookingAny.vehicle_details?.model || bookingAny.customer_vehicles?.model || ''}`.trim()
+        : 'Vehicle not specified',
+      date: booking.scheduled_date ? this.formatEmailDate(booking.scheduled_date) : 'Date TBC',
+      time: bookingAny.scheduled_start_time || booking.scheduled_start_time 
+        ? this.formatEmailTime(bookingAny.scheduled_start_time || booking.scheduled_start_time)
+        : 'Time TBC',
+      totalPrice: booking.total_price ? `£${Number(booking.total_price).toFixed(2)}` : 'N/A'
+    }
+
+    return this.generateUnifiedEmailHTML({
+      title: ' Payment Required - Booking At Risk',
+      header: {
+        title: ' Payment Deadline Exceeded',
+        subtitle: `Urgent: Your booking ${bookingDetails.reference} requires immediate payment`,
+        type: 'warning'
+      },
+      content: `
+        <!-- Urgent Alert -->
+        <div style="background: #fef2f2; border: 2px solid #fecaca; border-radius: 12px; padding: 24px; margin: 24px 0;">
+          <h2 style="color: #dc2626; margin: 0 0 12px 0; font-size: 20px; font-weight: 600;">⚠️ Payment Deadline Has Passed</h2>
+          <p style="color: #374151; margin: 0; font-size: 16px; line-height: 1.6;">
+            Your booking payment deadline has expired. To secure your appointment, please complete payment immediately or contact us to discuss options.
+          </p>
+        </div>
+
+        <!-- Booking Details -->
+        <div style="background: #f8fafc; border: 2px solid #e5e7eb; border-radius: 12px; padding: 24px; margin: 32px 0;">
+          <h3 style="color: #111827; margin: 0 0 20px 0; font-size: 18px; font-weight: 600;"> Your Booking Details</h3>
+          <div style="space-y: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid #e5e7eb;">
+              <span style="font-weight: 500; color: #374151;">Booking Reference</span>
+              <span style="font-weight: 600; color: #111827; font-family: monospace;">${bookingDetails.reference}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid #e5e7eb;">
+              <span style="font-weight: 500; color: #374151;">Service</span>
+              <span style="font-weight: 600; color: #111827; text-align: right; max-width: 60%;">${bookingDetails.services}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid #e5e7eb;">
+              <span style="font-weight: 500; color: #374151;">Vehicle</span>
+              <span style="font-weight: 600; color: #111827; text-align: right; max-width: 60%;">${bookingDetails.vehicle}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid #e5e7eb;">
+              <span style="font-weight: 500; color: #374151;">Scheduled</span>
+              <span style="font-weight: 600; color: #111827; text-align: right;">${bookingDetails.date} at ${bookingDetails.time}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+              <span style="font-weight: 500; color: #374151;">Amount Due</span>
+              <span style="font-weight: 700; color: #dc2626; font-size: 18px;">${bookingDetails.totalPrice}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Action Required */}
+        <div style="background: #fef3c7; border: 2px solid #fbbf24; border-radius: 12px; padding: 24px; margin: 32px 0;">
+          <h3 style="color: #92400e; margin: 0 0 16px 0; font-size: 18px; font-weight: 600;"> Immediate Action Required</h3>
+          <div style="space-y: 12px;">
+            <p style="color: #92400e; margin: 0; font-size: 16px; font-weight: 500;">
+              Your booking is currently marked as "Payment Failed" due to the missed deadline.
+            </p>
+            <p style="color: #78350f; margin: 0; font-size: 14px;">
+              To reactivate your booking and secure your appointment:
+            </p>
+            <ul style="color: #78350f; margin: 8px 0 0 20px; padding: 0;">
+              <li style="margin: 4px 0;">Contact us immediately to discuss payment options</li>
+              <li style="margin: 4px 0;">Your appointment slot may still be available</li>
+              <li style="margin: 4px 0;">We're here to help find a solution that works for you</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Contact Information -->}
+        <div style="text-align: center; margin: 32px 0; padding: 20px; background: #f8fafc; border-radius: 8px;">
+          <p style="color: #374151; margin: 0 0 12px 0; font-size: 16px; font-weight: 500;">Need Help? Contact Us Immediately</p>
+          <div style="margin: 16px 0;">
+            <a href="mailto:${this.config.adminEmail}" style="color: #7c3aed; text-decoration: none; font-weight: 600; margin: 0 16px;"> ${this.config.adminEmail}</a>
+            <a href="tel:${'+447908625581'}" style="color: #7c3aed; text-decoration: none; font-weight: 600; margin: 0 16px;">Call Now</a>
+          </div>
+          <p style="color: #64748b; margin: 8px 0 0 0; font-size: 14px;">We typically respond within 2 hours</p>
+        </div>
+
+        <p style="color: #374151; margin: 32px 0 16px 0; font-size: 16px; font-weight: 400; line-height: 1.6;">
+          We understand that sometimes deadlines can be missed. Please contact us as soon as possible so we can work together to resolve this and secure your vehicle detailing service.
+        </p>
+      `    })
+  }
+
+  /**
+   * Generate text template for customer payment failed notification
+   */
+  private generatePaymentFailedCustomerText(customerName: string, booking: Booking): string {
+    const bookingAny = booking as any
+    const bookingDetails = {
+      reference: booking.booking_reference || 'N/A',
+      services: Array.isArray(bookingAny.services) 
+        ? bookingAny.services.map((s: any) => s.name || s).join(', ')
+        : bookingAny.service?.name || 'Vehicle Detailing Service',
+      vehicle: bookingAny.vehicle_details || bookingAny.customer_vehicles
+        ? `${bookingAny.vehicle_details?.year || bookingAny.customer_vehicles?.year || ''} ${bookingAny.vehicle_details?.make || bookingAny.customer_vehicles?.make || ''} ${bookingAny.vehicle_details?.model || bookingAny.customer_vehicles?.model || ''}`.trim()
+        : 'Vehicle not specified',
+      date: booking.scheduled_date ? this.formatEmailDate(booking.scheduled_date) : 'Date TBC',
+      time: bookingAny.scheduled_start_time || booking.scheduled_start_time 
+        ? this.formatEmailTime(bookingAny.scheduled_start_time || booking.scheduled_start_time)
+        : 'Time TBC',
+      totalPrice: booking.total_price ? `£${Number(booking.total_price).toFixed(2)}` : 'N/A'
+    }
+
+    return `
+URGENT: PAYMENT DEADLINE EXCEEDED - Love 4 Detailing
+
+Dear ${customerName},
+
+⚠️ PAYMENT DEADLINE HAS PASSED
+
+Your booking payment deadline has expired. To secure your appointment, please complete payment immediately or contact us to discuss options.
+
+YOUR BOOKING DETAILS:
+- Booking Reference: ${bookingDetails.reference}
+- Service: ${bookingDetails.services}
+- Vehicle: ${bookingDetails.vehicle}
+- Scheduled: ${bookingDetails.date} at ${bookingDetails.time}
+- Amount Due: ${bookingDetails.totalPrice}
+
+ IMMEDIATE ACTION REQUIRED:
+Your booking is currently marked as "Payment Failed" due to the missed deadline.
+
+To reactivate your booking and secure your appointment:
+• Contact us immediately to discuss payment options
+• Your appointment slot may still be available
+• We're here to help find a solution that works for you
+
+CONTACT US NOW:
+ Email: ${this.config.adminEmail}
+Phone: ${'+447908625581'}
+Response Time: Within 2 hours
+
+We understand that sometimes deadlines can be missed. Please contact us as soon as possible so we can work together to resolve this and secure your vehicle detailing service.
+
+Best regards,
+The Love 4 Detailing Team
+
+---
+Love 4 Detailing - Premium Mobile Detailing Services
+    `.trim()
+  }
+
+  /**
+   * Generate HTML template for admin payment failed notification
+   */
+  private generatePaymentFailedAdminHTML(
+    booking: Booking,
+    customerEmail: string,
+    customerName: string
+  ): string {
+    const bookingAny = booking as any
+    const bookingDetails = {
+      reference: booking.booking_reference || 'N/A',
+      services: Array.isArray(bookingAny.services) 
+        ? bookingAny.services.map((s: any) => s.name || s).join(', ')
+        : bookingAny.service?.name || 'Vehicle Detailing Service',
+      vehicle: bookingAny.vehicle_details || bookingAny.customer_vehicles
+        ? `${bookingAny.vehicle_details?.year || bookingAny.customer_vehicles?.year || ''} ${bookingAny.vehicle_details?.make || bookingAny.customer_vehicles?.make || ''} ${bookingAny.vehicle_details?.model || bookingAny.customer_vehicles?.model || ''}`.trim()
+        : 'Vehicle not specified',
+      date: booking.scheduled_date ? this.formatEmailDate(booking.scheduled_date) : 'Date TBC',
+      time: bookingAny.scheduled_start_time || booking.scheduled_start_time 
+        ? this.formatEmailTime(bookingAny.scheduled_start_time || booking.scheduled_start_time)
+        : 'Time TBC',
+      totalPrice: booking.total_price ? `£${Number(booking.total_price).toFixed(2)}` : 'N/A'
+    }
+
+    return this.generateUnifiedEmailHTML({
+      title: '⚠️ Payment Deadline Exceeded',
+      header: {
+        title: '⚠️ Payment Deadline Exceeded',
+        subtitle: `Booking ${bookingDetails.reference} - ${customerName}`,
+        type: 'warning'
+      },
+      content: `
+        <!-- Alert -->}
+        <div style="background: #fef2f2; border: 2px solid #fecaca; border-radius: 12px; padding: 24px; margin: 24px 0;">
+          <h2 style="color: #dc2626; margin: 0 0 12px 0; font-size: 20px; font-weight: 600;"> Automatic Status Change</h2>
+          <p style="color: #374151; margin: 0; font-size: 16px; line-height: 1.6;">
+            A booking has exceeded its 48-hour payment deadline and has been automatically marked as "Payment Failed". Customer notification has been sent.
+          </p>
+        </div>
+
+        <!-- Customer & Booking Details -->}
+        <div style="background: #f8fafc; border: 2px solid #e5e7eb; border-radius: 12px; padding: 24px; margin: 32px 0;">
+          <h3 style="color: #111827; margin: 0 0 20px 0; font-size: 18px; font-weight: 600;">👤 Customer & Booking Details</h3>
+          <div style="space-y: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid #e5e7eb;">
+              <span style="font-weight: 500; color: #374151;">Customer</span>
+              <div style="text-align: right;">
+                <div style="font-weight: 600; color: #111827;">${customerName}</div>
+                <div style="font-weight: 400; color: #64748b; font-size: 14px;">${customerEmail}</div>
+              </div>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid #e5e7eb;">
+              <span style="font-weight: 500; color: #374151;">Booking Reference</span>
+              <span style="font-weight: 600; color: #111827; font-family: monospace;">${bookingDetails.reference}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid #e5e7eb;">
+              <span style="font-weight: 500; color: #374151;">Service</span>
+              <span style="font-weight: 600; color: #111827; text-align: right; max-width: 60%;">${bookingDetails.services}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid #e5e7eb;">
+              <span style="font-weight: 500; color: #374151;">Vehicle</span>
+              <span style="font-weight: 600; color: #111827; text-align: right; max-width: 60%;">${bookingDetails.vehicle}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid #e5e7eb;">
+              <span style="font-weight: 500; color: #374151;">Scheduled</span>
+              <span style="font-weight: 600; color: #111827; text-align: right;">${bookingDetails.date} at ${bookingDetails.time}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+              <span style="font-weight: 500; color: #374151;">Amount Due</span>
+              <span style="font-weight: 700; color: #dc2626; font-size: 18px;">${bookingDetails.totalPrice}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Actions Taken -->}
+        <div style="background: #eff6ff; border: 2px solid #bfdbfe; border-radius: 12px; padding: 24px; margin: 32px 0;">
+          <h3 style="color: #1e40af; margin: 0 0 16px 0; font-size: 18px; font-weight: 600;"> Automatic Actions Completed</h3>
+          <ul style="color: #374151; line-height: 1.8; margin: 0; padding-left: 20px;">
+            <li style="margin: 8px 0;"><strong>Status Changed:</strong> "Pending" -  "Payment Failed"</li>
+            <li style="margin: 8px 0;"><strong>Customer Notified:</strong> Payment deadline exceeded email sent</li>
+            <li style="margin: 8px 0;"><strong>Timeline:</strong> 48-hour payment window expired</li>
+            <li style="margin: 8px 0;"><strong>Next Steps:</strong> Customer contact required to reactivate</li>
+          </ul>
+        </div>
+
+        <!-- Recommended Actions -->}
+        <div style="background: #fefce8; border: 2px solid #fde047; border-radius: 12px; padding: 24px; margin: 32px 0;">
+          <h3 style="color: #92400e; margin: 0 0 16px 0; font-size: 18px; font-weight: 600;"> Recommended Next Steps</h3>
+          <ul style="color: #78350f; line-height: 1.8; margin: 0; padding-left: 20px;">
+            <li style="margin: 8px 0;">Review the customer's contact preferences and follow up if appropriate</li>
+            <li style="margin: 8px 0;">Consider reaching out if this is a high-value or repeat customer</li>
+            <li style="margin: 8px 0;">Check if the appointment slot can be freed up for other bookings</li>
+            <li style="margin: 8px 0;">Update any scheduling systems to reflect the availability</li>
+          </ul>
+        </div>
+
+        <p style="color: #374151; margin: 32px 0 16px 0; font-size: 16px; font-weight: 400; line-height: 1.6;">
+          This automated system helps ensure timely payment processing and maintains clear booking status. You can view the full booking details in your admin dashboard.
+        </p>
+      `    })
+  }
+
+  /**
+   * Generate text template for admin payment failed notification
+   */
+  private generatePaymentFailedAdminText(
+    booking: Booking,
+    customerEmail: string,
+    customerName: string
+  ): string {
+    const bookingAny = booking as any
+    const bookingDetails = {
+      reference: booking.booking_reference || 'N/A',
+      services: Array.isArray(bookingAny.services) 
+        ? bookingAny.services.map((s: any) => s.name || s).join(', ')
+        : bookingAny.service?.name || 'Vehicle Detailing Service',
+      vehicle: bookingAny.vehicle_details || bookingAny.customer_vehicles
+        ? `${bookingAny.vehicle_details?.year || bookingAny.customer_vehicles?.year || ''} ${bookingAny.vehicle_details?.make || bookingAny.customer_vehicles?.make || ''} ${bookingAny.vehicle_details?.model || bookingAny.customer_vehicles?.model || ''}`.trim()
+        : 'Vehicle not specified',
+      date: booking.scheduled_date ? this.formatEmailDate(booking.scheduled_date) : 'Date TBC',
+      time: bookingAny.scheduled_start_time || booking.scheduled_start_time 
+        ? this.formatEmailTime(bookingAny.scheduled_start_time || booking.scheduled_start_time)
+        : 'Time TBC',
+      totalPrice: booking.total_price ? `£${Number(booking.total_price).toFixed(2)}` : 'N/A'
+    }
+
+    return `
+ADMIN ALERT: PAYMENT DEADLINE EXCEEDED - Love 4 Detailing
+
+⚠️ AUTOMATIC STATUS CHANGE
+
+A booking has exceeded its 48-hour payment deadline and has been automatically marked as "Payment Failed". Customer notification has been sent.
+
+CUSTOMER & BOOKING DETAILS:
+- Customer: ${customerName} (${customerEmail})
+- Booking Reference: ${bookingDetails.reference}
+- Service: ${bookingDetails.services}
+- Vehicle: ${bookingDetails.vehicle}
+- Scheduled: ${bookingDetails.date} at ${bookingDetails.time}
+- Amount Due: ${bookingDetails.totalPrice}
+
+AUTOMATIC ACTIONS COMPLETED:
+✓ Status Changed: "Pending" -  "Payment Failed"
+✓ Customer Notified: Payment deadline exceeded email sent
+✓ Timeline: 48-hour payment window expired
+✓ Next Steps: Customer contact required to reactivate
+
+RECOMMENDED NEXT STEPS:
+• Review the customer's contact preferences and follow up if appropriate
+• Consider reaching out if this is a high-value or repeat customer
+• Check if the appointment slot can be freed up for other bookings
+• Update any scheduling systems to reflect the availability
+
+This automated system helps ensure timely payment processing and maintains clear booking status. You can view the full booking details in your admin dashboard.
+
+---
+Love 4 Detailing Admin System
+    `.trim()
   }
 }

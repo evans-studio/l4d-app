@@ -72,18 +72,13 @@ function ScheduleCalendarContent() {
       const endDate = futureDate.toISOString().split('T')[0]
       
       const url = `/api/admin/time-slots?start=${startDate}&end=${endDate}`
-      console.log('Fetching time slots from:', url)
       
       const response = await fetch(url)
       
       if (response.ok) {
         const data = await response.json()
-        console.log('Time slots API response:', data)
         if (data.success) {
-          console.log('Number of time slots loaded:', data.data?.length || 0)
-          if (data.data?.length > 0) {
-            console.log('Sample slot data:', data.data[0])
-          }
+          
           setTimeSlots(data.data || [])
         } else {
           console.error('API returned error:', data.error)

@@ -10,5 +10,11 @@
   },
   "env": {
     "NEXT_PUBLIC_APP_ENV": "production"
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/cron/check-payment-deadlines",
+      "schedule": "0 * * * *"
+    }
+  ]
 }

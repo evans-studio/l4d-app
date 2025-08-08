@@ -277,7 +277,7 @@ export function AddressCollection() {
           onClick={previousStep}
           leftIcon={<ChevronLeftIcon className="w-4 h-4" />}
         >
-          Back to Services
+          Back
         </Button>
         
         <Button
@@ -286,7 +286,7 @@ export function AddressCollection() {
           size="lg"
           rightIcon={<ChevronRightIcon className="w-4 h-4" />}
         >
-          Continue to Confirmation
+          Continue
         </Button>
       </div>
     </div>

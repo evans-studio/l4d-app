@@ -129,15 +129,11 @@ export async function POST(request: NextRequest) {
         services!inner(
           id,
           name,
-          short_description,
-          category,
-          base_price,
-          estimated_duration
+          short_description
         ),
         time_slots(
           id,
-          start_time,
-          end_time
+          start_time
         )
       `)
       .eq('customer_id', userProfile.id)
