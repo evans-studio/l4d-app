@@ -92,15 +92,16 @@ export function HeroSection() {
                 Book Service
               </Button>
             </Link>
-            <Button 
-              variant="outline" 
-              size="lg"
-              fullWidth
-              className="text-base sm:text-lg px-6 sm:px-8 py-3 sm:py-4 h-auto min-w-[200px] border-white/30 text-white hover:bg-white/10 hover:border-white/50 transition-all duration-300 sm:w-auto"
-              onClick={() => window.location.href = 'tel:+447908625581'}
-            >
-              Call
-            </Button>
+            <Link href="/auth/register" className="w-full sm:w-auto">
+              <Button 
+                variant="outline" 
+                size="lg"
+                fullWidth
+                className="text-base sm:text-lg px-6 sm:px-8 py-3 sm:py-4 h-auto min-w-[200px] border-white/30 text-white hover:bg-white/10 hover:border-white/50 transition-all duration-300 sm:w-auto"
+              >
+                Create an account
+              </Button>
+            </Link>
           </div>
 
         </div>

@@ -110,11 +110,11 @@ export default function BookingPoliciesPage() {
                 <ul className="space-y-2 text-[var(--text-secondary)]">
                   <li className="flex items-start gap-2">
                     <span className="text-[var(--primary)] mt-1">•</span>
-                    <span>Call us at <a href="tel:+441234567890" className="text-[var(--text-link)] hover:text-[var(--text-link-hover)]">01234 567890</a></span>
+                    <span>Call us at <a href="tel:+447908625581" className="text-[var(--text-link)] hover:text-[var(--text-link-hover)]">+44 7908 625581</a></span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-[var(--primary)] mt-1">•</span>
-                    <span>Email us at <a href="mailto:bookings@love4detailing.com" className="text-[var(--text-link)] hover:text-[var(--text-link-hover)]">bookings@love4detailing.com</a></span>
+                    <span>Email us at <a href="mailto:zell@love4detailing.com" className="text-[var(--text-link)] hover:text-[var(--text-link-hover)]">zell@love4detailing.com</a></span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-[var(--primary)] mt-1">•</span>
@@ -141,9 +141,9 @@ export default function BookingPoliciesPage() {
                 <div className="flex items-start gap-3">
                   <CreditCardIcon className="w-5 h-5 text-[var(--info)] mt-0.5" />
                   <div>
-                    <h3 className="font-semibold text-[var(--info)] mb-2">Payment on Completion</h3>
+                    <h3 className="font-semibold text-[var(--info)] mb-2">Payment Required in Advance</h3>
                     <p className="text-[var(--info)] text-sm">
-                      No upfront payment required. Payment is due after service completion and your satisfaction.
+                      Payment is required within 48 hours of booking confirmation to secure your appointment.
                     </p>
                   </div>
                 </div>
@@ -158,16 +158,16 @@ export default function BookingPoliciesPage() {
                 </div>
                 
                 <div className="bg-[var(--surface-tertiary)] rounded-lg p-4 text-center">
-                  <h3 className="font-semibold text-[var(--text-primary)] mb-2">Card Payment</h3>
+                  <h3 className="font-semibold text-[var(--text-primary)] mb-2">PayPal</h3>
                   <p className="text-[var(--text-secondary)] text-sm">
-                    Contactless, chip & PIN accepted on-site
+                    Secure digital payment via PayPal
                   </p>
                 </div>
                 
                 <div className="bg-[var(--surface-tertiary)] rounded-lg p-4 text-center">
-                  <h3 className="font-semibold text-[var(--text-primary)] mb-2">Bank Transfer</h3>
+                  <h3 className="font-semibold text-[var(--text-primary)] mb-2">Card Payment</h3>
                   <p className="text-[var(--text-secondary)] text-sm">
-                    Same-day transfer for commercial clients
+                    Contactless and chip & PIN available
                   </p>
                 </div>
               </div>
@@ -181,7 +181,7 @@ export default function BookingPoliciesPage() {
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-[var(--primary)] mt-1">•</span>
-                    <span>Travel surcharges apply beyond our free 15km radius</span>
+                    <span>Travel surcharges apply beyond our free 17.5 mile radius</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-[var(--primary)] mt-1">•</span>
@@ -218,7 +218,7 @@ export default function BookingPoliciesPage() {
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="text-[var(--primary)] mt-1">•</span>
-                      <span>Power source within 50 meters</span>
+                      <span>Access to electrical power (we bring extension leads)</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="text-[var(--primary)] mt-1">•</span>
@@ -326,11 +326,11 @@ export default function BookingPoliciesPage() {
               
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Button
-                  onClick={() => window.open('tel:+441234567890')}
+                  onClick={() => window.open('tel:+447908625581')}
                   className="flex items-center gap-2"
                 >
                   <PhoneIcon className="w-4 h-4" />
-                  Call Us: 01234 567890
+                  Call Us: +44 7908 625581
                 </Button>
                 
                 <Button

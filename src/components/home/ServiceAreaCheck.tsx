@@ -63,7 +63,7 @@ const validatePostcode = (postcode: string): Promise<{
           covered: true,
           distance,
           location: 'South London',
-          surcharge: distance > 5 ? Math.ceil((distance - 5) * 0.5) : 0
+          surcharge: distance > 17.5 ? Math.ceil((distance - 17.5) * 0.5) : 0
         }
       } else if (extendedAreas.some(area => cleanPostcode.startsWith(area))) {
         const distance = Math.floor(Math.random() * 10) + 12 // 12-22 miles
@@ -72,7 +72,7 @@ const validatePostcode = (postcode: string): Promise<{
           covered: true,
           distance,
           location: 'Greater London',
-          surcharge: Math.ceil((distance - 5) * 0.5)
+          surcharge: Math.ceil((distance - 17.5) * 0.5)
         }
       } else {
         result = {
@@ -285,7 +285,7 @@ export function ServiceAreaCheck() {
 
                           {result.surcharge && result.surcharge > 0 && (
                             <div className="text-center text-sm text-text-muted pt-3 border-t border-border-secondary">
-                              £0.50 per mile beyond our 5-mile free radius from SW9
+                              £0.50 per mile beyond our 17.5-mile free radius from SW9
                             </div>
                           )}
                         </div>
@@ -396,7 +396,7 @@ export function ServiceAreaCheck() {
             "transition-all duration-700 delay-400"
           )}>
             <Text color="secondary" className="text-lg">
-              Based in SW9 · 5 miles free · Covering South London
+              Based in SW9 · 17.5 miles free · Covering South London
             </Text>
           </div>
         </div>
