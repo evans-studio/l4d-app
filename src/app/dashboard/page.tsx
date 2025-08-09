@@ -71,6 +71,8 @@ export default function DashboardPage() {
   
   const [bookings, setBookings] = useState<DashboardBooking[]>([])
   const [customerStats, setCustomerStats] = useState<CustomerStats | null>(null)
+  const [vehicleCount, setVehicleCount] = useState<number>(0)
+  const [addressCount, setAddressCount] = useState<number>(0)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -82,25 +84,46 @@ export default function DashboardPage() {
 
       try {
         setError(null) // Clear any previous errors
-        // Fetch bookings with credentials to include cookies
-        const bookingsResponse = await fetch('/api/customer/bookings', {
-          credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json',
-          }
-        })
         
-        if (!bookingsResponse.ok) {
-          if (bookingsResponse.status === 401) {
+        // Fetch bookings, vehicles, and addresses in parallel
+        const [bookingsResponse, vehiclesResponse, addressesResponse] = await Promise.all([
+          fetch('/api/customer/bookings', {
+            credentials: 'include',
+            headers: {
+              'Content-Type': 'application/json',
+            }
+          }),
+          fetch('/api/customer/vehicles', {
+            credentials: 'include',
+            headers: {
+              'Content-Type': 'application/json',
+            }
+          }),
+          fetch('/api/customer/addresses', {
+            credentials: 'include',
+            headers: {
+              'Content-Type': 'application/json',
+            }
+          })
+        ])
+        
+        // Handle authentication for all requests
+        if (!bookingsResponse.ok || !vehiclesResponse.ok || !addressesResponse.ok) {
+          if (bookingsResponse.status === 401 || vehiclesResponse.status === 401 || addressesResponse.status === 401) {
             console.warn('User not authenticated, redirecting to login')
             router.push('/auth/login')
             return
           }
-          throw new Error(`HTTP error! status: ${bookingsResponse.status}`)
+          throw new Error(`HTTP error! Bookings: ${bookingsResponse.status}, Vehicles: ${vehiclesResponse.status}, Addresses: ${addressesResponse.status}`)
         }
         
-        const bookingsData = await bookingsResponse.json()
+        const [bookingsData, vehiclesData, addressesData] = await Promise.all([
+          bookingsResponse.json(),
+          vehiclesResponse.json(),
+          addressesResponse.json()
+        ])
         
+        // Process bookings
         if (bookingsData.success) {
           const bookingsArray = bookingsData.data || []
           setBookings(bookingsArray)
@@ -139,6 +162,24 @@ export default function DashboardPage() {
           }
           setBookings([])
           setCustomerStats(null)
+        }
+
+        // Process vehicles
+        if (vehiclesData.success) {
+          const vehiclesArray = vehiclesData.data || []
+          setVehicleCount(vehiclesArray.length)
+        } else {
+          console.warn('Vehicles API returned error:', vehiclesData.error)
+          setVehicleCount(0)
+        }
+
+        // Process addresses
+        if (addressesData.success) {
+          const addressesArray = addressesData.data || []
+          setAddressCount(addressesArray.length)
+        } else {
+          console.warn('Addresses API returned error:', addressesData.error)
+          setAddressCount(0)
         }
 
       } catch (error) {
@@ -236,8 +277,8 @@ export default function DashboardPage() {
             )}
           </div>
 
-          {/* New User Welcome Experience */}
-          {bookings.length === 0 && (
+          {/* New User Welcome Experience - Show only when no bookings AND no vehicles AND no addresses */}
+          {bookings.length === 0 && vehicleCount === 0 && addressCount === 0 && (
             <div className="mb-8">
               <Card className="border-2 border-brand-400/30 bg-gradient-to-br from-brand-600/5 to-brand-400/5">
                 <CardHeader>
@@ -307,6 +348,49 @@ export default function DashboardPage() {
                         Add Your Vehicle
                       </Button>
                     </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {/* User has vehicles/addresses but no bookings - encourage first booking */}
+          {bookings.length === 0 && (vehicleCount > 0 || addressCount > 0) && (
+            <div className="mb-8">
+              <Card className="border-2 border-brand-400/30 bg-gradient-to-br from-brand-600/5 to-brand-400/5">
+                <CardHeader>
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-brand-600 rounded-full flex items-center justify-center">
+                      <Calendar className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-bold text-text-primary">
+                        Ready for Your First Service!
+                      </h2>
+                      <p className="text-text-secondary">
+                        You've set up your {vehicleCount > 0 && addressCount > 0 ? 'account' : vehicleCount > 0 ? 'vehicle' + (vehicleCount > 1 ? 's' : '') : 'address' + (addressCount > 1 ? 'es' : '')} - time to book your first detail
+                      </p>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <p className="text-text-secondary">
+                      Great! You have {vehicleCount > 0 ? `${vehicleCount} vehicle${vehicleCount > 1 ? 's' : ''}` : ''}
+                      {vehicleCount > 0 && addressCount > 0 ? ' and ' : ''}
+                      {addressCount > 0 ? `${addressCount} address${addressCount > 1 ? 'es' : ''}` : ''} saved to your account. 
+                      Now you can book our professional mobile car detailing services with just a few clicks.
+                    </p>
+                    
+                    <Button
+                      onClick={() => router.push('/book')}
+                      size="lg"
+                      className="bg-brand-600 hover:bg-brand-700 min-h-[48px]"
+                      rightIcon={<ArrowRight className="w-4 h-4" />}
+                      fullWidth
+                    >
+                      Book Your First Service
+                    </Button>
                   </div>
                 </CardContent>
               </Card>

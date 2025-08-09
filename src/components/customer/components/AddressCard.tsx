@@ -301,7 +301,7 @@ export function AddressCard({
                 onClick={handleDelete}
                 variant="outline"
                 size="md"
-                disabled={isDeleting || address.is_default}
+                disabled={isDeleting}
                 leftIcon={isDeleting ? 
                   <div className="w-4 h-4 animate-spin rounded-full border-2 border-error-400 border-t-transparent" /> :
                   <Trash2 className="w-4 h-4" />

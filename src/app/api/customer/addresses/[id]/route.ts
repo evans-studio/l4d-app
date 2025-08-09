@@ -237,11 +237,31 @@ export async function DELETE(
       }, { status: 404 })
     }
 
-    // Prevent deletion of default address
-    if (existingAddress.is_default) {
+    // Check if this is the only address for the user
+    const { data: allAddresses, error: allAddressesError } = await supabaseService
+      .from('customer_addresses')
+      .select('id')
+      .eq('user_id', profile.id)
+
+    if (allAddressesError) {
+      console.error('Error checking address count:', allAddressesError)
       return NextResponse.json({
         success: false,
-        error: { message: 'Cannot delete default address', code: 'CANNOT_DELETE_DEFAULT' }
+        error: { message: 'Failed to check address count', code: 'DATABASE_ERROR' }
+      }, { status: 500 })
+    }
+
+    const addressCount = allAddresses?.length || 0
+
+    // Allow deletion of default address if it's the only address
+    // Prevent deletion of default address if user has multiple addresses
+    if (existingAddress.is_default && addressCount > 1) {
+      return NextResponse.json({
+        success: false,
+        error: { 
+          message: 'Cannot delete default address. Please set another address as default first.', 
+          code: 'CANNOT_DELETE_DEFAULT' 
+        }
       }, { status: 400 })
     }
 
@@ -265,11 +285,10 @@ export async function DELETE(
       return NextResponse.json({
         success: false,
         error: { 
-          message: 'Cannot delete address that has been used in bookings', 
-          code: 'ADDRESS_IN_USE' 
+          message: 'Cannot delete address that has been used in bookings. Address data is required for booking history.', 
+          code: 'ADDRESS_HAS_BOOKINGS' 
         }
       }, { status: 400 })
-
     }
 
     // Delete the address (only if no bookings exist) using service client

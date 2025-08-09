@@ -17,17 +17,17 @@ interface Vehicle {
   year: number
   color: string
   license_plate?: string
-  vehicle_size: {
-    id: string
+  registration?: string
+  vehicle_size?: {
     size: 'S' | 'M' | 'L' | 'XL'
+    label: string
     multiplier: number
-    name: string
-    description: string
+    examples: string
   }
   is_primary: boolean
   is_default: boolean
-  last_used?: string
-  booking_count: number
+  last_used?: string | null
+  booking_count?: number
   created_at: string
   updated_at: string
 }

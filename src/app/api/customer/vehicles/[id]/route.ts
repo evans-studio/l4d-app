@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClientFromRequest } from '@/lib/supabase/server'
+import { getVehicleSize, getSizeInfo } from '@/lib/utils/vehicle-size'
 
 export async function PUT(
   request: NextRequest,
@@ -36,13 +37,12 @@ export async function PUT(
     const vehicleId = params.id
     const updateData = await request.json()
 
-    // Verify vehicle ownership
+    // Verify vehicle ownership  
     const { data: existingVehicle, error: vehicleError } = await supabase
       .from('customer_vehicles')
       .select('id, is_default')
       .eq('id', vehicleId)
       .eq('user_id', profile.id)
-      .eq('is_active', true)
       .single()
 
     if (vehicleError || !existingVehicle) {
@@ -122,7 +122,10 @@ export async function PUT(
       updatedVehicle.is_default = true
     }
 
-    // Transform the response (no longer using vehicle_sizes)
+    // Transform the response with computed size information
+    const detectedSize = await getVehicleSize(updatedVehicle.make, updatedVehicle.model)
+    const sizeInfo = getSizeInfo(detectedSize)
+    
     const transformedVehicle = {
       id: updatedVehicle.id,
       make: updatedVehicle.make,
@@ -132,7 +135,14 @@ export async function PUT(
       license_plate: updatedVehicle.license_plate || updatedVehicle.registration,
       registration: updatedVehicle.registration || updatedVehicle.license_plate,
       is_primary: updatedVehicle.is_primary,
-      is_default: updatedVehicle.is_default
+      is_default: updatedVehicle.is_default,
+      // Add computed size information
+      vehicle_size: {
+        size: detectedSize,
+        label: sizeInfo.label,
+        multiplier: sizeInfo.multiplier,
+        examples: sizeInfo.examples
+      }
     }
 
     return NextResponse.json({
@@ -189,7 +199,6 @@ export async function DELETE(
       .select('id, is_default, is_primary')
       .eq('id', vehicleId)
       .eq('user_id', profile.id)
-      .eq('is_active', true)
       .single()
 
     if (vehicleError || !existingVehicle) {
@@ -199,11 +208,31 @@ export async function DELETE(
       }, { status: 404 })
     }
 
-    // Prevent deletion of default vehicle
-    if (existingVehicle.is_default) {
+    // Check if this is the only vehicle for the user
+    const { data: allVehicles, error: allVehiclesError } = await supabase
+      .from('customer_vehicles')
+      .select('id')
+      .eq('user_id', profile.id)
+
+    if (allVehiclesError) {
+      console.error('Error checking vehicle count:', allVehiclesError)
       return NextResponse.json({
         success: false,
-        error: { message: 'Cannot delete default vehicle', code: 'CANNOT_DELETE_DEFAULT' }
+        error: { message: 'Failed to check vehicle count', code: 'DATABASE_ERROR' }
+      }, { status: 500 })
+    }
+
+    const vehicleCount = allVehicles?.length || 0
+
+    // Allow deletion of default vehicle if it's the only vehicle
+    // Prevent deletion of default vehicle if user has multiple vehicles
+    if (existingVehicle.is_default && vehicleCount > 1) {
+      return NextResponse.json({
+        success: false,
+        error: { 
+          message: 'Cannot delete default vehicle. Please set another vehicle as default first.', 
+          code: 'CANNOT_DELETE_DEFAULT' 
+        }
       }, { status: 400 })
     }
 
@@ -222,36 +251,30 @@ export async function DELETE(
       }, { status: 500 })
     }
 
-    // If vehicle has bookings, soft delete
+    // Prevent deletion if vehicle has been used in any bookings
     if (bookings && bookings.length > 0) {
-      const { error: softDeleteError } = await supabase
-        .from('customer_vehicles')
-        .update({ is_active: false })
-        .eq('id', vehicleId)
-        .eq('user_id', profile.id)
+      return NextResponse.json({
+        success: false,
+        error: { 
+          message: 'Cannot delete vehicle that has been used in bookings. Vehicle data is required for booking history.', 
+          code: 'VEHICLE_HAS_BOOKINGS' 
+        }
+      }, { status: 400 })
+    }
 
-      if (softDeleteError) {
-        console.error('Vehicle soft delete error:', softDeleteError)
-        return NextResponse.json({
-          success: false,
-          error: { message: 'Failed to delete vehicle', code: 'DATABASE_ERROR' }
-        }, { status: 500 })
-      }
-    } else {
-      // Hard delete if no bookings
-      const { error: deleteError } = await supabase
-        .from('customer_vehicles')
-        .delete()
-        .eq('id', vehicleId)
-        .eq('user_id', profile.id)
+    // Hard delete - no is_active column exists for soft delete
+    const { error: deleteError } = await supabase
+      .from('customer_vehicles')
+      .delete()
+      .eq('id', vehicleId)
+      .eq('user_id', profile.id)
 
-      if (deleteError) {
-        console.error('Vehicle delete error:', deleteError)
-        return NextResponse.json({
-          success: false,
-          error: { message: 'Failed to delete vehicle', code: 'DATABASE_ERROR' }
-        }, { status: 500 })
-      }
+    if (deleteError) {
+      console.error('Vehicle delete error:', deleteError)
+      return NextResponse.json({
+        success: false,
+        error: { message: 'Failed to delete vehicle', code: 'DATABASE_ERROR' }
+      }, { status: 500 })
     }
 
     return NextResponse.json({

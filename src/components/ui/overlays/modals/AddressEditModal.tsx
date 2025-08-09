@@ -33,8 +33,7 @@ export const AddressEditModal: React.FC<AddressEditModalProps> = ({
     address_line_1: '',
     address_line_2: '',
     city: '',
-    postal_code: '',
-    special_instructions: ''
+    postal_code: ''
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
@@ -45,8 +44,7 @@ export const AddressEditModal: React.FC<AddressEditModalProps> = ({
         address_line_1: data.address.address_line_1 || '',
         address_line_2: data.address.address_line_2 || '',
         city: data.address.city || '',
-        postal_code: data.address.postal_code || '',
-        special_instructions: data.address.special_instructions || ''
+        postal_code: data.address.postal_code || ''
       })
     } else if (isOpen && !data?.addressId) {
       // Reset form for new address
@@ -54,8 +52,7 @@ export const AddressEditModal: React.FC<AddressEditModalProps> = ({
         address_line_1: '',
         address_line_2: '',
         city: '',
-        postal_code: '',
-        special_instructions: ''
+        postal_code: ''
       })
     }
   }, [isOpen, data?.address, data?.addressId])
@@ -186,19 +183,6 @@ export const AddressEditModal: React.FC<AddressEditModalProps> = ({
               required
             />
           </div>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-text-primary mb-2">
-            Special Instructions
-          </label>
-          <textarea
-            value={formData.special_instructions}
-            onChange={(e) => setFormData(prev => ({ ...prev, special_instructions: e.target.value }))}
-            placeholder="Any special access instructions, parking details, etc."
-            rows={3}
-            className="w-full px-3 py-2 border border-border-secondary rounded-lg resize-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600"
-          />
         </div>
 
         {error && (

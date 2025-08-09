@@ -238,6 +238,7 @@ export const VehicleCreateModal: React.FC<BaseOverlayProps> = ({
     }
     
     console.log('✅ Validation passed, proceeding with submission')
+    console.log('📤 [Frontend] Sending data to backend:', JSON.stringify(formData, null, 2))
 
     try {
       setIsSubmitting(true)
@@ -249,7 +250,10 @@ export const VehicleCreateModal: React.FC<BaseOverlayProps> = ({
         body: JSON.stringify(formData)
       })
 
+      console.log('📨 [Frontend] API Response status:', response.status, response.statusText)
+      
       const result = await response.json()
+      console.log('📥 [Frontend] API Response data:', result)
 
       if (result.success) {
         if (onConfirm) {

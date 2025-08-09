@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClientFromRequest } from '@/lib/supabase/server'
+import { getVehicleSize, getSizeInfo } from '@/lib/utils/vehicle-size'
 
 export async function GET(request: NextRequest) {
   try {
@@ -29,7 +30,7 @@ export async function GET(request: NextRequest) {
       }, { status: 401 })
     }
 
-    // Fetch customer vehicles (vehicle_sizes table no longer exists)
+    // Fetch customer vehicles (vehicle_size_id not used - denormalized structure)
     const { data: vehicles, error: vehiclesError } = await supabase
       .from('customer_vehicles')
       .select(`
@@ -94,22 +95,37 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Transform the data for frontend consumption (no longer using vehicle_sizes)
-    const transformedVehicles = vehicles?.map(vehicle => ({
-      id: vehicle.id,
-      make: vehicle.make,
-      model: vehicle.model,
-      year: vehicle.year,
-      color: vehicle.color,
-      license_plate: vehicle.license_plate || vehicle.registration,
-      registration: vehicle.registration || vehicle.license_plate,
-      is_primary: vehicle.is_primary,
-      is_default: vehicle.is_default,
-      last_used: vehicleStats[vehicle.id]?.last_used || null,
-      booking_count: vehicleStats[vehicle.id]?.booking_count || 0,
-      created_at: vehicle.created_at,
-      updated_at: vehicle.updated_at
-    })) || []
+    // Transform the data for frontend consumption with computed size information
+    const transformedVehicles = await Promise.all(
+      (vehicles || []).map(async vehicle => {
+        // Compute vehicle size
+        const detectedSize = await getVehicleSize(vehicle.make, vehicle.model)
+        const sizeInfo = getSizeInfo(detectedSize)
+        
+        return {
+          id: vehicle.id,
+          make: vehicle.make,
+          model: vehicle.model,
+          year: vehicle.year,
+          color: vehicle.color,
+          license_plate: vehicle.license_plate || vehicle.registration,
+          registration: vehicle.registration || vehicle.license_plate,
+          is_primary: vehicle.is_primary,
+          is_default: vehicle.is_default,
+          last_used: vehicleStats[vehicle.id]?.last_used || null,
+          booking_count: vehicleStats[vehicle.id]?.booking_count || 0,
+          // Add computed size information
+          vehicle_size: {
+            size: detectedSize,
+            label: sizeInfo.label,
+            multiplier: sizeInfo.multiplier,
+            examples: sizeInfo.examples
+          },
+          created_at: vehicle.created_at,
+          updated_at: vehicle.updated_at
+        }
+      })
+    )
 
     return NextResponse.json({
       success: true,
@@ -154,14 +170,35 @@ export async function POST(request: NextRequest) {
     }
 
     const vehicleData = await request.json()
+    
+    // Debug logging to understand what data is being sent
+    console.log('🔍 [Backend] Received vehicle data:', {
+      make: vehicleData.make,
+      model: vehicleData.model,
+      license_plate: vehicleData.license_plate,
+      color: vehicleData.color,
+      year: vehicleData.year,
+      vehicle_size_id: vehicleData.vehicle_size_id,
+      detected_size: vehicleData.detected_size,
+      set_as_default: vehicleData.set_as_default
+    })
 
-    // Validate required fields (no longer requiring vehicle_size_id)
-    if (!vehicleData.make || !vehicleData.model || !vehicleData.year || !vehicleData.color) {
+    // Validate required fields - only make, model, and license_plate are required
+    // Color and year are optional, vehicle_size_id should be provided for pricing
+    if (!vehicleData.make || !vehicleData.model || !vehicleData.license_plate) {
+      const missingFields = []
+      if (!vehicleData.make) missingFields.push('make')
+      if (!vehicleData.model) missingFields.push('model') 
+      if (!vehicleData.license_plate) missingFields.push('license_plate')
+      
+      console.error('❌ [Backend] Validation failed - missing fields:', missingFields)
       return NextResponse.json({
         success: false,
-        error: { message: 'Missing required fields', code: 'VALIDATION_ERROR' }
+        error: { message: `Missing required fields: ${missingFields.join(', ')}`, code: 'VALIDATION_ERROR' }
       }, { status: 400 })
     }
+    
+    console.log('✅ [Backend] Validation passed')
 
     // Check if this is the user's first vehicle (make it default)
     const { data: existingVehicles, error: countError } = await supabase
@@ -186,10 +223,11 @@ export async function POST(request: NextRequest) {
         user_id: profile.id,
         make: vehicleData.make.trim(),
         model: vehicleData.model.trim(),
-        year: parseInt(vehicleData.year),
-        color: vehicleData.color.trim(),
+        year: vehicleData.year ? parseInt(vehicleData.year) : new Date().getFullYear(),
+        color: vehicleData.color?.trim() || null,
         license_plate: vehicleData.license_plate?.trim() || null,
         registration: vehicleData.registration?.trim() || vehicleData.license_plate?.trim() || null,
+        vehicle_size_id: null, // No vehicle_sizes table exists - denormalized structure
         is_primary: isFirstVehicle,
         is_default: isFirstVehicle || vehicleData.set_as_default === true,
       })
@@ -207,12 +245,14 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (insertError) {
-      console.error('Vehicle insert error:', insertError)
+      console.error('❌ [Backend] Vehicle insert error:', insertError)
       return NextResponse.json({
         success: false,
         error: { message: 'Failed to create vehicle', code: 'DATABASE_ERROR' }
       }, { status: 500 })
     }
+    
+    console.log('✅ [Backend] Vehicle created successfully:', newVehicle.id)
 
     // If setting as default, unset other defaults
     if (vehicleData.set_as_default === true && !isFirstVehicle) {
@@ -223,7 +263,10 @@ export async function POST(request: NextRequest) {
         .neq('id', newVehicle.id)
     }
 
-    // Transform the response (no longer using vehicle_sizes)
+    // Transform the response with computed size information
+    const detectedSize = await getVehicleSize(newVehicle.make, newVehicle.model)
+    const sizeInfo = getSizeInfo(detectedSize)
+    
     const transformedVehicle = {
       id: newVehicle.id,
       make: newVehicle.make,
@@ -235,7 +278,14 @@ export async function POST(request: NextRequest) {
       is_primary: newVehicle.is_primary,
       is_default: newVehicle.is_default,
       last_used: null,
-      booking_count: 0
+      booking_count: 0,
+      // Add computed size information
+      vehicle_size: {
+        size: detectedSize,
+        label: sizeInfo.label,
+        multiplier: sizeInfo.multiplier,
+        examples: sizeInfo.examples
+      }
     }
 
     return NextResponse.json({

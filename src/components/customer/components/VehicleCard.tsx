@@ -12,6 +12,7 @@ import {
   Calendar,
   Gauge
 } from 'lucide-react'
+import { detectVehicleSizeSync, getSizeInfo } from '@/lib/utils/vehicle-size'
 
 interface VehicleCardProps {
   vehicle: {
@@ -24,13 +25,16 @@ interface VehicleCardProps {
     registration?: string
     vehicle_size?: {
       size: 'S' | 'M' | 'L' | 'XL'
+      label: string
       multiplier: number
+      examples: string
     }
-    vehicle_size_id?: string
     is_primary: boolean
     is_default: boolean
-    last_used?: string
+    last_used?: string | null
     booking_count?: number
+    created_at?: string
+    updated_at?: string
   }
   variant?: 'compact' | 'detailed'
   showActions?: boolean
@@ -39,75 +43,13 @@ interface VehicleCardProps {
   onSetDefault?: (vehicleId: string) => void
 }
 
-const sizeConfig = {
-  S: { label: 'Small', color: 'text-green-600', examples: 'Hatchbacks, Mini', multiplier: 1.0 },
-  M: { label: 'Medium', color: 'text-blue-600', examples: 'Saloons, Compact SUVs', multiplier: 1.2 },
-  L: { label: 'Large', color: 'text-orange-600', examples: 'Estates, Large SUVs', multiplier: 1.4 },
-  XL: { label: 'Extra Large', color: 'text-red-600', examples: 'Vans, Luxury Cars', multiplier: 1.6 }
+// Size color mapping for consistent display
+const sizeColorMap = {
+  S: 'text-green-600',
+  M: 'text-blue-600', 
+  L: 'text-orange-600',
+  XL: 'text-red-600'
 } as const
-
-// Detect vehicle size based on make and model
-const detectVehicleSize = (make: string, model: string): 'S' | 'M' | 'L' | 'XL' => {
-  const makeModel = `${make} ${model}`.toLowerCase()
-  
-  // Small vehicles
-  if (
-    makeModel.includes('mini') ||
-    makeModel.includes('smart') ||
-    makeModel.includes('fiat 500') ||
-    makeModel.includes('toyota aygo') ||
-    makeModel.includes('ford ka') ||
-    makeModel.includes('citroen c1') ||
-    makeModel.includes('peugeot 108') ||
-    makeModel.includes('hyundai i10') ||
-    makeModel.includes('volkswagen up') ||
-    model.toLowerCase().includes('hatchback')
-  ) {
-    return 'S'
-  }
-  
-  // Large vehicles
-  if (
-    makeModel.includes('range rover') ||
-    makeModel.includes('bmw x5') ||
-    makeModel.includes('bmw x6') ||
-    makeModel.includes('bmw x7') ||
-    makeModel.includes('audi q7') ||
-    makeModel.includes('audi q8') ||
-    makeModel.includes('mercedes gle') ||
-    makeModel.includes('mercedes gls') ||
-    makeModel.includes('mercedes g-class') ||
-    makeModel.includes('volvo xc90') ||
-    makeModel.includes('porsche cayenne') ||
-    makeModel.includes('estate') ||
-    makeModel.includes('touring') ||
-    model.toLowerCase().includes('suv') ||
-    model.toLowerCase().includes('4x4')
-  ) {
-    return 'L'
-  }
-  
-  // Extra large vehicles
-  if (
-    makeModel.includes('van') ||
-    makeModel.includes('transit') ||
-    makeModel.includes('sprinter') ||
-    makeModel.includes('mercedes v-class') ||
-    makeModel.includes('volkswagen crafter') ||
-    makeModel.includes('iveco daily') ||
-    makeModel.includes('bentley') ||
-    makeModel.includes('rolls royce') ||
-    makeModel.includes('ferrari') ||
-    makeModel.includes('lamborghini') ||
-    makeModel.includes('maserati') ||
-    makeModel.includes('aston martin')
-  ) {
-    return 'XL'
-  }
-  
-  // Default to medium for everything else (saloons, standard cars)
-  return 'M'
-}
 
 export function VehicleCard({ 
   vehicle, 
@@ -120,12 +62,12 @@ export function VehicleCard({
   const [isDeleting, setIsDeleting] = useState(false)
   const [isSettingDefault, setIsSettingDefault] = useState(false)
   
-  // Use detected size or fallback to provided size data
-  const vehicleSize = vehicle.vehicle_size?.size || detectVehicleSize(vehicle.make, vehicle.model)
-  const sizeInfo = sizeConfig[vehicleSize]
-  const sizeMultiplier = vehicle.vehicle_size?.multiplier || sizeInfo.multiplier
+  // Use API-provided size data or fallback to sync detection
+  const vehicleSize = vehicle.vehicle_size?.size || detectVehicleSizeSync(vehicle.make, vehicle.model)
+  const sizeInfo = vehicle.vehicle_size || getSizeInfo(vehicleSize)
+  const sizeColor = sizeColorMap[vehicleSize]
 
-  const formatLastUsed = (dateString?: string) => {
+  const formatLastUsed = (dateString?: string | null) => {
     if (!dateString) return 'Never used'
     
     const date = new Date(dateString)
@@ -195,7 +137,7 @@ export function VehicleCard({
               {/* Color and Size Row */}
               <div className="flex items-center gap-3 text-sm text-text-secondary mb-1">
                 <span className="font-medium">{vehicle.color}</span>
-                <span className={`${sizeInfo.color} font-medium`}>Size {vehicleSize}</span>
+                <span className={`${sizeColor} font-medium`}>Size {vehicleSize}</span>
               </div>
               
               {/* Registration Row */}
@@ -282,14 +224,14 @@ export function VehicleCard({
                       Size {vehicleSize} ({sizeInfo.label})
                     </p>
                     <p className="text-sm text-text-secondary">
-                      {sizeMultiplier}x pricing
+                      {sizeInfo.examples || 'Standard vehicle'}
                     </p>
                   </div>
                 </div>
               </div>
 
-              {/* Usage Stats - Only if data exists */}
-              {(vehicle.last_used || vehicle.booking_count) && (
+              {/* Usage Stats - Only if vehicle has been used */}
+              {(vehicle.last_used || (vehicle.booking_count && vehicle.booking_count > 0)) && (
                 <div className="flex items-center gap-3 p-4 bg-surface-tertiary rounded-xl">
                   <div className="w-12 h-12 rounded-xl bg-surface-secondary flex items-center justify-center">
                     <Calendar className="w-6 h-6 text-text-secondary" />
@@ -343,7 +285,7 @@ export function VehicleCard({
                 onClick={handleDelete}
                 variant="outline"
                 size="sm"
-                disabled={isDeleting || vehicle.is_default}
+                disabled={isDeleting}
                 leftIcon={isDeleting ? 
                   <div className="w-4 h-4 animate-spin rounded-full border-2 border-error-400 border-t-transparent" /> :
                   <Trash2 className="w-4 h-4" />
