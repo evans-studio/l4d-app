@@ -1,6 +1,6 @@
 'use client'
 
-import { ReactNode } from 'react'
+import { ReactNode, useMemo } from 'react'
 import { MinimalHeader } from '@/components/navigation/MinimalHeader'
 import { MainFooter } from '@/components/navigation/MainFooter'
 
@@ -8,7 +8,29 @@ interface MainLayoutProps {
   children: ReactNode
 }
 
+// Generate sparkle particles with random properties
+const generateSparkles = (count: number) => {
+  return Array.from({ length: count }, (_, i) => {
+    const sizes = [1, 1.5, 2] as const
+    const animations = ['animate-purple-pulse', 'animate-sparkle-float', 'animate-sparkle-drift'] as const
+    const opacities = [20, 25, 30, 35, 40] as const
+    
+    return {
+      id: i,
+      size: sizes[Math.floor(Math.random() * sizes.length)] as number,
+      top: Math.random() * 90 + 5, // 5% to 95% of viewport height
+      left: Math.random() * 90 + 5, // 5% to 95% of viewport width
+      opacity: opacities[Math.floor(Math.random() * opacities.length)] as number,
+      animation: animations[Math.floor(Math.random() * animations.length)] as string,
+      delay: Math.random() * 6, // 0-6 second delay
+      duration: 3 + Math.random() * 3, // 3-6 second duration
+    }
+  })
+}
+
 export function MainLayout({ children }: MainLayoutProps) {
+  // Generate sparkles once and memoize them
+  const sparkles = useMemo(() => generateSparkles(28), [])
   return (
     <div className="min-h-screen flex flex-col relative">
       {/* Global Dark Gradient Background with Automotive Texture and Sparkles */}
@@ -26,27 +48,24 @@ export function MainLayout({ children }: MainLayoutProps) {
           }}
         />
         
-        {/* Animated Sparkle Particles Throughout */}
+        {/* Dynamic Animated Sparkle Particles Throughout */}
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          {/* Top section sparkles */}
-          <div className="absolute top-1/6 left-1/5 w-2 h-2 bg-brand-400/30 rounded-full animate-purple-pulse" />
-          <div className="absolute top-1/4 right-1/4 w-1 h-1 bg-brand-300/40 rounded-full animate-purple-pulse" style={{ animationDelay: '1s' }} />
-          <div className="absolute top-1/8 left-3/4 w-1.5 h-1.5 bg-brand-500/20 rounded-full animate-purple-pulse" style={{ animationDelay: '2s' }} />
-          
-          {/* Middle section sparkles */}
-          <div className="absolute top-2/5 left-1/6 w-1.5 h-1.5 bg-brand-400/25 rounded-full animate-purple-pulse" style={{ animationDelay: '3s' }} />
-          <div className="absolute top-1/2 right-1/5 w-2 h-2 bg-brand-300/30 rounded-full animate-purple-pulse" style={{ animationDelay: '1.5s' }} />
-          <div className="absolute top-3/5 left-1/3 w-1 h-1 bg-brand-500/35 rounded-full animate-purple-pulse" style={{ animationDelay: '4s' }} />
-          
-          {/* Lower section sparkles */}
-          <div className="absolute top-3/4 right-1/6 w-1.5 h-1.5 bg-brand-400/20 rounded-full animate-purple-pulse" style={{ animationDelay: '2.5s' }} />
-          <div className="absolute top-4/5 left-2/3 w-1 h-1 bg-brand-300/25 rounded-full animate-purple-pulse" style={{ animationDelay: '3.5s' }} />
-          <div className="absolute top-5/6 right-1/3 w-2 h-2 bg-brand-500/25 rounded-full animate-purple-pulse" style={{ animationDelay: '0.5s' }} />
-          
-          {/* Additional scattered sparkles for fuller effect */}
-          <div className="absolute top-1/3 left-1/8 w-1 h-1 bg-brand-400/20 rounded-full animate-purple-pulse" style={{ animationDelay: '4.5s' }} />
-          <div className="absolute top-2/3 right-1/8 w-1.5 h-1.5 bg-brand-300/25 rounded-full animate-purple-pulse" style={{ animationDelay: '5s' }} />
-          <div className="absolute top-7/8 left-1/2 w-1 h-1 bg-brand-500/30 rounded-full animate-purple-pulse" style={{ animationDelay: '1.2s' }} />
+          {sparkles.map((sparkle) => (
+            <div
+              key={sparkle.id}
+              className={`absolute rounded-full bg-brand-400 ${sparkle.animation}`}
+              style={{
+                width: `${sparkle.size * 0.25}rem`,
+                height: `${sparkle.size * 0.25}rem`,
+                top: `${sparkle.top}%`,
+                left: `${sparkle.left}%`,
+                opacity: sparkle.opacity / 100,
+                animationDelay: `${sparkle.delay}s`,
+                animationDuration: `${sparkle.duration}s`,
+                willChange: 'transform, opacity',
+              }}
+            />
+          ))}
         </div>
       </div>
       

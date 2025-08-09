@@ -52,6 +52,36 @@
       transform: translate3d(0, -2px, 0);
     }
   }
+  
+  @keyframes sparkle-float {
+    0%, 100% {
+      transform: translateY(0px) translateX(0px);
+    }
+    25% {
+      transform: translateY(-10px) translateX(5px);
+    }
+    50% {
+      transform: translateY(-5px) translateX(-3px);
+    }
+    75% {
+      transform: translateY(-15px) translateX(2px);
+    }
+  }
+  
+  @keyframes sparkle-drift {
+    0% {
+      transform: translateY(0px) translateX(0px) rotate(0deg);
+    }
+    33% {
+      transform: translateY(-8px) translateX(4px) rotate(120deg);
+    }
+    66% {
+      transform: translateY(-3px) translateX(-6px) rotate(240deg);
+    }
+    100% {
+      transform: translateY(0px) translateX(0px) rotate(360deg);
+    }
+  }
 }
 
 @layer utilities {
@@ -91,6 +121,14 @@
   
   .animate-purple-bounce {
     animation: purple-bounce 1s infinite;
+  }
+  
+  .animate-sparkle-float {
+    animation: sparkle-float 4s ease-in-out infinite;
+  }
+  
+  .animate-sparkle-drift {
+    animation: sparkle-drift 6s ease-in-out infinite;
   }
   
   /* Purple Background Gradients */
