@@ -5,10 +5,10 @@ import { useRouter } from 'next/navigation'
 import { useSessionRefresh } from '@/lib/hooks/useSessionRefresh'
 import { Button } from '@/components/ui/primitives/Button'
 import { Card, CardContent, CardGrid } from '@/components/ui/composites/Card'
-import { HeaderLogo } from '@/components/ui/primitives/Logo'
 import { AdminLayout } from '@/components/layouts/AdminLayout'
 import { AdminRoute } from '@/components/ProtectedRoute'
 import { BookingCard } from '@/components/admin/BookingCard'
+import { DashboardLogo } from '@/components/ui/primitives/Logo'
 import { 
   CalendarIcon, 
   UsersIcon, 
@@ -599,9 +599,9 @@ function AdminDashboard() {
     <AdminLayout>
       <div className="space-y-6 sm:space-y-8 overflow-x-hidden max-w-full">
         {/* Header - Centered Logo Design */}
-        <div className="text-center space-y-4">
+        <div className="text-center space-y-6">
           <div className="flex justify-center">
-            <HeaderLogo size="lg" />
+            <DashboardLogo size={300} />
           </div>
           <h1 className="text-xl sm:text-2xl font-bold text-text-primary">
             Admin Dashboard
@@ -850,49 +850,8 @@ function AdminDashboard() {
           </div>
         </div>
 
-        {/* Quick Actions - Mobile First Design */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 w-full max-w-full">
-          <div className="bg-surface-secondary rounded-lg border border-border-primary p-4 md:p-6">
-            <h3 className="text-base md:text-lg font-semibold text-text-primary mb-4">Quick Actions</h3>
-            <div className="grid grid-cols-2 md:grid-cols-1 gap-3">
-              <Button
-                variant="outline"
-                className="w-full justify-center md:justify-start text-sm"
-                onClick={() => router.push('/admin/bookings')}
-                style={{ minHeight: '44px' }}
-              >
-                <CalendarIcon className="w-4 h-4 md:mr-2" />
-                <span className="hidden md:inline ml-0 md:ml-0">Bookings</span>
-              </Button>
-              <Button
-                variant="outline"
-                className="w-full justify-center md:justify-start text-sm"
-                onClick={() => router.push('/admin/customers')}
-                style={{ minHeight: '44px' }}
-              >
-                <UsersIcon className="w-4 h-4 md:mr-2" />
-                <span className="hidden md:inline">Customers</span>
-              </Button>
-              <Button
-                variant="outline"
-                className="w-full justify-center md:justify-start text-sm"
-                onClick={() => router.push('/admin/analytics')}
-                style={{ minHeight: '44px' }}
-              >
-                <BarChart3Icon className="w-4 h-4 md:mr-2" />
-                <span className="hidden md:inline">Analytics</span>
-              </Button>
-              <Button
-                variant="outline"
-                className="w-full justify-center md:justify-start text-sm"
-                onClick={() => router.push('/admin/services')}
-                style={{ minHeight: '44px' }}
-              >
-                <EditIcon className="w-4 h-4 md:mr-2" />
-                <span className="hidden md:inline">Services</span>
-              </Button>
-            </div>
-          </div>
+        {/* Dashboard Info Widgets */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 w-full max-w-full">
 
           <div className="bg-surface-secondary rounded-lg border border-border-primary p-4 sm:p-6">
             <h3 className="text-lg font-semibold text-text-primary mb-4">Alerts</h3>

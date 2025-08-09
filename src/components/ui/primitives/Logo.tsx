@@ -153,6 +153,23 @@ export const HeaderLogo: React.FC<Omit<LogoProps, 'variant' | 'size'> & {
   />
 );
 
+// Dashboard logo for admin and customer dashboards - clean logo without background or text
+export const DashboardLogo: React.FC<{
+  size?: number;
+  className?: string;
+  priority?: boolean;
+}> = ({ size = 300, className, priority = true, ...props }) => (
+  <Image
+    src="/logo1.png"
+    alt="Love4Detailing"
+    width={size}
+    height={size}
+    priority={priority}
+    className={cn("object-contain", className)}
+    {...props}
+  />
+);
+
 export const FooterLogo: React.FC<Omit<LogoProps, 'variant' | 'size'>> = (props) => (
   <Logo
     variant="full"
