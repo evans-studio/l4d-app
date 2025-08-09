@@ -33,22 +33,40 @@ export const VehicleEditModal: React.FC<VehicleEditModalProps> = ({
   data,
   onConfirm
 }) => {
-  const [formData, setFormData] = useState({
+interface VehicleSize {
+  id: string
+  name: string
+  description?: string
+  price_multiplier?: number
+}
+
+const [formData, setFormData] = useState({
     make: '',
     model: '',
     year: new Date().getFullYear(),
     color: '',
-    registration: ''
+    registration: '',
+    vehicle_size_id: '',
+    detected_size: ''
   })
+  const [isLoading, setIsLoading] = useState(false)
+  const [vehicleSizes, setVehicleSizes] = useState<VehicleSize[]>([])
   const [licensePlateError, setLicensePlateError] = useState<string | undefined>(undefined)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
   // Get available makes from vehicle data
   const availableMakes = vehicleData.vehicles.map(v => v.make).sort()
 
-  // Get available models for selected make
+  // Get available models for selected make (deduplicated)
   const availableModels = formData.make 
-    ? vehicleData.vehicles.find(v => v.make === formData.make)?.models || []
+    ? (() => {
+        const allModels = vehicleData.vehicles.find(v => v.make === formData.make)?.models || []
+        // Deduplicate models by name, keeping the first occurrence
+        const uniqueModels = allModels.filter((model, index, array) => 
+          array.findIndex(m => m.model === model.model) === index
+        )
+        return uniqueModels
+      })()
     : []
 
   // Get available years for selected make/model
@@ -57,6 +75,26 @@ export const VehicleEditModal: React.FC<VehicleEditModalProps> = ({
     : []
 
 
+  // Get size for selected make/model (auto-detection with duplicate handling)
+  const getVehicleSize = (make: string, model: string): string => {
+    console.log('🔍 [Edit] Auto-detecting size for:', { make, model })
+    const vehicleMake = vehicleData.vehicles.find(v => v.make === make)
+    if (vehicleMake) {
+      // Find the first matching model (handles duplicates by taking first occurrence)
+      const vehicleModel = vehicleMake.models.find(m => m.model === model)
+      if (vehicleModel) {
+        console.log('✅ [Edit] Size detected:', vehicleModel.size)
+        return vehicleModel.size
+      } else {
+        console.warn('⚠️ [Edit] Model not found in data:', model)
+      }
+    } else {
+      console.warn('⚠️ [Edit] Make not found in data:', make)
+    }
+    console.warn('❌ [Edit] Size detection failed for:', { make, model })
+    return ''
+  }
+
   useEffect(() => {
     if (isOpen && data?.vehicle) {
       setFormData({
@@ -64,10 +102,57 @@ export const VehicleEditModal: React.FC<VehicleEditModalProps> = ({
         model: data.vehicle.model || '',
         year: data.vehicle.year || new Date().getFullYear(),
         color: data.vehicle.color || '',
-        registration: data.vehicle.registration || ''
+        registration: data.vehicle.registration || '',
+        vehicle_size_id: '',
+        detected_size: ''
       })
+      loadVehicleSizes()
+    } else if (isOpen) {
+      loadVehicleSizes()
     }
   }, [isOpen, data?.vehicle])
+
+  // Auto-detect size when make/model changes
+  useEffect(() => {
+    if (formData.make && formData.model) {
+      const detectedSize = getVehicleSize(formData.make, formData.model)
+      if (detectedSize) {
+        // Find the corresponding vehicle size ID
+        const sizeRecord = vehicleSizes.find(size => 
+          size.name.toLowerCase() === {
+            'S': 'small',
+            'M': 'medium', 
+            'L': 'large',
+            'XL': 'extra large'
+          }[detectedSize]?.toLowerCase()
+        )
+        
+        setFormData(prev => ({
+          ...prev,
+          detected_size: detectedSize,
+          vehicle_size_id: sizeRecord?.id || ''
+        }))
+      }
+    }
+  }, [formData.make, formData.model, vehicleSizes])
+
+  const loadVehicleSizes = async () => {
+    try {
+      setIsLoading(true)
+      const response = await fetch('/api/services/vehicle-sizes')
+      const result = await response.json()
+      
+      if (result.success) {
+        setVehicleSizes(result.data || [])
+      } else {
+        console.error('Failed to load vehicle sizes:', result.error)
+      }
+    } catch (error) {
+      console.error('Failed to load vehicle sizes:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
 
 
@@ -79,6 +164,8 @@ export const VehicleEditModal: React.FC<VehicleEditModalProps> = ({
       if (field === 'make') {
         newForm.model = ''
         newForm.year = new Date().getFullYear()
+        newForm.detected_size = ''
+        newForm.vehicle_size_id = ''
       }
       
       // Reset year when model changes
@@ -95,6 +182,12 @@ export const VehicleEditModal: React.FC<VehicleEditModalProps> = ({
     
     if (!formData.make.trim() || !formData.model.trim() || !formData.registration.trim()) {
       setError('Please fill in all required fields (make, model, and registration number)')
+      return
+    }
+    
+    // Check if vehicle size was auto-detected
+    if (!formData.vehicle_size_id) {
+      setError('Sorry, we don\'t have pricing information for this vehicle. Please contact us for assistance.')
       return
     }
 
@@ -225,6 +318,7 @@ export const VehicleEditModal: React.FC<VehicleEditModalProps> = ({
           error={licensePlateError}
           helperText={licensePlateError || "UK license plate format"}
         />
+
 
 
         {error && (
