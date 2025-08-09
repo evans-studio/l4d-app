@@ -151,19 +151,26 @@ export const VehicleCreateModal: React.FC<BaseOverlayProps> = ({
 
   const loadVehicleSizes = async () => {
     try {
+      console.log('🔄 Loading vehicle sizes from API...')
       setIsLoading(true)
       const response = await fetch('/api/services/vehicle-sizes')
       const result = await response.json()
       
+      console.log('📡 Vehicle sizes API response:', result)
+      
       if (result.success) {
+        console.log('✅ Vehicle sizes loaded:', result.data?.length || 0, 'sizes')
         setVehicleSizes(result.data || [])
       } else {
-        console.error('Failed to load vehicle sizes:', result.error)
+        console.error('❌ Failed to load vehicle sizes:', result.error)
+        setVehicleSizes([]) // Ensure it's an empty array, not undefined
       }
     } catch (error) {
-      console.error('Failed to load vehicle sizes:', error)
+      console.error('❌ Vehicle sizes API error:', error)
+      setVehicleSizes([]) // Ensure it's an empty array on error
     } finally {
       setIsLoading(false)
+      console.log('🏁 Vehicle sizes loading complete')
     }
   }
 
@@ -198,8 +205,13 @@ export const VehicleCreateModal: React.FC<BaseOverlayProps> = ({
       model: formData.model?.trim(), 
       license_plate: formData.license_plate?.trim(),
       vehicle_size_id: formData.vehicle_size_id,
-      detected_size: formData.detected_size
+      detected_size: formData.detected_size,
+      vehicleSizesLoaded: vehicleSizes.length,
+      isLoading: isLoading
     })
+    
+    console.log('🔍 Full form data state:', formData)
+    console.log('📊 Available vehicle sizes:', vehicleSizes)
     
     if (!formData.make.trim() || !formData.model.trim() || !formData.license_plate.trim()) {
       const missing = []
@@ -316,6 +328,39 @@ export const VehicleCreateModal: React.FC<BaseOverlayProps> = ({
             disabled={!formData.model}
             helperText={!formData.model ? "Select a model first" : ""}
           />
+          
+          {/* Vehicle Size Indicator - Shows detected size to customer */}
+          {isLoading && formData.make && formData.model && (
+            <div className="flex items-center gap-2 p-3 bg-blue-50 border border-blue-200 rounded-md">
+              <div className="animate-spin w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full"></div>
+              <span className="text-sm text-blue-700 font-medium">
+                Detecting vehicle size...
+              </span>
+            </div>
+          )}
+          
+          {!isLoading && formData.detected_size && (
+            <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-md">
+              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+              <span className="text-sm text-green-700 font-medium">
+                Vehicle Size: {{
+                  'S': 'Small Vehicle',
+                  'M': 'Medium Vehicle', 
+                  'L': 'Large Vehicle',
+                  'XL': 'Extra Large Vehicle'
+                }[formData.detected_size] || formData.detected_size}
+              </span>
+            </div>
+          )}
+          
+          {!isLoading && formData.make && formData.model && !formData.detected_size && (
+            <div className="flex items-center gap-2 p-3 bg-orange-50 border border-orange-200 rounded-md">
+              <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+              <span className="text-sm text-orange-700 font-medium">
+                Vehicle size could not be determined automatically
+              </span>
+            </div>
+          )}
           
           <Input
             label="Color (Optional)"

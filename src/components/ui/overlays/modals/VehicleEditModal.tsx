@@ -318,6 +318,39 @@ const [formData, setFormData] = useState({
           error={licensePlateError}
           helperText={licensePlateError || "UK license plate format"}
         />
+        
+        {/* Vehicle Size Indicator - Shows detected size to customer */}
+        {isLoading && formData.make && formData.model && (
+          <div className="flex items-center gap-2 p-3 bg-blue-50 border border-blue-200 rounded-md">
+            <div className="animate-spin w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full"></div>
+            <span className="text-sm text-blue-700 font-medium">
+              Detecting vehicle size...
+            </span>
+          </div>
+        )}
+        
+        {!isLoading && formData.detected_size && (
+          <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-md">
+            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+            <span className="text-sm text-green-700 font-medium">
+              Vehicle Size: {{
+                'S': 'Small Vehicle',
+                'M': 'Medium Vehicle', 
+                'L': 'Large Vehicle',
+                'XL': 'Extra Large Vehicle'
+              }[formData.detected_size] || formData.detected_size}
+            </span>
+          </div>
+        )}
+        
+        {!isLoading && formData.make && formData.model && !formData.detected_size && (
+          <div className="flex items-center gap-2 p-3 bg-orange-50 border border-orange-200 rounded-md">
+            <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+            <span className="text-sm text-orange-700 font-medium">
+              Vehicle size could not be determined automatically
+            </span>
+          </div>
+        )}
 
 
 
