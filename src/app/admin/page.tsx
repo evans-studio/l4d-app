@@ -13,6 +13,7 @@ import {
   UsersIcon, 
   DollarSignIcon, 
   TrendingUpIcon,
+  TrendingDownIcon,
   ClockIcon,
   PlusIcon,
   AlertCircleIcon,
@@ -27,11 +28,27 @@ import {
 interface AdminStats {
   today: {
     booked: number
-    capacity: number
+    completed: number
+    inProgress: number
     remaining: number
-    utilizationPercent: number
+    revenue: number
     bookings: any[]
   }
+  customerActivity: {
+    thisWeek: number
+    newCustomers: number
+    returningCustomers: number
+    latestActivity: any[]
+  }
+  revenue: {
+    today: number
+    week: number
+    month: number
+    previousWeek: number
+    changePercent: number
+    trend: 'up' | 'down' | 'stable'
+  }
+  // Legacy fields for backward compatibility
   tomorrow: {
     booked: number
     capacity: number
@@ -89,9 +106,10 @@ interface RecentBooking {
 interface MobileWidgetCarouselProps {
   stats: AdminStats
   router: any
+  formatTime: (timeStr: string) => string
 }
 
-function MobileWidgetCarousel({ stats, router }: MobileWidgetCarouselProps) {
+function MobileWidgetCarousel({ stats, router, formatTime }: MobileWidgetCarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [isScrolling, setIsScrolling] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -112,7 +130,7 @@ function MobileWidgetCarousel({ stats, router }: MobileWidgetCarouselProps) {
     }
   }
 
-  // Order widgets by priority: Requiring Action (if > 0), Today, Tomorrow, This Week
+  // Order widgets by priority: Requiring Action (if > 0), Today, Customer Activity, Revenue Pulse
   const getWidgetOrder = () => {
     const widgets = []
     
@@ -124,11 +142,11 @@ function MobileWidgetCarousel({ stats, router }: MobileWidgetCarouselProps) {
     // Priority 2: Today's Schedule
     widgets.push('today')
     
-    // Priority 3: Tomorrow
-    widgets.push('tomorrow')
+    // Priority 3: Customer Activity
+    widgets.push('customerActivity')
     
-    // Priority 4: This Week
-    widgets.push('thisWeek')
+    // Priority 4: Revenue Pulse
+    widgets.push('revenuePulse')
     
     return widgets
   }
@@ -236,20 +254,24 @@ function MobileWidgetCarousel({ stats, router }: MobileWidgetCarouselProps) {
               <div>
                 <p className="text-text-secondary text-sm font-medium">Today's Schedule</p>
                 <p className="text-2xl font-bold text-text-primary">
-                  {stats.today.booked} of {stats.today.capacity}
+                  {stats.today.booked} Total
                 </p>
               </div>
               <CalendarIcon className="w-8 h-8 text-brand-purple" />
             </div>
             <div className="space-y-2">
               <div className="text-sm">
-                <span className="text-text-primary font-medium">{stats.today.remaining} remaining</span>
+                <span className="text-green-600 font-medium">{stats.today.completed || 0} completed</span>
+                <span className="text-text-secondary mx-2">•</span>
+                <span className="text-text-primary font-medium">{stats.today.remaining || 0} remaining</span>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div 
-                  className="bg-brand-purple h-2 rounded-full transition-all duration-300" 
-                  style={{ width: `${stats.today.utilizationPercent}%` }}
-                ></div>
+              {stats.today.bookings && stats.today.bookings[0] && (
+                <div className="text-xs text-text-secondary">
+                  Next: {formatTime(stats.today.bookings[0].scheduled_start_time || '00:00')} - {stats.today.bookings[0].customer_name || 'Customer'}
+                </div>
+              )}
+              <div className="text-sm">
+                <span className="text-green-600 font-medium">£{stats.today.revenue || 0} today's revenue</span>
               </div>
               <Button 
                 onClick={() => router.push('/admin/schedule')}
@@ -263,72 +285,70 @@ function MobileWidgetCarousel({ stats, router }: MobileWidgetCarouselProps) {
           </div>
         )
 
-      case 'tomorrow':
+      case 'customerActivity':
         return (
           <div className={baseClasses}>
             <div className="flex items-center justify-between mb-4">
               <div>
-                <p className="text-text-secondary text-sm font-medium">Tomorrow</p>
+                <p className="text-text-secondary text-sm font-medium">Customer Activity</p>
                 <p className="text-2xl font-bold text-text-primary">
-                  {stats.tomorrow.booked} of {stats.tomorrow.capacity}
+                  {stats.customerActivity?.thisWeek || 0} This Week
                 </p>
               </div>
-              <ClockIcon className="w-8 h-8 text-blue-600" />
+              <UsersIcon className="w-8 h-8 text-blue-600" />
             </div>
             <div className="space-y-2">
-              {stats.tomorrow.fullyBooked ? (
-                <div className="text-sm">
-                  <span className="text-red-600 font-bold">FULLY BOOKED</span>
-                </div>
-              ) : (
-                <div className="text-sm">
-                  <span className="text-text-primary font-medium">{stats.tomorrow.remaining} remaining</span>
+              <div className="text-sm">
+                <span className="text-blue-600 font-medium">{stats.customerActivity?.newCustomers || 0} new</span>
+                <span className="text-text-secondary mx-2">•</span>
+                <span className="text-text-primary font-medium">{stats.customerActivity?.returningCustomers || 0} returning</span>
+              </div>
+              {stats.customerActivity?.latestActivity?.[0] && (
+                <div className="text-xs text-text-secondary">
+                  <span className="font-medium">{stats.customerActivity.latestActivity[0].customer_name || 'Customer'}</span> booked {stats.customerActivity.latestActivity[0].services?.[0]?.name || 'service'}
                 </div>
               )}
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div 
-                  className={`h-2 rounded-full transition-all duration-300 ${
-                    stats.tomorrow.fullyBooked ? 'bg-red-500' : 'bg-blue-500'
-                  }`}
-                  style={{ width: `${stats.tomorrow.utilizationPercent}%` }}
-                ></div>
-              </div>
               <Button 
-                onClick={() => router.push('/admin/schedule')}
+                onClick={() => router.push('/admin/customers')}
                 variant="outline" 
                 size="md" 
                 className="w-full min-h-[48px] touch-manipulation"
               >
-                View Day
+                View Customers
               </Button>
             </div>
           </div>
         )
 
-      case 'thisWeek':
+      case 'revenuePulse':
         return (
           <div className={baseClasses}>
             <div className="flex items-center justify-between mb-4">
               <div>
-                <p className="text-text-secondary text-sm font-medium">This Week</p>
+                <p className="text-text-secondary text-sm font-medium">Revenue Pulse</p>
                 <p className="text-2xl font-bold text-text-primary">
-                  {stats.thisWeek.booked} of {stats.thisWeek.capacity}
+                  £{stats.revenue?.today || 0}
                 </p>
+                <p className="text-xs text-text-secondary">Today</p>
               </div>
-              <TrendingUpIcon className="w-8 h-8 text-green-600" />
+              <TrendingUpIcon className={`w-8 h-8 ${stats.revenue?.trend === 'up' ? 'text-green-600' : stats.revenue?.trend === 'down' ? 'text-red-600' : 'text-gray-600'}`} />
             </div>
             <div className="space-y-2">
               <div className="text-sm">
-                <span className="text-green-600 font-medium">£{stats.thisWeek.revenue.toLocaleString()} revenue</span>
+                <span className="text-green-600 font-medium">£{(stats.revenue?.week || 0).toLocaleString()} this week</span>
               </div>
               <div className="text-sm">
-                <span className="text-text-secondary">{stats.thisWeek.utilizationPercent}% utilized</span>
+                <span className="text-text-primary font-medium">£{(stats.revenue?.month || 0).toLocaleString()} this month</span>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div 
-                  className="bg-green-500 h-2 rounded-full transition-all duration-300" 
-                  style={{ width: `${stats.thisWeek.utilizationPercent}%` }}
-                ></div>
+              <div className="flex items-center text-sm">
+                {stats.revenue?.trend === 'up' && <TrendingUpIcon className="w-4 h-4 text-green-500 mr-1" />}
+                {stats.revenue?.trend === 'down' && <TrendingDownIcon className="w-4 h-4 text-red-500 mr-1" />}
+                <span className={`font-medium ${stats.revenue?.trend === 'up' ? 'text-green-600' : stats.revenue?.trend === 'down' ? 'text-red-600' : 'text-gray-600'}`}>
+                  {stats.revenue?.changePercent && stats.revenue.changePercent !== 0 
+                    ? `${stats.revenue.changePercent > 0 ? '+' : ''}${stats.revenue.changePercent}%`
+                    : 'No change'
+                  }
+                </span>
               </div>
             </div>
           </div>
@@ -362,7 +382,7 @@ function MobileWidgetCarousel({ stats, router }: MobileWidgetCarouselProps) {
             scrollSnapType: 'x mandatory'
           }}
         >
-          {widgetOrder.map((widgetType, index) => (
+          {widgetOrder.map((widgetType) => (
             <div 
               key={widgetType} 
               className="mobile-widget-item snap-center flex-shrink-0 w-full min-w-full max-w-full"
@@ -395,7 +415,7 @@ function MobileWidgetCarousel({ stats, router }: MobileWidgetCarouselProps) {
 
 function AdminDashboard() {
   const router = useRouter()
-  const { refreshSession, isRefreshing } = useSessionRefresh()
+  const { refreshSession } = useSessionRefresh()
   const [stats, setStats] = useState<AdminStats | null>(null)
   const [recentBookings, setRecentBookings] = useState<RecentBooking[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -556,14 +576,6 @@ function AdminDashboard() {
     }
   }
 
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr)
-    return date.toLocaleDateString('en-GB', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric'
-    })
-  }
 
   const formatTime = (timeStr: string) => {
     const [hours, minutes] = timeStr.split(':')
@@ -677,20 +689,29 @@ function AdminDashboard() {
                   <div>
                     <p className="text-text-secondary text-sm font-medium">Today's Schedule</p>
                     <p className="text-2xl font-bold text-text-primary">
-                      {stats.today.booked} of {stats.today.capacity}
+                      {stats.today.booked} Total
                     </p>
                   </div>
                   <CalendarIcon className="w-8 h-8 text-brand-purple" />
                 </div>
                 <div className="space-y-2">
                   <div className="text-sm">
-                    <span className="text-text-primary font-medium">{stats.today.remaining} remaining</span>
+                    <span className="text-green-600 font-medium">{stats.today.completed || 0} completed</span>
+                    <span className="text-text-secondary mx-2">•</span>
+                    <span className="text-yellow-600 font-medium">{stats.today.inProgress || 0} in progress</span>
+                    <span className="text-text-secondary mx-2">•</span>
+                    <span className="text-text-primary font-medium">{stats.today.remaining || 0} remaining</span>
                   </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div 
-                      className="bg-brand-purple h-2 rounded-full transition-all duration-300" 
-                      style={{ width: `${stats.today.utilizationPercent}%` }}
-                    ></div>
+                  {stats.today.bookings && stats.today.bookings[0] && (
+                    <div className="text-sm">
+                      <span className="text-text-secondary">Next: </span>
+                      <span className="text-text-primary font-medium">
+                        {formatTime(stats.today.bookings[0].scheduled_start_time || '00:00')} - {stats.today.bookings[0].customer_name || 'Customer'}
+                      </span>
+                    </div>
+                  )}
+                  <div className="text-sm">
+                    <span className="text-green-600 font-medium">£{stats.today.revenue || 0} today's revenue</span>
                   </div>
                   <Button 
                     onClick={() => router.push('/admin/schedule')}
@@ -704,72 +725,81 @@ function AdminDashboard() {
               </CardContent>
             </Card>
 
-            {/* Tomorrow Widget - Priority #3 */}
+            {/* Customer Activity Widget - Priority #3 */}
             <Card variant="default" size="md">
               <CardContent>
                 <div className="flex items-center justify-between mb-4">
                   <div>
-                    <p className="text-text-secondary text-sm font-medium">Tomorrow</p>
+                    <p className="text-text-secondary text-sm font-medium">Customer Activity</p>
                     <p className="text-2xl font-bold text-text-primary">
-                      {stats.tomorrow.booked} of {stats.tomorrow.capacity}
+                      {stats.customerActivity?.thisWeek || 0} This Week
                     </p>
                   </div>
-                  <ClockIcon className="w-8 h-8 text-blue-600" />
+                  <UsersIcon className="w-8 h-8 text-blue-600" />
                 </div>
                 <div className="space-y-2">
-                  {stats.tomorrow.fullyBooked ? (
-                    <div className="text-sm">
-                      <span className="text-red-600 font-bold">FULLY BOOKED</span>
-                    </div>
-                  ) : (
-                    <div className="text-sm">
-                      <span className="text-text-primary font-medium">{stats.tomorrow.remaining} remaining</span>
+                  <div className="text-sm">
+                    <span className="text-blue-600 font-medium">{stats.customerActivity?.newCustomers || 0} new</span>
+                    <span className="text-text-secondary mx-2">•</span>
+                    <span className="text-text-primary font-medium">{stats.customerActivity?.returningCustomers || 0} returning</span>
+                  </div>
+                  {stats.customerActivity?.latestActivity?.[0] && (
+                    <div className="text-sm bg-surface-tertiary rounded p-2">
+                      <div className="text-text-primary font-medium">{stats.customerActivity.latestActivity[0].customer_name || 'Customer'}</div>
+                      <div className="text-text-secondary">
+                        booked {stats.customerActivity.latestActivity[0].services?.[0]?.name || 'service'} (recently)
+                      </div>
                     </div>
                   )}
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div 
-                      className={`h-2 rounded-full transition-all duration-300 ${
-                        stats.tomorrow.fullyBooked ? 'bg-red-500' : 'bg-blue-500'
-                      }`}
-                      style={{ width: `${stats.tomorrow.utilizationPercent}%` }}
-                    ></div>
-                  </div>
+                  {stats.customerActivity?.latestActivity?.[1] && (
+                    <div className="text-xs text-text-secondary">
+                      <span className="font-medium">{stats.customerActivity.latestActivity[1].customer_name || 'Customer'}</span> - {stats.customerActivity.latestActivity[1].services?.[0]?.name || 'service'} (recently)
+                    </div>
+                  )}
                   <Button 
-                    onClick={() => router.push('/admin/schedule')}
+                    onClick={() => router.push('/admin/customers')}
                     variant="outline" 
                     size="md" 
                     className="w-full min-h-[48px] touch-manipulation"
                   >
-                    View Day
+                    View Customers
                   </Button>
                 </div>
               </CardContent>
             </Card>
 
-            {/* This Week Widget - Priority #4 */}
+            {/* Revenue Pulse Widget - Priority #4 */}
             <Card variant="default" size="md">
               <CardContent>
                 <div className="flex items-center justify-between mb-4">
                   <div>
-                    <p className="text-text-secondary text-sm font-medium">This Week</p>
+                    <p className="text-text-secondary text-sm font-medium">Revenue Pulse</p>
                     <p className="text-2xl font-bold text-text-primary">
-                      {stats.thisWeek.booked} of {stats.thisWeek.capacity}
+                      £{stats.revenue?.today || 0}
                     </p>
+                    <p className="text-xs text-text-secondary">Today</p>
                   </div>
-                  <TrendingUpIcon className="w-8 h-8 text-green-600" />
+                  <div className="flex items-center">
+                    <TrendingUpIcon className={`w-8 h-8 ${stats.revenue?.trend === 'up' ? 'text-green-600' : stats.revenue?.trend === 'down' ? 'text-red-600' : 'text-gray-600'}`} />
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <div className="text-sm">
-                    <span className="text-green-600 font-medium">£{stats.thisWeek.revenue.toLocaleString()} revenue</span>
+                    <span className="text-green-600 font-medium">£{(stats.revenue?.week || 0).toLocaleString()} this week</span>
                   </div>
                   <div className="text-sm">
-                    <span className="text-text-secondary">{stats.thisWeek.utilizationPercent}% utilized</span>
+                    <span className="text-text-primary font-medium">£{(stats.revenue?.month || 0).toLocaleString()} this month</span>
                   </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div 
-                      className="bg-green-500 h-2 rounded-full transition-all duration-300" 
-                      style={{ width: `${stats.thisWeek.utilizationPercent}%` }}
-                    ></div>
+                  <div className="flex items-center text-sm">
+                    {stats.revenue?.trend === 'up' && <TrendingUpIcon className="w-4 h-4 text-green-500 mr-1" />}
+                    {stats.revenue?.trend === 'down' && <TrendingDownIcon className="w-4 h-4 text-red-500 mr-1" />}
+                    {stats.revenue?.trend === 'stable' && <div className="w-4 h-4 mr-1" />}
+                    <span className={`font-medium ${stats.revenue?.trend === 'up' ? 'text-green-600' : stats.revenue?.trend === 'down' ? 'text-red-600' : 'text-gray-600'}`}>
+                      {stats.revenue?.changePercent && stats.revenue.changePercent !== 0 
+                        ? `${stats.revenue.changePercent > 0 ? '+' : ''}${stats.revenue.changePercent}% vs last week`
+                        : 'No change vs last week'
+                      }
+                    </span>
                   </div>
                 </div>
               </CardContent>
