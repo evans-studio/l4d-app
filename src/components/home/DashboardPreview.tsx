@@ -71,17 +71,17 @@ export function DashboardPreview() {
             </Text>
           </div>
 
-          {/* Benefits with proper spacing */}
+          {/* Benefits with proper spacing and mobile alignment */}
           <div className={cn(
             "mb-16 lg:mb-20",
             inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8",
             "transition-all duration-500 delay-200"
           )}>
-            <div className="flex flex-col lg:flex-row items-center justify-center gap-8 lg:gap-16 text-center lg:text-left">
+            <div className="flex flex-col lg:flex-row items-center justify-center gap-6 sm:gap-8 lg:gap-16">
               {dashboardBenefits.map((benefit, index) => (
-                <div key={index} className="flex items-center gap-4">
+                <div key={index} className="flex items-center gap-4 w-full max-w-sm lg:max-w-none lg:w-auto">
                   <div className="w-3 h-3 bg-brand-600 rounded-full flex-shrink-0"></div>
-                  <Text size="lg" color="primary" className="font-medium text-base md:text-lg">
+                  <Text size="lg" color="primary" className="font-medium text-base md:text-lg text-left">
                     {benefit}
                   </Text>
                 </div>

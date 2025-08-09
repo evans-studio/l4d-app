@@ -8,12 +8,12 @@ interface MainLayoutProps {
   children: ReactNode
 }
 
-// Generate sparkle particles with random properties
+// Generate subtle sparkle particles for ambient background effect
 const generateSparkles = (count: number) => {
   return Array.from({ length: count }, (_, i) => {
-    const sizes = [1, 1.5, 2] as const
-    const animations = ['animate-purple-pulse', 'animate-sparkle-float', 'animate-sparkle-drift'] as const
-    const opacities = [20, 25, 30, 35, 40] as const
+    const sizes = [0.5, 1, 1.5] as const // Smaller, more subtle sizes
+    const animations = ['animate-purple-pulse', 'animate-sparkle-float'] as const // Removed rotating drift animation
+    const opacities = [10, 12, 15, 18, 20] as const // Much lower opacity for subtlety
     
     return {
       id: i,
@@ -22,15 +22,15 @@ const generateSparkles = (count: number) => {
       left: Math.random() * 90 + 5, // 5% to 95% of viewport width
       opacity: opacities[Math.floor(Math.random() * opacities.length)] as number,
       animation: animations[Math.floor(Math.random() * animations.length)] as string,
-      delay: Math.random() * 6, // 0-6 second delay
-      duration: 3 + Math.random() * 3, // 3-6 second duration
+      delay: Math.random() * 8, // 0-8 second delay for more spacing
+      duration: 4 + Math.random() * 4, // 4-8 second duration for slower movement
     }
   })
 }
 
 export function MainLayout({ children }: MainLayoutProps) {
-  // Generate sparkles once and memoize them
-  const sparkles = useMemo(() => generateSparkles(28), [])
+  // Generate fewer sparkles for subtle ambient effect
+  const sparkles = useMemo(() => generateSparkles(14), [])
   return (
     <div className="min-h-screen flex flex-col relative">
       {/* Global Dark Gradient Background with Automotive Texture and Sparkles */}
