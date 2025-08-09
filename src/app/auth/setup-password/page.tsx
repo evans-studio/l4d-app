@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/primitives/Button'
-import { ResponsiveLogo } from '@/components/ui/primitives/Logo'
+import { AuthLogo } from '@/components/ui/primitives/Logo'
 import { Container } from '@/components/layout/templates/PageLayout'
 import { Lock, Eye, EyeOff, CheckCircle, AlertCircle, Car } from 'lucide-react'
 import Link from 'next/link'
@@ -118,7 +118,7 @@ function SetupPasswordPageContent() {
       <Container className="flex items-center justify-center min-h-screen px-4">
         <div className="w-full max-w-md space-y-8">
           <div className="text-center">
-            <ResponsiveLogo />
+            <AuthLogo />
             <h2 className="mt-6 text-3xl font-bold tracking-tight text-foreground">
               Invalid Setup Link
             </h2>
@@ -160,7 +160,7 @@ function SetupPasswordPageContent() {
       <Container className="flex items-center justify-center min-h-screen px-4">
         <div className="w-full max-w-md space-y-8">
           <div className="text-center">
-            <ResponsiveLogo />
+            <AuthLogo />
             <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-green-100 mt-6">
               <CheckCircle className="h-6 w-6 text-green-600" />
             </div>
@@ -200,7 +200,7 @@ function SetupPasswordPageContent() {
     <Container className="flex items-center justify-center min-h-screen px-4">
       <div className="w-full max-w-md space-y-8">
         <div className="text-center">
-          <ResponsiveLogo />
+          <AuthLogo />
           <h2 className="mt-6 text-3xl font-bold tracking-tight text-foreground">
             Set Up Your Password
           </h2>
@@ -355,7 +355,7 @@ export default function SetupPasswordPage() {
     <Suspense fallback={
       <Container className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <ResponsiveLogo />
+          <AuthLogo />
           <p className="mt-4 text-muted-foreground">Loading...</p>
         </div>
       </Container>

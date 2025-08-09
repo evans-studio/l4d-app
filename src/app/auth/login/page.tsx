@@ -6,7 +6,7 @@ import { useAuth } from '@/lib/auth-compat'
 import { Button } from '@/components/ui/primitives/Button'
 import { Input } from '@/components/ui/primitives/Input'
 import { Checkbox } from '@/components/ui/primitives/Checkbox'
-import { ResponsiveLogo } from '@/components/ui/primitives/Logo'
+import { AuthLogo } from '@/components/ui/primitives/Logo'
 import { Container } from '@/components/layout/templates/PageLayout'
 import { Mail, Lock, AlertCircle, CheckCircle } from 'lucide-react'
 import Link from 'next/link'
@@ -76,7 +76,7 @@ export default function LoginPage() {
         <div className="max-w-md mx-auto space-y-8">
           <div className="text-center">
             <div className="flex justify-center mb-6">
-              <ResponsiveLogo />
+              <AuthLogo />
             </div>
             <h2 className="text-3xl font-bold text-text-primary">
               Sign In

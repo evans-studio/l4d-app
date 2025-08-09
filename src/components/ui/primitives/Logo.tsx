@@ -170,6 +170,24 @@ export const DashboardLogo: React.FC<{
   />
 );
 
+// Auth pages logo - clean logo without background, same sizing as homepage
+export const AuthLogo: React.FC<{
+  className?: string;
+  priority?: boolean;
+}> = ({ className, priority = true, ...props }) => (
+  <div className={cn('flex items-center justify-center', className)}>
+    <Image
+      src="/logo1.png"
+      alt="Love4Detailing"
+      width={400}
+      height={400}
+      priority={priority}
+      className="object-contain"
+      {...props}
+    />
+  </div>
+);
+
 export const FooterLogo: React.FC<Omit<LogoProps, 'variant' | 'size'>> = (props) => (
   <Logo
     variant="full"

@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth-compat'
 import { Button } from '@/components/ui/primitives/Button'
-import { ResponsiveLogo } from '@/components/ui/primitives/Logo'
+import { AuthLogo } from '@/components/ui/primitives/Logo'
 import { Container } from '@/components/layout/templates/PageLayout'
 import { Mail, Lock, User, Phone, AlertCircle, CheckCircle } from 'lucide-react'
 import Link from 'next/link'
@@ -62,7 +62,7 @@ export default function RegisterPage() {
           <div className="max-w-md mx-auto space-y-8">
             <div className="text-center">
               <div className="flex justify-center mb-6">
-                <ResponsiveLogo />
+                <AuthLogo />
               </div>
               <div className="w-16 h-16 bg-success-600/10 rounded-full flex items-center justify-center mx-auto mb-4">
                 <CheckCircle className="w-8 h-8 text-success-400" />
@@ -101,7 +101,7 @@ export default function RegisterPage() {
         <div className="max-w-md mx-auto space-y-8">
           <div className="text-center">
             <div className="flex justify-center mb-6">
-              <ResponsiveLogo />
+              <AuthLogo />
             </div>
             <h2 className="text-3xl font-bold text-text-primary">
               Create Account
