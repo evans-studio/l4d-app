@@ -19,12 +19,6 @@ interface Vehicle {
   registration?: string
 }
 
-interface VehicleSize {
-  id: string
-  name: string
-  description?: string
-  price_multiplier?: number
-}
 
 interface VehicleEditModalProps extends BaseOverlayProps {
   data: {
@@ -44,12 +38,8 @@ export const VehicleEditModal: React.FC<VehicleEditModalProps> = ({
     model: '',
     year: new Date().getFullYear(),
     color: '',
-    registration: '',
-    vehicle_size_id: '',
-    detected_size: ''
+    registration: ''
   })
-  const [isLoading, setIsLoading] = useState(false)
-  const [vehicleSizes, setVehicleSizes] = useState<VehicleSize[]>([])
   const [licensePlateError, setLicensePlateError] = useState<string | undefined>(undefined)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
@@ -66,17 +56,6 @@ export const VehicleEditModal: React.FC<VehicleEditModalProps> = ({
     ? availableModels.find(m => m.model === formData.model)?.years || []
     : []
 
-  // Get size for selected make/model (auto-detection)
-  const getVehicleSize = (make: string, model: string): string => {
-    const vehicleMake = vehicleData.vehicles.find(v => v.make === make)
-    if (vehicleMake) {
-      const vehicleModel = vehicleMake.models.find(m => m.model === model)
-      if (vehicleModel) {
-        return vehicleModel.size
-      }
-    }
-    return ''
-  }
 
   useEffect(() => {
     if (isOpen && data?.vehicle) {
@@ -85,57 +64,12 @@ export const VehicleEditModal: React.FC<VehicleEditModalProps> = ({
         model: data.vehicle.model || '',
         year: data.vehicle.year || new Date().getFullYear(),
         color: data.vehicle.color || '',
-        registration: data.vehicle.registration || '',
-        vehicle_size_id: '',
-        detected_size: ''
+        registration: data.vehicle.registration || ''
       })
-      loadVehicleSizes()
-    } else if (isOpen) {
-      loadVehicleSizes()
     }
   }, [isOpen, data?.vehicle])
 
-  // Auto-detect size when make/model changes
-  useEffect(() => {
-    if (formData.make && formData.model) {
-      const detectedSize = getVehicleSize(formData.make, formData.model)
-      if (detectedSize) {
-        // Find the corresponding vehicle size ID
-        const sizeRecord = vehicleSizes.find(size => 
-          size.name.toLowerCase() === {
-            'S': 'small',
-            'M': 'medium', 
-            'L': 'large',
-            'XL': 'extra large'
-          }[detectedSize]?.toLowerCase()
-        )
-        
-        setFormData(prev => ({
-          ...prev,
-          detected_size: detectedSize,
-          vehicle_size_id: sizeRecord?.id || ''
-        }))
-      }
-    }
-  }, [formData.make, formData.model, vehicleSizes])
 
-  const loadVehicleSizes = async () => {
-    try {
-      setIsLoading(true)
-      const response = await fetch('/api/vehicle-sizes')
-      const result = await response.json()
-      
-      if (result.success) {
-        setVehicleSizes(result.data || [])
-      } else {
-        console.error('Failed to load vehicle sizes:', result.error)
-      }
-    } catch (error) {
-      console.error('Failed to load vehicle sizes:', error)
-    } finally {
-      setIsLoading(false)
-    }
-  }
 
   const handleFormChange = (field: string, value: any) => {
     setFormData(prev => {
@@ -145,8 +79,6 @@ export const VehicleEditModal: React.FC<VehicleEditModalProps> = ({
       if (field === 'make') {
         newForm.model = ''
         newForm.year = new Date().getFullYear()
-        newForm.detected_size = ''
-        newForm.vehicle_size_id = ''
       }
       
       // Reset year when model changes
@@ -161,8 +93,8 @@ export const VehicleEditModal: React.FC<VehicleEditModalProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!formData.make.trim() || !formData.model.trim() || !formData.vehicle_size_id) {
-      setError('Please fill in all required fields')
+    if (!formData.make.trim() || !formData.model.trim() || !formData.registration.trim()) {
+      setError('Please fill in all required fields (make, model, and registration number)')
       return
     }
 
@@ -262,7 +194,7 @@ export const VehicleEditModal: React.FC<VehicleEditModalProps> = ({
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Select
-            label="Year"
+            label="Year (Optional)"
             placeholder="Select year"
             required
             options={availableYears.map(year => ({ value: year.toString(), label: year.toString() }))}
@@ -273,7 +205,7 @@ export const VehicleEditModal: React.FC<VehicleEditModalProps> = ({
           />
           
           <Input
-            label="Color"
+            label="Color (Optional)"
             placeholder="e.g. Black, White, Silver"
             value={formData.color}
             onChange={(e) => setFormData(prev => ({ ...prev, color: e.target.value }))}
@@ -283,7 +215,7 @@ export const VehicleEditModal: React.FC<VehicleEditModalProps> = ({
         <Input
           label="Registration Number"
           placeholder={`e.g. ${getRandomLicensePlateExample()}`}
-          optional
+          required
           value={formData.registration}
           onChange={(e) => {
             const { formatted, error } = formatLicensePlateInput(e.target.value)
@@ -291,27 +223,9 @@ export const VehicleEditModal: React.FC<VehicleEditModalProps> = ({
             setLicensePlateError(error || undefined)
           }}
           error={licensePlateError}
-          helperText={licensePlateError || "UK license plate format (optional)"}
+          helperText={licensePlateError || "UK license plate format"}
         />
 
-        <Select
-          label="Vehicle Size"
-          placeholder="Select vehicle size"
-          required
-          options={vehicleSizes.map(size => ({
-            value: size.id,
-            label: `${size.name}${size.price_multiplier ? ` (${size.price_multiplier}x)` : ''}`
-          }))}
-          value={formData.vehicle_size_id}
-          onChange={(e) => setFormData(prev => ({ ...prev, vehicle_size_id: e.target.value }))}
-          helperText={
-            formData.detected_size 
-              ? `Auto-detected: ${formData.detected_size} (${['S', 'M', 'L', 'XL'].includes(formData.detected_size) ? 
-                  { 'S': 'Small', 'M': 'Medium', 'L': 'Large', 'XL': 'Extra Large' }[formData.detected_size] : formData.detected_size})`
-              : "Vehicle size affects pricing"
-          }
-          disabled={isLoading}
-        />
 
         {error && (
           <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-800 text-sm">
