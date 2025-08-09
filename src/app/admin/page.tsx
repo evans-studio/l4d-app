@@ -4,23 +4,18 @@ import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSessionRefresh } from '@/lib/hooks/useSessionRefresh'
 import { Button } from '@/components/ui/primitives/Button'
-import { Card, CardContent, CardGrid } from '@/components/ui/composites/Card'
 import { AdminLayout } from '@/components/layouts/AdminLayout'
 import { AdminRoute } from '@/components/ProtectedRoute'
 import { BookingCard } from '@/components/admin/BookingCard'
+import { CompactDashboardWidgets } from '@/components/admin/widgets/CompactDashboardWidgets'
 import { 
   CalendarIcon, 
   UsersIcon, 
-  DollarSignIcon, 
-  TrendingUpIcon,
-  ClockIcon,
   PlusIcon,
   AlertCircleIcon,
   CheckCircleIcon,
-  XCircleIcon,
-  EyeIcon,
+  ClockIcon,
   EditIcon,
-  AlertTriangleIcon,
   BarChart3Icon
 } from 'lucide-react'
 
@@ -85,317 +80,10 @@ interface RecentBooking {
 }
 
 
-// Mobile Widget Carousel Component
-interface MobileWidgetCarouselProps {
-  stats: AdminStats
-  router: any
-}
-
-function MobileWidgetCarousel({ stats, router }: MobileWidgetCarouselProps) {
-  const [currentIndex, setCurrentIndex] = useState(0)
-  const [isScrolling, setIsScrolling] = useState(false)
-  const scrollRef = useRef<HTMLDivElement>(null)
-  const touchStartX = useRef<number>(0)
-  const touchEndX = useRef<number>(0)
-
-  // Update current index based on scroll position
-  const handleScroll = () => {
-    if (!scrollRef.current) return
-    
-    const container = scrollRef.current
-    const scrollLeft = container.scrollLeft
-    const slideWidth = container.clientWidth
-    const newIndex = Math.round(scrollLeft / slideWidth)
-    
-    if (newIndex !== currentIndex && newIndex >= 0 && newIndex < totalWidgets) {
-      setCurrentIndex(newIndex)
-    }
-  }
-
-  // Order widgets by priority: Requiring Action (if > 0), Today, Tomorrow, This Week
-  const getWidgetOrder = () => {
-    const widgets = []
-    
-    // Priority 1: Requiring Action (only if there are items requiring action)
-    if (stats.requiresAction.total > 0) {
-      widgets.push('requiresAction')
-    }
-    
-    // Priority 2: Today's Schedule
-    widgets.push('today')
-    
-    // Priority 3: Tomorrow
-    widgets.push('tomorrow')
-    
-    // Priority 4: This Week
-    widgets.push('thisWeek')
-    
-    return widgets
-  }
-
-  const widgetOrder = getWidgetOrder()
-  const totalWidgets = widgetOrder.length
-
-  const goToSlide = (index: number) => {
-    if (isScrolling) return
-    setCurrentIndex(index)
-    if (scrollRef.current) {
-      const container = scrollRef.current
-      const slideWidth = container.clientWidth
-      container.scrollTo({
-        left: slideWidth * index,
-        behavior: 'smooth'
-      })
-    }
-  }
-
-  const goToNext = () => {
-    const nextIndex = (currentIndex + 1) % totalWidgets
-    goToSlide(nextIndex)
-  }
-
-  const goToPrev = () => {
-    const prevIndex = currentIndex === 0 ? totalWidgets - 1 : currentIndex - 1
-    goToSlide(prevIndex)
-  }
-
-  // Touch handlers for swipe gestures
-  const handleTouchStart = (e: React.TouchEvent) => {
-    setIsScrolling(true)
-    if (e.touches[0]) {
-      touchStartX.current = e.touches[0].clientX
-    }
-  }
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (e.touches[0]) {
-      touchEndX.current = e.touches[0].clientX
-    }
-  }
-
-  const handleTouchEnd = () => {
-    setIsScrolling(false)
-    const difference = touchStartX.current - touchEndX.current
-    const threshold = 50 // minimum swipe distance
-
-    if (Math.abs(difference) > threshold) {
-      if (difference > 0) {
-        goToNext() // Swipe left - go to next
-      } else {
-        goToPrev() // Swipe right - go to previous
-      }
-    }
-  }
-
-  const renderWidget = (widgetType: string) => {
-    const baseClasses = "bg-surface-secondary rounded-lg border border-border-primary p-4 w-full h-44 flex flex-col justify-between"
-    
-    switch (widgetType) {
-      case 'requiresAction':
-        return (
-          <div className={baseClasses}>
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <p className="text-text-secondary text-sm font-medium">Requiring Action</p>
-                <p className="text-2xl font-bold text-text-primary">
-                  {stats.requiresAction.total}
-                </p>
-              </div>
-              <AlertTriangleIcon className="w-8 h-8 text-orange-500" />
-            </div>
-            <div className="space-y-2">
-              <div className="text-sm">
-                <span className="text-orange-600 font-medium">{stats.requiresAction.pending} pending bookings</span>
-              </div>
-              {stats.requiresAction.rescheduleRequests > 0 && (
-                <div className="text-sm">
-                  <span className="text-purple-600 font-medium">{stats.requiresAction.rescheduleRequests} reschedule requests</span>
-                </div>
-              )}
-              {stats.requiresAction.toConfirm > 0 && (
-                <div className="text-sm">
-                  <span className="text-blue-600 font-medium">{stats.requiresAction.toConfirm} to confirm</span>
-                </div>
-              )}
-              <Button 
-                onClick={() => router.push('/admin/bookings')}
-                variant="primary"
-                size="md" 
-                className="w-full min-h-[48px] touch-manipulation"
-              >
-                Take Action
-              </Button>
-            </div>
-          </div>
-        )
-
-      case 'today':
-        return (
-          <div className={baseClasses}>
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <p className="text-text-secondary text-sm font-medium">Today's Schedule</p>
-                <p className="text-2xl font-bold text-text-primary">
-                  {stats.today.booked} of {stats.today.capacity}
-                </p>
-              </div>
-              <CalendarIcon className="w-8 h-8 text-brand-purple" />
-            </div>
-            <div className="space-y-2">
-              <div className="text-sm">
-                <span className="text-text-primary font-medium">{stats.today.remaining} remaining</span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div 
-                  className="bg-brand-purple h-2 rounded-full transition-all duration-300" 
-                  style={{ width: `${stats.today.utilizationPercent}%` }}
-                ></div>
-              </div>
-              <Button 
-                onClick={() => router.push('/admin/schedule')}
-                variant="outline" 
-                size="md" 
-                className="w-full min-h-[48px] touch-manipulation"
-              >
-                View Schedule
-              </Button>
-            </div>
-          </div>
-        )
-
-      case 'tomorrow':
-        return (
-          <div className={baseClasses}>
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <p className="text-text-secondary text-sm font-medium">Tomorrow</p>
-                <p className="text-2xl font-bold text-text-primary">
-                  {stats.tomorrow.booked} of {stats.tomorrow.capacity}
-                </p>
-              </div>
-              <ClockIcon className="w-8 h-8 text-blue-600" />
-            </div>
-            <div className="space-y-2">
-              {stats.tomorrow.fullyBooked ? (
-                <div className="text-sm">
-                  <span className="text-red-600 font-bold">FULLY BOOKED</span>
-                </div>
-              ) : (
-                <div className="text-sm">
-                  <span className="text-text-primary font-medium">{stats.tomorrow.remaining} remaining</span>
-                </div>
-              )}
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div 
-                  className={`h-2 rounded-full transition-all duration-300 ${
-                    stats.tomorrow.fullyBooked ? 'bg-red-500' : 'bg-blue-500'
-                  }`}
-                  style={{ width: `${stats.tomorrow.utilizationPercent}%` }}
-                ></div>
-              </div>
-              <Button 
-                onClick={() => router.push('/admin/schedule')}
-                variant="outline" 
-                size="md" 
-                className="w-full min-h-[48px] touch-manipulation"
-              >
-                View Day
-              </Button>
-            </div>
-          </div>
-        )
-
-      case 'thisWeek':
-        return (
-          <div className={baseClasses}>
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <p className="text-text-secondary text-sm font-medium">This Week</p>
-                <p className="text-2xl font-bold text-text-primary">
-                  {stats.thisWeek.booked} of {stats.thisWeek.capacity}
-                </p>
-              </div>
-              <TrendingUpIcon className="w-8 h-8 text-green-600" />
-            </div>
-            <div className="space-y-2">
-              <div className="text-sm">
-                <span className="text-green-600 font-medium">£{stats.thisWeek.revenue.toLocaleString()} revenue</span>
-              </div>
-              <div className="text-sm">
-                <span className="text-text-secondary">{stats.thisWeek.utilizationPercent}% utilized</span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div 
-                  className="bg-green-500 h-2 rounded-full transition-all duration-300" 
-                  style={{ width: `${stats.thisWeek.utilizationPercent}%` }}
-                ></div>
-              </div>
-            </div>
-          </div>
-        )
-
-      default:
-        return null
-    }
-  }
-
-  return (
-    <div className="mobile-widget-carousel w-full max-w-full overflow-hidden">
-      {/* Swipe hint text */}
-      <div className="text-center mb-3">
-        <p className="text-text-secondary text-xs font-medium">← Swipe between widgets →</p>
-      </div>
-
-      {/* Widget carousel container - Mobile optimized */}
-      <div className="w-full overflow-hidden">
-        <div 
-          className="flex overflow-x-auto scrollbar-hide snap-x snap-mandatory"
-          ref={scrollRef}
-          onScroll={handleScroll}
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
-          style={{ 
-            scrollbarWidth: 'none', 
-            msOverflowStyle: 'none',
-            WebkitOverflowScrolling: 'touch',
-            scrollSnapType: 'x mandatory'
-          }}
-        >
-          {widgetOrder.map((widgetType, index) => (
-            <div 
-              key={widgetType} 
-              className="mobile-widget-item snap-center flex-shrink-0 w-full min-w-full max-w-full"
-            >
-              {renderWidget(widgetType)}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Dot indicators */}
-      <div className="flex justify-center mt-4 space-x-2">
-        {widgetOrder.map((_, index) => (
-          <button
-            key={index}
-            onClick={() => goToSlide(index)}
-            className={`rounded-full transition-all duration-200 touch-manipulation ${
-              index === currentIndex 
-                ? 'bg-brand-purple w-6 h-2' 
-                : 'bg-gray-300 hover:bg-gray-400 w-2 h-2'
-            }`}
-            style={{ minHeight: '44px', minWidth: '44px' }}
-            aria-label={`Go to widget ${index + 1}`}
-          />
-        ))}
-      </div>
-    </div>
-  )
-}
 
 function AdminDashboard() {
   const router = useRouter()
-  const { refreshSession, isRefreshing } = useSessionRefresh()
+  const { refreshSession } = useSessionRefresh()
   const [stats, setStats] = useState<AdminStats | null>(null)
   const [recentBookings, setRecentBookings] = useState<RecentBooking[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -573,6 +261,57 @@ function AdminDashboard() {
     return `${displayHour}:${minutes || '00'} ${ampm}`
   }
 
+  // Transform AdminStats into compact widget data
+  const getCompactWidgetData = () => {
+    if (!stats) return null
+
+    // Find next booking from today's bookings
+    const nextBooking = stats.today.bookings?.[0] // Assuming first is next
+    
+    return {
+      todaysSchedule: {
+        stats: {
+          total: stats.today.booked,
+          completed: stats.today.booked - stats.today.remaining,
+          remaining: stats.today.remaining
+        },
+        next: nextBooking ? {
+          time: formatTime(nextBooking.start_time || '00:00'),
+          customer: nextBooking.customer_name || 'Customer',
+          service: nextBooking.services?.[0]?.name || 'Service'
+        } : null,
+        revenue: stats.thisWeek.revenue
+      },
+      customerActivity: {
+        new: 4, // Mock data - you can enhance this with real API data
+        returning: 12,
+        latest: {
+          name: recentBookings[0]?.customer_name || 'Customer',
+          action: `booked ${recentBookings[0]?.services?.[0]?.name || 'service'}`,
+          timeAgo: recentBookings[0] ? '2h ago' : 'N/A'
+        }
+      },
+      revenuePulse: {
+        today: Math.round(stats.thisWeek.revenue / 7), // Mock today revenue
+        week: stats.thisWeek.revenue,
+        month: stats.thisWeek.revenue * 4, // Mock month revenue
+        trend: 'up' as const
+      },
+      requiresAction: {
+        count: stats.requiresAction.total,
+        mostUrgent: {
+          type: 'booking',
+          message: stats.requiresAction.pending > 0 
+            ? `Booking confirmation from ${recentBookings.find(b => b.status === 'pending')?.customer_name || 'customer'}` 
+            : 'Review required',
+          action: 'Review'
+        }
+      }
+    }
+  }
+
+  const compactWidgetData = getCompactWidgetData()
+
   if (isLoading) {
     return (
       <AdminLayout>
@@ -611,170 +350,15 @@ function AdminDashboard() {
           </div>
         )}
 
-        {/* Operational Dashboard Widgets - Using Component Library */}
-        {stats && (
-          <CardGrid 
-            columns={{ mobile: 1, tablet: 2, desktop: 4 }} 
-            gap="md"
-            className="w-full"
-          >
-            {/* Requiring Action Widget - Priority #1 */}
-            {stats.requiresAction.total > 0 && (
-              <Card variant="default" size="md">
-                <CardContent>
-                  <div className="flex items-center justify-between mb-4">
-                    <div>
-                      <p className="text-text-secondary text-sm font-medium">Requiring Action</p>
-                      <p className="text-2xl font-bold text-text-primary">
-                        {stats.requiresAction.total}
-                      </p>
-                    </div>
-                    <AlertTriangleIcon className="w-8 h-8 text-orange-500" />
-                  </div>
-                  <div className="space-y-2">
-                    <div className="text-sm">
-                      <span className="text-orange-600 font-medium">{stats.requiresAction.pending} pending bookings</span>
-                    </div>
-                    {stats.requiresAction.rescheduleRequests > 0 && (
-                      <div className="text-sm">
-                        <span className="text-purple-600 font-medium">{stats.requiresAction.rescheduleRequests} reschedule requests</span>
-                      </div>
-                    )}
-                    {stats.requiresAction.toConfirm > 0 && (
-                      <div className="text-sm">
-                        <span className="text-blue-600 font-medium">{stats.requiresAction.toConfirm} to confirm</span>
-                      </div>
-                    )}
-                    <div className="space-y-3">
-                      <Button 
-                        onClick={() => router.push('/admin/bookings')}
-                        variant="primary"
-                        size="md" 
-                        className="w-full min-h-[48px] touch-manipulation"
-                      >
-                        Manage Bookings
-                      </Button>
-                      {stats.requiresAction.rescheduleRequests > 0 && (
-                        <Button 
-                          onClick={() => router.push('/admin/reschedule-requests')}
-                          variant="outline"
-                          size="md" 
-                          className="w-full min-h-[48px] touch-manipulation"
-                        >
-                          View Reschedule Requests
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Today's Schedule Widget - Priority #2 */}
-            <Card variant="default" size="md">
-              <CardContent>
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <p className="text-text-secondary text-sm font-medium">Today's Schedule</p>
-                    <p className="text-2xl font-bold text-text-primary">
-                      {stats.today.booked} of {stats.today.capacity}
-                    </p>
-                  </div>
-                  <CalendarIcon className="w-8 h-8 text-brand-purple" />
-                </div>
-                <div className="space-y-2">
-                  <div className="text-sm">
-                    <span className="text-text-primary font-medium">{stats.today.remaining} remaining</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div 
-                      className="bg-brand-purple h-2 rounded-full transition-all duration-300" 
-                      style={{ width: `${stats.today.utilizationPercent}%` }}
-                    ></div>
-                  </div>
-                  <Button 
-                    onClick={() => router.push('/admin/schedule')}
-                    variant="outline" 
-                    size="md" 
-                    className="w-full min-h-[48px] touch-manipulation"
-                  >
-                    View Schedule
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Tomorrow Widget - Priority #3 */}
-            <Card variant="default" size="md">
-              <CardContent>
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <p className="text-text-secondary text-sm font-medium">Tomorrow</p>
-                    <p className="text-2xl font-bold text-text-primary">
-                      {stats.tomorrow.booked} of {stats.tomorrow.capacity}
-                    </p>
-                  </div>
-                  <ClockIcon className="w-8 h-8 text-blue-600" />
-                </div>
-                <div className="space-y-2">
-                  {stats.tomorrow.fullyBooked ? (
-                    <div className="text-sm">
-                      <span className="text-red-600 font-bold">FULLY BOOKED</span>
-                    </div>
-                  ) : (
-                    <div className="text-sm">
-                      <span className="text-text-primary font-medium">{stats.tomorrow.remaining} remaining</span>
-                    </div>
-                  )}
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div 
-                      className={`h-2 rounded-full transition-all duration-300 ${
-                        stats.tomorrow.fullyBooked ? 'bg-red-500' : 'bg-blue-500'
-                      }`}
-                      style={{ width: `${stats.tomorrow.utilizationPercent}%` }}
-                    ></div>
-                  </div>
-                  <Button 
-                    onClick={() => router.push('/admin/schedule')}
-                    variant="outline" 
-                    size="md" 
-                    className="w-full min-h-[48px] touch-manipulation"
-                  >
-                    View Day
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* This Week Widget - Priority #4 */}
-            <Card variant="default" size="md">
-              <CardContent>
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <p className="text-text-secondary text-sm font-medium">This Week</p>
-                    <p className="text-2xl font-bold text-text-primary">
-                      {stats.thisWeek.booked} of {stats.thisWeek.capacity}
-                    </p>
-                  </div>
-                  <TrendingUpIcon className="w-8 h-8 text-green-600" />
-                </div>
-                <div className="space-y-2">
-                  <div className="text-sm">
-                    <span className="text-green-600 font-medium">£{stats.thisWeek.revenue.toLocaleString()} revenue</span>
-                  </div>
-                  <div className="text-sm">
-                    <span className="text-text-secondary">{stats.thisWeek.utilizationPercent}% utilized</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div 
-                      className="bg-green-500 h-2 rounded-full transition-all duration-300" 
-                      style={{ width: `${stats.thisWeek.utilizationPercent}%` }}
-                    ></div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </CardGrid>
+        {/* Ultra-Compact Dashboard Widgets */}
+        {compactWidgetData && (
+          <CompactDashboardWidgets
+            todaysSchedule={compactWidgetData.todaysSchedule}
+            customerActivity={compactWidgetData.customerActivity}
+            revenuePulse={compactWidgetData.revenuePulse}
+            requiresAction={compactWidgetData.requiresAction}
+            onActionClick={() => router.push('/admin/bookings')}
+          />
         )}
 
         {/* Recent Bookings - Compact Card Stack */}
