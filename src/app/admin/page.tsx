@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useSessionRefresh } from '@/lib/hooks/useSessionRefresh'
 import { Button } from '@/components/ui/primitives/Button'
 import { Card, CardContent, CardGrid } from '@/components/ui/composites/Card'
+import { HeaderLogo } from '@/components/ui/primitives/Logo'
 import { AdminLayout } from '@/components/layouts/AdminLayout'
 import { AdminRoute } from '@/components/ProtectedRoute'
 import { BookingCard } from '@/components/admin/BookingCard'
@@ -15,7 +16,6 @@ import {
   TrendingUpIcon,
   TrendingDownIcon,
   ClockIcon,
-  PlusIcon,
   AlertCircleIcon,
   CheckCircleIcon,
   XCircleIcon,
@@ -598,23 +598,14 @@ function AdminDashboard() {
   return (
     <AdminLayout>
       <div className="space-y-6 sm:space-y-8 overflow-x-hidden max-w-full">
-        {/* Header - Mobile First Responsive */}
-        <div className="flex flex-col space-y-4 sm:flex-row sm:justify-between sm:items-start sm:space-y-0 w-full max-w-full min-w-0">
-          <div className="flex-1">
-            <h1 className="text-xl sm:text-2xl font-bold text-text-primary">Admin Dashboard</h1>
-            <p className="text-text-secondary mt-2 text-sm sm:text-base">
-              Overview of your business performance and recent activities
-            </p>
+        {/* Header - Centered Logo Design */}
+        <div className="text-center space-y-4">
+          <div className="flex justify-center">
+            <HeaderLogo size="lg" />
           </div>
-          <Button 
-            onClick={() => router.push('/admin/bookings')}
-            className="flex items-center justify-center space-x-2 w-full sm:w-auto"
-            size="sm"
-          >
-            <PlusIcon className="w-4 h-4" />
-            <span className="sm:hidden">Bookings</span>
-            <span className="hidden sm:inline">Manage Bookings</span>
-          </Button>
+          <h1 className="text-xl sm:text-2xl font-bold text-text-primary">
+            Admin Dashboard
+          </h1>
         </div>
 
         {error && (
