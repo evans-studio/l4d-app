@@ -346,7 +346,7 @@ export class PaymentReminderService {
             <a href="${payment.payment_link}" 
                class="cta-button"
                style="display: inline-block; background: ${urgencyColor}; color: white; padding: 16px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); transition: all 0.2s;">
-              💳 Pay Now with PayPal
+Pay Now with PayPal
             </a>
             <p class="text-small" style="font-size: 13px; color: #6b7280; margin-top: 16px; line-height: 1.5;">
               Secure payment processing through PayPal<br>
@@ -360,8 +360,8 @@ export class PaymentReminderService {
             <h4 style="color: #111827; margin: 0 0 16px 0; font-size: 16px; font-weight: 600;">Need Help?</h4>
             <p class="text-small" style="color: #6b7280; font-size: 14px; margin: 0; line-height: 1.6;">
               If you have any questions or concerns about this payment reminder:<br>
-              <strong style="color: #374151;">📧 Email:</strong> <a href="mailto:zell@love4detailing.com" style="color: #9747FF; text-decoration: none;">zell@love4detailing.com</a><br>
-              <strong style="color: #374151;">🕒 Response Time:</strong> Within 24 hours
+              <strong style="color: #374151;">Email:</strong> <a href="mailto:zell@love4detailing.com" style="color: #9747FF; text-decoration: none;">zell@love4detailing.com</a><br>
+              <strong style="color: #374151;">Response Time:</strong> Within 24 hours
             </p>
           </div>
           

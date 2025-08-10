@@ -390,10 +390,10 @@ function getBookingReminderTemplate(data: NotificationData): EmailTemplate {
         
         <h3>Please ensure:</h3>
         <ul>
-          <li>✅ Your vehicle is accessible</li>
-          <li>✅ Keys are available</li>
-          <li>✅ Any personal items are removed from the vehicle</li>
-          <li>✅ You're available at the scheduled time</li>
+          <li>Your vehicle is accessible</li>
+          <li>Keys are available</li>
+          <li>Any personal items are removed from the vehicle</li>
+          <li>You're available at the scheduled time</li>
         </ul>
         
         <p>If you need to reschedule or have any questions, please call us at ${data.businessPhone}</p>
@@ -454,7 +454,7 @@ function getBookingCancellationTemplate(data: NotificationData): EmailTemplate {
       
       <div class="content">
         <div class="cancellation-box">
-          <h3>❌ Booking Cancelled</h3>
+          <h3>Booking Cancelled</h3>
           <p>Your booking ${data.bookingReference} has been cancelled.</p>
         </div>
         
@@ -532,7 +532,7 @@ function getBookingRescheduleTemplate(data: NotificationData): EmailTemplate {
       
       <div class="content">
         <div class="reschedule-box">
-          <h3>📅 Booking Rescheduled</h3>
+          <h3>Booking Rescheduled</h3>
           <p>Your appointment has been successfully rescheduled.</p>
         </div>
         
@@ -616,7 +616,7 @@ function getServiceCompletionTemplate(data: NotificationData): EmailTemplate {
       
       <div class="content">
         <div class="completion-box">
-          <h3>✨ Your vehicle is ready!</h3>
+          <h3>Your vehicle is ready!</h3>
           <p>We've completed the ${data.serviceName} service.</p>
         </div>
         
@@ -698,7 +698,7 @@ function getAdminNewBookingTemplate(data: NotificationData): EmailTemplate {
       </div>
       
       <div class="content">
-        <h2>📅 New booking received!</h2>
+        <h2>New booking received!</h2>
         
         <div class="booking-details">
           <h3>Booking Details</h3>
@@ -764,7 +764,7 @@ function getAdminCancellationTemplate(data: NotificationData): EmailTemplate {
       </div>
       
       <div class="content">
-        <h2>❌ Booking cancelled</h2>
+        <h2>Booking cancelled</h2>
         
         <div class="cancellation-details">
           <h3>Cancelled Booking</h3>

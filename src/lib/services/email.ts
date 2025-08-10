@@ -26,6 +26,68 @@ export class EmailService {
     this.config = { ...defaultConfig, ...config }
   }
 
+  /**
+   * Format price with proper validation and fallback
+   */
+  private formatPrice(price: number | string | null | undefined): string {
+    if (!price || isNaN(Number(price))) {
+      console.warn('EmailService: Missing or invalid price data, using £0.00 fallback')
+      return '£0.00'
+    }
+    return `£${Number(price).toFixed(2)}`
+  }
+
+  /**
+   * Format date with proper spacing (e.g., "Processed On: 8 August 2024")
+   */
+  private formatDateTimeWithLabel(label: string, date?: Date | string): string {
+    const formattedDate = date 
+      ? new Date(date).toLocaleDateString('en-GB', {
+          day: 'numeric',
+          month: 'long', 
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        })
+      : new Date().toLocaleDateString('en-GB', {
+          day: 'numeric',
+          month: 'long', 
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        })
+    
+    return `${label}: ${formattedDate}`
+  }
+
+  /**
+   * Get logo URL with proper fallback
+   */
+  private getLogoUrl(): string {
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || 'https://love4detailing.com'
+    return `${baseUrl}/logo1.png`
+  }
+
+  /**
+   * Standard brand colors for consistent theming
+   */
+  private getBrandColors() {
+    return {
+      primary: '#9747FF',
+      secondary: '#B269FF',
+      gradient: 'linear-gradient(135deg, #9747FF 0%, #B269FF 100%)',
+      success: '#16a34a',
+      warning: '#f59e0b',
+      error: '#dc2626',
+      text: {
+        primary: '#111827',
+        secondary: '#374151',
+        muted: '#6b7280',
+        light: '#ffffff'
+      }
+    }
+  }
+
   // Send booking confirmation email to customer
   async sendBookingConfirmation(
     customerEmail: string,
@@ -337,7 +399,7 @@ export class EmailService {
         <div style="font-size: 14px; color: rgba(255, 255, 255, 0.8); margin-top: 16px;">
           <p style="margin-bottom: 8px;"><strong>Payment Reference:</strong> ${booking.booking_reference}</p>
           <p style="margin-bottom: 8px;"><strong>Payment Deadline:</strong> ${paypalPayment.deadline}</p>
-          <p style="margin-bottom: 0;">⚠️ Your booking will be automatically cancelled if payment is not received by the deadline.</p>
+          <p style="margin-bottom: 0;">Important: Your booking will be automatically cancelled if payment is not received by the deadline.</p>
         </div>
       </div>
       
@@ -440,7 +502,7 @@ This is an automated email. Please do not reply directly to this email.
         </div>
         
         <p style="margin-bottom: 0; font-size: 14px; color: rgba(255, 255, 255, 0.8);">
-          ⚠️ You'll need to verify your email to access your customer dashboard after your service.
+          Important: You'll need to verify your email to access your customer dashboard after your service.
         </p>
       </div>
       ` : ''}
@@ -461,7 +523,7 @@ This is an automated email. Please do not reply directly to this email.
         <div style="font-size: 14px; color: rgba(255, 255, 255, 0.8); margin-top: 16px;">
           <p style="margin-bottom: 8px;"><strong>Payment Reference:</strong> ${booking.booking_reference}</p>
           <p style="margin-bottom: 8px;"><strong>Payment Deadline:</strong> ${paypalPayment.deadline}</p>
-          <p style="margin-bottom: 0;">⚠️ Your booking will be automatically cancelled if payment is not received by the deadline.</p>
+          <p style="margin-bottom: 0;">Important: Your booking will be automatically cancelled if payment is not received by the deadline.</p>
         </div>
       </div>
       
@@ -539,7 +601,7 @@ ${paypalPayment.paymentLink}
 Payment Reference: ${booking.booking_reference}
 Payment Deadline: ${paypalPayment.deadline}
 
-⚠️ Important: Your booking will be automatically cancelled if payment is not received by the deadline.
+Important: Important: Your booking will be automatically cancelled if payment is not received by the deadline.
 
  WHAT HAPPENS NEXT:
 1. Complete payment using the PayPal link above within 48 hours
@@ -693,7 +755,7 @@ Love 4 Detailing - Premium Mobile Detailing Services
             <div class="header">
               <div class="alert-badge"> NEW BOOKING ALERT</div>
               <div class="logo-section">
-                <img src="${process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://love4detailing.com'}/logo1.png" alt="Love 4 Detailing" style="width: 40px; height: 40px; object-fit: contain; border-radius: 8px; filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2)); margin-bottom: 8px;" />
+                <img src="${this.getLogoUrl()}" alt="Love 4 Detailing" style="width: 40px; height: 40px; object-fit: contain; border-radius: 8px; filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2)); margin-bottom: 8px;" />
                 <div class="logo-text">Love4Detailing Admin</div>
               </div>
               <h1 style="margin: 0; font-size: 24px; font-weight: 700;">Action Required</h1>
@@ -708,7 +770,7 @@ Love 4 Detailing - Premium Mobile Detailing Services
               
               <div class="customer-card">
                 <div class="customer-header">
-                  <span>👤</span>
+                  <span></span>
                   <span>Customer Information</span>
                 </div>
                 <div class="customer-details">
@@ -787,7 +849,7 @@ Love 4 Detailing - Premium Mobile Detailing Services
               ${booking.special_instructions ? `
                 <div class="instructions-card">
                   <h4 style="color: #B269FF; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
-                    <span>📝</span>
+                    <span>Instructions:</span>
                     <span>Special Instructions</span>
                   </h4>
                   <p style="color: rgba(255, 255, 255, 0.8); margin: 0; font-style: italic;">${booking.special_instructions}</p>
@@ -848,7 +910,7 @@ Love 4 Detailing - Premium Mobile Detailing Services
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
  PRIORITY: HIGH - Action Required Within 24 Hours
 
-👤 CUSTOMER INFORMATION:
+CUSTOMER INFORMATION:
 Name: ${customerName}
 Email: ${customerEmail}
 
@@ -867,7 +929,7 @@ ${booking.service_address?.city}, ${booking.service_address?.postcode}${booking.
 
  SERVICE VALUE: £${booking.total_price}
 
-${booking.special_instructions ? `📝 SPECIAL INSTRUCTIONS:\n${booking.special_instructions}\n\n` : ''}
+${booking.special_instructions ? `Instructions: SPECIAL INSTRUCTIONS:\n${booking.special_instructions}\n\n` : ''}
  REQUIRED ACTIONS:
 -  Review booking details and customer requirements
 -  Check schedule availability for requested time slot
@@ -1000,8 +1062,8 @@ Professional Vehicle Detailing Services
           <div class="highlight-card">
             <h4>Service in Progress!</h4>
             <p style="margin-bottom: 16px;">Our professional team is currently working on your vehicle with care and attention to detail.</p>
-            <p style="margin-bottom: 12px;">⏱️ <strong>Estimated completion:</strong> We'll notify you when finished</p>
-            <p style="margin-bottom: 0;">📸 <strong>Progress updates:</strong> Before and after photos will be provided</p>
+            <p style="margin-bottom: 12px;">Estimated completion: <strong>Estimated completion:</strong> We'll notify you when finished</p>
+            <p style="margin-bottom: 0;">Progress updates: <strong>Progress updates:</strong> Before and after photos will be provided</p>
           </div>
         `
       
@@ -1103,7 +1165,7 @@ Love 4 Detailing - Professional Vehicle Detailing Services
         <body>
           <div class="header">
             <div style="text-align: center; margin-bottom: 20px;">
-              <img src="${process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://love4detailing.com'}/logo1.png" alt="Love 4 Detailing" style="width: 48px; height: 48px; object-fit: contain; border-radius: 12px; filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));" />
+              <img src="${this.getLogoUrl()}" alt="Love 4 Detailing" style="width: 48px; height: 48px; object-fit: contain; border-radius: 12px; filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));" />
             </div>
             <h1> Welcome to Love 4 Detailing!</h1>
             <p>Complete your account setup to manage your bookings</p>
@@ -1143,7 +1205,7 @@ Love 4 Detailing - Professional Vehicle Detailing Services
             </div>
             
             <div class="warning">
-              <h4>⚠️ Important Security Notice</h4>
+              <h4>Important: Important Security Notice</h4>
               <p>If you didn't create this account or book a service with us, please ignore this email. The account will be automatically removed if not activated within 7 days.</p>
             </div>
             
@@ -1283,7 +1345,7 @@ ${setupUrl}
 
         <!-- Reason Card -->
         <div style="background: #fef2f2; border: 2px solid #fca5a5; border-radius: 12px; padding: 24px; margin: 32px 0;">
-          <h3 style="color: #dc2626; margin: 0 0 16px 0; font-size: 18px; font-weight: 600;">📝 Why We Can't Fulfill This Booking</h3>
+          <h3 style="color: #dc2626; margin: 0 0 16px 0; font-size: 18px; font-weight: 600;">Instructions: Why We Can't Fulfill This Booking</h3>
           <div style="background: white; border-radius: 8px; padding: 20px; border-left: 4px solid #dc2626;">
             <p style="color: #374151; margin: 0; font-size: 16px; font-weight: 600; font-style: italic;">
               "${declineReason}"
@@ -1407,7 +1469,7 @@ YOUR BOOKING DETAILS:
 ${bookingDetails.totalPrice ? `- Total Price: ${bookingDetails.totalPrice}` : ''}
 - Current Status: Unable to Fulfill
 
-📝 WHY WE CAN'T FULFILL THIS BOOKING:
+Instructions: WHY WE CAN'T FULFILL THIS BOOKING:
 "${declineReason}"
 ${additionalNotes ? `\nAdditional Information: ${additionalNotes}` : ''}
 
@@ -1493,7 +1555,7 @@ Love 4 Detailing - Premium Mobile Detailing Services
         <body>
           <div class="header">
             <div style="text-align: center; margin-bottom: 20px;">
-              <img src="${process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://love4detailing.com'}/logo1.png" alt="Love 4 Detailing" style="width: 48px; height: 48px; object-fit: contain; border-radius: 12px; filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));" />
+              <img src="${this.getLogoUrl()}" alt="Love 4 Detailing" style="width: 48px; height: 48px; object-fit: contain; border-radius: 12px; filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));" />
             </div>
             <h1> Reschedule Request</h1>
             <p>Customer requesting to reschedule booking</p>
@@ -1649,7 +1711,7 @@ Love 4 Detailing - Admin Notifications
             <!-- Header Section -->
             <div class="email-header" style="background: ${headerGradient};">
               <div class="brand-logo">
-                <img src="${process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://love4detailing.com'}/logo1.png" alt="Love 4 Detailing" class="logo-icon" style="width: 48px; height: 48px; object-fit: contain;" />
+                <img src="${this.getLogoUrl()}" alt="Love 4 Detailing" class="logo-icon" style="width: 48px; height: 48px; object-fit: contain;" />
                 <div class="logo-text">Love 4 Detailing</div>
               </div>
               <h1 class="header-title">${header.title}</h1>
@@ -2170,7 +2232,7 @@ Love 4 Detailing - Admin Notifications
           
           ${booking.special_instructions ? `
             <div class="detail-row" style="border-bottom: none;">
-              <div class="detail-icon">📝</div>
+              <div class="detail-icon">Instructions:</div>
               <div class="detail-content">
                 <div class="detail-label">Special Instructions</div>
                 <div class="detail-value" style="font-style: italic; opacity: 0.9;">${booking.special_instructions}</div>
@@ -2305,7 +2367,7 @@ Love 4 Detailing - Admin Notifications
         ${adminResponse ? `
         <!-- Admin Message Card -->
         <div style="background: #f8fafc; border: 2px solid #e5e7eb; border-radius: 12px; padding: 24px; margin: 32px 0;">
-          <h3 style="color: #111827; margin: 0 0 16px 0; font-size: 18px; font-weight: 600;">📝 Message from Love 4 Detailing</h3>
+          <h3 style="color: #111827; margin: 0 0 16px 0; font-size: 18px; font-weight: 600;">Instructions: Message from Love 4 Detailing</h3>
           <p style="color: #374151; margin: 0; font-size: 16px; line-height: 1.6; font-style: italic; border-left: 4px solid #9747FF; padding-left: 16px;">
             "${adminResponse}"
           </p>
@@ -2457,7 +2519,7 @@ Love 4 Detailing - Premium Mobile Detailing Services
       address: bookingAny.address || bookingAny.service_address
         ? `${(bookingAny.address || bookingAny.service_address).address_line_1}, ${(bookingAny.address || bookingAny.service_address).city} ${(bookingAny.address || bookingAny.service_address).postal_code}`
         : 'Address not specified',
-      totalPrice: booking.total_price ? `£${Number(booking.total_price).toFixed(2)}` : 'N/A'
+      totalPrice: this.formatPrice(booking.total_price)
     }
 
     const paymentMethodDisplay = {
@@ -2590,7 +2652,7 @@ Love 4 Detailing - Premium Mobile Detailing Services
       address: bookingAny.address || bookingAny.service_address
         ? `${(bookingAny.address || bookingAny.service_address).address_line_1}, ${(bookingAny.address || bookingAny.service_address).city} ${(bookingAny.address || bookingAny.service_address).postal_code}`
         : 'Address not specified',
-      totalPrice: booking.total_price ? `£${Number(booking.total_price).toFixed(2)}` : 'N/A'
+      totalPrice: this.formatPrice(booking.total_price)
     }
 
     const paymentMethodDisplay = {
@@ -2670,7 +2732,7 @@ Love 4 Detailing - Premium Mobile Detailing Services
       address: bookingAny.address || bookingAny.service_address
         ? `${(bookingAny.address || bookingAny.service_address).address_line_1}, ${(bookingAny.address || bookingAny.service_address).city} ${(bookingAny.address || bookingAny.service_address).postal_code}`
         : 'Address not specified',
-      totalPrice: booking.total_price ? `£${Number(booking.total_price).toFixed(2)}` : 'N/A'
+      totalPrice: this.formatPrice(booking.total_price)
     }
 
     const paymentMethodDisplay = {
@@ -2681,16 +2743,16 @@ Love 4 Detailing - Premium Mobile Detailing Services
     }[paymentMethod] || paymentMethod
 
     return this.generateUnifiedEmailHTML({
-      title: ' Payment Received!',
+      title: 'Payment Received!',
       header: {
-        title: ' Payment Received!',
+        title: 'Payment Received!',
         subtitle: `Booking ${bookingDetails.reference} - ${customerName}`,
         type: 'default'
       },
       content: `
         <!-- Admin Alert -->
         <div style="background: #f0f9ff; border: 2px solid #0ea5e9; border-radius: 12px; padding: 24px; margin: 24px 0;">
-          <h2 style="color: #0369a1; margin: 0 0 12px 0; font-size: 20px; font-weight: 600;"> Payment Successfully Processed</h2>
+          <h2 style="color: #0369a1; margin: 0 0 12px 0; font-size: 20px; font-weight: 600;">Payment Successfully Processed</h2>
           <p style="color: #374151; margin: 0; font-size: 16px; line-height: 1.6;">
             A payment has been confirmed for booking ${bookingDetails.reference}. The booking status has been automatically updated and the customer has been notified.
           </p>
@@ -2698,7 +2760,7 @@ Love 4 Detailing - Premium Mobile Detailing Services
 
         <!-- Payment Summary -->
         <div style="background: #f8fafc; border: 2px solid #e5e7eb; border-radius: 12px; padding: 24px; margin: 32px 0;">
-          <h3 style="color: #111827; margin: 0 0 20px 0; font-size: 18px; font-weight: 600;"> Payment Information</h3>
+          <h3 style="color: #111827; margin: 0 0 20px 0; font-size: 18px; font-weight: 600;">Payment Information</h3>
           <div style="space-y: 16px;">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid #e5e7eb;">
               <span style="font-weight: 500; color: #374151;">Payment Method</span>
@@ -2714,20 +2776,14 @@ Love 4 Detailing - Premium Mobile Detailing Services
             </div>
             <div style="display: flex; justify-content: space-between; align-items: flex-start;">
               <span style="font-weight: 500; color: #374151;">Processed On</span>
-              <span style="font-weight: 600; color: #111827;">${new Date().toLocaleDateString('en-GB', {
-                day: 'numeric',
-                month: 'long', 
-                year: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-              })}</span>
+              <span style="font-weight: 600; color: #111827;">${this.formatDateTimeWithLabel('', new Date()).replace(': ', '')}</span>
             </div>
           </div>
         </div>
 
         <!-- Customer & Booking Details -->
         <div style="background: #fefce8; border: 2px solid #fde047; border-radius: 12px; padding: 24px; margin: 32px 0;">
-          <h3 style="color: #111827; margin: 0 0 20px 0; font-size: 18px; font-weight: 600;">👤 Customer & Booking Details</h3>
+          <h3 style="color: #111827; margin: 0 0 20px 0; font-size: 18px; font-weight: 600;">Customer & Booking Details</h3>
           <div style="space-y: 16px;">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid #fde047;">
               <span style="font-weight: 500; color: #374151;">Customer</span>
@@ -2761,12 +2817,12 @@ Love 4 Detailing - Premium Mobile Detailing Services
 
         <!-- Admin Actions -->
         <div style="background: #eff6ff; border: 2px solid #bfdbfe; border-radius: 12px; padding: 24px; margin: 32px 0;">
-          <h3 style="color: #1e40af; margin: 0 0 16px 0; font-size: 18px; font-weight: 600;"> Automatic Actions Completed</h3>
+          <h3 style="color: #1e40af; margin: 0 0 16px 0; font-size: 18px; font-weight: 600;">Automatic Actions Completed</h3>
           <ul style="color: #374151; line-height: 1.8; margin: 0; padding-left: 20px;">
-            <li style="margin: 8px 0;"><strong> Booking Status:</strong> Updated to "Confirmed"</li>
-            <li style="margin: 8px 0;"><strong> Payment Status:</strong> Updated to "Paid"</li>
-            <li style="margin: 8px 0;"><strong> Customer Notification:</strong> Payment confirmation email sent</li>
-            <li style="margin: 8px 0;"><strong> Schedule:</strong> Booking is now ready for service delivery</li>
+            <li style="margin: 8px 0;"><strong>Booking Status:</strong> Updated to "Confirmed"</li>
+            <li style="margin: 8px 0;"><strong>Payment Status:</strong> Updated to "Paid"</li>
+            <li style="margin: 8px 0;"><strong>Customer Notification:</strong> Payment confirmation email sent</li>
+            <li style="margin: 8px 0;"><strong>Schedule:</strong> Booking is now ready for service delivery</li>
           </ul>
         </div>
 
@@ -2803,7 +2859,7 @@ Love 4 Detailing - Premium Mobile Detailing Services
       address: bookingAny.address || bookingAny.service_address
         ? `${(bookingAny.address || bookingAny.service_address).address_line_1}, ${(bookingAny.address || bookingAny.service_address).city} ${(bookingAny.address || bookingAny.service_address).postal_code}`
         : 'Address not specified',
-      totalPrice: booking.total_price ? `£${Number(booking.total_price).toFixed(2)}` : 'N/A'
+      totalPrice: this.formatPrice(booking.total_price)
     }
 
     const paymentMethodDisplay = {
@@ -2824,13 +2880,7 @@ PAYMENT INFORMATION:
 - Payment Method: ${paymentMethodDisplay}
 - Payment Reference: ${paymentReference}
 - Amount Received: ${bookingDetails.totalPrice}
-- Processed On: ${new Date().toLocaleDateString('en-GB', {
-      day: 'numeric',
-      month: 'long', 
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    })}
+- ${this.formatDateTimeWithLabel('Processed On', new Date())}
 
 CUSTOMER & BOOKING DETAILS:
 - Customer: ${customerName} (${customerEmail})
@@ -2841,10 +2891,10 @@ CUSTOMER & BOOKING DETAILS:
 - Location: ${bookingDetails.address}
 
 AUTOMATIC ACTIONS COMPLETED:
- Booking Status: Updated to "Confirmed"
- Payment Status: Updated to "Paid"
-Customer Notification: Payment confirmation email sent
-Schedule: Booking is now ready for service delivery
+- Booking Status: Updated to "Confirmed"
+- Payment Status: Updated to "Paid"
+- Customer Notification: Payment confirmation email sent
+- Schedule: Booking is now ready for service delivery
 
 The payment has been successfully processed and all necessary updates have been completed automatically. You can view the full booking details in your admin dashboard.
 
@@ -2898,7 +2948,7 @@ Love 4 Detailing Admin System
     customerName: string
   ): Promise<{ success: boolean; error?: string }> {
     try {
-      const subject = `⚠️ Payment Deadline Exceeded - ${booking.booking_reference}`
+      const subject = `Important: Payment Deadline Exceeded - ${booking.booking_reference}`
       const htmlContent = this.generatePaymentFailedAdminHTML(booking, customerEmail, customerName)
       const textContent = this.generatePaymentFailedAdminText(booking, customerEmail, customerName)
 
@@ -2942,7 +2992,7 @@ Love 4 Detailing Admin System
       time: bookingAny.scheduled_start_time || booking.scheduled_start_time 
         ? this.formatEmailTime(bookingAny.scheduled_start_time || booking.scheduled_start_time)
         : 'Time TBC',
-      totalPrice: booking.total_price ? `£${Number(booking.total_price).toFixed(2)}` : 'N/A'
+      totalPrice: this.formatPrice(booking.total_price)
     }
 
     return this.generateUnifiedEmailHTML({
@@ -2955,7 +3005,7 @@ Love 4 Detailing Admin System
       content: `
         <!-- Urgent Alert -->
         <div style="background: #fef2f2; border: 2px solid #fecaca; border-radius: 12px; padding: 24px; margin: 24px 0;">
-          <h2 style="color: #dc2626; margin: 0 0 12px 0; font-size: 20px; font-weight: 600;">⚠️ Payment Deadline Has Passed</h2>
+          <h2 style="color: #dc2626; margin: 0 0 12px 0; font-size: 20px; font-weight: 600;">Important: Payment Deadline Has Passed</h2>
           <p style="color: #374151; margin: 0; font-size: 16px; line-height: 1.6;">
             Your booking payment deadline has expired. To secure your appointment, please complete payment immediately or contact us to discuss options.
           </p>
@@ -3039,7 +3089,7 @@ Love 4 Detailing Admin System
       time: bookingAny.scheduled_start_time || booking.scheduled_start_time 
         ? this.formatEmailTime(bookingAny.scheduled_start_time || booking.scheduled_start_time)
         : 'Time TBC',
-      totalPrice: booking.total_price ? `£${Number(booking.total_price).toFixed(2)}` : 'N/A'
+      totalPrice: this.formatPrice(booking.total_price)
     }
 
     return `
@@ -3047,7 +3097,7 @@ URGENT: PAYMENT DEADLINE EXCEEDED - Love 4 Detailing
 
 Dear ${customerName},
 
-⚠️ PAYMENT DEADLINE HAS PASSED
+Important: PAYMENT DEADLINE HAS PASSED
 
 Your booking payment deadline has expired. To secure your appointment, please complete payment immediately or contact us to discuss options.
 
@@ -3102,13 +3152,13 @@ Love 4 Detailing - Premium Mobile Detailing Services
       time: bookingAny.scheduled_start_time || booking.scheduled_start_time 
         ? this.formatEmailTime(bookingAny.scheduled_start_time || booking.scheduled_start_time)
         : 'Time TBC',
-      totalPrice: booking.total_price ? `£${Number(booking.total_price).toFixed(2)}` : 'N/A'
+      totalPrice: this.formatPrice(booking.total_price)
     }
 
     return this.generateUnifiedEmailHTML({
-      title: '⚠️ Payment Deadline Exceeded',
+      title: 'Important: Payment Deadline Exceeded',
       header: {
-        title: '⚠️ Payment Deadline Exceeded',
+        title: 'Important: Payment Deadline Exceeded',
         subtitle: `Booking ${bookingDetails.reference} - ${customerName}`,
         type: 'warning'
       },
@@ -3123,7 +3173,7 @@ Love 4 Detailing - Premium Mobile Detailing Services
 
         <!-- Customer & Booking Details -->}
         <div style="background: #f8fafc; border: 2px solid #e5e7eb; border-radius: 12px; padding: 24px; margin: 32px 0;">
-          <h3 style="color: #111827; margin: 0 0 20px 0; font-size: 18px; font-weight: 600;">👤 Customer & Booking Details</h3>
+          <h3 style="color: #111827; margin: 0 0 20px 0; font-size: 18px; font-weight: 600;">Customer & Booking Details</h3>
           <div style="space-y: 16px;">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid #e5e7eb;">
               <span style="font-weight: 500; color: #374151;">Customer</span>
@@ -3157,7 +3207,7 @@ Love 4 Detailing - Premium Mobile Detailing Services
 
         <!-- Actions Taken -->}
         <div style="background: #eff6ff; border: 2px solid #bfdbfe; border-radius: 12px; padding: 24px; margin: 32px 0;">
-          <h3 style="color: #1e40af; margin: 0 0 16px 0; font-size: 18px; font-weight: 600;"> Automatic Actions Completed</h3>
+          <h3 style="color: #1e40af; margin: 0 0 16px 0; font-size: 18px; font-weight: 600;">Automatic Actions Completed</h3>
           <ul style="color: #374151; line-height: 1.8; margin: 0; padding-left: 20px;">
             <li style="margin: 8px 0;"><strong>Status Changed:</strong> "Pending" -  "Payment Failed"</li>
             <li style="margin: 8px 0;"><strong>Customer Notified:</strong> Payment deadline exceeded email sent</li>
@@ -3204,13 +3254,13 @@ Love 4 Detailing - Premium Mobile Detailing Services
       time: bookingAny.scheduled_start_time || booking.scheduled_start_time 
         ? this.formatEmailTime(bookingAny.scheduled_start_time || booking.scheduled_start_time)
         : 'Time TBC',
-      totalPrice: booking.total_price ? `£${Number(booking.total_price).toFixed(2)}` : 'N/A'
+      totalPrice: this.formatPrice(booking.total_price)
     }
 
     return `
 ADMIN ALERT: PAYMENT DEADLINE EXCEEDED - Love 4 Detailing
 
-⚠️ AUTOMATIC STATUS CHANGE
+Important: AUTOMATIC STATUS CHANGE
 
 A booking has exceeded its 48-hour payment deadline and has been automatically marked as "Payment Failed". Customer notification has been sent.
 

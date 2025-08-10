@@ -132,8 +132,8 @@ export class EmailService {
           <div style="text-align: center; margin-top: 30px; padding-top: 25px; border-top: 1px solid #404040;">
             <p style="color: #cccccc; margin-bottom: 10px;">Need to make changes or have questions?</p>
             <p style="color: #cccccc; margin: 0;">
-              📞 <a href="tel:+441234567890" style="color: #9747FF; text-decoration: none;">01234 567890</a> | 
-              ✉️ <a href="mailto:zell@love4detailing.com" style="color: #9747FF; text-decoration: none;">zell@love4detailing.com</a>
+              Phone: <a href="tel:+447908625581" style="color: #9747FF; text-decoration: none;">07908 625581</a> | 
+              Email: <a href="mailto:zell@love4detailing.com" style="color: #9747FF; text-decoration: none;">zell@love4detailing.com</a>
             </p>
             <p style="color: #888888; margin-top: 15px; font-size: 12px;">Reference: ${data.bookingReference}</p>
           </div>
@@ -252,8 +252,8 @@ Reference: ${data.bookingReference}
           <div style="text-align: center; margin-top: 30px; padding-top: 25px; border-top: 1px solid #404040;">
             <p style="color: #cccccc; margin-bottom: 10px;">Questions about your booking?</p>
             <p style="color: #cccccc; margin: 0;">
-              📞 <a href="tel:+441234567890" style="color: #9747FF; text-decoration: none;">01234 567890</a> | 
-              ✉️ <a href="mailto:zell@love4detailing.com" style="color: #9747FF; text-decoration: none;">zell@love4detailing.com</a>
+              Phone: <a href="tel:+447908625581" style="color: #9747FF; text-decoration: none;">07908 625581</a> | 
+              Email: <a href="mailto:zell@love4detailing.com" style="color: #9747FF; text-decoration: none;">zell@love4detailing.com</a>
             </p>
           </div>
         </div>
@@ -367,8 +367,8 @@ Email: zell@love4detailing.com
           <div style="text-align: center; margin-top: 30px; padding-top: 25px; border-top: 1px solid #404040;">
             <p style="color: #cccccc; margin-bottom: 10px;">Need help with your account?</p>
             <p style="color: #cccccc; margin: 0;">
-              📞 <a href="tel:+447123456789" style="color: #9747FF; text-decoration: none;">07908 625581</a> | 
-              ✉️ <a href="mailto:zell@love4detailing.com" style="color: #9747FF; text-decoration: none;">zell@love4detailing.com</a>
+              Phone: <a href="tel:+447908625581" style="color: #9747FF; text-decoration: none;">07908 625581</a> | 
+              Email: <a href="mailto:zell@love4detailing.com" style="color: #9747FF; text-decoration: none;">zell@love4detailing.com</a>
             </p>
           </div>
         </div>
