@@ -291,17 +291,11 @@ export function BookingCard({
                 <StatusIcon className="w-3 h-3 mr-1" />
                 {statusInfo.label}
               </span>
-              {/* Payment status for dashboard variant */}
-              {booking.payment_status && (
-                <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border ${
-                  booking.payment_status === 'paid' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                  booking.payment_status === 'failed' ? 'bg-red-50 text-red-700 border-red-200' :
-                  'bg-yellow-50 text-yellow-700 border-yellow-200'
-                }`}>
+              {/* Payment indicator: only show failure on dashboard; do not show Paid (redundant) */}
+              {booking.payment_status === 'failed' && (
+                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border bg-red-50 text-red-700 border-red-200">
                   <CreditCard className="w-3 h-3" />
-                  {booking.payment_status === 'paid' ? 'Paid' :
-                   booking.payment_status === 'failed' ? 'Payment Failed' :
-                   'Payment Pending'}
+                  Payment Failed
                 </span>
               )}
               {isPaymentOverdue() && (
@@ -388,17 +382,11 @@ export function BookingCard({
                 <StatusIcon className={`w-4 h-4 ${statusInfo.color}`} />
                 <span className={statusInfo.color}>{statusInfo.label}</span>
               </span>
-              {/* Payment Status Badge */}
-              {booking.payment_status && (
-                <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium border ${
-                  booking.payment_status === 'paid' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                  booking.payment_status === 'failed' ? 'bg-red-50 text-red-700 border-red-200' :
-                  'bg-yellow-50 text-yellow-700 border-yellow-200'
-                }`}>
+              {/* Payment indicator: show failed; do not show paid alongside confirmed */}
+              {booking.payment_status === 'failed' && (
+                <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium border bg-red-50 text-red-700 border-red-200">
                   <CreditCard className="w-3 h-3" />
-                  {booking.payment_status === 'paid' ? 'Paid' :
-                   booking.payment_status === 'failed' ? 'Payment Failed' :
-                   'Payment Pending'}
+                  Payment Failed
                 </span>
               )}
               {/* Payment Overdue Warning */}
@@ -512,20 +500,8 @@ export function BookingCard({
           </div>
         </div>
 
-        {/* Payment Status Information */}
-        {booking.payment_status === 'paid' ? (
-          <div className="rounded-md p-3 border bg-emerald-50 border-emerald-200">
-            <div className="flex items-center gap-2">
-              <CreditCard className="w-4 h-4 text-emerald-600" />
-              <p className="text-sm font-semibold text-emerald-800">
-                Payment Completed
-              </p>
-            </div>
-            <p className="text-xs text-emerald-700 mt-1">
-              This booking has been successfully paid for.
-            </p>
-          </div>
-        ) : booking.status === 'pending' && (
+        {/* Payment indicators: pending shows deadline; remove paid box entirely */}
+        {booking.status === 'pending' && (
           <div className={`rounded-md p-3 border ${
             isPaymentOverdue() 
               ? 'bg-red-50 border-red-200' 
@@ -546,29 +522,19 @@ export function BookingCard({
                 )
               })()}
             </div>
-            <div className="space-y-2">
-              {booking.payment_link && (
-                <div className="flex items-center gap-2">
-                  <Button
-                    onClick={copyPaymentLink}
-                    variant="outline"
-                    size="sm"
-                    className="text-blue-600 border-blue-200 hover:bg-blue-50 h-7 text-xs"
-                  >
-                    <Copy className="w-3 h-3 mr-1" />
-                    Copy Payment Link
-                  </Button>
-                  <a 
-                    href={booking.payment_link} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-xs text-blue-600 hover:underline truncate flex-1"
-                  >
-                    {booking.payment_link}
-                  </a>
-                </div>
-              )}
-            </div>
+            {booking.payment_link && (
+              <div>
+                <Button
+                  onClick={copyPaymentLink}
+                  variant="outline"
+                  size="sm"
+                  className="text-blue-600 border-blue-200 hover:bg-blue-50 h-7 text-xs"
+                >
+                  <Copy className="w-3 h-3 mr-1" />
+                  Copy Payment Link
+                </Button>
+              </div>
+            )}
           </div>
         )}
 
