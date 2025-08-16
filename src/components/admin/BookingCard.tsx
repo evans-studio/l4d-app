@@ -12,7 +12,6 @@ import {
   PhoneIcon,
   MailIcon,
   AlertCircleIcon,
-  CreditCard,
   AlertTriangle,
   Copy
 } from 'lucide-react'
@@ -291,7 +290,6 @@ export function BookingCard({
               {/* Payment indicator: only show failure on dashboard; do not show Paid (redundant) */}
               {booking.payment_status === 'failed' && (
                 <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border bg-red-50 text-red-700 border-red-200">
-                  <CreditCard className="w-3 h-3" />
                   Payment Failed
                 </span>
               )}
@@ -539,85 +537,93 @@ export function BookingCard({
       {/* Actions Footer */}
       {showActions && (
         <div className="p-4 border-t border-border-secondary space-y-2">
-          <Button
-            onClick={() => openOverlay({
-              type: 'booking-view',
-              data: { bookingId: booking.id, booking }
-            })}
-            variant="outline"
-            size="sm"
-            className="flex items-center justify-center gap-2 border-brand-300 text-brand-600 hover:bg-brand-50 hover:border-brand-400 hover:shadow-purple-sm transition-all duration-300 font-medium min-h-[44px] touch-manipulation"
-          >
-            View Details
-          </Button>
-
-          {/* Reschedule Request Actions - Priority */}
-          {booking.has_pending_reschedule && booking.reschedule_request && (
-            <div className="grid grid-cols-2 gap-2">
+          {/* Pending: present all four actions in a single row */}
+          {!booking.has_pending_reschedule && booking.status === 'pending' ? (
+            <div className="flex flex-wrap items-center gap-2">
               <Button
                 onClick={() => openOverlay({
-                  type: 'reschedule-approve',
-                  data: { 
-                    bookingId: booking.id, 
-                    booking,
-                    rescheduleRequest: booking.reschedule_request 
-                  }
-                })}
-                size="sm"
-                className="flex items-center justify-center gap-1 bg-green-600 hover:bg-green-700 text-white"
-              >
-                Approve
-              </Button>
-              <Button
-                onClick={() => openOverlay({
-                  type: 'reschedule-decline',
-                  data: { 
-                    bookingId: booking.id, 
-                    booking,
-                    rescheduleRequest: booking.reschedule_request 
-                  }
+                  type: 'booking-view',
+                  data: { bookingId: booking.id, booking }
                 })}
                 variant="outline"
                 size="sm"
-                className="flex items-center justify-center gap-1 text-red-600 border-red-200 hover:bg-red-50"
+                className="flex items-center justify-center gap-2 border-brand-300 text-brand-600 hover:bg-brand-50 hover:border-brand-400 hover:shadow-purple-sm transition-all duration-300 font-medium min-h-[44px] touch-manipulation"
               >
-                Decline
+                View Details
               </Button>
-            </div>
-          )}
-
-          {/* Payment Actions for Pending Bookings */}
-          {!booking.has_pending_reschedule && booking.status === 'pending' && (
-            <div className="space-y-3">
-              {/* Primary Action - Mark as Paid */}
               <Button
                 onClick={() => onMarkAsPaid ? onMarkAsPaid(booking) : handleStatusUpdate('confirmed')}
                 size="sm"
                 className="flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-emerald-md hover:shadow-emerald-lg transition-all duration-300 font-semibold min-h-[44px] touch-manipulation"
               >
-                <CreditCard className="w-4 h-4" />
                 Mark as Paid
               </Button>
-              {/* Secondary Actions */}
-              <div className="flex flex-wrap items-center gap-2">
-                <Button
-                  onClick={() => handleStatusUpdate('payment_failed')}
-                  variant="outline"
-                  size="sm"
-                  className="flex items-center justify-center gap-1 text-red-600 border-red-300 hover:bg-red-50 hover:border-red-400 hover:shadow-red-sm transition-all duration-300 min-h-[44px] touch-manipulation"
-                >
-                  Payment Failed
-                </Button>
-                <Button
-                  onClick={() => handleStatusUpdate('cancelled')}
-                  variant="outline"
-                  size="sm"
-                  className="flex items-center justify-center gap-1 text-red-600 border-red-300 hover:bg-red-50 hover:border-red-400 hover:shadow-red-sm transition-all duration-300 min-h-[44px] touch-manipulation"
-                >
-                  Cancel Booking
-                </Button>
-              </div>
+              <Button
+                onClick={() => handleStatusUpdate('payment_failed')}
+                variant="outline"
+                size="sm"
+                className="flex items-center justify-center gap-1 text-red-600 border-red-300 hover:bg-red-50 hover:border-red-400 hover:shadow-red-sm transition-all duration-300 min-h-[44px] touch-manipulation"
+              >
+                Payment Failed
+              </Button>
+              <Button
+                onClick={() => handleStatusUpdate('cancelled')}
+                variant="outline"
+                size="sm"
+                className="flex items-center justify-center gap-1 text-red-600 border-red-300 hover:bg-red-50 hover:border-red-400 hover:shadow-red-sm transition-all duration-300 min-h-[44px] touch-manipulation"
+              >
+                Cancel Booking
+              </Button>
             </div>
+          ) : (
+            <>
+              <Button
+                onClick={() => openOverlay({
+                  type: 'booking-view',
+                  data: { bookingId: booking.id, booking }
+                })}
+                variant="outline"
+                size="sm"
+                className="flex items-center justify-center gap-2 border-brand-300 text-brand-600 hover:bg-brand-50 hover:border-brand-400 hover:shadow-purple-sm transition-all duration-300 font-medium min-h-[44px] touch-manipulation"
+              >
+                View Details
+              </Button>
+
+              {/* Reschedule Request Actions - Priority */}
+              {booking.has_pending_reschedule && booking.reschedule_request && (
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    onClick={() => openOverlay({
+                      type: 'reschedule-approve',
+                      data: { 
+                        bookingId: booking.id, 
+                        booking,
+                        rescheduleRequest: booking.reschedule_request 
+                      }
+                    })}
+                    size="sm"
+                    className="flex items-center justify-center gap-1 bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    Approve
+                  </Button>
+                  <Button
+                    onClick={() => openOverlay({
+                      type: 'reschedule-decline',
+                      data: { 
+                        bookingId: booking.id, 
+                        booking,
+                        rescheduleRequest: booking.reschedule_request 
+                      }
+                    })}
+                    variant="outline"
+                    size="sm"
+                    className="flex items-center justify-center gap-1 text-red-600 border-red-200 hover:bg-red-50"
+                  >
+                    Decline
+                  </Button>
+                </div>
+              )}
+            </>
           )}
 
           {/* Payment Failed Actions */}
@@ -628,7 +634,6 @@ export function BookingCard({
                 size="sm"
                 className="flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-emerald-md hover:shadow-emerald-lg transition-all duration-300 font-semibold min-h-[44px] touch-manipulation"
               >
-                <CreditCard className="w-4 h-4" />
                 Mark as Paid
               </Button>
               <div className="flex flex-wrap items-center gap-2">
