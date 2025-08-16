@@ -62,65 +62,47 @@ const statusConfig = {
   draft: {
     label: 'Draft',
     icon: FileText,
-    color: 'secondary',
-    bgColor: 'bg-gray-600/10',
-    textColor: 'text-gray-600'
+    className: 'bg-gray-500/10 text-gray-600 border border-gray-500/20'
   },
   pending: {
-    label: 'Pending',
+    label: 'Pending Payment',
     icon: PendingIcon,
-    color: 'warning',
-    bgColor: 'bg-warning-600/10',
-    textColor: 'text-warning-600'
+    className: 'bg-amber-500/10 text-amber-600 border border-amber-500/20'
   },
   confirmed: {
     label: 'Confirmed',
     icon: CheckCircle,
-    color: 'secondary',
-    bgColor: 'bg-success-600/5',
-    textColor: 'text-success-700'
+    className: 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20'
   },
   rescheduled: {
     label: 'Rescheduled',
     icon: RefreshCw,
-    color: 'brand',
-    bgColor: 'bg-brand-600/10',
-    textColor: 'text-brand-600'
+    className: 'bg-blue-500/10 text-blue-600 border border-blue-500/20'
   },
   in_progress: {
     label: 'In Progress',
     icon: AlertCircle,
-    color: 'brand',
-    bgColor: 'bg-brand-600/10',
-    textColor: 'text-brand-600'
+    className: 'bg-blue-500/10 text-blue-600 border border-blue-500/20'
   },
   completed: {
     label: 'Completed',
     icon: CheckCircle,
-    color: 'secondary',
-    bgColor: 'bg-success-600/5',
-    textColor: 'text-success-700'
+    className: 'bg-green-500/10 text-green-600 border border-green-500/20'
   },
   paid: {
     label: 'Paid',
     icon: DollarSign,
-    color: 'secondary',
-    bgColor: 'bg-success-600/5',
-    textColor: 'text-success-700'
+    className: 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20'
   },
   cancelled: {
     label: 'Cancelled',
     icon: XCircle,
-    color: 'error',
-    bgColor: 'bg-error-600/10',
-    textColor: 'text-error-600'
+    className: 'bg-red-500/10 text-red-600 border border-red-500/20'
   },
   no_show: {
     label: 'No Show',
     icon: UserX,
-    color: 'error',
-    bgColor: 'bg-error-600/10',
-    textColor: 'text-error-600'
+    className: 'bg-red-500/10 text-red-600 border border-red-500/20'
   }
 } as const
 
@@ -132,6 +114,7 @@ export const BookingDetailsModal: React.FC<BaseOverlayProps> = ({
   const [booking, setBooking] = useState<BookingDetails | null>(data?.booking || null)
   const [isLoading, setIsLoading] = useState(!data?.booking)
   const [error, setError] = useState('')
+  const [actionLoading, setActionLoading] = useState<string | null>(null)
 
 
   // Helper function to normalize customer data from different formats
@@ -163,6 +146,49 @@ export const BookingDetailsModal: React.FC<BaseOverlayProps> = ({
       name: 'Customer details unavailable',
       email: 'Email not available', 
       phone: 'Not provided'
+    }
+  }
+
+  // Admin action helpers (status transitions)
+  const updateStatus = async (newStatus: string, body: Record<string, any> = {}) => {
+    if (!booking?.id) return
+    setActionLoading(newStatus)
+    try {
+      const response = await fetch(`/api/admin/bookings/${booking.id}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus, ...body })
+      })
+      const result = await response.json()
+      if (result?.success && result?.booking) {
+        setBooking(result.booking)
+        setError('')
+      } else {
+        setError(result?.error?.message || 'Failed to update status')
+      }
+    } catch (e) {
+      setError('Network error occurred')
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  const confirmBooking = async () => {
+    if (!booking?.id) return
+    setActionLoading('confirmed')
+    try {
+      const response = await fetch(`/api/admin/bookings/${booking.id}/confirm`, { method: 'POST' })
+      const result = await response.json()
+      if (result?.success && result?.data) {
+        setBooking({ ...booking, status: 'confirmed' })
+        setError('')
+      } else {
+        setError(result?.error?.message || 'Failed to confirm booking')
+      }
+    } catch (e) {
+      setError('Network error occurred')
+    } finally {
+      setActionLoading(null)
     }
   }
 
@@ -293,23 +319,10 @@ export const BookingDetailsModal: React.FC<BaseOverlayProps> = ({
                 {booking.services?.[0]?.name || booking.service?.name || 'Service Details'}
               </h2>
               <div className="flex flex-wrap items-center gap-3 mb-2">
-                <Badge variant={config.color as any} size="md">
-                  <StatusIcon className="w-4 h-4 mr-2" />
+                <span className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${config.className}`}>
+                  <StatusIcon className="w-4 h-4" />
                   {config.label}
-                </Badge>
-                {/* Payment Status Badge */}
-                {booking.payment_status && (
-                  <Badge 
-                    variant={booking.payment_status === 'paid' ? 'success' : booking.payment_status === 'failed' ? 'error' : 'warning'} 
-                    size="md"
-                  >
-                    <DollarSign className="w-4 h-4 mr-2" />
-                    {booking.payment_status === 'paid' ? 'Paid' :
-                     booking.payment_status === 'failed' ? 'Payment Failed' :
-                     booking.payment_status === 'refunded' ? 'Refunded' :
-                     'Payment Pending'}
-                  </Badge>
-                )}
+                </span>
                 <span className="text-lg font-semibold text-text-secondary">
                   #{booking.booking_reference}
                 </span>
@@ -326,7 +339,7 @@ export const BookingDetailsModal: React.FC<BaseOverlayProps> = ({
         </div>
 
         {/* Appointment Details */}
-        <div className="bg-surface-secondary rounded-lg p-6 border border-border-secondary">
+        <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-6">
           <h3 className="text-lg font-semibold text-text-primary mb-4 flex items-center gap-2">
             <Calendar className="w-5 h-5 text-brand-400" />
             Appointment Details
@@ -356,7 +369,7 @@ export const BookingDetailsModal: React.FC<BaseOverlayProps> = ({
         </div>
 
         {/* Vehicle Details */}
-        <div className="bg-surface-secondary rounded-lg p-6 border border-border-secondary">
+        <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-6">
           <h3 className="text-lg font-semibold text-text-primary mb-4 flex items-center gap-2">
             <Car className="w-5 h-5 text-brand-400" />
             Vehicle Details
@@ -386,7 +399,7 @@ export const BookingDetailsModal: React.FC<BaseOverlayProps> = ({
         </div>
 
         {/* Service Location */}
-        <div className="bg-surface-secondary rounded-lg p-6 border border-border-secondary">
+        <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-6">
           <h3 className="text-lg font-semibold text-text-primary mb-4 flex items-center gap-2">
             <MapPin className="w-5 h-5 text-brand-400" />
             Service Location
@@ -412,7 +425,7 @@ export const BookingDetailsModal: React.FC<BaseOverlayProps> = ({
 
         {/* Payment Information */}
         {booking.payment_status && (
-          <div className="bg-surface-secondary rounded-lg p-6 border border-border-secondary">
+          <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-6">
             <h3 className="text-lg font-semibold text-text-primary mb-4 flex items-center gap-2">
               <DollarSign className="w-5 h-5 text-brand-400" />
               Payment Information
@@ -422,37 +435,28 @@ export const BookingDetailsModal: React.FC<BaseOverlayProps> = ({
                 <div className="flex-1">
                   <p className="text-sm font-medium text-text-secondary mb-2">Payment Status</p>
                   <div className={`inline-flex items-center gap-2 px-3 py-2 rounded-full text-sm font-medium border min-h-[44px] touch-manipulation ${
-                    booking.payment_status === 'paid' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                    booking.payment_status === 'failed' ? 'bg-red-50 text-red-700 border-red-200' :
-                    booking.payment_status === 'refunded' ? 'bg-gray-50 text-gray-700 border-gray-200' :
-                    'bg-yellow-50 text-yellow-700 border-yellow-200'
+                    booking.payment_status === 'paid' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' :
+                    booking.payment_status === 'failed' ? 'bg-red-500/10 text-red-600 border-red-500/20' :
+                    booking.payment_status === 'refunded' ? 'bg-gray-500/10 text-gray-700 border-gray-500/20' :
+                    'bg-amber-500/10 text-amber-700 border-amber-500/20'
                   }`}>
-                    <DollarSign className="w-4 h-4" />
                     {booking.payment_status === 'paid' ? 'Payment Completed' :
                      booking.payment_status === 'failed' ? 'Payment Failed' :
                      booking.payment_status === 'refunded' ? 'Payment Refunded' :
                      'Awaiting Payment'}
                   </div>
                 </div>
-                <div className="text-center sm:text-right">
+                <div className="text-left sm:text-right">
                   <p className="text-sm font-medium text-text-secondary mb-1">Total Amount</p>
                   <p className="text-2xl sm:text-3xl font-bold text-text-primary">{formatPrice(booking.total_price)}</p>
                 </div>
               </div>
-              {booking.payment_status === 'paid' && (
-                <div className="bg-emerald-50 border border-emerald-200 rounded-md p-3">
-                  <p className="text-emerald-800 text-sm font-medium">Payment Successfully Received</p>
-                  <p className="text-emerald-700 text-xs mt-1">
-                    This booking has been fully paid and confirmed.
-                  </p>
-                </div>
-              )}
             </div>
           </div>
         )}
 
         {/* Customer Details */}
-        <div className="bg-surface-secondary rounded-lg p-6 border border-border-secondary">
+        <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-6">
           <h3 className="text-lg font-semibold text-text-primary mb-4 flex items-center gap-2">
             <User className="w-5 h-5 text-brand-400" />
             Customer Details
@@ -485,7 +489,7 @@ export const BookingDetailsModal: React.FC<BaseOverlayProps> = ({
 
         {/* Additional Notes */}
         {booking.notes && (
-          <div className="bg-surface-secondary rounded-lg p-6 border border-border-secondary">
+          <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-6">
             <h3 className="text-lg font-semibold text-text-primary mb-4 flex items-center gap-2">
               <FileText className="w-5 h-5 text-brand-400" />
               Additional Notes
@@ -494,16 +498,83 @@ export const BookingDetailsModal: React.FC<BaseOverlayProps> = ({
           </div>
         )}
 
-        {/* Actions - Mobile optimized */}
+        {/* Actions - Mobile optimized (context-aware) */}
         <div className="flex gap-3 pt-6 border-t border-border-secondary sticky bottom-0 bg-surface-primary">
-          <Button
-            onClick={onClose}
-            variant="outline"
-            size="lg"
-            className="flex-1 min-h-[48px] touch-manipulation"
-          >
-            Close
-          </Button>
+          {/* Secondary action (varies) */}
+          {booking.status === 'pending' && (
+            <Button
+              onClick={() => updateStatus('cancelled', { reason: 'Cancelled by admin from modal' })}
+              variant="outline"
+              size="lg"
+              className="flex-1 min-h-[48px] touch-manipulation"
+              loading={actionLoading === 'cancelled'}
+            >
+              Cancel
+            </Button>
+          )}
+          {booking.status === 'confirmed' && (
+            <Button
+              onClick={() => updateStatus('cancelled', { reason: 'Cancelled by admin from modal' })}
+              variant="outline"
+              size="lg"
+              className="flex-1 min-h-[48px] touch-manipulation"
+              loading={actionLoading === 'cancelled'}
+            >
+              Cancel
+            </Button>
+          )}
+          {booking.status === 'in_progress' && (
+            <Button
+              onClick={() => updateStatus('no_show', { reason: 'Marked no-show from modal' })}
+              variant="outline"
+              size="lg"
+              className="flex-1 min-h-[48px] touch-manipulation"
+              loading={actionLoading === 'no_show'}
+            >
+              No Show
+            </Button>
+          )}
+          {/* Primary action (varies) */}
+          {booking.status === 'pending' && (
+            <Button
+              onClick={confirmBooking}
+              size="lg"
+              className="flex-1 min-h-[48px] touch-manipulation bg-blue-600 hover:bg-blue-700 text-white"
+              loading={actionLoading === 'confirmed'}
+            >
+              Mark as Paid / Confirm
+            </Button>
+          )}
+          {booking.status === 'confirmed' && (
+            <Button
+              onClick={() => updateStatus('in_progress')}
+              size="lg"
+              className="flex-1 min-h-[48px] touch-manipulation bg-blue-600 hover:bg-blue-700 text-white"
+              loading={actionLoading === 'in_progress'}
+            >
+              Start Service
+            </Button>
+          )}
+          {booking.status === 'in_progress' && (
+            <Button
+              onClick={() => updateStatus('completed')}
+              size="lg"
+              className="flex-1 min-h-[48px] touch-manipulation bg-blue-600 hover:bg-blue-700 text-white"
+              loading={actionLoading === 'completed'}
+            >
+              Complete Service
+            </Button>
+          )}
+          {['cancelled', 'completed'].includes(booking.status) && (
+            <Button
+              onClick={onClose}
+              variant="outline"
+              size="lg"
+              className="flex-1 min-h-[48px] touch-manipulation"
+            >
+              Close
+            </Button>
+          )}
         </div>
       </div>
     </BaseModal>

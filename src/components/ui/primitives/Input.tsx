@@ -37,6 +37,7 @@ export interface InputProps
   extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size'>,
     VariantProps<typeof inputVariants> {
   label?: string
+  floating?: boolean
   error?: string
   success?: string
   warning?: string
@@ -56,6 +57,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
     variant,
     size,
     label,
+    floating = false,
     error,
     success,
     warning,
@@ -93,8 +95,8 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
     
     return (
       <div className="space-y-2">
-        {/* Label */}
-        {label && (
+        {/* Label (standard) */}
+        {!floating && label && (
           <label
             htmlFor={inputId}
             className="text-sm font-medium text-white flex items-center gap-1"
@@ -106,7 +108,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
             )}
           </label>
         )}
-        
+
         {/* Input Container */}
         <div className="relative">
           {/* Left Icon */}
@@ -128,7 +130,8 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
             className={cn(
               inputVariants({ variant: currentVariant, size, className }),
               hasLeftIcon && 'pl-10',
-              hasRightIcon && 'pr-10'
+              hasRightIcon && 'pr-10',
+              floating && 'peer placeholder-transparent'
             )}
             ref={ref}
             id={inputId}
@@ -137,8 +140,32 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
               helperText && helperId,
               error && errorId
             )}
+            placeholder={floating ? (props.placeholder || ' ') : props.placeholder}
             {...props}
           />
+
+          {/* Floating Label */}
+          {floating && label && (
+            <label
+              htmlFor={inputId}
+              className={cn(
+                'pointer-events-none absolute text-text-secondary',
+                hasLeftIcon ? 'left-10' : 'left-3',
+                // Base position when empty
+                'top-1/2 -translate-y-1/2',
+                // When focused or has value
+                'peer-focus:top-2 peer-focus:-translate-y-0 peer-focus:text-xs',
+                'peer-not-placeholder-shown:top-2 peer-not-placeholder-shown:-translate-y-0 peer-not-placeholder-shown:text-xs',
+                'transition-all duration-200'
+              )}
+            >
+              {label}
+              {required && <span className="text-red-400 ml-0.5" aria-label="required">*</span>}
+              {optional && showOptional && !required && (
+                <span className="text-gray-400 text-[10px] font-normal ml-1">(optional)</span>
+              )}
+            </label>
+          )}
           
           {/* Right Icon/Actions */}
           {hasRightIcon && (

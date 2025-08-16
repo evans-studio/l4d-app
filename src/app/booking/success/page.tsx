@@ -106,7 +106,6 @@ function BookingSuccessContent() {
 
   const downloadReceipt = () => {
     // TODO: Implement PDF generation
-    console.log('Download receipt for booking:', booking?.booking_reference)
   }
 
   const addToCalendar = () => {

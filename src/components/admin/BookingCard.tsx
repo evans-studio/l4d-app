@@ -340,10 +340,17 @@ export function BookingCard({
               )}
               {/* Payment Overdue Warning */}
               {isPaymentOverdue() && (
-                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-red-50 border border-red-200 text-red-700">
+                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-red-500/10 border border-red-500/20 text-red-600">
                   OVERDUE
                 </span>
               )}
+              {/* Mobile: minimal info under header */}
+              <div className="w-full sm:hidden mt-2 text-text-primary font-medium truncate">
+                {booking.customer_name}
+              </div>
+              <div className="w-full sm:hidden text-text-secondary text-sm truncate">
+                {formatDate(booking.scheduled_date)} • {formatTime(booking.start_time)}
+              </div>
             </div>
           </div>
           <div className="text-right ml-3">
@@ -354,8 +361,8 @@ export function BookingCard({
           </div>
         </div>
         
-        {/* Date/Time and Payment Deadline */}
-        <div className="space-y-2">
+        {/* Date/Time and Payment Deadline (desktop only) */}
+        <div className="space-y-2 hidden sm:block">
           <div className="flex items-center gap-2 text-text-primary">
             <CalendarIcon className="w-4 h-4 text-text-secondary" />
             <span className="font-medium">{formatDate(booking.scheduled_date)}</span>
@@ -374,8 +381,8 @@ export function BookingCard({
         </div>
       </div>
 
-      {/* Content */}
-      <div className="p-4 space-y-4">
+      {/* Content (desktop only) */}
+      <div className="p-4 space-y-4 hidden sm:block">
         {/* Customer Info */}
         <div>
           <p className="text-text-secondary text-xs mb-1">Customer</p>
@@ -494,9 +501,23 @@ export function BookingCard({
       {/* Actions Footer */}
       {showActions && (
         <div className="p-4 border-t border-border-secondary space-y-2">
-          {/* Pending: present all four actions in a single, evenly distributed row */}
+          {/* Mobile: single primary CTA */}
+          <div className="sm:hidden">
+            <Button
+              onClick={() => openOverlay({
+                type: 'booking-view',
+                data: { bookingId: booking.id, booking }
+              })}
+              size="sm"
+              className="w-full bg-white/10 hover:bg-white/20 text-white border border-white/20 h-11 px-4 rounded-lg"
+            >
+              View Details
+            </Button>
+          </div>
+
+          {/* Pending: desktop-only action row */}
           {!booking.has_pending_reschedule && booking.status === 'pending' ? (
-            <div className="flex w-full items-stretch gap-3">
+            <div className="hidden sm:flex w-full items-stretch gap-3">
               <Button
                 onClick={() => openOverlay({
                   type: 'booking-view',
@@ -531,9 +552,9 @@ export function BookingCard({
             </div>
           ) : (
             <>
-              {/* Reschedule Request Actions - Priority */}
+              {/* Reschedule Request Actions - Priority (desktop only) */}
               {booking.has_pending_reschedule && booking.reschedule_request && (
-                <div className="grid grid-cols-2 gap-2">
+                <div className="hidden sm:grid grid-cols-2 gap-2">
                   <Button
                     onClick={() => openOverlay({
                       type: 'reschedule-approve',
@@ -568,9 +589,9 @@ export function BookingCard({
             </>
           )}
 
-          {/* Confirmed: show View + Start in a clean row */}
+          {/* Confirmed: desktop row; mobile handled by single CTA */}
           {booking.status === 'confirmed' && (
-            <div className="flex w-full items-stretch gap-3">
+            <div className="hidden sm:flex w-full items-stretch gap-3">
               <Button
                 onClick={() => openOverlay({
                   type: 'booking-view',
@@ -624,25 +645,9 @@ export function BookingCard({
             </div>
           )}
 
-          {booking.status === 'confirmed' && onStatusUpdate && (
-            <Button
-              onClick={() => handleStatusUpdate('in_progress')}
-              size="sm"
-              className="bg-blue-600 hover:bg-blue-700 text-white font-medium h-11 px-4 rounded-lg"
-            >
-              Start Service
-            </Button>
-          )}
+          {/* remove duplicate lone Start Service button for confirmed/rescheduled */}
 
-          {booking.status === 'rescheduled' && onStatusUpdate && (
-            <Button
-              onClick={() => handleStatusUpdate('in_progress')}
-              size="sm"
-              className="bg-blue-600 hover:bg-blue-700 text-white font-medium h-11 px-4 rounded-lg"
-            >
-              Start Service
-            </Button>
-          )}
+          {/* rescheduled already handled above when rendering the row */}
 
           {booking.status === 'in_progress' && onStatusUpdate && (
             <div className="space-y-3">

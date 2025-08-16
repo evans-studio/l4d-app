@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/primitives/Input'
 import { Select } from '@/components/ui/primitives/Select'
 import { ChevronLeftIcon, ChevronRightIcon, PlusIcon, CarIcon, CheckIcon, Clock, AlertCircle, Loader2 } from 'lucide-react'
 import { getVehicleSizeDescription, PRICING_CONFIG } from '@/lib/pricing/calculator'
+import { safeConsole } from '@/lib/utils/logger'
 
 // Vehicle data interfaces
 interface VehicleModel {
@@ -87,37 +88,27 @@ export function VehicleDetails() {
   // Get size for selected make/model (auto-detection on model selection)
   const getVehicleSize = (make: string, model: string): 'S' | 'M' | 'L' | 'XL' => {
     try {
-      console.log(`🔍 Getting vehicle size for: ${make} ${model}`)
       
       if (!vehicleData?.vehicles || !make || !model) {
-        console.log('❌ Missing data for vehicle size detection:', { 
-          hasVehicleData: !!vehicleData?.vehicles,
-          make,
-          model
-        })
         return 'M' // Default fallback
       }
       
       const vehicleMake = vehicleData.vehicles.find(v => v.make === make)
-      console.log(`🔍 Found vehicle make: ${vehicleMake ? 'yes' : 'no'}`)
       
       if (vehicleMake?.models) {
         const vehicleModel = vehicleMake.models.find(m => m.model === model)
-        console.log(`🔍 Found vehicle model: ${vehicleModel ? 'yes' : 'no'}`)
         
         if (vehicleModel?.size) {
           const size = vehicleModel.size as 'S' | 'M' | 'L' | 'XL'
-          console.log(`✅ Detected vehicle size: ${size} for ${make} ${model}`)
           return size
         } else {
-          console.log(`❌ No size found for model: ${model}`)
+          // no-op
         }
       }
     } catch (error) {
-      console.error('❌ Error getting vehicle size:', error)
+      safeConsole.error('Error getting vehicle size', error as Error)
     }
     
-    console.log(`🔧 Using default size 'M' for ${make} ${model}`)
     return 'M' // Default fallback
   }
 
@@ -138,7 +129,7 @@ export function VehicleDetails() {
             throw new Error(data.error?.message || 'Failed to load vehicle data')
           }
         } catch (error) {
-          console.error('Error loading vehicle data:', error)
+          safeConsole.error('Error loading vehicle data', error as Error)
           setVehicleDataError(error instanceof Error ? error.message : 'Failed to load vehicle data')
         } finally {
           setVehicleDataLoading(false)
@@ -199,7 +190,6 @@ export function VehicleDetails() {
     try {
       const vehicle = userVehicles.find(v => v.id === vehicleId)
       if (!vehicle) {
-        console.error('Vehicle not found:', vehicleId)
         return
       }
 
@@ -222,7 +212,7 @@ export function VehicleDetails() {
       })
       setShowNewVehicleForm(false)
     } catch (error) {
-      console.error('Error selecting existing vehicle:', error)
+      safeConsole.error('Error selecting existing vehicle', error as Error)
       // Continue with default behavior - don't crash the component
     }
   }
@@ -236,16 +226,9 @@ export function VehicleDetails() {
 
   const handleNext = async () => {
     // Calculate price when proceeding to next step
-    console.log('🚀 Vehicle Details - proceeding to next step')
-    console.log('🔍 Current vehicle data:', formData.vehicle)
-    
     if (canProceedToNextStep()) {
-      console.log('✅ Can proceed to next step, calculating price...')
       await calculatePrice()
-      console.log('✅ Price calculation completed, moving to next step')
       nextStep()
-    } else {
-      console.log('❌ Cannot proceed to next step')
     }
   }
 
@@ -287,7 +270,7 @@ export function VehicleDetails() {
       
       return sizeMap[sizeName] || sizeMap.M
     } catch (error) {
-      console.error('Error getting size info:', error)
+      safeConsole.error('Error getting size info', error as Error)
       // Return safe fallback
       return {
         label: 'Medium',
@@ -414,7 +397,7 @@ export function VehicleDetails() {
                   : 'M'
                 sizeInfo = getSizeInfo(sizeName)
               } catch (error) {
-                console.error('Error getting size info for vehicle:', vehicle.id, error)
+                safeConsole.error('Error getting size info for vehicle', error as Error, { vehicleId: vehicle.id })
                 sizeInfo = getSizeInfo('M') // Safe fallback
               }
               const isSelected = selectedVehicleId === vehicle.id
@@ -573,10 +556,9 @@ export function VehicleDetails() {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-medium text-text-primary mb-2">
-                  Registration *
-                </label>
                 <Input
+                  label="Registration *"
+                  floating
                   value={vehicleForm.registration}
                   onChange={(e) => handleFormChange('registration', e.target.value.toUpperCase())}
                   placeholder="e.g., AB12 CDE"
@@ -584,9 +566,7 @@ export function VehicleDetails() {
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-text-primary mb-2">
-                  Year <span className="text-text-muted">(optional)</span>
-                </label>
+                <label className="block text-sm font-medium text-text-primary mb-2">Year <span className="text-text-muted">(optional)</span></label>
                 <Select
                   value={vehicleForm.year.toString()}
                   onChange={(e) => handleFormChange('year', parseInt(e.target.value))}
@@ -609,10 +589,9 @@ export function VehicleDetails() {
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-text-primary mb-2">
-                  Color <span className="text-text-muted">(optional)</span>
-                </label>
                 <Input
+                  label="Color (optional)"
+                  floating
                   value={vehicleForm.color}
                   onChange={(e) => handleFormChange('color', e.target.value)}
                   placeholder="e.g., White, Black, Silver"

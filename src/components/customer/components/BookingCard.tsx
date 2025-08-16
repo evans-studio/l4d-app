@@ -350,8 +350,24 @@ export function BookingCard({
           <div className="flex-1 space-y-4">
             {/* Header */}
             <div className="flex items-start justify-between">
-              <div>
-                <div className="flex items-center gap-3 mb-2">
+              <div className="min-w-0">
+                {/* Mobile minimal header */}
+                <div className="flex items-center justify-between sm:hidden mb-1">
+                  <h3 className="text-base font-semibold text-text-primary truncate">#{booking.booking_reference}</h3>
+                  <span className="text-base font-bold text-brand-500 ml-3">£{booking.total_price}</span>
+                </div>
+                <div className="sm:hidden flex items-center gap-2 mb-2">
+                  <Badge variant={config.color as any} size="sm">{config.label}</Badge>
+                  {(booking.payment_status === 'failed' || isPaymentOverdue()) && (
+                    <Badge variant="error" size="sm">{booking.payment_status === 'failed' ? 'Payment Failed' : 'Overdue'}</Badge>
+                  )}
+                </div>
+                <div className="sm:hidden text-sm text-text-secondary truncate mb-2">
+                  {dateInfo.primary} • {formatTime(booking.start_time)}
+                </div>
+
+                {/* Desktop rich header */}
+                <div className="hidden sm:flex items-center gap-3 mb-2">
                   <h3 className="text-lg font-semibold text-text-primary">
                     {booking.services[0]?.name}
                     {booking.services.length > 1 && ` +${booking.services.length - 1} more`}
@@ -359,26 +375,18 @@ export function BookingCard({
                   <Badge variant={config.color as any} className="shadow-sm">
                     {config.label}
                   </Badge>
-                  {/* Payment Status Badge */}
                   {booking.payment_status && (
                     <Badge variant={booking.payment_status === 'paid' ? 'success' : booking.payment_status === 'failed' ? 'error' : 'warning'} className="shadow-sm">
-                      <CreditCard className="w-3 h-3 mr-1" />
                       {booking.payment_status === 'paid' ? 'Paid' : booking.payment_status === 'failed' ? 'Payment Failed' : 'Payment Pending'}
                     </Badge>
                   )}
-                  {/* Payment Overdue Warning */}
                   {isPaymentOverdue() && (
-                    <Badge variant="error" className="shadow-sm animate-pulse">
-                      <AlertTriangle className="w-3 h-3 mr-1" />
-                      OVERDUE
-                    </Badge>
+                    <Badge variant="error" className="shadow-sm">OVERDUE</Badge>
                   )}
                 </div>
-                <p className="text-sm text-text-secondary">
-                  Booking #{booking.booking_reference}
-                </p>
+                <p className="hidden sm:block text-sm text-text-secondary">Booking #{booking.booking_reference}</p>
               </div>
-              <div className="text-right">
+              <div className="hidden sm:block text-right">
                 <p className="text-3xl font-bold text-brand-500 drop-shadow-sm">£{booking.total_price}</p>
                 {dateInfo.secondary && (
                   <p className="text-sm text-brand-400 font-medium">{dateInfo.secondary}</p>
@@ -386,13 +394,13 @@ export function BookingCard({
               </div>
             </div>
 
-            {/* Payment Status Information - Show for pending bookings */}
+            {/* Payment Status Information - Show for pending bookings (desktop only) */}
             {booking.status === 'pending' && (
               <div className={`rounded-xl p-5 border ${ 
                 isPaymentOverdue() 
                   ? 'bg-red-50 border-red-200' 
                   : 'bg-blue-50 border-blue-200'
-              }`}>
+              } hidden sm:block`}>
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-3">
                     <CreditCard className={`w-5 h-5 ${
@@ -452,8 +460,8 @@ export function BookingCard({
               </div>
             )}
 
-            {/* Details Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            {/* Details Grid (desktop only) */}
+            <div className="hidden sm:grid grid-cols-1 sm:grid-cols-2 gap-6">
               {/* Date & Time */}
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 rounded-xl bg-brand-600/10 flex items-center justify-center">
@@ -497,56 +505,58 @@ export function BookingCard({
 
           {/* Actions */}
           {showActions && (
-            <div className="flex flex-row lg:flex-col gap-3 lg:min-w-[160px]">
-              <Button
-                onClick={handleViewDetails}
-                variant="outline"
-                size="sm"
-                leftIcon={<Eye className="w-4 h-4" />}
-                className="flex-1 lg:w-full border-brand-300 text-brand-600 hover:bg-brand-50 hover:border-brand-400 hover:shadow-purple-sm transition-all duration-300 font-medium min-h-[44px] touch-manipulation"
-              >
-                <span className="lg:hidden">View</span>
-                <span className="hidden lg:inline">View Details</span>
-              </Button>
-              
-              {booking.status === 'pending' && (
+            <div className="flex flex-col gap-3 lg:min-w-[160px]">
+              {/* Mobile single CTA */}
+              <div className="sm:hidden">
                 <Button
-                  onClick={handleCancel}
-                  variant="outline"
+                  onClick={handleViewDetails}
                   size="sm"
-                  leftIcon={<X className="w-4 h-4" />}
-                  className="flex-1 lg:w-full border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400 hover:shadow-red-sm transition-all duration-300 font-medium min-h-[44px] touch-manipulation"
+                  className="w-full bg-white/10 hover:bg-white/20 text-white border border-white/20 h-11 px-4 rounded-lg"
                 >
-                  <span className="lg:hidden">Cancel</span>
-                  <span className="hidden lg:inline">Cancel</span>
+                  View Details
                 </Button>
-              )}
-              
-              {['pending', 'confirmed'].includes(booking.status) && (
+              </div>
+              {/* Desktop actions */}
+              <div className="hidden sm:flex flex-row lg:flex-col gap-3">
                 <Button
-                  onClick={handleReschedule}
+                  onClick={handleViewDetails}
                   variant="outline"
                   size="sm"
-                  leftIcon={<RefreshCw className="w-4 h-4" />}
                   className="flex-1 lg:w-full border-brand-300 text-brand-600 hover:bg-brand-50 hover:border-brand-400 hover:shadow-purple-sm transition-all duration-300 font-medium min-h-[44px] touch-manipulation"
                 >
-                  <span className="lg:hidden">Reschedule</span>
-                  <span className="hidden lg:inline">Reschedule</span>
+                  View Details
                 </Button>
-              )}
-              
-              {booking.status === 'completed' && (
-                <Button
-                  onClick={handleRebook}
-                  variant="outline"
-                  size="sm"
-                  leftIcon={<RefreshCw className="w-4 h-4" />}
-                  className="flex-1 lg:w-full border-emerald-300 text-emerald-600 hover:bg-emerald-50 hover:border-emerald-400 hover:shadow-emerald-sm transition-all duration-300 font-medium min-h-[44px] touch-manipulation"
-                >
-                  <span className="lg:hidden">Rebook</span>
-                  <span className="hidden lg:inline">Book Again</span>
-                </Button>
-              )}
+                {booking.status === 'pending' && (
+                  <Button
+                    onClick={handleCancel}
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 lg:w-full border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400 hover:shadow-red-sm transition-all duration-300 font-medium min-h-[44px] touch-manipulation"
+                  >
+                    Cancel
+                  </Button>
+                )}
+                {['pending', 'confirmed'].includes(booking.status) && (
+                  <Button
+                    onClick={handleReschedule}
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 lg:w-full border-brand-300 text-brand-600 hover:bg-brand-50 hover:border-brand-400 hover:shadow-purple-sm transition-all duration-300 font-medium min-h-[44px] touch-manipulation"
+                  >
+                    Reschedule
+                  </Button>
+                )}
+                {booking.status === 'completed' && (
+                  <Button
+                    onClick={handleRebook}
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 lg:w-full border-emerald-300 text-emerald-600 hover:bg-emerald-50 hover:border-emerald-400 hover:shadow-emerald-sm transition-all duration-300 font-medium min-h-[44px] touch-manipulation"
+                  >
+                    Book Again
+                  </Button>
+                )}
+              </div>
             </div>
           )}
         </div>

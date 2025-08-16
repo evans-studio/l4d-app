@@ -25,6 +25,7 @@ import {
   ArrowRight
 } from 'lucide-react'
 import { formatDate, formatTime, getSlotStartTime, calculateEndTime } from '@/lib/utils/date-formatting'
+import { safeConsole } from '@/lib/utils/logger'
 
 export function PricingConfirmation() {
   const router = useRouter()
@@ -89,7 +90,7 @@ export function PricingConfirmation() {
           setIsAuthenticated(false)
         }
       } catch (error) {
-        console.error('Auth check failed:', error)
+        safeConsole.error('Auth check failed', error as Error)
         setIsAuthenticated(false)
         // Don't redirect - allow unauthenticated users to continue
       } finally {
@@ -121,7 +122,7 @@ export function PricingConfirmation() {
         router.push(`/booking/success?ref=${result.confirmationNumber}`)
       }
     } catch (error) {
-      console.error('❌ Booking submission failed:', error)
+      safeConsole.error('Booking submission failed', error as Error)
       setBookingResult({
         success: false
       })
@@ -575,15 +576,6 @@ export function PricingConfirmation() {
                                       calculatedTotal ||
                                       '0'
                       
-                      console.log('🔍 Total Price Display:', {
-                        'calculatedPrice.finalPrice': calculatedPrice.finalPrice,
-                        'calculatedPrice.breakdown?.totalPrice': (calculatedPrice.breakdown as any)?.totalPrice,
-                        'calculatedPrice.breakdown?.breakdown?.total': (calculatedPrice.breakdown as any)?.breakdown?.total,
-                        'servicePrice': servicePrice,
-                        'travelSurcharge': travelSurcharge,
-                        'calculatedTotal': calculatedTotal,
-                        'final displayed value': finalPrice
-                      })
                       return finalPrice
                     })()}</span>
                   </div>

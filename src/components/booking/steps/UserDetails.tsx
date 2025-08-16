@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { safeConsole } from '@/lib/utils/logger'
 import { useBookingFlowStore, useBookingStep } from '@/lib/store/bookingFlowStore'
 import { Button } from '@/components/ui/primitives/Button'
 import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/composites/Card'
@@ -71,7 +72,6 @@ export function UserDetails() {
     
     // Reset validation status when user changes email or phone
     if (field === 'email' || field === 'phone') {
-      console.log('📝 User changed', field, '- resetting validation state')
       setValidationStatus('idle')
       setShowUserData(false)
       
@@ -115,11 +115,9 @@ export function UserDetails() {
 
   const handleValidateUser = async () => {
     if (!userForm.email || !userForm.phone) {
-      console.log('⚠️ Cannot validate - missing email or phone')
       return
     }
 
-    console.log('🔍 Starting user validation for:', userForm.email, userForm.phone)
     setValidationStatus('checking')
     
     try {
@@ -129,10 +127,7 @@ export function UserDetails() {
       // Small delay to ensure state is updated before we check it
       await new Promise(resolve => setTimeout(resolve, 100))
       
-      console.log('🔄 After validation - isExistingUser:', isExistingUser)
-      
       if (isExistingUser) {
-        console.log('✅ Found existing user')
         setValidationStatus('found')
         setShowUserData(true)
         
@@ -144,7 +139,6 @@ export function UserDetails() {
           isExistingUser: true
         })
       } else {
-        console.log('👤 New user detected')
         setValidationStatus('new')
         setShowUserData(false)
         
@@ -160,25 +154,7 @@ export function UserDetails() {
       }
     } catch (error) {
       setValidationStatus('idle')
-      console.error('User validation error:', error)
-      
-      // Enhanced error logging for debugging
-      if (error instanceof Error) {
-        console.error('Error details:', {
-          name: error.name,
-          message: error.message,
-          stack: error.stack
-        })
-      }
-      
-      // Check if it's a fetch error
-      if (error && typeof error === 'object' && 'status' in error) {
-        console.error('HTTP Error details:', {
-          status: (error as any).status,
-          statusText: (error as any).statusText,
-          url: '/api/booking/validate-user'
-        })
-      }
+      safeConsole.error('User validation error', error as Error, { url: '/api/booking/validate-user' })
     }
   }
 

@@ -98,14 +98,14 @@ export function AddSlotModal({ date, onClose, onSuccess }: AddSlotModalProps) {
 
   return (
     <Modal open={true} onClose={onClose}>
-      <ModalContent size="md" mobile="drawer" onClose={onClose}>
+      <ModalContent size="md" position="center" mobile="fullscreen" onClose={onClose}>
         <ModalHeader 
           title="Add Time Slot"
           subtitle="Create a new available booking slot"
         />
         
-        <form onSubmit={handleSubmit}>
-          <ModalBody className="space-y-6">
+        <form onSubmit={handleSubmit} className="flex flex-col max-h-full sm:max-h-[90vh]">
+          <ModalBody scrollable className="space-y-6 flex-1 overflow-y-auto">
             {/* Date Display */}
             <div className="flex items-center gap-3 p-4 bg-[var(--surface-secondary)] border border-[var(--border-secondary)] rounded-lg">
               <CalendarIcon className="w-5 h-5 text-[var(--text-muted)]" />
@@ -189,7 +189,7 @@ export function AddSlotModal({ date, onClose, onSuccess }: AddSlotModalProps) {
             )}
           </ModalBody>
 
-          <ModalFooter>
+          <ModalFooter className="bg-[var(--surface-primary)]">
             <Button
               type="button"
               variant="outline"

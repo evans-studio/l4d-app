@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/primitives/Button'
 import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/composites/Card'
 import { ChevronLeftIcon, ChevronRightIcon, CalendarIcon, ClockIcon, CheckCircleIcon, AlertCircleIcon } from 'lucide-react'
 import { addDays, format, startOfWeek, endOfWeek, isSameDay, isAfter, startOfDay, startOfMonth, endOfMonth, addMonths, isSameMonth } from 'date-fns'
+import { safeConsole } from '@/lib/utils/logger'
 
 export function TimeSlotSelection() {
   const {
@@ -54,7 +55,7 @@ export function TimeSlotSelection() {
     } catch (error) {
       setSlotsError('Failed to load time slots')
       setTimeSlots([])
-      console.error('Error fetching time slots:', error)
+      safeConsole.error('Error fetching time slots', error as Error)
     } finally {
       setSlotsLoading(false)
     }
@@ -116,7 +117,6 @@ export function TimeSlotSelection() {
     
     // Check if slot is already booked
     if (!slot.is_available) {
-      console.error('Attempted to select unavailable slot')
       return
     }
 

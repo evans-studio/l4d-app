@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { safeConsole } from '@/lib/utils/logger'
 import { useBookingFlowStore, useBookingStep } from '@/lib/store/bookingFlowStore';
 import { Button } from '@/components/ui/primitives/Button';
 import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/composites/Card';
@@ -53,7 +54,7 @@ export function ServiceSelection(): React.JSX.Element {
         // Also load available services for the store
         await loadAvailableServices()
       } catch (error) {
-        console.error('Error loading services:', error)
+        safeConsole.error('Error loading services', error as Error)
       } finally {
         setLocalLoading(false)
       }

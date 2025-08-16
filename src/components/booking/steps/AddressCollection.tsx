@@ -198,10 +198,9 @@ export function AddressCollection() {
           
           <CardContent className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-2">
-                Street Address *
-              </label>
               <Input
+                label="Street Address *"
+                floating
                 value={addressForm.addressLine1}
                 onChange={(e) => handleFormChange('addressLine1', e.target.value)}
                 placeholder="e.g., 123 Main Street"
@@ -211,10 +210,9 @@ export function AddressCollection() {
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-text-primary mb-2">
-                  City *
-                </label>
                 <Input
+                  label="City *"
+                  floating
                   value={addressForm.city}
                   onChange={(e) => handleFormChange('city', e.target.value)}
                   placeholder="e.g., London"
@@ -223,10 +221,9 @@ export function AddressCollection() {
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-text-primary mb-2">
-                  Postcode *
-                </label>
                 <Input
+                  label="Postcode *"
+                  floating
                   value={addressForm.postcode}
                   onChange={(e) => handleFormChange('postcode', e.target.value.toUpperCase())}
                   placeholder="e.g., SW1A 1AA"
