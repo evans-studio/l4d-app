@@ -31,27 +31,36 @@ export async function GET(request: NextRequest) {
     const startOfWeekStr = startOfWeek.toISOString().split('T')[0]
     const endOfWeekStr = endOfWeek.toISOString().split('T')[0]
 
-    // Get today's bookings
-    const { data: todayBookings, error: todayError } = await supabase
+    // Get today's bookings with customer and services
+    const { data: todayBookingsRaw, error: todayError } = await supabase
       .from('bookings')
-      .select('id, status, scheduled_start_time, total_price, booking_reference')
+      .select(`
+        id,
+        status,
+        scheduled_start_time,
+        total_price,
+        booking_reference,
+        customer_id,
+        user_profiles!inner (first_name, last_name, email),
+        booking_services (service_details)
+      `)
       .eq('scheduled_date', todayStr)
 
     if (todayError) {
       console.error('Today bookings error:', todayError)
     }
 
-    // Get tomorrow's bookings
+    // Get tomorrow's bookings (counts only)
     const { data: tomorrowBookings, error: tomorrowError } = await supabase
       .from('bookings')
-      .select('id, status, scheduled_start_time, total_price, booking_reference')
+      .select('id, status')
       .eq('scheduled_date', tomorrowStr)
 
     if (tomorrowError) {
       console.error('Tomorrow bookings error:', tomorrowError)
     }
 
-    // Get this week's bookings
+    // Get this week's bookings (for revenue/utilization)
     const { data: weekBookings, error: weekError } = await supabase
       .from('bookings')
       .select('id, status, scheduled_date, total_price, booking_reference, created_at, customer_id')
@@ -96,10 +105,16 @@ export async function GET(request: NextRequest) {
       console.error('Month bookings error:', monthError)
     }
 
-    // Get customer activity data - bookings created this week
-    const { data: customerBookings, error: customerError } = await supabase
+    // Get customer activity data - bookings created this week with customer and services
+    const { data: customerBookingsRaw, error: customerError } = await supabase
       .from('bookings')
-      .select('customer_id, created_at, customer_name, services')
+      .select(`
+        id,
+        customer_id,
+        created_at,
+        user_profiles!inner (first_name, last_name, email),
+        booking_services (service_details)
+      `)
       .gte('created_at', startOfWeek.toISOString())
       .lte('created_at', endOfWeek.toISOString())
       .order('created_at', { ascending: false })
@@ -109,7 +124,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get unique customers from this week vs previous periods to determine new vs returning
-    const thisWeekCustomers = [...new Set(customerBookings?.map(b => b.customer_id) || [])]
+    const thisWeekCustomers = [...new Set(customerBookingsRaw?.map(b => b.customer_id) || [])]
     
     const { data: existingCustomers, error: existingCustomersError } = await supabase
       .from('bookings')
@@ -145,12 +160,29 @@ export async function GET(request: NextRequest) {
       console.error('Reschedule requests error:', rescheduleError)
     }
 
+    // Transform today bookings with customer_name and service list
+    const todayBookings = (todayBookingsRaw || []).map((b: any) => {
+      const profile = Array.isArray(b.user_profiles) ? b.user_profiles[0] : b.user_profiles
+      const name = profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() : 'Customer'
+      const services = (b.booking_services || []).map((s: any) => s.service_details?.name).filter(Boolean)
+      return {
+        id: b.id,
+        status: b.status,
+        scheduled_start_time: b.scheduled_start_time,
+        total_price: b.total_price,
+        booking_reference: b.booking_reference,
+        customer_id: b.customer_id,
+        customer_name: name || profile?.email || 'Customer',
+        services
+      }
+    })
+
     // Calculate today's schedule stats with completed bookings
-    const todayTotal = todayBookings?.length || 0
-    const todayCompleted = todayBookings?.filter(b => b.status === 'completed')?.length || 0
-    const todayInProgress = todayBookings?.filter(b => b.status === 'in_progress')?.length || 0
-    const todayPending = todayBookings?.filter(b => ['pending', 'confirmed'].includes(b.status))?.length || 0
-    const todayRevenue = todayBookings?.reduce((sum, booking) => sum + (booking.total_price || 0), 0) || 0
+    const todayTotal = todayBookings.length || 0
+    const todayCompleted = todayBookings.filter((b: any) => b.status === 'completed')?.length || 0
+    const todayInProgress = todayBookings.filter((b: any) => b.status === 'in_progress')?.length || 0
+    const todayPending = todayBookings.filter((b: any) => ['pending', 'confirmed'].includes(b.status))?.length || 0
+    const todayRevenue = todayBookings.reduce((sum: number, booking: any) => sum + (booking.total_price || 0), 0) || 0
     
     // Calculate tomorrow's schedule stats
     const tomorrowTotal = tomorrowBookings?.length || 0
@@ -173,10 +205,21 @@ export async function GET(request: NextRequest) {
     // Calculate monthly revenue
     const monthRevenue = monthBookings?.reduce((sum, booking) => sum + (booking.total_price || 0), 0) || 0
 
-    // Calculate customer activity
+    // Transform customer activity
     const newCustomers = thisWeekCustomers.filter(customerId => !existingCustomerIds.includes(customerId))
     const returningCustomers = thisWeekCustomers.filter(customerId => existingCustomerIds.includes(customerId))
-    const latestCustomerActivity = customerBookings?.slice(0, 3) || [] // Latest 3 activities
+    const latestCustomerActivity = (customerBookingsRaw || []).slice(0, 3).map((b: any) => {
+      const profile = Array.isArray(b.user_profiles) ? b.user_profiles[0] : b.user_profiles
+      const name = profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() : undefined
+      const services = (b.booking_services || []).map((s: any) => s.service_details?.name).filter(Boolean)
+      return {
+        id: b.id,
+        customer_id: b.customer_id,
+        customer_name: name || profile?.email || 'Customer',
+        services: services.map((n: string) => ({ name: n })),
+        created_at: b.created_at
+      }
+    })
 
     // Calculate action required stats - pending bookings AND reschedule requests need action
     const pendingBookings = actionBookings?.length || 0
@@ -191,7 +234,7 @@ export async function GET(request: NextRequest) {
         inProgress: todayInProgress,
         remaining: todayPending,
         revenue: todayRevenue,
-        bookings: todayBookings || []
+        bookings: todayBookings
       },
       
       // Customer Activity Widget - Real customer metrics

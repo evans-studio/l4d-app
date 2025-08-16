@@ -269,12 +269,14 @@ function BookingSuccessContent() {
                     <div className="flex items-center gap-2">
                       <Car className="w-4 h-4 text-text-tertiary" />
                       <span className="text-text-secondary text-sm">
-                        {booking.vehicle.color} {booking.vehicle.year} {booking.vehicle.make} {booking.vehicle.model}
+                        {booking.vehicle ? `${booking.vehicle.color || ''} ${booking.vehicle.year || ''} ${booking.vehicle.make || ''} ${booking.vehicle.model || ''}`.trim() : 'Vehicle details not provided'}
                       </span>
                     </div>
-                    <p className="text-text-tertiary text-xs">
-                      {booking.vehicle.vehicle_size.name} vehicle
-                    </p>
+                    {booking.vehicle && (booking as any).vehicle?.vehicle_size?.name && (
+                      <p className="text-text-tertiary text-xs">
+                        {(booking as any).vehicle.vehicle_size.name} vehicle
+                      </p>
+                    )}
                   </div>
                 </div>
               </CardContent>

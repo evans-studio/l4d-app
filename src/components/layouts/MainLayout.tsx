@@ -1,6 +1,6 @@
 'use client'
 
-import { ReactNode, useMemo } from 'react'
+import { ReactNode, useMemo, useEffect, useState } from 'react'
 import { MinimalHeader } from '@/components/navigation/MinimalHeader'
 import { MainFooter } from '@/components/navigation/MainFooter'
 
@@ -29,8 +29,11 @@ const generateSparkles = (count: number) => {
 }
 
 export function MainLayout({ children }: MainLayoutProps) {
-  // Generate fewer sparkles for subtle ambient effect
-  const sparkles = useMemo(() => generateSparkles(14), [])
+  // Generate sparkles on client only to avoid SSR hydration mismatches
+  const [sparkles, setSparkles] = useState<Array<ReturnType<typeof generateSparkles>[number]>>([])
+  useEffect(() => {
+    setSparkles(generateSparkles(14))
+  }, [])
   return (
     <div className="min-h-screen flex flex-col relative">
       {/* Global Dark Gradient Background with Automotive Texture and Sparkles */}
@@ -49,7 +52,7 @@ export function MainLayout({ children }: MainLayoutProps) {
         />
         
         {/* Dynamic Animated Sparkle Particles Throughout */}
-        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute inset-0 pointer-events-none overflow-hidden" suppressHydrationWarning>
           {sparkles.map((sparkle) => (
             <div
               key={sparkle.id}

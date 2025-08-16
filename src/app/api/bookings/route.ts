@@ -67,7 +67,11 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
         scheduled_end_time,
         status,
         total_price,
-        special_requests,
+        special_instructions,
+        pricing_breakdown,
+        service_address,
+        payment_status,
+        payment_deadline,
         created_at,
         customer_vehicles (
           make,
@@ -132,41 +136,60 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
     }
 
     // Transform the data for frontend consumption
-    const transformedBookings = bookings?.map((booking: any) => ({
-      id: booking.id,
-      booking_reference: booking.booking_reference,
-      customer_id: booking.customer_id,
-      scheduled_date: booking.scheduled_date,
-      start_time: booking.scheduled_start_time,
-      end_time: booking.scheduled_end_time,
-      status: booking.status,
-      total_price: booking.total_price,
-      special_requests: booking.special_requests,
-      created_at: booking.created_at,
-      services: booking.booking_services?.map((service: any) => ({
-        name: service.service_details?.name || 'Vehicle Detailing Service',
-        price: service.price,
-        duration: service.estimated_duration
-      })) || [],
-      vehicle: booking.customer_vehicles && booking.customer_vehicles.length > 0 ? {
-        make: booking.customer_vehicles[0]?.make,
-        model: booking.customer_vehicles[0]?.model,
-        year: booking.customer_vehicles[0]?.year,
-        color: booking.customer_vehicles[0]?.color,
-        license_plate: booking.customer_vehicles[0]?.license_plate || booking.customer_vehicles[0]?.registration,
-        vehicle_size: booking.customer_vehicles[0]?.vehicle_size
-      } : null,
-      address: booking.customer_addresses && booking.customer_addresses.length > 0 ? {
-        name: booking.customer_addresses[0]?.name,
-        address_line_1: booking.customer_addresses[0]?.address_line_1,
-        address_line_2: booking.customer_addresses[0]?.address_line_2,
-        city: booking.customer_addresses[0]?.city,
-        county: booking.customer_addresses[0]?.county,
-        postal_code: booking.customer_addresses[0]?.postal_code,
-        country: booking.customer_addresses[0]?.country
-      } : null
-    })) || []
+    const transformedBookings = bookings?.map((booking: any) => {
+      const firstService = booking.booking_services?.[0]
+      const vehicle = booking.customer_vehicles?.[0]
+      const address = booking.customer_addresses?.[0]
+      return {
+        id: booking.id,
+        booking_reference: booking.booking_reference,
+        customer_id: booking.customer_id,
+        scheduled_date: booking.scheduled_date,
+        scheduled_start_time: booking.scheduled_start_time,
+        scheduled_end_time: booking.scheduled_end_time,
+        status: booking.status,
+        total_price: booking.total_price,
+        pricing_breakdown: booking.pricing_breakdown,
+        special_instructions: booking.special_instructions,
+        payment_status: booking.payment_status,
+        payment_deadline: booking.payment_deadline,
+        created_at: booking.created_at,
+        service: firstService ? {
+          name: firstService.service_details?.name || 'Vehicle Detailing Service',
+          short_description: firstService.service_details?.short_description || '',
+          category: firstService.service_details?.category || ''
+        } : { name: 'Vehicle Detailing Service', short_description: '', category: '' },
+        vehicle: vehicle ? {
+          make: vehicle.make,
+          model: vehicle.model,
+          year: vehicle.year,
+          color: vehicle.color
+        } : null,
+        address: address ? {
+          name: address.name,
+          address_line_1: address.address_line_1,
+          address_line_2: address.address_line_2,
+          city: address.city,
+          county: address.county,
+          postal_code: address.postal_code,
+          country: address.country
+        } : null
+      }
+    }) || []
 
+    // If a booking reference was requested, return a single object for success page
+    if (reference) {
+      const single = transformedBookings[0]
+      if (!single) {
+        return NextResponse.json({
+          success: false,
+          error: { message: 'Booking not found', code: 'NOT_FOUND' }
+        }, { status: 404 })
+      }
+      return NextResponse.json({ success: true, data: single })
+    }
+
+    // Otherwise return list
     return NextResponse.json({
       success: true,
       data: transformedBookings,

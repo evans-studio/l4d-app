@@ -44,6 +44,7 @@ export const CancelModal: React.FC<CancelModalProps> = ({
   const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
+  const [acknowledgeNoRefund, setAcknowledgeNoRefund] = useState(false)
 
   useEffect(() => {
     if (isOpen && data?.bookingId) {
@@ -100,6 +101,13 @@ export const CancelModal: React.FC<CancelModalProps> = ({
       return
     }
 
+    // Require explicit acknowledgment if within 24 hours (no refund)
+    const requiresNoRefundAck = policy ? !policy.canCancelFree : false
+    if (requiresNoRefundAck && !acknowledgeNoRefund) {
+      setError('Please acknowledge the 24-hour no-refund policy to continue')
+      return
+    }
+
     try {
       setIsSubmitting(true)
       setError('')
@@ -108,7 +116,8 @@ export const CancelModal: React.FC<CancelModalProps> = ({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          reason: reason.trim()
+          reason: reason.trim(),
+          acknowledgeNoRefund: requiresNoRefundAck ? acknowledgeNoRefund : false
         })
       })
 
@@ -252,6 +261,23 @@ export const CancelModal: React.FC<CancelModalProps> = ({
                     </div>
                   </AlertDescription>
                 </Alert>
+              )}
+
+              {/* 24-hour policy acknowledgment */}
+              {!policy.canCancelFree && (
+                <div className="p-3 border border-yellow-200 bg-yellow-50 rounded-md">
+                  <label className="flex items-start gap-3 text-sm">
+                    <input
+                      type="checkbox"
+                      className="mt-1 w-4 h-4"
+                      checked={acknowledgeNoRefund}
+                      onChange={(e) => setAcknowledgeNoRefund(e.target.checked)}
+                    />
+                    <span className="text-yellow-800">
+                      I understand this booking is within 24 hours and no refund will be provided upon cancellation.
+                    </span>
+                  </label>
+                </div>
               )}
 
               {/* Error */}
