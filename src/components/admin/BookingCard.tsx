@@ -500,43 +500,7 @@ export function BookingCard({
           </div>
         </div>
 
-        {/* Payment indicators: pending shows deadline; remove paid box entirely */}
-        {booking.status === 'pending' && (
-          <div className={`rounded-md p-3 border ${
-            isPaymentOverdue() 
-              ? 'bg-red-50 border-red-200' 
-              : 'bg-blue-50 border-blue-200'
-          }`}>
-            <div className="flex items-start justify-between mb-2">
-              <p className={`text-xs font-medium ${
-                isPaymentOverdue() ? 'text-red-700' : 'text-blue-700'
-              }`}>
-                {isPaymentOverdue() ? 'Payment Overdue' : 'Payment Required'}
-              </p>
-              {(() => {
-                const deadlineInfo = getPaymentDeadlineDisplay()
-                return deadlineInfo && (
-                  <span className={`text-xs px-2 py-1 rounded-full font-medium border ${deadlineInfo.bgColor} ${deadlineInfo.borderColor} ${deadlineInfo.color}`}>
-                    {deadlineInfo.text}
-                  </span>
-                )
-              })()}
-            </div>
-            {booking.payment_link && (
-              <div>
-                <Button
-                  onClick={copyPaymentLink}
-                  variant="outline"
-                  size="sm"
-                  className="text-blue-600 border-blue-200 hover:bg-blue-50 h-7 text-xs"
-                >
-                  <Copy className="w-3 h-3 mr-1" />
-                  Copy Payment Link
-                </Button>
-              </div>
-            )}
-          </div>
-        )}
+        {/* Payment notice is shown once near date/time above; no second box here to avoid duplication */}
 
         {/* Special Instructions */}
         {booking.special_instructions && (
