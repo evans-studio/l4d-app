@@ -328,7 +328,7 @@ export function BookingCard({
         {/* Action button */}
         {showActions && (
           <div className="mt-3 pt-3 border-t border-border-secondary">
-            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
               <Button
                 onClick={() => openOverlay({
                 type: 'booking-view',
@@ -336,7 +336,7 @@ export function BookingCard({
               })}
                 variant="outline"
                 size="sm"
-                className="w-full sm:w-auto sm:flex-1 text-xs"
+                className="text-xs"
               >
                 <EyeIcon className="w-3 h-3 mr-1" />
                 View Details
@@ -346,7 +346,7 @@ export function BookingCard({
                 <Button
                   onClick={() => onMarkAsPaid(booking)}
                   size="sm"
-                  className="w-full sm:w-auto sm:flex-1 text-xs bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-emerald-sm hover:shadow-emerald-md transition-all duration-300 font-medium min-h-[44px] touch-manipulation"
+                  className="text-xs bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-emerald-sm hover:shadow-emerald-md transition-all duration-300 font-medium min-h-[44px] touch-manipulation"
                 >
                   <CreditCard className="w-3 h-3 mr-1" />
                   Mark as Paid
@@ -593,7 +593,7 @@ export function BookingCard({
             })}
             variant="outline"
             size="sm"
-            className="w-full flex items-center justify-center gap-2 border-brand-300 text-brand-600 hover:bg-brand-50 hover:border-brand-400 hover:shadow-purple-sm transition-all duration-300 font-medium min-h-[44px] touch-manipulation"
+            className="flex items-center justify-center gap-2 border-brand-300 text-brand-600 hover:bg-brand-50 hover:border-brand-400 hover:shadow-purple-sm transition-all duration-300 font-medium min-h-[44px] touch-manipulation"
           >
             <EyeIcon className="w-4 h-4" />
             View Details
@@ -643,13 +643,13 @@ export function BookingCard({
               <Button
                 onClick={() => onMarkAsPaid ? onMarkAsPaid(booking) : handleStatusUpdate('confirmed')}
                 size="sm"
-                className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-emerald-md hover:shadow-emerald-lg transition-all duration-300 font-semibold min-h-[44px] touch-manipulation"
+                className="flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-emerald-md hover:shadow-emerald-lg transition-all duration-300 font-semibold min-h-[44px] touch-manipulation"
               >
                 <CreditCard className="w-4 h-4" />
                 Mark as Paid
               </Button>
               {/* Secondary Actions */}
-              <div className="grid grid-cols-2 gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <Button
                   onClick={() => handleStatusUpdate('payment_failed')}
                   variant="outline"
@@ -678,12 +678,12 @@ export function BookingCard({
               <Button
                 onClick={() => onMarkAsPaid ? onMarkAsPaid(booking) : handleStatusUpdate('confirmed')}
                 size="sm"
-                className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-emerald-md hover:shadow-emerald-lg transition-all duration-300 font-semibold min-h-[44px] touch-manipulation"
+                className="flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-emerald-md hover:shadow-emerald-lg transition-all duration-300 font-semibold min-h-[44px] touch-manipulation"
               >
                 <CreditCard className="w-4 h-4" />
                 Mark as Paid
               </Button>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <Button
                   onClick={() => handleStatusUpdate('pending')}
                   variant="outline"
@@ -710,7 +710,7 @@ export function BookingCard({
             <Button
               onClick={() => handleStatusUpdate('in_progress')}
               size="sm"
-              className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 text-white shadow-purple-md hover:shadow-purple-lg transition-all duration-300 font-semibold min-h-[44px] touch-manipulation"
+              className="flex items-center justify-center gap-2 bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 text-white shadow-purple-md hover:shadow-purple-lg transition-all duration-300 font-semibold min-h-[44px] touch-manipulation"
             >
               <ClockIcon className="w-4 h-4" />
               Start Service
@@ -721,7 +721,7 @@ export function BookingCard({
             <Button
               onClick={() => handleStatusUpdate('in_progress')}
               size="sm"
-              className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 text-white shadow-purple-md hover:shadow-purple-lg transition-all duration-300 font-semibold min-h-[44px] touch-manipulation"
+              className="flex items-center justify-center gap-2 bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 text-white shadow-purple-md hover:shadow-purple-lg transition-all duration-300 font-semibold min-h-[44px] touch-manipulation"
             >
               <ClockIcon className="w-4 h-4" />
               Start Service
@@ -733,7 +733,7 @@ export function BookingCard({
               <Button
                 onClick={() => handleStatusUpdate('completed')}
                 size="sm"
-                className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-emerald-md hover:shadow-emerald-lg transition-all duration-300 font-semibold min-h-[44px] touch-manipulation"
+                className="flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-emerald-md hover:shadow-emerald-lg transition-all duration-300 font-semibold min-h-[44px] touch-manipulation"
               >
                 <CheckCircleIcon className="w-4 h-4" />
                 Complete Service
@@ -742,7 +742,7 @@ export function BookingCard({
                 onClick={() => handleStatusUpdate('no_show')}
                 variant="outline"
                 size="sm"
-                className="w-full flex items-center justify-center gap-2 text-red-600 border-red-300 hover:bg-red-50 hover:border-red-400 hover:shadow-red-sm transition-all duration-300 min-h-[44px] touch-manipulation"
+                className="flex items-center justify-center gap-2 text-red-600 border-red-300 hover:bg-red-50 hover:border-red-400 hover:shadow-red-sm transition-all duration-300 min-h-[44px] touch-manipulation"
               >
                 <XCircleIcon className="w-4 h-4" />
                 Mark No Show

@@ -151,7 +151,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         {/* Button Text */}
         {size !== 'icon' && (
           <span className={cn(
-            'inline-block',
+            'inline-block whitespace-nowrap',
             loading && 'opacity-0'
           )}>
             {loading && loadingText ? loadingText : children}
