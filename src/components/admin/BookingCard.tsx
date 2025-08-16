@@ -12,7 +12,6 @@ import {
   PhoneIcon,
   MailIcon,
   AlertCircleIcon,
-  AlertTriangle,
   Copy
 } from 'lucide-react'
 
@@ -72,82 +71,52 @@ const statusConfig = {
   pending: {
     label: 'Pending Payment',
     icon: ClockIcon,
-    color: 'text-brand-600',
-    bgColor: 'bg-brand-50',
-    borderColor: 'border-brand-200',
-    shadowColor: 'shadow-purple-sm'
+    className: 'bg-amber-500/10 text-amber-600 border-amber-500/20'
   },
   confirmed: {
     label: 'Confirmed',
     icon: CheckCircleIcon,
-    color: 'text-emerald-600',
-    bgColor: 'bg-emerald-50',
-    borderColor: 'border-emerald-200',
-    shadowColor: 'shadow-emerald-sm'
+    className: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
   },
   rescheduled: {
     label: 'Rescheduled',
     icon: CalendarIcon,
-    color: 'text-brand-600',
-    bgColor: 'bg-brand-50',
-    borderColor: 'border-brand-200',
-    shadowColor: 'shadow-purple-sm'
+    className: 'bg-blue-500/10 text-blue-600 border-blue-500/20'
   },
   in_progress: {
     label: 'In Progress',
-    icon: AlertCircleIcon,
-    color: 'text-brand-600',
-    bgColor: 'bg-brand-50',
-    borderColor: 'border-brand-200',
-    shadowColor: 'shadow-purple-sm animate-purple-pulse'
+    icon: ClockIcon,
+    className: 'bg-blue-500/10 text-blue-600 border-blue-500/20'
   },
   completed: {
     label: 'Completed',
     icon: CheckCircleIcon,
-    color: 'text-emerald-600',
-    bgColor: 'bg-emerald-50',
-    borderColor: 'border-emerald-200',
-    shadowColor: 'shadow-emerald-sm'
+    className: 'bg-green-500/10 text-green-600 border-green-500/20'
   },
   cancelled: {
     label: 'Cancelled',
     icon: XCircleIcon,
-    color: 'text-red-600',
-    bgColor: 'bg-red-50',
-    borderColor: 'border-red-200',
-    shadowColor: 'shadow-red-sm'
+    className: 'bg-red-500/10 text-red-600 border-red-500/20'
   },
   no_show: {
     label: 'No Show',
     icon: XCircleIcon,
-    color: 'text-red-600',
-    bgColor: 'bg-red-50',
-    borderColor: 'border-red-200',
-    shadowColor: 'shadow-red-sm'
+    className: 'bg-red-500/10 text-red-600 border-red-500/20'
   },
   processing: {
     label: 'Processing',
     icon: ClockIcon,
-    color: 'text-brand-600',
-    bgColor: 'bg-brand-50',
-    borderColor: 'border-brand-200',
-    shadowColor: 'shadow-purple-sm'
+    className: 'bg-blue-500/10 text-blue-600 border-blue-500/20'
   },
   payment_failed: {
     label: 'Payment Failed',
     icon: XCircleIcon,
-    color: 'text-red-600',
-    bgColor: 'bg-red-50',
-    borderColor: 'border-red-200',
-    shadowColor: 'shadow-red-sm'
+    className: 'bg-red-500/10 text-red-600 border-red-500/20'
   },
   declined: {
     label: 'Declined',
     icon: XCircleIcon,
-    color: 'text-red-600',
-    bgColor: 'bg-red-50',
-    borderColor: 'border-red-200',
-    shadowColor: 'shadow-red-sm'
+    className: 'bg-red-500/10 text-red-600 border-red-500/20'
   }
 } as const
 
@@ -155,9 +124,7 @@ const statusConfig = {
 const defaultStatusConfig = {
   label: 'Unknown',
   icon: AlertCircleIcon,
-  color: 'text-gray-700',
-  bgColor: 'bg-gray-50',
-  borderColor: 'border-gray-200'
+  className: 'bg-gray-500/10 text-gray-700 border-gray-500/20'
 }
 
 export function BookingCard({ 
@@ -194,26 +161,17 @@ export function BookingCard({
     if (hoursUntilDeadline <= 0) {
       return {
         text: 'Payment Overdue',
-        isOverdue: true,
-        color: 'text-red-700',
-        bgColor: 'bg-red-50',
-        borderColor: 'border-red-200'
+        className: 'bg-red-500/10 text-red-600 border-red-500/20'
       }
     } else if (hoursUntilDeadline <= 24) {
       return {
         text: `Payment due in ${hoursUntilDeadline}h`,
-        isOverdue: false,
-        color: 'text-orange-700',
-        bgColor: 'bg-orange-50', 
-        borderColor: 'border-orange-200'
+        className: 'bg-amber-500/10 text-amber-700 border-amber-500/20'
       }
     } else {
       return {
         text: `Payment due ${deadline.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}`,
-        isOverdue: false,
-        color: 'text-blue-700',
-        bgColor: 'bg-blue-50',
-        borderColor: 'border-blue-200'
+        className: 'bg-blue-500/10 text-blue-600 border-blue-500/20'
       }
     }
   }
@@ -270,7 +228,7 @@ export function BookingCard({
   if (variant === 'dashboard') {
     // Compact dashboard variant with payment integration
     return (
-      <div className="bg-surface-primary rounded-lg border border-border-secondary p-4 hover:border-border-primary transition-colors">
+      <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-4 hover:border-white/20 hover:bg-white/[0.07] transition-all duration-200">
         {/* Header - Booking reference, price, and status */}
         <div className="flex items-start justify-between mb-3">
           <div className="flex-1 min-w-0">
@@ -283,7 +241,7 @@ export function BookingCard({
               </span>
             </div>
             <div className="flex flex-wrap items-center gap-1">
-              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${statusInfo.bgColor} ${statusInfo.borderColor} ${statusInfo.color}`}>
+              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${statusInfo.className}`}>
                 <StatusIcon className="w-3 h-3 mr-1" />
                 {statusInfo.label}
               </span>
@@ -294,8 +252,7 @@ export function BookingCard({
                 </span>
               )}
               {isPaymentOverdue() && (
-                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-red-50 border border-red-200 text-red-700">
-                  <AlertTriangle className="w-3 h-3" />
+                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-red-500/10 border border-red-500/20 text-red-600">
                   OVERDUE
                 </span>
               )}
@@ -354,7 +311,7 @@ export function BookingCard({
 
   // Full variant for bookings page with enhanced payment tracking
   return (
-    <div className="bg-surface-secondary rounded-xl border border-border-secondary hover:border-brand-400 hover:shadow-purple-md transition-all duration-300 overflow-hidden">
+    <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl hover:border-white/20 hover:bg-white/[0.07] transition-all duration-200 overflow-hidden">
       {/* Header */}
       <div className="p-4 border-b border-border-secondary">
         <div className="flex items-start justify-between mb-3">
@@ -371,9 +328,9 @@ export function BookingCard({
               )}
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <span className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium border transition-all ${statusInfo.bgColor} ${statusInfo.borderColor} ${statusInfo.shadowColor || ''}`}>
-                <StatusIcon className={`w-4 h-4 ${statusInfo.color}`} />
-                <span className={statusInfo.color}>{statusInfo.label}</span>
+              <span className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium border transition-all ${statusInfo.className}`}>
+                <StatusIcon className="w-4 h-4" />
+                <span>{statusInfo.label}</span>
               </span>
               {/* Payment indicator: show failed; do not show paid alongside confirmed */}
               {booking.payment_status === 'failed' && (
@@ -409,8 +366,8 @@ export function BookingCard({
           {booking.status === 'pending' && (() => {
             const deadlineInfo = getPaymentDeadlineDisplay()
             return deadlineInfo && (
-              <div className={`flex items-center gap-2 text-xs px-2 py-1 rounded-md border ${deadlineInfo.bgColor} ${deadlineInfo.borderColor}`}>
-                <span className={deadlineInfo.color}>{deadlineInfo.text}</span>
+              <div className={`flex items-center gap-2 text-xs px-2 py-1 rounded-md border ${deadlineInfo.className}`}>
+                <span>{deadlineInfo.text}</span>
               </div>
             )
           })()}
@@ -537,7 +494,7 @@ export function BookingCard({
       {/* Actions Footer */}
       {showActions && (
         <div className="p-4 border-t border-border-secondary space-y-2">
-          {/* Pending: present all four actions in a single row */}
+          {/* Pending: present all four actions in a single row with unified button styles */}
           {!booking.has_pending_reschedule && booking.status === 'pending' ? (
             <div className="flex flex-wrap items-center gap-2">
               <Button
@@ -545,32 +502,29 @@ export function BookingCard({
                   type: 'booking-view',
                   data: { bookingId: booking.id, booking }
                 })}
-                variant="outline"
                 size="sm"
-                className="flex items-center justify-center gap-2 border-brand-300 text-brand-600 hover:bg-brand-50 hover:border-brand-400 hover:shadow-purple-sm transition-all duration-300 font-medium min-h-[44px] touch-manipulation"
+                className="bg-white/10 hover:bg-white/20 text-white border border-white/20 h-11 px-4 rounded-lg"
               >
                 View Details
               </Button>
               <Button
                 onClick={() => onMarkAsPaid ? onMarkAsPaid(booking) : handleStatusUpdate('confirmed')}
                 size="sm"
-                className="flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-emerald-md hover:shadow-emerald-lg transition-all duration-300 font-semibold min-h-[44px] touch-manipulation"
+                className="bg-blue-600 hover:bg-blue-700 text-white font-medium h-11 px-4 rounded-lg"
               >
                 Mark as Paid
               </Button>
               <Button
                 onClick={() => handleStatusUpdate('payment_failed')}
-                variant="outline"
                 size="sm"
-                className="flex items-center justify-center gap-1 text-red-600 border-red-300 hover:bg-red-50 hover:border-red-400 hover:shadow-red-sm transition-all duration-300 min-h-[44px] touch-manipulation"
+                className="bg-red-600/10 hover:bg-red-600/20 text-red-400 border border-red-600/20 h-11 px-4 rounded-lg"
               >
                 Payment Failed
               </Button>
               <Button
                 onClick={() => handleStatusUpdate('cancelled')}
-                variant="outline"
                 size="sm"
-                className="flex items-center justify-center gap-1 text-red-600 border-red-300 hover:bg-red-50 hover:border-red-400 hover:shadow-red-sm transition-all duration-300 min-h-[44px] touch-manipulation"
+                className="bg-red-600/10 hover:bg-red-600/20 text-red-400 border border-red-600/20 h-11 px-4 rounded-lg"
               >
                 Cancel Booking
               </Button>
@@ -632,24 +586,24 @@ export function BookingCard({
               <Button
                 onClick={() => onMarkAsPaid ? onMarkAsPaid(booking) : handleStatusUpdate('confirmed')}
                 size="sm"
-                className="flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-emerald-md hover:shadow-emerald-lg transition-all duration-300 font-semibold min-h-[44px] touch-manipulation"
+                className="bg-blue-600 hover:bg-blue-700 text-white font-medium h-11 px-4 rounded-lg"
               >
                 Mark as Paid
               </Button>
               <div className="flex flex-wrap items-center gap-2">
                 <Button
                   onClick={() => handleStatusUpdate('pending')}
-                  variant="outline"
+                  variant="secondary"
                   size="sm"
-                  className="flex items-center justify-center gap-1 text-brand-600 border-brand-300 hover:bg-brand-50 hover:border-brand-400 hover:shadow-purple-sm transition-all duration-300 min-h-[44px] touch-manipulation"
+                  className="bg-white/10 hover:bg-white/20 text-white border border-white/20 h-11 px-4 rounded-lg"
                 >
                   Retry Payment
                 </Button>
                 <Button
                   onClick={() => handleStatusUpdate('cancelled')}
-                  variant="outline"
+                  variant="destructive"
                   size="sm"
-                  className="flex items-center justify-center gap-1 text-red-600 border-red-300 hover:bg-red-50 hover:border-red-400 hover:shadow-red-sm transition-all duration-300 min-h-[44px] touch-manipulation"
+                  className="bg-red-600/10 hover:bg-red-600/20 text-red-400 border border-red-600/20 h-11 px-4 rounded-lg"
                 >
                   Cancel Booking
                 </Button>
@@ -661,7 +615,7 @@ export function BookingCard({
             <Button
               onClick={() => handleStatusUpdate('in_progress')}
               size="sm"
-              className="flex items-center justify-center gap-2 bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 text-white shadow-purple-md hover:shadow-purple-lg transition-all duration-300 font-semibold min-h-[44px] touch-manipulation"
+              className="bg-blue-600 hover:bg-blue-700 text-white font-medium h-11 px-4 rounded-lg"
             >
               Start Service
             </Button>
@@ -671,7 +625,7 @@ export function BookingCard({
             <Button
               onClick={() => handleStatusUpdate('in_progress')}
               size="sm"
-              className="flex items-center justify-center gap-2 bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 text-white shadow-purple-md hover:shadow-purple-lg transition-all duration-300 font-semibold min-h-[44px] touch-manipulation"
+              className="bg-blue-600 hover:bg-blue-700 text-white font-medium h-11 px-4 rounded-lg"
             >
               Start Service
             </Button>
@@ -682,15 +636,15 @@ export function BookingCard({
               <Button
                 onClick={() => handleStatusUpdate('completed')}
                 size="sm"
-                className="flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-emerald-md hover:shadow-emerald-lg transition-all duration-300 font-semibold min-h-[44px] touch-manipulation"
+                className="bg-blue-600 hover:bg-blue-700 text-white font-medium h-11 px-4 rounded-lg"
               >
                 Complete Service
               </Button>
               <Button
                 onClick={() => handleStatusUpdate('no_show')}
-                variant="outline"
+                variant="destructive"
                 size="sm"
-                className="flex items-center justify-center gap-2 text-red-600 border-red-300 hover:bg-red-50 hover:border-red-400 hover:shadow-red-sm transition-all duration-300 min-h-[44px] touch-manipulation"
+                className="bg-red-600/10 hover:bg-red-600/20 text-red-400 border border-red-600/20 h-11 px-4 rounded-lg"
               >
                 Mark No Show
               </Button>
