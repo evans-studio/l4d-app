@@ -6,15 +6,12 @@ import { Button } from '@/components/ui/primitives/Button'
 import { 
   CheckCircleIcon,
   XCircleIcon,
-  EyeIcon,
   ClockIcon,
   CalendarIcon,
   UsersIcon,
   PhoneIcon,
   MailIcon,
   AlertCircleIcon,
-  CalendarCheckIcon,
-  CalendarXIcon,
   CreditCard,
   AlertTriangle,
   Copy
@@ -338,7 +335,6 @@ export function BookingCard({
                 size="sm"
                 className="text-xs"
               >
-                <EyeIcon className="w-3 h-3 mr-1" />
                 View Details
               </Button>
               {/* Dashboard variant payment actions */}
@@ -348,7 +344,6 @@ export function BookingCard({
                   size="sm"
                   className="text-xs bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-emerald-sm hover:shadow-emerald-md transition-all duration-300 font-medium min-h-[44px] touch-manipulation"
                 >
-                  <CreditCard className="w-3 h-3 mr-1" />
                   Mark as Paid
                 </Button>
               )}
@@ -385,14 +380,12 @@ export function BookingCard({
               {/* Payment indicator: show failed; do not show paid alongside confirmed */}
               {booking.payment_status === 'failed' && (
                 <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium border bg-red-50 text-red-700 border-red-200">
-                  <CreditCard className="w-3 h-3" />
                   Payment Failed
                 </span>
               )}
               {/* Payment Overdue Warning */}
               {isPaymentOverdue() && (
                 <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-red-50 border border-red-200 text-red-700">
-                  <AlertTriangle className="w-3 h-3" />
                   OVERDUE
                 </span>
               )}
@@ -419,11 +412,7 @@ export function BookingCard({
             const deadlineInfo = getPaymentDeadlineDisplay()
             return deadlineInfo && (
               <div className={`flex items-center gap-2 text-xs px-2 py-1 rounded-md border ${deadlineInfo.bgColor} ${deadlineInfo.borderColor}`}>
-                <CreditCard className={`w-3 h-3 ${deadlineInfo.color}`} />
                 <span className={deadlineInfo.color}>{deadlineInfo.text}</span>
-                {deadlineInfo.isOverdue && (
-                  <AlertTriangle className="w-3 h-3 text-red-600 ml-1" />
-                )}
               </div>
             )
           })()}
@@ -559,7 +548,6 @@ export function BookingCard({
             size="sm"
             className="flex items-center justify-center gap-2 border-brand-300 text-brand-600 hover:bg-brand-50 hover:border-brand-400 hover:shadow-purple-sm transition-all duration-300 font-medium min-h-[44px] touch-manipulation"
           >
-            <EyeIcon className="w-4 h-4" />
             View Details
           </Button>
 
@@ -578,7 +566,6 @@ export function BookingCard({
                 size="sm"
                 className="flex items-center justify-center gap-1 bg-green-600 hover:bg-green-700 text-white"
               >
-                <CalendarCheckIcon className="w-3 h-3" />
                 Approve
               </Button>
               <Button
@@ -594,7 +581,6 @@ export function BookingCard({
                 size="sm"
                 className="flex items-center justify-center gap-1 text-red-600 border-red-200 hover:bg-red-50"
               >
-                <CalendarXIcon className="w-3 h-3" />
                 Decline
               </Button>
             </div>
@@ -620,7 +606,6 @@ export function BookingCard({
                   size="sm"
                   className="flex items-center justify-center gap-1 text-red-600 border-red-300 hover:bg-red-50 hover:border-red-400 hover:shadow-red-sm transition-all duration-300 min-h-[44px] touch-manipulation"
                 >
-                  <XCircleIcon className="w-4 h-4" />
                   Payment Failed
                 </Button>
                 <Button
@@ -629,7 +614,6 @@ export function BookingCard({
                   size="sm"
                   className="flex items-center justify-center gap-1 text-red-600 border-red-300 hover:bg-red-50 hover:border-red-400 hover:shadow-red-sm transition-all duration-300 min-h-[44px] touch-manipulation"
                 >
-                  <XCircleIcon className="w-4 h-4" />
                   Cancel Booking
                 </Button>
               </div>
@@ -654,7 +638,6 @@ export function BookingCard({
                   size="sm"
                   className="flex items-center justify-center gap-1 text-brand-600 border-brand-300 hover:bg-brand-50 hover:border-brand-400 hover:shadow-purple-sm transition-all duration-300 min-h-[44px] touch-manipulation"
                 >
-                  <ClockIcon className="w-4 h-4" />
                   Retry Payment
                 </Button>
                 <Button
@@ -663,7 +646,6 @@ export function BookingCard({
                   size="sm"
                   className="flex items-center justify-center gap-1 text-red-600 border-red-300 hover:bg-red-50 hover:border-red-400 hover:shadow-red-sm transition-all duration-300 min-h-[44px] touch-manipulation"
                 >
-                  <XCircleIcon className="w-4 h-4" />
                   Cancel Booking
                 </Button>
               </div>
@@ -676,7 +658,6 @@ export function BookingCard({
               size="sm"
               className="flex items-center justify-center gap-2 bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 text-white shadow-purple-md hover:shadow-purple-lg transition-all duration-300 font-semibold min-h-[44px] touch-manipulation"
             >
-              <ClockIcon className="w-4 h-4" />
               Start Service
             </Button>
           )}
@@ -687,7 +668,6 @@ export function BookingCard({
               size="sm"
               className="flex items-center justify-center gap-2 bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 text-white shadow-purple-md hover:shadow-purple-lg transition-all duration-300 font-semibold min-h-[44px] touch-manipulation"
             >
-              <ClockIcon className="w-4 h-4" />
               Start Service
             </Button>
           )}
@@ -699,7 +679,6 @@ export function BookingCard({
                 size="sm"
                 className="flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-emerald-md hover:shadow-emerald-lg transition-all duration-300 font-semibold min-h-[44px] touch-manipulation"
               >
-                <CheckCircleIcon className="w-4 h-4" />
                 Complete Service
               </Button>
               <Button
@@ -708,7 +687,6 @@ export function BookingCard({
                 size="sm"
                 className="flex items-center justify-center gap-2 text-red-600 border-red-300 hover:bg-red-50 hover:border-red-400 hover:shadow-red-sm transition-all duration-300 min-h-[44px] touch-manipulation"
               >
-                <XCircleIcon className="w-4 h-4" />
                 Mark No Show
               </Button>
             </div>
