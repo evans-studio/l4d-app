@@ -494,37 +494,37 @@ export function BookingCard({
       {/* Actions Footer */}
       {showActions && (
         <div className="p-4 border-t border-border-secondary space-y-2">
-          {/* Pending: present all four actions in a single row with unified button styles */}
+          {/* Pending: present all four actions in a single, evenly distributed row */}
           {!booking.has_pending_reschedule && booking.status === 'pending' ? (
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex w-full items-stretch gap-3">
               <Button
                 onClick={() => openOverlay({
                   type: 'booking-view',
                   data: { bookingId: booking.id, booking }
                 })}
                 size="sm"
-                className="bg-white/10 hover:bg-white/20 text-white border border-white/20 h-11 px-4 rounded-lg"
+                className="bg-white/10 hover:bg-white/20 text-white border border-white/20 h-11 px-4 rounded-lg flex-1 sm:min-w-[160px]"
               >
                 View Details
               </Button>
               <Button
                 onClick={() => onMarkAsPaid ? onMarkAsPaid(booking) : handleStatusUpdate('confirmed')}
                 size="sm"
-                className="bg-blue-600 hover:bg-blue-700 text-white font-medium h-11 px-4 rounded-lg"
+                className="bg-blue-600 hover:bg-blue-700 text-white font-medium h-11 px-4 rounded-lg flex-1 sm:min-w-[160px]"
               >
                 Mark as Paid
               </Button>
               <Button
                 onClick={() => handleStatusUpdate('payment_failed')}
                 size="sm"
-                className="bg-red-600/10 hover:bg-red-600/20 text-red-400 border border-red-600/20 h-11 px-4 rounded-lg"
+                className="bg-red-600/10 hover:bg-red-600/20 text-red-400 border border-red-600/20 h-11 px-4 rounded-lg flex-1 sm:min-w-[160px]"
               >
                 Payment Failed
               </Button>
               <Button
                 onClick={() => handleStatusUpdate('cancelled')}
                 size="sm"
-                className="bg-red-600/10 hover:bg-red-600/20 text-red-400 border border-red-600/20 h-11 px-4 rounded-lg"
+                className="bg-red-600/10 hover:bg-red-600/20 text-red-400 border border-red-600/20 h-11 px-4 rounded-lg flex-1 sm:min-w-[160px]"
               >
                 Cancel Booking
               </Button>
