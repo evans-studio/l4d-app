@@ -531,18 +531,6 @@ export function BookingCard({
             </div>
           ) : (
             <>
-              <Button
-                onClick={() => openOverlay({
-                  type: 'booking-view',
-                  data: { bookingId: booking.id, booking }
-                })}
-                variant="outline"
-                size="sm"
-                className="flex items-center justify-center gap-2 border-brand-300 text-brand-600 hover:bg-brand-50 hover:border-brand-400 hover:shadow-purple-sm transition-all duration-300 font-medium min-h-[44px] touch-manipulation"
-              >
-                View Details
-              </Button>
-
               {/* Reschedule Request Actions - Priority */}
               {booking.has_pending_reschedule && booking.reschedule_request && (
                 <div className="grid grid-cols-2 gap-2">
@@ -578,6 +566,31 @@ export function BookingCard({
                 </div>
               )}
             </>
+          )}
+
+          {/* Confirmed: show View + Start in a clean row */}
+          {booking.status === 'confirmed' && (
+            <div className="flex w-full items-stretch gap-3">
+              <Button
+                onClick={() => openOverlay({
+                  type: 'booking-view',
+                  data: { bookingId: booking.id, booking }
+                })}
+                size="sm"
+                className="bg-white/10 hover:bg-white/20 text-white border border-white/20 h-11 px-4 rounded-lg flex-1 sm:min-w-[160px]"
+              >
+                View Details
+              </Button>
+              {onStatusUpdate && (
+                <Button
+                  onClick={() => handleStatusUpdate('in_progress')}
+                  size="sm"
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-medium h-11 px-4 rounded-lg flex-1 sm:min-w-[160px]"
+                >
+                  Start Service
+                </Button>
+              )}
+            </div>
           )}
 
           {/* Payment Failed Actions */}
