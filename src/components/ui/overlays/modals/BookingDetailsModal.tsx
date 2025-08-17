@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { Calendar, Clock, MapPin, Car, User, Phone, Mail, CheckCircle, AlertCircle, XCircle, Clock as PendingIcon, FileText, RefreshCw, DollarSign, UserX } from 'lucide-react'
-import { BaseModal } from '../BaseModal'
+import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from '@/components/ui/composites/Modal'
 import { BaseOverlayProps } from '@/lib/overlay/types'
 import { Button } from '@/components/ui/primitives/Button'
 import { Badge } from '@/components/ui/primitives/Badge'
@@ -265,37 +265,37 @@ export const BookingDetailsModal: React.FC<BaseOverlayProps> = ({
 
   if (isLoading) {
     return (
-      <BaseModal
-        isOpen={isOpen}
-        onClose={onClose}
-        title="Booking Details"
-        size="lg"
-      >
-        <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600"></div>
-        </div>
-      </BaseModal>
+      <Modal open={isOpen} onClose={onClose}>
+        <ModalContent size="lg" position="center" mobile="fullscreen" onClose={onClose}>
+          <ModalHeader title="Booking Details" />
+          <ModalBody>
+            <div className="flex items-center justify-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600"></div>
+            </div>
+          </ModalBody>
+        </ModalContent>
+      </Modal>
     )
   }
 
   if (error || !booking) {
     return (
-      <BaseModal
-        isOpen={isOpen}
-        onClose={onClose}
-        title="Booking Details"
-        size="lg"
-      >
-        <div className="text-center py-12">
-          <XCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-          <p className="text-red-600 mb-4">{error || 'Booking not found'}</p>
-          {data?.bookingId && (
-            <Button onClick={loadBookingDetails} variant="outline">
-              Try Again
-            </Button>
-          )}
-        </div>
-      </BaseModal>
+      <Modal open={isOpen} onClose={onClose}>
+        <ModalContent size="lg" position="center" mobile="fullscreen" onClose={onClose}>
+          <ModalHeader title="Booking Details" />
+          <ModalBody>
+            <div className="text-center py-12">
+              <XCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+              <p className="text-red-600 mb-4">{error || 'Booking not found'}</p>
+              {data?.bookingId && (
+                <Button onClick={loadBookingDetails} variant="outline">
+                  Try Again
+                </Button>
+              )}
+            </div>
+          </ModalBody>
+        </ModalContent>
+      </Modal>
     )
   }
 
@@ -304,15 +304,13 @@ export const BookingDetailsModal: React.FC<BaseOverlayProps> = ({
   const customerData = getCustomerData(booking)
 
   return (
-    <BaseModal
-      isOpen={isOpen}
-      onClose={onClose}
-      title="Booking Details"
-      size="lg"
-    >
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="space-y-4 pb-6 border-b border-border-secondary">
+    <Modal open={isOpen} onClose={onClose}>
+      <ModalContent size="lg" position="center" mobile="fullscreen" onClose={onClose}>
+        <ModalHeader title="Booking Details" />
+        <ModalBody scrollable>
+          <div className="space-y-6">
+            {/* Header */}
+            <div className="space-y-4 pb-6 border-b border-border-secondary">
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
             <div className="flex-1">
               <h2 className="text-2xl font-bold text-text-primary mb-3">
@@ -336,10 +334,10 @@ export const BookingDetailsModal: React.FC<BaseOverlayProps> = ({
               <p className="text-sm text-text-secondary">Total Price</p>
             </div>
           </div>
-        </div>
+            </div>
 
-        {/* Appointment Details */}
-        <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-6">
+            {/* Appointment Details */}
+            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-6">
           <h3 className="text-lg font-semibold text-text-primary mb-4 flex items-center gap-2">
             <Calendar className="w-5 h-5 text-brand-400" />
             Appointment Details
@@ -366,10 +364,10 @@ export const BookingDetailsModal: React.FC<BaseOverlayProps> = ({
               </div>
             </div>
           </div>
-        </div>
+            </div>
 
-        {/* Vehicle Details */}
-        <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-6">
+            {/* Vehicle Details */}
+            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-6">
           <h3 className="text-lg font-semibold text-text-primary mb-4 flex items-center gap-2">
             <Car className="w-5 h-5 text-brand-400" />
             Vehicle Details
@@ -396,10 +394,10 @@ export const BookingDetailsModal: React.FC<BaseOverlayProps> = ({
               )}
             </div>
           </div>
-        </div>
+            </div>
 
-        {/* Service Location */}
-        <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-6">
+            {/* Service Location */}
+            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-6">
           <h3 className="text-lg font-semibold text-text-primary mb-4 flex items-center gap-2">
             <MapPin className="w-5 h-5 text-brand-400" />
             Service Location
@@ -421,11 +419,11 @@ export const BookingDetailsModal: React.FC<BaseOverlayProps> = ({
               </div>
             )}
           </div>
-        </div>
+            </div>
 
-        {/* Payment Information */}
-        {booking.payment_status && (
-          <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-6">
+            {/* Payment Information */}
+            {booking.payment_status && (
+              <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-6">
             <h3 className="text-lg font-semibold text-text-primary mb-4 flex items-center gap-2">
               <DollarSign className="w-5 h-5 text-brand-400" />
               Payment Information
@@ -452,11 +450,11 @@ export const BookingDetailsModal: React.FC<BaseOverlayProps> = ({
                 </div>
               </div>
             </div>
-          </div>
-        )}
+              </div>
+            )}
 
-        {/* Customer Details */}
-        <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-6">
+            {/* Customer Details */}
+            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-6">
           <h3 className="text-lg font-semibold text-text-primary mb-4 flex items-center gap-2">
             <User className="w-5 h-5 text-brand-400" />
             Customer Details
@@ -485,85 +483,83 @@ export const BookingDetailsModal: React.FC<BaseOverlayProps> = ({
               </div>
             </div>
           </div>
-        </div>
+            </div>
 
-        {/* Additional Notes */}
-        {booking.notes && (
-          <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-6">
+            {/* Additional Notes */}
+            {booking.notes && (
+              <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-6">
             <h3 className="text-lg font-semibold text-text-primary mb-4 flex items-center gap-2">
               <FileText className="w-5 h-5 text-brand-400" />
               Additional Notes
             </h3>
             <p className="text-base text-text-primary leading-relaxed">{booking.notes}</p>
+              </div>
+            )}
           </div>
-        )}
-
-        {/* Actions - Mobile optimized (context-aware) */}
-        <div className="flex gap-3 pt-6 border-t border-border-secondary sticky bottom-0 bg-surface-primary">
-          {/* Secondary action (varies) */}
+        </ModalBody>
+        <ModalFooter className="sticky bottom-0 bg-surface-primary">
           {booking.status === 'pending' && (
-            <Button
-              onClick={() => updateStatus('cancelled', { reason: 'Cancelled by admin from modal' })}
-              variant="outline"
-              size="lg"
-              className="flex-1 min-h-[48px] touch-manipulation"
-              loading={actionLoading === 'cancelled'}
-            >
-              Cancel
-            </Button>
+            <>
+              <Button
+                onClick={() => updateStatus('cancelled', { reason: 'Cancelled by admin from modal' })}
+                variant="outline"
+                size="lg"
+                className="flex-1 min-h-[48px] touch-manipulation"
+                loading={actionLoading === 'cancelled'}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={confirmBooking}
+                size="lg"
+                className="flex-1 min-h-[48px] touch-manipulation bg-blue-600 hover:bg-blue-700 text-white"
+                loading={actionLoading === 'confirmed'}
+              >
+                Mark as Paid / Confirm
+              </Button>
+            </>
           )}
           {booking.status === 'confirmed' && (
-            <Button
-              onClick={() => updateStatus('cancelled', { reason: 'Cancelled by admin from modal' })}
-              variant="outline"
-              size="lg"
-              className="flex-1 min-h-[48px] touch-manipulation"
-              loading={actionLoading === 'cancelled'}
-            >
-              Cancel
-            </Button>
+            <>
+              <Button
+                onClick={() => updateStatus('cancelled', { reason: 'Cancelled by admin from modal' })}
+                variant="outline"
+                size="lg"
+                className="flex-1 min-h-[48px] touch-manipulation"
+                loading={actionLoading === 'cancelled'}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => updateStatus('in_progress')}
+                size="lg"
+                className="flex-1 min-h-[48px] touch-manipulation bg-blue-600 hover:bg-blue-700 text-white"
+                loading={actionLoading === 'in_progress'}
+              >
+                Start Service
+              </Button>
+            </>
           )}
           {booking.status === 'in_progress' && (
-            <Button
-              onClick={() => updateStatus('no_show', { reason: 'Marked no-show from modal' })}
-              variant="outline"
-              size="lg"
-              className="flex-1 min-h-[48px] touch-manipulation"
-              loading={actionLoading === 'no_show'}
-            >
-              No Show
-            </Button>
-          )}
-          {/* Primary action (varies) */}
-          {booking.status === 'pending' && (
-            <Button
-              onClick={confirmBooking}
-              size="lg"
-              className="flex-1 min-h-[48px] touch-manipulation bg-blue-600 hover:bg-blue-700 text-white"
-              loading={actionLoading === 'confirmed'}
-            >
-              Mark as Paid / Confirm
-            </Button>
-          )}
-          {booking.status === 'confirmed' && (
-            <Button
-              onClick={() => updateStatus('in_progress')}
-              size="lg"
-              className="flex-1 min-h-[48px] touch-manipulation bg-blue-600 hover:bg-blue-700 text-white"
-              loading={actionLoading === 'in_progress'}
-            >
-              Start Service
-            </Button>
-          )}
-          {booking.status === 'in_progress' && (
-            <Button
-              onClick={() => updateStatus('completed')}
-              size="lg"
-              className="flex-1 min-h-[48px] touch-manipulation bg-blue-600 hover:bg-blue-700 text-white"
-              loading={actionLoading === 'completed'}
-            >
-              Complete Service
-            </Button>
+            <>
+              <Button
+                onClick={() => updateStatus('no_show', { reason: 'Marked no-show from modal' })}
+                variant="outline"
+                size="lg"
+                className="flex-1 min-h-[48px] touch-manipulation"
+                loading={actionLoading === 'no_show'}
+              >
+                No Show
+              </Button>
+              <Button
+                onClick={() => updateStatus('completed')}
+                size="lg"
+                className="flex-1 min-h-[48px] touch-manipulation bg-blue-600 hover:bg-blue-700 text-white"
+                loading={actionLoading === 'completed'}
+              >
+                Complete Service
+              </Button>
+            </>
           )}
           {['cancelled', 'completed'].includes(booking.status) && (
             <Button
@@ -575,8 +571,8 @@ export const BookingDetailsModal: React.FC<BaseOverlayProps> = ({
               Close
             </Button>
           )}
-        </div>
-      </div>
-    </BaseModal>
+        </ModalFooter>
+      </ModalContent>
+    </Modal>
   )
 }

@@ -165,7 +165,7 @@ export const CancelModal: React.FC<CancelModalProps> = ({
 
   return (
     <Modal open={isOpen} onClose={onClose}>
-      <ModalContent size="md" mobile="drawer" onClose={onClose}>
+      <ModalContent size="md" mobile="fullscreen" onClose={onClose}>
         <ModalHeader title="Cancel Booking" />
         
         <ModalBody scrollable maxHeight="60vh">
@@ -293,7 +293,7 @@ export const CancelModal: React.FC<CancelModalProps> = ({
 
         {/* Footer with actions only when booking is loaded */}
         {booking && policy && (
-          <ModalFooter>
+          <ModalFooter className="sticky bottom-0 bg-surface-primary">
             <Button
               variant="outline"
               onClick={onClose}

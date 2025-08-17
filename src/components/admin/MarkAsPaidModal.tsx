@@ -103,7 +103,7 @@ export function MarkAsPaidModal({
 
   return (
     <Modal open={open} onClose={handleClose}>
-      <ModalContent size="lg" position="center" onClose={handleClose}>
+      <ModalContent size="lg" position="center" mobile="fullscreen" onClose={handleClose}>
         <ModalHeader>
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
@@ -195,7 +195,7 @@ export function MarkAsPaidModal({
           </div>
         </ModalBody>
 
-        <ModalFooter>
+        <ModalFooter className="sticky bottom-0 bg-surface-primary">
           <Button
             onClick={handleClose}
             variant="outline"
