@@ -6,7 +6,7 @@
  */
 
 /** @type {import('next').NextConfig} */
-const nextConfig = {
+const baseConfig = {
   // Build configuration
   eslint: {
     ignoreDuringBuilds: true,
@@ -79,6 +79,19 @@ const nextConfig = {
 
     return config
   },
+}
+
+// Wrap with Sentry if available
+let nextConfig = baseConfig as any
+try {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { withSentryConfig } = require('@sentry/nextjs')
+  nextConfig = withSentryConfig(baseConfig, {
+    silent: true,
+    widenClientFileUpload: true,
+  })
+} catch (_) {
+  // Sentry not installed or not available at build time
 }
 
 export default nextConfig

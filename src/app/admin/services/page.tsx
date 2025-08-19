@@ -8,12 +8,9 @@ import { AdminRoute } from '@/components/ProtectedRoute'
 import { 
   PlusIcon,
   EditIcon,
-  SearchIcon,
   PackageIcon,
-  ArrowLeftIcon,
   DollarSignIcon,
-  TagIcon,
-  CarIcon
+  TagIcon
 } from 'lucide-react'
 
 interface Service {
@@ -66,9 +63,7 @@ function AdminServicesPage() {
   const [vehicleSizes, setVehicleSizes] = useState<VehicleSize[]>([])
   const [pricing, setPricing] = useState<ServicePricing>({})
   const [isLoading, setIsLoading] = useState(true)
-  const [searchTerm, setSearchTerm] = useState('')
-  const [categoryFilter, setCategoryFilter] = useState('all')
-  const [statusFilter, setStatusFilter] = useState('all')
+  
 
   useEffect(() => {
     const fetchData = async () => {
@@ -111,26 +106,7 @@ function AdminServicesPage() {
     fetchData()
   }, [])
 
-  const filteredServices = services.filter(service => {
-    // Search filter
-    if (searchTerm && !service.name.toLowerCase().includes(searchTerm.toLowerCase()) && 
-        !(service.description || service.short_description || '').toLowerCase().includes(searchTerm.toLowerCase())) {
-      return false
-    }
-
-    // Category filter
-    if (categoryFilter !== 'all' && service.category?.name !== categoryFilter) {
-      return false
-    }
-
-    // Status filter
-    if (statusFilter !== 'all') {
-      if (statusFilter === 'active' && !service.is_active) return false
-      if (statusFilter === 'inactive' && service.is_active) return false
-    }
-
-    return true
-  })
+  const filteredServices = services
 
   const toggleServiceStatus = async (serviceId: string, newStatus: boolean) => {
     try {
@@ -172,9 +148,9 @@ function AdminServicesPage() {
 
   return (
     <AdminLayout>
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-3">
           <div>
             <h1 className="text-3xl font-bold text-[var(--text-primary)] mb-2">
               Service Management
@@ -184,24 +160,10 @@ function AdminServicesPage() {
             </p>
           </div>
           
-          <div className="flex items-center gap-3 mt-4 sm:mt-0">
-            <Button
-              onClick={() => router.push('/admin')}
-              variant="outline"
-            >
-              <ArrowLeftIcon className="w-4 h-4 mr-2" />
-              Back to Dashboard
-            </Button>
-            <Button
-              onClick={() => router.push('/admin/services/categories')}
-              variant="outline"
-            >
-              <TagIcon className="w-4 h-4 mr-2" />
-              Manage Categories
-            </Button>
+          <div className="w-full sm:w-auto mt-4 sm:mt-0">
             <Button
               onClick={() => router.push('/admin/services/new')}
-              className="flex items-center gap-2"
+              className="flex items-center justify-center gap-2 w-full sm:w-auto"
             >
               <PlusIcon className="w-4 h-4" />
               Add Service
@@ -209,73 +171,7 @@ function AdminServicesPage() {
           </div>
         </div>
 
-        {/* Filters */}
-        <div className="bg-[var(--surface-secondary)] rounded-lg p-6 mb-8 border border-[var(--border-secondary)]">
-          <div className="flex flex-col lg:flex-row gap-4">
-            {/* Search */}
-            <div className="flex-1">
-              <div className="relative">
-                <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-[var(--text-muted)]" />
-                <input
-                  type="text"
-                  placeholder="Search services..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 min-h-[44px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-md text-[var(--input-text)] placeholder-[var(--input-placeholder)] focus:border-[var(--input-border-focus)] focus:outline-none transition-colors touch-manipulation"
-                />
-              </div>
-            </div>
-
-            {/* Category Filter */}
-            <div>
-              <select
-                value={categoryFilter}
-                onChange={(e) => setCategoryFilter(e.target.value)}
-                className="px-4 py-3 min-h-[44px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-md text-[var(--input-text)] focus:border-[var(--input-border-focus)] focus:outline-none transition-colors touch-manipulation"
-              >
-                <option value="all">All Categories</option>
-                {categories.map(category => (
-                  <option key={category.id} value={category.name}>
-                    {category.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Status Filter */}
-            <div>
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="px-4 py-3 min-h-[44px] bg-[var(--input-bg)] border border-[var(--input-border)] rounded-md text-[var(--input-text)] focus:border-[var(--input-border-focus)] focus:outline-none transition-colors touch-manipulation"
-              >
-                <option value="all">All Status</option>
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Quick Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 pt-4 border-t border-[var(--border-secondary)]">
-            <div className="text-center">
-              <p className="text-sm text-[var(--text-secondary)] mb-1">Total Services</p>
-              <p className="text-lg font-bold text-[var(--text-primary)]">{services.length}</p>
-            </div>
-            <div className="text-center">
-              <p className="text-sm text-[var(--text-secondary)] mb-1">Active</p>
-              <p className="text-lg font-bold text-[var(--success)]">{services.filter(s => s.is_active).length}</p>
-            </div>
-            <div className="text-center">
-              <p className="text-sm text-[var(--text-secondary)] mb-1">Inactive</p>
-              <p className="text-lg font-bold text-[var(--warning)]">{services.filter(s => !s.is_active).length}</p>
-            </div>
-            <div className="text-center">
-              <p className="text-sm text-[var(--text-secondary)] mb-1">Categories</p>
-              <p className="text-lg font-bold text-[var(--text-primary)]">{categories.length}</p>
-            </div>
-          </div>
-        </div>
+        {/* Filters removed as requested */}
 
         {/* Services Grid */}
         {filteredServices.length === 0 ? (
@@ -286,12 +182,9 @@ function AdminServicesPage() {
                 No Services Found
               </h3>
               <p className="text-[var(--text-secondary)] text-sm mb-4">
-                {searchTerm || categoryFilter !== 'all' || statusFilter !== 'all' 
-                  ? 'No services match your current filters.'
-                  : 'Start by adding your first service.'
-                }
+                Start by adding your first service.
               </p>
-              {(!searchTerm && categoryFilter === 'all' && statusFilter === 'all') && (
+              {
                 <Button
                   onClick={() => router.push('/admin/services/new')}
                   className="flex items-center gap-2"
@@ -299,15 +192,15 @@ function AdminServicesPage() {
                   <PlusIcon className="w-4 h-4" />
                   Add Your First Service
                 </Button>
-              )}
+              }
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {filteredServices.map((service) => (
               <div
                 key={service.id}
-                className="bg-[var(--surface-secondary)] rounded-lg p-6 border border-[var(--border-secondary)] hover:border-[var(--border-primary)] transition-colors"
+                className="bg-[var(--surface-secondary)] rounded-lg p-4 sm:p-6 border border-[var(--border-secondary)] hover:border-[var(--border-primary)] transition-colors"
               >
                 {/* Service Header */}
                 <div className="flex items-start justify-between mb-4">
@@ -319,9 +212,9 @@ function AdminServicesPage() {
                     }`}>
                       <PackageIcon className="w-5 h-5" />
                     </div>
-                    <div>
-                      <h3 className="font-semibold text-[var(--text-primary)]">{service.name}</h3>
-                      <div className="flex items-center gap-2 mt-1">
+                    <div className="min-w-0">
+                      <h3 className="font-semibold text-[var(--text-primary)] truncate max-w-[220px] sm:max-w-none">{service.name}</h3>
+                      <div className="flex items-center gap-2 mt-1 flex-wrap">
                         <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs ${
                           service.is_active 
                             ? 'bg-[var(--success-bg)] text-[var(--success)]' 
@@ -342,18 +235,18 @@ function AdminServicesPage() {
 
                 {/* Service Details */}
                 <div className="space-y-3 mb-4">
-                  <p className="text-[var(--text-secondary)] text-sm line-clamp-2">
+                  <p className="text-[var(--text-secondary)] text-sm line-clamp-3">
                     {service.description || service.short_description || 'No description available'}
                   </p>
                   
-                  <div className="flex items-center justify-between text-sm">
-                    <div className="flex items-center gap-2 text-[var(--text-primary)]">
+                  <div className="flex items-start justify-between text-sm gap-3">
+                    <div className="flex items-start gap-2 text-[var(--text-primary)] overflow-hidden">
                       <DollarSignIcon className="w-4 h-4 text-[var(--primary)]" />
                       <div className="text-xs">
                         {pricing[service.id] && vehicleSizes.length > 0 ? (
                           <div className="space-y-0.5">
                             {vehicleSizes.slice(0, 2).map(size => (
-                              <div key={size.id} className="flex justify-between min-w-[120px]">
+                              <div key={size.id} className="flex justify-between min-w-0 gap-2">
                                 <span className="text-[var(--text-muted)]">{size.name}:</span>
                                 <span className="font-semibold">
                                   £{(pricing[service.id]?.[size.id]?.price || 0).toFixed(2)}
@@ -371,7 +264,7 @@ function AdminServicesPage() {
                         )}
                       </div>
                     </div>
-                    <div className="text-[var(--text-secondary)]">
+                    <div className="text-[var(--text-secondary)] whitespace-nowrap flex-shrink-0">
                       {formatDuration(service.duration_minutes)}
                     </div>
                   </div>
@@ -383,7 +276,7 @@ function AdminServicesPage() {
                     onClick={() => router.push(`/admin/services/${service.id}`)}
                     variant="outline"
                     size="md"
-                    className="w-full sm:flex-1 flex items-center gap-2 min-h-[44px] touch-manipulation"
+                    className="w-full sm:flex-1 flex items-center justify-center gap-2 min-h-[44px] touch-manipulation"
                   >
                     <EditIcon className="w-4 h-4" />
                     Edit

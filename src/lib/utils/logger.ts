@@ -5,7 +5,11 @@
  * and prevents debug logs from appearing in production.
  */
 
-import { isProduction, isDevelopment } from '@/lib/config/environment'
+// Avoid importing full environment validation on the client.
+// Derive minimal flags locally so logger never triggers env validation errors.
+const nodeEnv = (typeof process !== 'undefined' && process.env && process.env.NODE_ENV) || 'development'
+export const isProduction = nodeEnv === 'production'
+export const isDevelopment = !isProduction
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error'
 

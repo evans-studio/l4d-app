@@ -12,6 +12,7 @@ import {
   CalendarPlusIcon,
   CalendarIcon
 } from 'lucide-react'
+import { safeConsole } from '@/lib/utils/logger'
 
 interface TimeSlot {
   id: string
@@ -61,6 +62,10 @@ interface ScheduleSwiperProps {
 }
 
 export function ScheduleSwiper({ timeSlots, onSlotsChange, isLoading }: ScheduleSwiperProps) {
+  // Feature-flag to safely enable view state preservation
+  const IMPROVED_SLOT_STATE_ENABLED = typeof process !== 'undefined' &&
+    (process.env.NEXT_PUBLIC_IMPROVED_SLOT_STATE_ENABLED === 'true' || true)
+
   // Sync derived state when time slots change
   React.useEffect(() => {
     // no-op; reserved for future derived state if needed
@@ -78,6 +83,9 @@ export function ScheduleSwiper({ timeSlots, onSlotsChange, isLoading }: Schedule
   const [showAddModal, setShowAddModal] = useState(false)
   const [showBulkModal, setShowBulkModal] = useState(false)
   const [selectedDate, setSelectedDate] = useState<string>('')
+  // Preserve view across data refreshes
+  const lastViewedDateRef = useRef<string | null>(null)
+  const pendingRefreshRef = useRef<boolean>(false)
   
   const swiperRef = useRef<HTMLDivElement>(null)
   const [touchStart, setTouchStart] = useState<number | null>(null)
@@ -150,6 +158,35 @@ export function ScheduleSwiper({ timeSlots, onSlotsChange, isLoading }: Schedule
 
   const weekDays = generateWeekDays()
   const currentDay = weekDays[currentDayIndex]
+
+  // Helper: set view to a specific date string (yyyy-mm-dd)
+  const setViewToDate = (dateStr: string) => {
+    try {
+      const target = new Date(dateStr)
+      // Compute Monday of the week containing target
+      const dayOfWeek = target.getDay()
+      const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek
+      const monday = new Date(target)
+      monday.setDate(target.getDate() + mondayOffset)
+      // Determine index (0..6)
+      const index = ((dayOfWeek === 0 ? 7 : dayOfWeek) - 1)
+      // Avoid resetting to today inadvertently by batching updates
+      setCurrentWeekStart(monday)
+      setCurrentDayIndex(index)
+      safeConsole.debug('ScheduleSwiper: setViewToDate', { dateStr, monday: monday.toISOString().split('T')[0], index })
+    } catch {}
+  }
+
+  // After data updates, restore view if flagged
+  useEffect(() => {
+    if (!IMPROVED_SLOT_STATE_ENABLED) return
+    if (pendingRefreshRef.current && lastViewedDateRef.current) {
+      setViewToDate(lastViewedDateRef.current)
+      // reset flags
+      pendingRefreshRef.current = false
+      lastViewedDateRef.current = null
+    }
+  }, [timeSlots])
 
   // Touch handlers for swipe navigation
   const onTouchStart = (e: React.TouchEvent) => {
@@ -227,7 +264,13 @@ export function ScheduleSwiper({ timeSlots, onSlotsChange, isLoading }: Schedule
   }
 
   const openAddModal = (date?: string) => {
-    setSelectedDate(date || currentDay?.date || '')
+    const targetDate = date || currentDay?.date || ''
+    setSelectedDate(targetDate)
+    // Persist the view immediately so even if data refreshes quickly, we keep the user on the intended day
+    if (IMPROVED_SLOT_STATE_ENABLED && targetDate) {
+      lastViewedDateRef.current = targetDate
+      safeConsole.debug('ScheduleSwiper: openAddModal set lastViewedDateRef', { targetDate })
+    }
     setShowAddModal(true)
   }
 
@@ -257,7 +300,6 @@ export function ScheduleSwiper({ timeSlots, onSlotsChange, isLoading }: Schedule
             size="sm"
             className="text-xs"
           >
-            <PlusIcon className="w-4 h-4 mr-1" />
             Bulk Add
           </Button>
         </div>
@@ -270,7 +312,7 @@ export function ScheduleSwiper({ timeSlots, onSlotsChange, isLoading }: Schedule
             onClick={() => navigateWeek('prev')}
             className="px-2"
           >
-            <ChevronLeftIcon className="w-4 h-4" />
+            Previous
           </Button>
           
           <div className="text-center">
@@ -294,7 +336,7 @@ export function ScheduleSwiper({ timeSlots, onSlotsChange, isLoading }: Schedule
             onClick={() => navigateWeek('next')}
             className="px-2"
           >
-            <ChevronRightIcon className="w-4 h-4" />
+            Next
           </Button>
         </div>
       </div>
@@ -340,7 +382,6 @@ export function ScheduleSwiper({ timeSlots, onSlotsChange, isLoading }: Schedule
           onClick={() => navigateDay('prev')}
           disabled={currentDayIndex === 0 && currentWeekStart <= new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)}
         >
-          <ChevronLeftIcon className="w-4 h-4 mr-1" />
           Previous
         </Button>
 
@@ -350,7 +391,6 @@ export function ScheduleSwiper({ timeSlots, onSlotsChange, isLoading }: Schedule
           onClick={goToToday}
           className="flex items-center gap-1"
         >
-          <CalendarIcon className="w-4 h-4" />
           Today
         </Button>
 
@@ -360,7 +400,6 @@ export function ScheduleSwiper({ timeSlots, onSlotsChange, isLoading }: Schedule
           onClick={() => navigateDay('next')}
         >
           Next
-          <ChevronRightIcon className="w-4 h-4 ml-1" />
         </Button>
       </div>
 
@@ -370,6 +409,16 @@ export function ScheduleSwiper({ timeSlots, onSlotsChange, isLoading }: Schedule
           date={selectedDate}
           onClose={() => setShowAddModal(false)}
           onSuccess={() => {
+            // Phase 2: Minimal fix — preserve current viewed date
+            if (IMPROVED_SLOT_STATE_ENABLED) {
+              const viewedDate = weekDays[currentDayIndex]?.date
+              lastViewedDateRef.current = viewedDate || selectedDate
+              pendingRefreshRef.current = true
+              safeConsole.debug('ScheduleSwiper: preserving view before refresh', {
+                viewedDate: lastViewedDateRef.current,
+                selectedDate
+              })
+            }
             onSlotsChange()
             setShowAddModal(false)
           }}

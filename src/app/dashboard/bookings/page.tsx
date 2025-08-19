@@ -6,6 +6,7 @@ import { useBookingFlowStore } from '@/lib/store/bookingFlowStore'
 import { useOverlay } from '@/lib/overlay/context'
 import { useCustomerRealTimeBookings, type CustomerBooking } from '@/hooks/useCustomerRealTimeBookings'
 import { Button } from '@/components/ui/primitives/Button'
+import { BookingCard as UnifiedBookingCard, type BookingData } from '@/components/ui/patterns/BookingCard'
 import { CustomerLayout } from '@/components/layout/templates/CustomerLayout'
 import { Container } from '@/components/layout/templates/PageLayout'
 import { CustomerRoute } from '@/components/ProtectedRoute'
@@ -284,137 +285,46 @@ export default function MyBookingsPage() {
           ) : (
             <div className="space-y-6">
               {filteredBookings.map((booking) => {
-                const status = statusConfig[booking.status]
-                const StatusIcon = status.icon
-                
+                const data: BookingData = {
+                  id: booking.id,
+                  bookingReference: booking.booking_reference,
+                  status: (booking.status as any),
+                  scheduledDate: booking.scheduled_date,
+                  scheduledStartTime: booking.scheduled_start_time,
+                  totalPrice: booking.total_price,
+                  createdAt: booking.created_at,
+                  services: booking.service ? [{ id: `${booking.id}-svc-0`, name: booking.service.name, price: booking.total_price }] : [],
+                  customer: {
+                    id: booking.customer_id,
+                    firstName: booking.customer_name,
+                    lastName: '',
+                    email: booking.customer_email,
+                    phone: booking.customer_phone,
+                  },
+                  vehicle: booking.vehicle ? {
+                    make: booking.vehicle.make,
+                    model: booking.vehicle.model,
+                    year: booking.vehicle.year,
+                    color: booking.vehicle.color,
+                  } : undefined,
+                  address: booking.address ? {
+                    addressLine1: booking.address.address_line_1,
+                    city: booking.address.city,
+                    postalCode: booking.address.postal_code,
+                  } : undefined,
+                  specialInstructions: booking.special_instructions,
+                  priority: 'normal',
+                }
                 return (
-                  <div
+                  <UnifiedBookingCard
                     key={booking.id}
-                    className="bg-surface-secondary rounded-lg p-6 border border-border-secondary hover:border-border-primary transition-colors"
-                  >
-                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-                      {/* Main Info */}
-                      <div className="flex-1">
-                        <div className="flex items-start justify-between mb-4">
-                          <div>
-                            <h3 className="text-lg font-semibold text-text-primary mb-1">
-                              Booking #{booking.booking_reference}
-                            </h3>
-                            <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm border ${status.bgColor} ${status.borderColor}`}>
-                              <StatusIcon className={`w-4 h-4 ${status.color}`} />
-                              <span className={status.color}>{status.label}</span>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-2xl font-bold text-brand-400">£{booking.total_price}</p>
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                          {/* Date & Time */}
-                          <div className="flex items-center gap-3">
-                            <Calendar className="w-5 h-5 text-brand-400" />
-                            <div>
-                              <p className="text-text-secondary text-xs">Date & Time</p>
-                              <p className="text-text-primary font-medium">
-                                {formatDate(booking.scheduled_date)}
-                              </p>
-                              <p className="text-text-primary text-sm">
-                                {formatTime(booking.scheduled_start_time)}
-                              </p>
-                            </div>
-                          </div>
-
-                          {/* Vehicle */}
-                          <div className="flex items-center gap-3">
-                            <Car className="w-5 h-5 text-brand-400" />
-                            <div>
-                              <p className="text-text-secondary text-xs">Vehicle</p>
-                              <p className="text-text-primary font-medium">
-                                {booking.vehicle ? `${booking.vehicle.make} ${booking.vehicle.model}` : 'Vehicle details pending'}
-                              </p>
-                              {booking.vehicle?.year && (
-                                <p className="text-text-secondary text-sm">
-                                  {booking.vehicle.year}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Location */}
-                          <div className="flex items-center gap-3">
-                            <MapPin className="w-5 h-5 text-brand-400" />
-                            <div>
-                              <p className="text-text-secondary text-xs">Location</p>
-                              <p className="text-text-primary font-medium">
-                                {booking.address?.city || 'City pending'}
-                              </p>
-                              <p className="text-text-secondary text-sm">
-                                {booking.address?.postal_code || 'Postcode pending'}
-                              </p>
-                            </div>
-                          </div>
-
-                          {/* Services */}
-                          <div>
-                            <p className="text-text-secondary text-xs mb-1">Services</p>
-                            <div className="space-y-1">
-                              <p className="text-text-primary text-sm">
-                                {booking.service?.name || 'Service details pending'}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Actions */}
-                      <div className="flex flex-row lg:flex-col gap-2">
-                        <Button
-                          onClick={() => openOverlay({
-                            type: 'booking-view',
-                            data: { bookingId: booking.id, booking }
-                          })}
-                          variant="outline"
-                          size="sm"
-                          className="min-h-[44px] touch-manipulation"
-                          leftIcon={<Eye className="w-4 h-4" />}
-                        >
-                          View Details
-                        </Button>
-                        
-                        {['pending', 'confirmed'].includes(booking.status) && (
-                          <Button
-                            onClick={() => openOverlay({
-                              type: 'booking-reschedule',
-                              data: { bookingId: booking.id, booking }
-                            })}
-                            variant="outline"
-                            size="sm"
-                            className="min-h-[44px] touch-manipulation"
-                            leftIcon={<Edit className="w-4 h-4" />}
-                          >
-                            Reschedule
-                          </Button>
-                        )}
-                        
-                        {booking.status === 'completed' && (
-                          <Button
-                            onClick={() => handleRebook(booking.id)}
-                            variant="outline"
-                            size="sm"
-                            className="min-h-[44px] touch-manipulation"
-                            leftIcon={rebookingBookingId === booking.id ? 
-                              <div className="w-4 h-4 animate-spin rounded-full border-2 border-brand-400 border-t-transparent" /> :
-                              <Calendar className="w-4 h-4" />
-                            }
-                            disabled={rebookingBookingId === booking.id}
-                          >
-                            {rebookingBookingId === booking.id ? 'Loading...' : 'Book Again'}
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
+                    booking={data}
+                    layout="detailed"
+                    interactive
+                    onView={() => openOverlay({ type: 'booking-view', data: { bookingId: booking.id, booking } })}
+                    onEdit={() => openOverlay({ type: 'booking-reschedule', data: { bookingId: booking.id, booking } })}
+                    onCancel={() => openOverlay({ type: 'booking-cancel', data: { bookingId: booking.id, booking } })}
+                  />
                 )
               })}
             </div>

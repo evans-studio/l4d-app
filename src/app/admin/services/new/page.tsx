@@ -210,13 +210,7 @@ function NewServicePage() {
             </p>
           </div>
           
-          <Button
-            onClick={() => router.push('/admin/services')}
-            variant="outline"
-          >
-            <ArrowLeftIcon className="w-4 h-4 mr-2" />
-            Back to Services
-          </Button>
+          {/* Back button removed as requested */}
         </div>
 
         {/* Form */}

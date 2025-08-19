@@ -112,9 +112,11 @@ export const BookingDetailsModal: React.FC<BaseOverlayProps> = ({
   data
 }) => {
   const [booking, setBooking] = useState<BookingDetails | null>(data?.booking || null)
-  const [isLoading, setIsLoading] = useState(!data?.booking)
+  const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
   const [actionLoading, setActionLoading] = useState<string | null>(null)
+  const [showCancelPrompt, setShowCancelPrompt] = useState(false)
+  const [cancelReason, setCancelReason] = useState('')
 
 
   // Helper function to normalize customer data from different formats
@@ -192,9 +194,25 @@ export const BookingDetailsModal: React.FC<BaseOverlayProps> = ({
     }
   }
 
+  const submitCancellation = async () => {
+    if (!cancelReason.trim()) return
+    await updateStatus('cancelled', { reason: cancelReason })
+    setShowCancelPrompt(false)
+    setCancelReason('')
+  }
+
   useEffect(() => {
-    if (isOpen && data?.bookingId && !data?.booking) {
+    if (!isOpen || !data?.bookingId) {
+      setIsLoading(false)
+      return
+    }
+    const minimal = data?.booking as any | undefined
+    const needsHydration = !minimal || !minimal.address || !minimal.address.address_line_1 || !minimal.customer_phone
+    if (needsHydration) {
       loadBookingDetails()
+    } else {
+      setBooking(minimal as BookingDetails)
+      setIsLoading(false)
     }
   }, [isOpen, data?.bookingId])
 
@@ -304,40 +322,38 @@ export const BookingDetailsModal: React.FC<BaseOverlayProps> = ({
   const customerData = getCustomerData(booking)
 
   return (
+    <>
     <Modal open={isOpen} onClose={onClose}>
       <ModalContent size="lg" position="center" mobile="fullscreen" onClose={onClose}>
         <ModalHeader title="Booking Details" />
         <ModalBody scrollable>
           <div className="space-y-6">
             {/* Header */}
-            <div className="space-y-4 pb-6 border-b border-border-secondary">
-          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-            <div className="flex-1">
-              <h2 className="text-2xl font-bold text-text-primary mb-3">
-                {booking.services?.[0]?.name || booking.service?.name || 'Service Details'}
-              </h2>
-              <div className="flex flex-wrap items-center gap-3 mb-2">
-                <span className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${config.className}`}>
-                  <StatusIcon className="w-4 h-4" />
-                  {config.label}
-                </span>
-                <span className="text-lg font-semibold text-text-secondary">
-                  #{booking.booking_reference}
-                </span>
+            <div className="pb-6 border-b border-border-secondary">
+              <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <h2 className="text-2xl font-semibold text-text-primary truncate">
+                    {booking.services?.[0]?.name || booking.service?.name || 'Service Details'}
+                  </h2>
+                  <div className="mt-1 flex flex-wrap items-center gap-2 text-sm">
+                    <span className="font-mono text-text-secondary">#{booking.booking_reference}</span>
+                    <span className="hidden sm:inline text-text-muted">•</span>
+                    <span className="text-text-muted">Booked on {formatDateTime(booking.created_at)}</span>
+                  </div>
+                </div>
+                <div className="sm:text-right text-left">
+                  <p className="text-[11px] uppercase tracking-wide text-text-secondary mb-1">Total</p>
+                  <p className="text-3xl font-semibold text-text-primary leading-tight">{formatPrice(booking.total_price)}</p>
+                  <div className={`mt-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${config.className}`}>
+                    <StatusIcon className="w-3.5 h-3.5" />
+                    {config.label}
+                  </div>
+                </div>
               </div>
-              <p className="text-sm text-text-muted">
-                Booked on {formatDateTime(booking.created_at)}
-              </p>
-            </div>
-            <div className="text-right">
-              <p className="text-3xl font-bold text-brand-600 mb-1">{formatPrice(booking.total_price)}</p>
-              <p className="text-sm text-text-secondary">Total Price</p>
-            </div>
-          </div>
             </div>
 
             {/* Appointment Details */}
-            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-6">
+            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-6 text-left">
           <h3 className="text-lg font-semibold text-text-primary mb-4 flex items-center gap-2">
             <Calendar className="w-5 h-5 text-brand-400" />
             Appointment Details
@@ -367,7 +383,7 @@ export const BookingDetailsModal: React.FC<BaseOverlayProps> = ({
             </div>
 
             {/* Vehicle Details */}
-            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-6">
+            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-6 text-left">
           <h3 className="text-lg font-semibold text-text-primary mb-4 flex items-center gap-2">
             <Car className="w-5 h-5 text-brand-400" />
             Vehicle Details
@@ -397,7 +413,7 @@ export const BookingDetailsModal: React.FC<BaseOverlayProps> = ({
             </div>
 
             {/* Service Location */}
-            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-6">
+            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-6 text-left">
           <h3 className="text-lg font-semibold text-text-primary mb-4 flex items-center gap-2">
             <MapPin className="w-5 h-5 text-brand-400" />
             Service Location
@@ -429,8 +445,8 @@ export const BookingDetailsModal: React.FC<BaseOverlayProps> = ({
               Payment Information
             </h3>
             <div className="space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div className="flex-1">
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                <div className="flex-1 text-left">
                   <p className="text-sm font-medium text-text-secondary mb-2">Payment Status</p>
                   <div className={`inline-flex items-center gap-2 px-3 py-2 rounded-full text-sm font-medium border min-h-[44px] touch-manipulation ${
                     booking.payment_status === 'paid' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' :
@@ -444,7 +460,7 @@ export const BookingDetailsModal: React.FC<BaseOverlayProps> = ({
                      'Awaiting Payment'}
                   </div>
                 </div>
-                <div className="text-left sm:text-right">
+                <div className="sm:text-right text-left">
                   <p className="text-sm font-medium text-text-secondary mb-1">Total Amount</p>
                   <p className="text-2xl sm:text-3xl font-bold text-text-primary">{formatPrice(booking.total_price)}</p>
                 </div>
@@ -466,18 +482,16 @@ export const BookingDetailsModal: React.FC<BaseOverlayProps> = ({
                 {customerData.name}
               </p>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm font-medium text-text-secondary mb-2">Email Address</p>
-                <p className="text-base text-text-primary flex items-center gap-2">
-                  <Mail className="w-4 h-4 text-text-secondary" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-text-secondary">Email Address</p>
+                <p className="text-base text-text-primary break-all">
                   {customerData.email}
                 </p>
               </div>
-              <div>
-                <p className="text-sm font-medium text-text-secondary mb-2">Phone Number</p>
-                <p className="text-base text-text-primary flex items-center gap-2">
-                  <Phone className="w-4 h-4 text-text-secondary" />
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-text-secondary">Phone Number</p>
+                <p className="text-base text-text-primary break-all">
                   {customerData.phone}
                 </p>
               </div>
@@ -501,13 +515,13 @@ export const BookingDetailsModal: React.FC<BaseOverlayProps> = ({
           {booking.status === 'pending' && (
             <>
               <Button
-                onClick={() => updateStatus('cancelled', { reason: 'Cancelled by admin from modal' })}
+                onClick={() => setShowCancelPrompt(true)}
                 variant="outline"
                 size="lg"
                 className="flex-1 min-h-[48px] touch-manipulation"
                 loading={actionLoading === 'cancelled'}
               >
-                Cancel
+                Cancel Booking
               </Button>
               <Button
                 onClick={confirmBooking}
@@ -522,13 +536,13 @@ export const BookingDetailsModal: React.FC<BaseOverlayProps> = ({
           {booking.status === 'confirmed' && (
             <>
               <Button
-                onClick={() => updateStatus('cancelled', { reason: 'Cancelled by admin from modal' })}
+                onClick={() => setShowCancelPrompt(true)}
                 variant="outline"
                 size="lg"
                 className="flex-1 min-h-[48px] touch-manipulation"
                 loading={actionLoading === 'cancelled'}
               >
-                Cancel
+                Cancel Booking
               </Button>
               <Button
                 onClick={() => updateStatus('in_progress')}
@@ -574,5 +588,28 @@ export const BookingDetailsModal: React.FC<BaseOverlayProps> = ({
         </ModalFooter>
       </ModalContent>
     </Modal>
+
+    {/* Cancel Prompt */}
+    <Modal open={showCancelPrompt} onClose={() => setShowCancelPrompt(false)}>
+      <ModalContent size="md" position="center" mobile="fullscreen" onClose={() => setShowCancelPrompt(false)}>
+        <ModalHeader title="Cancel Booking" />
+        <ModalBody>
+          <div className="space-y-4">
+            <p className="text-text-secondary text-sm">Please provide a reason for cancelling this booking. The reason may be included in customer notifications.</p>
+            <textarea
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+              placeholder="e.g. Customer requested cancellation, double booking, unavailable, etc."
+              className="w-full min-h-[100px] rounded-md border border-border-secondary bg-surface-secondary p-3 text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand-600"
+            />
+          </div>
+        </ModalBody>
+        <ModalFooter>
+          <Button variant="outline" onClick={() => setShowCancelPrompt(false)} className="min-h-[44px]">Back</Button>
+          <Button onClick={submitCancellation} disabled={!cancelReason.trim()} className="min-h-[44px] bg-red-600 hover:bg-red-700 text-white">Confirm Cancel</Button>
+        </ModalFooter>
+      </ModalContent>
+    </Modal>
+    </>
   )
 }

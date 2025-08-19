@@ -22,15 +22,17 @@ import { AdminLayout } from '@/components/layouts/AdminLayout'
 import { AdminRoute } from '@/components/ProtectedRoute'
 import { Container } from '@/components/layout/templates/PageLayout'
 import { ConfirmBookingModal, DeclineBookingModal, RescheduleBookingModal, CancelBookingModal } from '@/components/admin/BookingActionModals'
+import { useOverlay } from '@/lib/overlay/context'
 import { MarkAsPaidModal } from '@/components/admin/MarkAsPaidModal'
 import { PaymentSummary } from '@/components/admin/PaymentSummary'
-import { BookingCard } from '@/components/admin/BookingCard'
+import { BookingCard as UnifiedBookingCard, type BookingData } from '@/components/ui/patterns/BookingCard'
 
 // Use the booking type from the hook
 type Booking = AdminBooking
 
 function AdminBookingsContent() {
   const router = useRouter()
+  const { openOverlay } = useOverlay()
   const searchParams = useSearchParams()
   
   // State
@@ -135,6 +137,44 @@ function AdminBookingsContent() {
 
     setFilteredBookings(filtered)
   }, [bookings, searchTerm, activeTab])
+
+  // Adapter: AdminBooking -> BookingData for unified card
+  const toBookingData = (b: Booking): BookingData => {
+    const [firstName, ...rest] = (b.customer_name || '').split(' ')
+    const lastName = rest.join(' ').trim()
+    return {
+      id: b.id,
+      bookingReference: b.booking_reference,
+      status: b.status as BookingData['status'],
+      scheduledDate: b.scheduled_date,
+      scheduledStartTime: b.start_time,
+      totalPrice: b.total_price,
+      createdAt: b.created_at,
+      services: (b.services || []).map((s, i) => ({ id: `${b.id}-svc-${i}`, name: s.name, price: s.base_price })),
+      customer: {
+        id: b.customer_id,
+        firstName: firstName || b.customer_name,
+        lastName: lastName || '',
+        email: b.customer_email,
+        phone: b.customer_phone,
+      },
+      vehicle: b.vehicle ? {
+        make: b.vehicle.make,
+        model: b.vehicle.model,
+        year: b.vehicle.year,
+        color: b.vehicle.color,
+        size: undefined,
+      } : undefined,
+      address: b.address ? {
+        addressLine1: b.address.address_line_1,
+        addressLine2: undefined,
+        city: b.address.city,
+        postalCode: b.address.postal_code,
+      } : undefined,
+      specialInstructions: b.special_instructions,
+      priority: 'normal',
+    }
+  }
 
   // Modal handlers
   const handleConfirmClick = (booking: Booking) => {
@@ -493,15 +533,20 @@ function AdminBookingsContent() {
               </div>
 
               <CardGrid columns={{ mobile: 1, tablet: 1, desktop: 1 }} gap="lg">
-                {filteredBookings.map((booking, index) => (
-                  <BookingCard
-                    key={`${booking.id}-${booking.booking_reference}-${index}`}
-                    booking={booking}
-                    onStatusUpdate={updateBookingStatus}
-                    onMarkAsPaid={() => handleMarkAsPaidClick(booking)}
-                    variant="full"
-                  />
-                ))}
+                {filteredBookings.map((booking, index) => {
+                  const cardData = toBookingData(booking)
+                  return (
+                    <UnifiedBookingCard
+                      key={`${booking.id}-${booking.booking_reference}-${index}`}
+                      booking={cardData}
+                      layout="detailed"
+                      interactive
+                      onView={() => openOverlay({ type: 'booking-view', data: { bookingId: booking.id, booking } })}
+                      onConfirm={() => handleMarkAsPaidClick(booking)}
+                      onCancel={() => setCancelModal({ isOpen: true, booking })}
+                    />
+                  )
+                })}
               </CardGrid>
             </>
           )}

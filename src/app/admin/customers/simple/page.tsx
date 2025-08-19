@@ -132,87 +132,98 @@ function SimpleCustomersContent() {
               </p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-surface-primary border-b border-border-secondary">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
-                      Customer
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
-                      Contact
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
-                      Joined
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border-secondary">
-                  {filteredCustomers.map((customer) => (
-                    <tr key={customer.id} className="hover:bg-surface-hover transition-colors">
-                      <td className="px-6 py-4">
-                        <div>
-                          <div className="font-medium text-text-primary">
-                            {customer.first_name} {customer.last_name}
-                          </div>
-                          <div className="text-sm text-text-secondary">
-                            ID: {customer.id.substring(0, 8)}...
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="space-y-1">
-                          <div className="flex items-center text-sm text-text-primary">
-                            <MailIcon className="w-4 h-4 mr-2 text-text-muted" />
-                            {customer.email}
-                          </div>
-                          {customer.phone && (
-                            <div className="flex items-center text-sm text-text-secondary">
-                              <PhoneIcon className="w-4 h-4 mr-2 text-text-muted" />
-                              {customer.phone}
-                            </div>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center text-sm text-text-primary">
-                          <CalendarIcon className="w-4 h-4 mr-2 text-text-muted" />
-                          {formatDate(customer.created_at)}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          customer.is_active 
-                            ? 'bg-green-100 text-green-800 border border-green-200' 
-                            : 'bg-red-100 text-red-800 border border-red-200'
-                        }`}>
-                          {customer.is_active ? 'Active' : 'Inactive'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            // TODO: Navigate to customer detail page
-                            console.log('View customer:', customer.id)
-                          }}
-                          leftIcon={<EyeIcon className="w-4 h-4" />}
-                        >
-                          View Details
-                        </Button>
-                      </td>
+            <>
+              {/* Desktop table */}
+              <div className="hidden sm:block overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-surface-primary border-b border-border-secondary">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">Customer</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">Contact</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">Joined</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">Status</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="divide-y divide-border-secondary">
+                    {filteredCustomers.map((customer) => (
+                      <tr key={customer.id} className="hover:bg-surface-hover transition-colors">
+                        <td className="px-6 py-4">
+                          <div>
+                            <div className="font-medium text-text-primary">{customer.first_name} {customer.last_name}</div>
+                            <div className="text-sm text-text-secondary">ID: {customer.id.substring(0, 8)}...</div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="space-y-1">
+                            <div className="flex items-center text-sm text-text-primary"><MailIcon className="w-4 h-4 mr-2 text-text-muted" />{customer.email}</div>
+                            {customer.phone && (
+                              <div className="flex items-center text-sm text-text-secondary"><PhoneIcon className="w-4 h-4 mr-2 text-text-muted" />{customer.phone}</div>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center text-sm text-text-primary"><CalendarIcon className="w-4 h-4 mr-2 text-text-muted" />{formatDate(customer.created_at)}</div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${customer.is_active ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-red-100 text-red-800 border border-red-200'}`}>{customer.is_active ? 'Active' : 'Inactive'}</span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => console.log('View customer:', customer.id)}
+                            leftIcon={<EyeIcon className="w-4 h-4" />}
+                          >
+                            View Details
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile cards */}
+              <div className="block sm:hidden divide-y divide-border-secondary">
+                {filteredCustomers.map((customer) => (
+                  <div key={customer.id} className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="font-semibold text-text-primary">{customer.first_name} {customer.last_name}</div>
+                        <div className="text-xs text-text-secondary">ID: {customer.id.substring(0, 8)}...</div>
+                      </div>
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${customer.is_active ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-red-100 text-red-800 border border-red-200'}`}>{customer.is_active ? 'Active' : 'Inactive'}</span>
+                    </div>
+                    <div className="mt-3 space-y-2">
+                      <div className="flex items-start text-sm text-text-primary">
+                        <MailIcon className="w-4 h-4 mr-2 text-text-muted mt-0.5" />
+                        <span className="break-words">{customer.email}</span>
+                      </div>
+                      {customer.phone && (
+                        <div className="flex items-center text-sm text-text-secondary">
+                          <PhoneIcon className="w-4 h-4 mr-2 text-text-muted" />{customer.phone}
+                        </div>
+                      )}
+                      <div className="flex items-center text-sm text-text-primary">
+                        <CalendarIcon className="w-4 h-4 mr-2 text-text-muted" />{formatDate(customer.created_at)}
+                      </div>
+                    </div>
+                    <div className="mt-4">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full"
+                        onClick={() => console.log('View customer:', customer.id)}
+                        leftIcon={<EyeIcon className="w-4 h-4" />}
+                      >
+                        View Details
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
           )}
         </div>
       </div>

@@ -66,64 +66,30 @@ export function TimeSlot({ slot, onClick, onUpdate, onDelete, isPast }: TimeSlot
 
   const getStatusInfo = () => {
     if (slot.booking) {
-      const status = slot.booking.status
-      switch (status) {
-        case 'completed':
-          return {
-            icon: CheckCircleIcon,
-            text: 'Completed',
-            bgColor: 'bg-purple-50',
-            borderColor: 'border-purple-200',
-            textColor: 'text-purple-800',
-            iconColor: 'text-purple-600'
-          }
-        case 'cancelled':
-          return {
-            icon: XIcon,
-            text: 'Cancelled',
-            bgColor: 'bg-red-50',
-            borderColor: 'border-red-200',
-            textColor: 'text-red-800',
-            iconColor: 'text-red-600'
-          }
-        case 'confirmed':
-        case 'in_progress':
-          return {
-            icon: UserIcon,
-            text: status === 'in_progress' ? 'In Progress' : 'Confirmed',
-            bgColor: 'bg-blue-50',
-            borderColor: 'border-blue-200',
-            textColor: 'text-blue-800',
-            iconColor: 'text-blue-600'
-          }
-        default: // pending, draft
-          return {
-            icon: ClockIcon,
-            text: 'Pending',
-            bgColor: 'bg-yellow-50',
-            borderColor: 'border-yellow-200',
-            textColor: 'text-yellow-800',
-            iconColor: 'text-yellow-600'
-          }
+      return {
+        icon: UserIcon,
+        text: 'Booked',
+        chipBg: 'bg-[var(--primary)]/10',
+        chipText: 'text-[var(--primary)]',
+        chipBorder: 'border-[var(--primary)]/20'
       }
-    } else if (slot.is_available) {
+    }
+    if (slot.is_available) {
       return {
         icon: CheckCircleIcon,
         text: 'Available',
-        bgColor: 'bg-green-50',
-        borderColor: 'border-green-200',
-        textColor: 'text-green-800',
-        iconColor: 'text-green-600'
+        chipBg: 'bg-[var(--surface-secondary)]',
+        chipText: 'text-[var(--text-secondary)]',
+        chipBorder: 'border-[var(--border-secondary)]'
       }
-    } else {
-      return {
-        icon: CircleIcon,
-        text: 'Blocked',
-        bgColor: 'bg-gray-50',
-        borderColor: 'border-gray-200',
-        textColor: 'text-gray-600',
-        iconColor: 'text-gray-500'
-      }
+    }
+    // Neutral blocked state (no red/green)
+    return {
+      icon: CircleIcon,
+      text: 'Blocked',
+      chipBg: 'bg-[var(--surface-secondary)]',
+      chipText: 'text-[var(--text-secondary)]',
+      chipBorder: 'border-[var(--border-secondary)]'
     }
   }
 
@@ -165,17 +131,16 @@ export function TimeSlot({ slot, onClick, onUpdate, onDelete, isPast }: TimeSlot
     <div 
       className={`relative rounded-lg border transition-all duration-200 ${
         isPast 
-          ? 'cursor-not-allowed opacity-60' 
-          : 'cursor-pointer hover:shadow-sm'
-      } ${statusInfo.bgColor} ${statusInfo.borderColor}`}
-      onClick={isPast ? undefined : onClick}
+          ? 'opacity-60' 
+          : 'hover:shadow-sm'
+      } bg-[var(--surface-primary)] border-[var(--border-secondary)]`}
     >
       <div className="p-4">
         <div className="flex items-center justify-between">
           {/* Time Display */}
           <div className="flex items-center gap-3">
-            <div className={`p-2 rounded-full ${statusInfo.bgColor} border ${statusInfo.borderColor}`}>
-              <StatusIcon className={`w-4 h-4 ${statusInfo.iconColor}`} />
+            <div className={`px-2.5 py-1 rounded-full text-xs font-medium border ${statusInfo.chipBg} ${statusInfo.chipBorder} ${statusInfo.chipText}`}>
+              {statusInfo.text}
             </div>
             
             <div>
@@ -185,29 +150,29 @@ export function TimeSlot({ slot, onClick, onUpdate, onDelete, isPast }: TimeSlot
                     type="time"
                     value={editTime}
                     onChange={(e) => setEditTime(e.target.value)}
-                    className="text-lg font-semibold bg-white border border-gray-300 rounded px-2 py-1"
+                    className="text-lg font-semibold bg-[var(--surface-primary)] border border-[var(--border-secondary)] rounded px-2 py-1 text-[var(--text-primary)]"
                     onClick={(e) => e.stopPropagation()}
                   />
                   <button
                     onClick={handleSaveEdit}
-                    className="p-1 text-green-600 hover:bg-green-100 rounded"
+                    className="p-1 text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] rounded"
                   >
-                    <CheckIcon className="w-4 h-4" />
+                    Save
                   </button>
                   <button
                     onClick={handleCancelEdit}
-                    className="p-1 text-gray-600 hover:bg-gray-100 rounded"
+                    className="p-1 text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] rounded"
                   >
-                    <XIcon className="w-4 h-4" />
+                    Cancel
                   </button>
                 </div>
               ) : (
                 <>
-                  <div className={`text-lg font-semibold ${statusInfo.textColor}`}>
+                  <div className={`text-lg font-semibold text-[var(--text-primary)]`}>
                     {formatTime(slot.start_time)}
                   </div>
                   {slot.booking && (
-                    <div className="text-sm text-gray-600">
+                    <div className="text-sm text-[var(--text-secondary)]">
                       {slot.booking.customer_name}
                     </div>
                   )}
@@ -219,13 +184,10 @@ export function TimeSlot({ slot, onClick, onUpdate, onDelete, isPast }: TimeSlot
           {/* Status Badge */}
           <div className="flex items-center gap-2">
             {isPast && (
-              <span className="text-xs font-bold bg-gray-100 text-gray-600 px-2 py-1 rounded uppercase">
+              <span className="text-xs font-bold bg-[var(--surface-secondary)] text-[var(--text-secondary)] px-2 py-1 rounded uppercase">
                 Past
               </span>
             )}
-            <span className={`text-sm font-medium ${statusInfo.textColor}`}>
-              {statusInfo.text}
-            </span>
             
             {!isPast && !isEditing && (
               <div className="relative">
@@ -234,45 +196,39 @@ export function TimeSlot({ slot, onClick, onUpdate, onDelete, isPast }: TimeSlot
                     e.stopPropagation()
                     setShowActions(!showActions)
                   }}
-                  className={`p-1 rounded hover:bg-white/50 ${statusInfo.textColor}`}
+                  className={`p-1 rounded hover:bg-[var(--surface-hover)] text-[var(--text-secondary)]`}
                 >
                   <MoreHorizontalIcon className="w-4 h-4" />
                 </button>
 
                 {/* Action Menu */}
                 {showActions && (
-                  <div className="absolute right-0 top-8 bg-white border border-gray-200 rounded-lg shadow-lg z-10 min-w-[120px]">
+                  <div className="absolute right-0 top-8 bg-[var(--surface-primary)] border border-[var(--border-secondary)] rounded-lg shadow-lg z-20 min-w-[160px]">
                     <div className="py-1">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); onClick(); setShowActions(false) }}
+                        className="w-full px-3 py-2 text-left text-sm hover:bg-[var(--surface-hover)] text-[var(--text-primary)]"
+                      >
+                        View Details
+                      </button>
                       {!slot.booking && (
                         <button
                           onClick={handleToggleAvailability}
-                          className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2"
+                          className="w-full px-3 py-2 text-left text-sm hover:bg-[var(--surface-hover)] text-[var(--text-primary)]"
                         >
-                          {slot.is_available ? (
-                            <>
-                              <EyeOffIcon className="w-4 h-4" />
-                              Block
-                            </>
-                          ) : (
-                            <>
-                              <EyeIcon className="w-4 h-4" />
-                              Unblock
-                            </>
-                          )}
+                          {slot.is_available ? 'Block' : 'Unblock'}
                         </button>
                       )}
                       <button
                         onClick={handleEdit}
-                        className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2"
+                        className="w-full px-3 py-2 text-left text-sm hover:bg-[var(--surface-hover)] text-[var(--text-primary)]"
                       >
-                        <EditIcon className="w-4 h-4" />
                         Edit Time
                       </button>
                       <button
                         onClick={handleDelete}
-                        className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 text-red-600 flex items-center gap-2"
+                        className="w-full px-3 py-2 text-left text-sm hover:bg-[var(--surface-hover)] text-red-600"
                       >
-                        <TrashIcon className="w-4 h-4" />
                         Delete
                       </button>
                     </div>
@@ -285,8 +241,8 @@ export function TimeSlot({ slot, onClick, onUpdate, onDelete, isPast }: TimeSlot
 
         {/* Booking Preview */}
         {slot.booking && (
-          <div className={`mt-3 pt-3 border-t ${statusInfo.borderColor}`}>
-            <div className={`text-sm ${statusInfo.textColor}`}>
+          <div className={`mt-3 pt-3 border-t border-[var(--border-secondary)]`}>
+            <div className={`text-sm text-[var(--text-secondary)]`}>
               <div className="font-medium">{slot.booking.booking_reference}</div>
               {slot.booking.services && slot.booking.services.length > 0 && (
                 <div>{slot.booking.services.map(s => s.name).join(', ')}</div>
@@ -296,15 +252,10 @@ export function TimeSlot({ slot, onClick, onUpdate, onDelete, isPast }: TimeSlot
           </div>
         )}
 
-        {/* Click hint */}
-        {!isPast && (
-          <div className="mt-2 text-xs text-gray-500 text-center">
-            Tap for details
-          </div>
-        )}
+        {/* Click hint removed per design clean-up */}
       </div>
 
-      {/* Click overlay to close actions */}
+      {/* Overlay to close actions */}
       {showActions && (
         <div
           className="fixed inset-0 z-0"

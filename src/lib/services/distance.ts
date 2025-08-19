@@ -283,31 +283,32 @@ async function calculateWithHaversine(
  */
 async function geocodePostcodeUK(postcode: string): Promise<Coordinates | null> {
   try {
-    // Use a free UK postcode API
-    const response = await fetch(
-      `https://api.postcodes.io/postcodes/${encodeURIComponent(postcode)}`,
-      { 
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json'
-        }
-      }
+    const clean = postcode.trim().toUpperCase()
+    // First attempt: full postcode lookup
+    const pcRes = await fetch(
+      `https://api.postcodes.io/postcodes/${encodeURIComponent(clean)}`,
+      { method: 'GET', headers: { 'Accept': 'application/json' } }
     )
-
-    if (!response.ok) {
-      throw new Error(`Postcode API error: ${response.status}`)
+    if (pcRes.ok) {
+      const data = await pcRes.json()
+      if (data.status === 200 && data.result) {
+        return { lat: data.result.latitude, lng: data.result.longitude }
+      }
     }
-
-    const data = await response.json()
-    
-    if (data.status !== 200 || !data.result) {
-      throw new Error('Invalid postcode')
+    // Fallback: outcode (e.g., "SW9") center lookup
+    // Derive outcode: part before space, or remove inward code if present
+    const outcode = (clean.includes(' ') ? clean.split(' ')[0] : (clean.length > 3 ? clean.slice(0, -3) : clean)) || clean
+    const ocRes = await fetch(
+      `https://api.postcodes.io/outcodes/${encodeURIComponent(String(outcode))}`,
+      { method: 'GET', headers: { 'Accept': 'application/json' } }
+    )
+    if (ocRes.ok) {
+      const data = await ocRes.json()
+      if (data.status === 200 && data.result) {
+        return { lat: data.result.latitude, lng: data.result.longitude }
+      }
     }
-
-    return {
-      lat: data.result.latitude,
-      lng: data.result.longitude
-    }
+    throw new Error('Postcode and outcode lookup failed')
   } catch (error) {
     console.warn('UK postcode geocoding failed:', error)
     return null

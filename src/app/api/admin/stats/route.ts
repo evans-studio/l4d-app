@@ -40,9 +40,7 @@ export async function GET(request: NextRequest) {
         scheduled_start_time,
         total_price,
         booking_reference,
-        customer_id,
-        user_profiles!inner (first_name, last_name, email),
-        booking_services (service_details)
+        customer_id
       `)
       .eq('scheduled_date', todayStr)
 
@@ -111,9 +109,7 @@ export async function GET(request: NextRequest) {
       .select(`
         id,
         customer_id,
-        created_at,
-        user_profiles!inner (first_name, last_name, email),
-        booking_services (service_details)
+        created_at
       `)
       .gte('created_at', startOfWeek.toISOString())
       .lte('created_at', endOfWeek.toISOString())
@@ -161,10 +157,22 @@ export async function GET(request: NextRequest) {
     }
 
     // Transform today bookings with customer_name and service list
+    // Lookup profiles for "today" names
+    const todayCustomerIds = [...new Set((todayBookingsRaw || []).map((b: any) => b.customer_id).filter(Boolean))]
+    let todayProfiles: Record<string, any> = {}
+    if (todayCustomerIds.length > 0) {
+      const { data: p } = await supabase
+        .from('user_profiles')
+        .select('id, first_name, last_name, email')
+        .in('id', todayCustomerIds as any)
+      todayProfiles = (p || []).reduce((acc: Record<string, any>, prof: any) => {
+        acc[prof.id] = prof
+        return acc
+      }, {})
+    }
     const todayBookings = (todayBookingsRaw || []).map((b: any) => {
-      const profile = Array.isArray(b.user_profiles) ? b.user_profiles[0] : b.user_profiles
+      const profile = todayProfiles[b.customer_id] || null
       const name = profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() : 'Customer'
-      const services = (b.booking_services || []).map((s: any) => s.service_details?.name).filter(Boolean)
       return {
         id: b.id,
         status: b.status,
@@ -173,7 +181,7 @@ export async function GET(request: NextRequest) {
         booking_reference: b.booking_reference,
         customer_id: b.customer_id,
         customer_name: name || profile?.email || 'Customer',
-        services
+        services: [] as string[]
       }
     })
 
@@ -208,15 +216,27 @@ export async function GET(request: NextRequest) {
     // Transform customer activity
     const newCustomers = thisWeekCustomers.filter(customerId => !existingCustomerIds.includes(customerId))
     const returningCustomers = thisWeekCustomers.filter(customerId => existingCustomerIds.includes(customerId))
+    // Resolve names for activity
+    const activityCustomerIds = [...new Set((customerBookingsRaw || []).map((b: any) => b.customer_id).filter(Boolean))]
+    let activityProfiles: Record<string, any> = {}
+    if (activityCustomerIds.length > 0) {
+      const { data: ap } = await supabase
+        .from('user_profiles')
+        .select('id, first_name, last_name, email')
+        .in('id', activityCustomerIds as any)
+      activityProfiles = (ap || []).reduce((acc: Record<string, any>, prof: any) => {
+        acc[prof.id] = prof
+        return acc
+      }, {})
+    }
     const latestCustomerActivity = (customerBookingsRaw || []).slice(0, 3).map((b: any) => {
-      const profile = Array.isArray(b.user_profiles) ? b.user_profiles[0] : b.user_profiles
-      const name = profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() : undefined
-      const services = (b.booking_services || []).map((s: any) => s.service_details?.name).filter(Boolean)
+      const profile = activityProfiles[b.customer_id] || null
+      const name = profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() : profile?.email
       return {
         id: b.id,
         customer_id: b.customer_id,
-        customer_name: name || profile?.email || 'Customer',
-        services: services.map((n: string) => ({ name: n })),
+        customer_name: name || 'Customer',
+        services: [] as { name: string }[],
         created_at: b.created_at
       }
     })

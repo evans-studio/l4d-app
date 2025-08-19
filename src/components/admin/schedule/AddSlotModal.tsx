@@ -68,6 +68,7 @@ export function AddSlotModal({ date, onClose, onSuccess }: AddSlotModalProps) {
       const data = await response.json()
 
       if (data.success) {
+        // Optimistically add the slot to UI by calling success callback
         onSuccess()
       } else {
         setError(data.error?.message || 'Failed to create time slot')
@@ -202,7 +203,6 @@ export function AddSlotModal({ date, onClose, onSuccess }: AddSlotModalProps) {
               type="submit"
               disabled={isLoading}
               loading={isLoading}
-              leftIcon={isLoading ? <LoaderIcon className="w-4 h-4 animate-spin" /> : <PlusIcon className="w-4 h-4" />}
             >
               {isLoading ? 'Adding...' : 'Add Slot'}
             </Button>

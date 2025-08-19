@@ -1,10 +1,34 @@
 import { NextResponse, type NextRequest } from 'next/server'
+// Server Sentry is initialized via app/instrumentation.ts
 import { createServerClient } from '@supabase/ssr'
 import { logger } from '@/lib/utils/logger'
 
 export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname
   const response = NextResponse.next()
+
+  // Security Headers applied to every response
+  const securityHeaders: Record<string, string> = {
+    'Strict-Transport-Security': 'max-age=63072000; includeSubDomains; preload',
+    'X-Frame-Options': 'DENY',
+    'X-Content-Type-Options': 'nosniff',
+    'Referrer-Policy': 'strict-origin-when-cross-origin',
+    // Allow required domains; adjust if additional CDNs/providers used
+    'Content-Security-Policy': [
+      "default-src 'self'",
+      "img-src 'self' data: blob: https:",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https:",
+      "style-src 'self' 'unsafe-inline' https:",
+      "connect-src 'self' https: http:",
+      "font-src 'self' data: https:",
+      "frame-ancestors 'none'",
+    ].join('; '),
+    // A conservative baseline; enable specific features as needed
+    'Permissions-Policy': [
+      'geolocation=()','microphone=()','camera=()','payment=()','fullscreen=(self)'
+    ].join(', '),
+  }
+  Object.entries(securityHeaders).forEach(([k, v]) => response.headers.set(k, v))
 
   // Public routes that don't require authentication
   const publicRoutes = [
@@ -105,8 +129,31 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  // Handle API routes - require verified authentication
+  // Handle API routes - basic rate limit + require verified authentication
   if (path.startsWith('/api/')) {
+    try {
+      const ipHeader = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || ''
+      const ip = ipHeader.split(',')[0]?.trim() || 'unknown'
+      const key = `${ip}:global`
+      const now = Date.now()
+      const windowMs = 5 * 60 * 1000 // 5 minutes
+      const maxRequests = 200
+      // Use global store to persist within a single server process
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const store: any = (globalThis as any).__rateLimitStore || ((globalThis as any).__rateLimitStore = new Map<string, { count: number, reset: number }>())
+      const entry = store.get(key) as { count: number, reset: number } | undefined
+      if (!entry || now > entry.reset) {
+        store.set(key, { count: 1, reset: now + windowMs })
+      } else {
+        entry.count += 1
+        store.set(key, entry)
+        if (entry.count > maxRequests) {
+          return NextResponse.json({ success: false, error: { message: 'Too many requests', code: 'RATE_LIMITED' } }, { status: 429 })
+        }
+      }
+    } catch (_) {
+      // Fail-open on rate limit storage issues
+    }
     if (!isVerified) {
       return NextResponse.json(
         { success: false, error: { message: 'Email verification required', code: 'EMAIL_NOT_VERIFIED' } },

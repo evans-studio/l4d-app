@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import { useOverlay } from '@/lib/overlay/context'
 import { AdminLayout } from '@/components/layouts/AdminLayout'
 import { AdminRoute } from '@/components/ProtectedRoute'
 import { Button } from '@/components/ui/primitives/Button'
@@ -63,6 +64,7 @@ const statusConfig = {
 
 function AdminCustomersPage() {
   const router = useRouter()
+  const { openOverlay } = useOverlay()
   const [customers, setCustomers] = useState<Customer[]>([])
   const [filteredCustomers, setFilteredCustomers] = useState<Customer[]>([])
   const [stats, setStats] = useState<CustomerStats | null>(null)
@@ -436,7 +438,7 @@ function AdminCustomersPage() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => router.push(`/admin/customers/${customer.id}`)}
+                          onClick={() => openOverlay({ type: 'customer-view', data: { customerId: customer.id } })}
                           className="flex items-center gap-2"
                         >
                           <EyeIcon className="w-4 h-4" />

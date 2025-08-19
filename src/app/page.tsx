@@ -5,9 +5,10 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/primitives/Button'
 import { Container, Section, GridLayout } from '@/components/layout/templates/PageLayout'
 import { Heading, Text } from '@/components/ui/primitives/Typography'
+import { FadeIn } from '@/components/ui/primitives/FadeIn'
 import { Badge } from '@/components/ui/primitives/Badge'
 import { Skeleton } from '@/components/ui/primitives/Skeleton'
-import { ArrowRight, Star, CheckCircle, Award, Car, Sparkles, Palette, Shield, Heart, Users, ChevronDown } from 'lucide-react'
+import { Star, CheckCircle, Award, Car, Sparkles, Palette, Shield, Heart, Users, ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/composites/Card'
 import { MainLayout } from '@/components/layouts/MainLayout'
@@ -65,11 +66,11 @@ export default function HomePage() {
       </div>
 
 
-      {/* Enhanced Services Section - Full Viewport */}
-      <section id="services" className="relative z-10 min-h-screen flex flex-col justify-center py-24 md:py-32 lg:py-40">
+      {/* Enhanced Services Section - Mobile-first spacing (48/64/80) */}
+      <FadeIn as="section" id="services" className="relative z-10 flex flex-col py-12 sm:py-16 lg:py-20">
         <Container>
           {/* Section Header with proper spacing */}
-          <div className="text-center mb-20 lg:mb-24">
+          <div className="text-center mb-12 sm:mb-16 lg:mb-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <Heading size="h2" align="center" className="mb-6 text-3xl md:text-4xl lg:text-5xl">
               Our Services
             </Heading>
@@ -79,17 +80,17 @@ export default function HomePage() {
           </div>
           
           {/* Services Grid with breathing room */}
-          <div className="flex-1 flex items-center justify-center">
+          <div className="flex-1 flex items-start justify-center max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             {servicesLoading ? (
-              <GridLayout columns={{ default: 1, sm: 2, md: 3 }} gap="lg" className="lg:gap-12 w-full max-w-7xl">
+              <GridLayout columns={{ default: 1, sm: 2, md: 3 }} gap="lg" className="gap-4 sm:gap-6 lg:gap-8 w-full max-w-7xl">
                 {[1, 2, 3].map((i) => (
                   <Card key={i} className="relative border-2 border-border-secondary min-h-[400px]">
-                    <CardHeader className="pb-6">
+                    <CardHeader className="p-4 sm:p-6 pb-6">
                       <Skeleton className="w-12 h-12 rounded-lg mb-6" />
                       <Skeleton className="h-6 mb-3" />
                       <Skeleton className="h-4" />
                     </CardHeader>
-                    <CardContent className="pb-6">
+                    <CardContent className="p-4 sm:p-6 pb-6">
                       <div className="space-y-4 mb-8">
                         <Skeleton className="h-4" />
                         <Skeleton className="h-4" />
@@ -101,68 +102,67 @@ export default function HomePage() {
                 ))}
               </GridLayout>
             ) : (
-              <GridLayout columns={{ default: 1, sm: 2, md: 3 }} gap="lg" className="lg:gap-12 w-full max-w-7xl">
-                {services.slice(0, 3).map((service, index) => {
-                  const isPopular = service.name.toLowerCase().includes('full valet') // Make Full Valet popular
-                  const ServiceIcon = index === 0 ? Sparkles : index === 1 ? Palette : Shield
-                  
+              <GridLayout columns={{ default: 1, sm: 2, md: 3 }} gap="lg" className="gap-4 sm:gap-6 lg:gap-8 w-full max-w-7xl">
+                {services.slice(0, 3).map((service) => {
+                  const nameLower = service.name.toLowerCase()
+                  const isPopular = nameLower.includes('full valet') || nameLower.includes('full')
+                  // Map to booking card visual language
+                  const Icon = nameLower.includes('exterior') ? Sparkles : nameLower.includes('interior') ? Palette : Shield
+
+                  const hasPricing = Array.isArray(service.pricing) && service.pricing.length > 0
+                  const prices = hasPricing ? service.pricing.map(p => p.price).filter(p => p !== null && p !== undefined) : []
+                  const minPrice = prices.length ? Math.min(...prices) : 0
+                  const maxPrice = prices.length ? Math.max(...prices) : 0
+                  const durationMinutes = service.duration || 0
+                  const durationHours = Math.max(1, Math.round(Math.max(0, durationMinutes) / 60))
+
                   return (
-                    <Card 
-                      key={service.id} 
+                    <Card
+                      key={service.id}
                       className={cn(
-                        "relative border-2 transition-all duration-300 min-h-[400px] hover:transform hover:scale-105",
-                        isPopular 
-                          ? "border-brand-500 bg-brand-600/5 shadow-purple-lg" 
-                          : "border-border-secondary hover:border-brand-400 hover:shadow-lg"
+                        'relative transition-all duration-300 border-2',
+                        isPopular ? 'border-brand-500 bg-brand-600/5' : 'border-border-secondary hover:border-brand-400'
                       )}
                     >
                       {isPopular && (
-                        <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                          <Badge variant="primary" size="sm" className="bg-brand-600 hover:bg-brand-700">
-                            MOST POPULAR
-                          </Badge>
+                        <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-brand-600 text-white px-3 py-1 rounded-full text-xs font-bold shadow">
+                          POPULAR
                         </div>
                       )}
-                      <CardHeader className="pb-6">
-                        <div className="w-14 h-14 bg-brand-600/10 rounded-lg flex items-center justify-center mb-6">
-                          <ServiceIcon className="w-7 h-7 text-brand-600" />
+
+                      <CardHeader className="text-center pb-2">
+                        <div className="w-12 h-12 rounded-full mx-auto mb-3 flex items-center justify-center bg-brand-600/10 text-brand-400">
+                          <Icon className="w-6 h-6" />
                         </div>
-                        <Heading size="h4" className="text-xl mb-3">{service.name}</Heading>
-                        <Text color="secondary" className="text-base leading-relaxed">{service.description}</Text>
+                        <Heading size="h4" className="text-lg font-bold text-brand-300 mb-1">{service.name}</Heading>
+                        <Text color="secondary" className="text-sm line-clamp-2">{service.description}</Text>
                       </CardHeader>
-                      <CardContent className="pb-6 flex-1">
-                        <div className="mb-8">
-                          <Text size="sm" color="secondary" className="mb-3">
-                            Duration: ~{Math.round(service.duration / 60)} hours
-                          </Text>
-                          {service.pricing.length > 0 && (
-                            <Text size="xs" color="muted">
-                              Pricing varies by vehicle size
-                            </Text>
+
+                      <CardContent className="pt-0">
+                        <div className="text-center space-y-2">
+                          {prices.length > 0 ? (
+                            minPrice !== maxPrice ? (
+                              <div className="text-brand-400 font-bold">
+                                From £{minPrice} - £{maxPrice}
+                              </div>
+                            ) : (
+                              <div className="text-brand-400 font-bold">£{minPrice}</div>
+                            )
+                          ) : (
+                            <div className="text-text-secondary">Contact for pricing</div>
                           )}
-                        </div>
-                        <div className="flex items-center gap-3 mb-6">
-                          <Text size="sm" color="secondary">
-                            {service.basePrice === 0 ? 'Price:' : 'From'}
-                          </Text>
-                          <Text size="2xl" weight="bold" color="accent">
-                            {service.basePrice === 0 ? (
-                              // Check if this is a testing service or genuinely free
-                              service.name.toLowerCase().includes('test') 
-                                ? 'Test Service' 
-                                : 'Free'
-                            ) : `£${service.basePrice}`}
-                          </Text>
+                          <div className="text-xs text-text-muted">Based on vehicle size</div>
+                          <div className="flex items-center justify-center gap-1 text-xs text-text-muted">
+                            <Car className="w-3 h-3" />
+                            <span>~{durationHours} hours</span>
+                          </div>
                         </div>
                       </CardContent>
-                      <CardFooter className="pt-0">
+
+                      <CardFooter>
                         <Link href={`/book?service=${service.id}`} className="w-full">
-                          <Button 
-                            variant={isPopular ? "primary" : "outline"} 
-                            fullWidth
-                            className="min-h-[48px] text-base font-medium"
-                          >
-                            Choose {service.name}
+                          <Button variant="outline" fullWidth className="min-h-[48px]">
+                            Select Service
                           </Button>
                         </Link>
                       </CardFooter>
@@ -173,25 +173,25 @@ export default function HomePage() {
             )}
           </div>
         </Container>
-      </section>
+      </FadeIn>
 
-      {/* New Dashboard Preview Section */}
-      <div className="relative z-10">
+      {/* New Dashboard Preview Section - unified section spacing */}
+      <FadeIn className="relative z-10 py-12 sm:py-16 lg:py-20 px-4 sm:px-6 lg:px-8">
         <DashboardPreview />
-      </div>
+      </FadeIn>
 
-      {/* How It Works Section */}
-      <div className="relative z-10">
+      {/* How It Works Section - unified section spacing */}
+      <FadeIn className="relative z-10 py-12 sm:py-16 lg:py-20 px-4 sm:px-6 lg:px-8">
         <HowItWorksSection />
-      </div>
+      </FadeIn>
 
-      {/* Combined Service Area + FAQ Section */}
-      <div className="relative z-10">
+      {/* Combined Service Area + FAQ Section - unified section spacing */}
+      <FadeIn className="relative z-10 py-12 sm:py-16 lg:py-20 px-4 sm:px-6 lg:px-8">
         <ServiceAreaAndFAQ />
-      </div>
+      </FadeIn>
 
-      {/* Final CTA Section - Enhanced with Proper Spacing */}
-      <section id="contact" className="relative z-10 py-32 lg:py-40 border-t border-border-secondary/30">
+      {/* Final CTA Section - Mobile-first spacing (48/64/80) */}
+      <FadeIn as="section" id="contact" className="relative z-10 py-12 sm:py-16 lg:py-20 border-t border-border-secondary/30">
         <Container>
           <div className="max-w-4xl mx-auto text-center">
             {/* Strong Visual Separation */}
@@ -216,7 +216,6 @@ export default function HomePage() {
                   size="lg" 
                   fullWidth 
                   className="bg-brand-600 hover:bg-brand-700 shadow-purple-lg hover:shadow-purple-xl hover:scale-105 sm:w-auto min-h-[56px] text-base sm:text-lg px-10 transition-all duration-300"
-                  rightIcon={<ArrowRight className="w-5 h-5" />}
                 >
                   Book Your Service
                 </Button>
@@ -254,7 +253,7 @@ export default function HomePage() {
             </div>
           </div>
         </Container>
-      </section>
+      </FadeIn>
     </MainLayout>
   )
 }

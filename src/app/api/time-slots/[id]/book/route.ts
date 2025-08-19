@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import { createClientFromRequest } from '@/lib/supabase/server'
 import { ApiResponseHandler } from '@/lib/api/response'
-import { sendBookingConfirmation } from '@/lib/services/email-notifications'
+import { EmailService } from '@/lib/services/email'
 
 export const runtime = 'nodejs'
 
@@ -103,26 +103,24 @@ export async function PUT(
           .single()
 
         if (customer) {
-          // Send confirmation email
-          const emailData = {
-            customerName: `${customer.first_name} ${customer.last_name}`,
-            customerEmail: customer.email,
-            bookingReference: booking.booking_reference,
-            serviceName: booking.booking_services?.[0]?.service_details?.name || 'Vehicle Detailing',
-            scheduledDate: slot.slot_date,
-            scheduledTime: slot.start_time,
-            totalPrice: booking.total_price,
-            address: booking.service_address?.address_line_1 || '',
-            vehicleDetails: `${booking.vehicle_details?.make} ${booking.vehicle_details?.model}`,
-            specialInstructions: booking.special_instructions,
-            businessName: 'Love 4 Detailing',
-            businessPhone: process.env.BUSINESS_PHONE || ''
-          }
-
-          // Send email in background (don't wait for it)
-          sendBookingConfirmation(emailData).catch(error => {
-            console.error('Failed to send booking confirmation email:', error)
-          })
+          // Send confirmation email using branded template
+          const emailService = new EmailService()
+          emailService
+            .sendBookingStatusUpdate(
+              customer.email,
+              `${customer.first_name} ${customer.last_name}`.trim(),
+              {
+                ...booking,
+                status: 'confirmed',
+                scheduled_date: slot.slot_date,
+                scheduled_start_time: slot.start_time,
+              } as any,
+              booking.status || 'pending',
+              'Booking confirmed via slot booking'
+            )
+            .catch(error => {
+              console.error('Failed to send booking confirmation email:', error)
+            })
         }
       }
     } catch (emailError) {

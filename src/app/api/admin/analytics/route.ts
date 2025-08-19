@@ -34,66 +34,74 @@ export async function GET(request: NextRequest) {
     const prevStartDate = new Date(new Date(startDate).getTime() - periodDays * 24 * 60 * 60 * 1000).toISOString().split('T')[0] || ''
     const prevEndDate = new Date(new Date(endDate).getTime() - periodDays * 24 * 60 * 60 * 1000).toISOString().split('T')[0] || ''
 
-    // Get bookings data for current period
-    const { data: currentBookings, error: currentError } = await supabase
+    // Get bookings created in current period (for revenue, counts, services, locations)
+    const { data: createdBookings, error: createdError } = await supabase
       .from('bookings')
       .select(`
         id,
         total_price,
         status,
+        created_at,
         scheduled_date,
         scheduled_start_time,
         scheduled_end_time,
         estimated_duration,
         customer_id,
         service_address,
+        payment_status,
         booking_services(
           service_details
         )
       `)
-      .gte('scheduled_date', startDate)
-      .lte('scheduled_date', endDate)
-      .neq('status', 'cancelled')
+      .gte('created_at', `${startDate}T00:00:00.000Z`)
+      .lte('created_at', `${endDate}T23:59:59.999Z`)
 
-    if (currentError) {
-      console.error('Error fetching current bookings:', currentError)
+    if (createdError) {
+      console.error('Error fetching created bookings:', createdError)
       return ApiResponseHandler.serverError('Failed to fetch analytics data')
     }
 
-    // Get bookings data for previous period
+    // Get bookings created in previous period (for comparisons)
     const { data: previousBookings, error: previousError } = await supabase
       .from('bookings')
-      .select('id, total_price, status')
-      .gte('scheduled_date', prevStartDate)
-      .lte('scheduled_date', prevEndDate)
-      .neq('status', 'cancelled')
+      .select('id, total_price, status, payment_status, created_at')
+      .gte('created_at', `${prevStartDate}T00:00:00.000Z`)
+      .lte('created_at', `${prevEndDate}T23:59:59.999Z`)
 
     if (previousError) {
       console.error('Error fetching previous bookings:', previousError)
     }
 
     // Calculate revenue metrics
-    const currentRevenue = currentBookings?.reduce((sum, booking) => sum + (booking.total_price || 0), 0) || 0
-    const previousRevenue = previousBookings?.reduce((sum, booking) => sum + (booking.total_price || 0), 0) || 0
+    // Revenue: include all except failed/declined/cancelled (treat pending/confirmed/in_progress/completed as pipeline revenue)
+    const isRevenueStatus = (b: { status?: string | null; payment_status?: string | null }) => {
+      const s = (b.status || '').toLowerCase()
+      const ps = (b.payment_status || '').toLowerCase()
+      if (s === 'cancelled' || s === 'declined' || s === 'payment_failed' || ps === 'failed') return false
+      return true
+    }
+
+    const currentRevenue = createdBookings?.filter(isRevenueStatus).reduce((sum, booking) => sum + (booking.total_price || 0), 0) || 0
+    const previousRevenue = previousBookings?.filter(isRevenueStatus).reduce((sum, booking) => sum + (booking.total_price || 0), 0) || 0
     const revenueGrowth = previousRevenue > 0 ? ((currentRevenue - previousRevenue) / previousRevenue) * 100 : 0
 
     // Calculate booking metrics
-    const totalBookings = currentBookings?.length || 0
-    const completedBookings = currentBookings?.filter(b => b.status === 'completed').length || 0
+    const totalBookings = createdBookings?.length || 0
+    const completedBookings = createdBookings?.filter((b: { status?: string | null }) => b.status === 'completed').length || 0
     const completionRate = totalBookings > 0 ? (completedBookings / totalBookings) * 100 : 0
-    const cancelledBookings = currentBookings?.filter(b => b.status === 'cancelled').length || 0
+    const cancelledBookings = createdBookings?.filter((b: { status?: string | null }) => b.status === 'cancelled').length || 0
     const cancellationRate = totalBookings > 0 ? (cancelledBookings / totalBookings) * 100 : 0
     const averageBookingValue = totalBookings > 0 ? currentRevenue / totalBookings : 0
 
     // Status breakdown
     const statusBreakdown = {
-      pending: currentBookings?.filter(b => b.status === 'pending').length || 0,
-      confirmed: currentBookings?.filter(b => b.status === 'confirmed').length || 0,
+      pending: createdBookings?.filter((b: { status?: string | null }) => b.status === 'pending').length || 0,
+      confirmed: createdBookings?.filter((b: { status?: string | null }) => b.status === 'confirmed').length || 0,
       completed: completedBookings,
       cancelled: cancelledBookings
     }
 
-    // Get monthly trend data (last 6 months)
+    // Get monthly trend data (last 6 months) based on scheduled_date
     const monthlyTrend = []
     for (let i = 5; i >= 0; i--) {
       const date = new Date()
@@ -103,12 +111,11 @@ export async function GET(request: NextRequest) {
 
       const { data: monthBookings } = await supabase
         .from('bookings')
-        .select('total_price, status')
-        .gte('scheduled_date', monthStart)
-        .lte('scheduled_date', monthEnd)
-        .neq('status', 'cancelled')
+        .select('total_price, status, payment_status, created_at')
+        .gte('created_at', `${monthStart}T00:00:00.000Z`)
+        .lte('created_at', `${monthEnd}T23:59:59.999Z`)
 
-      const monthRevenue = monthBookings?.reduce((sum, booking) => sum + (booking.total_price || 0), 0) || 0
+      const monthRevenue = monthBookings?.filter(isRevenueStatus).reduce((sum, booking) => sum + (booking.total_price || 0), 0) || 0
       const monthBookingCount = monthBookings?.length || 0
 
       monthlyTrend.push({
@@ -121,7 +128,7 @@ export async function GET(request: NextRequest) {
     // Analyze services popularity
     const serviceStats = new Map<string, { bookings: number; revenue: number }>()
     
-    currentBookings?.forEach(booking => {
+    createdBookings?.forEach((booking: any) => {
       booking.booking_services?.forEach((bs: { service_details?: { name?: string } }) => {
         const serviceName = bs.service_details?.name || 'Unknown Service'
         const current = serviceStats.get(serviceName) || { bookings: 0, revenue: 0 }
@@ -142,8 +149,8 @@ export async function GET(request: NextRequest) {
     // Analyze top locations
     const locationStats = new Map<string, { bookings: number; revenue: number }>()
     
-    currentBookings?.forEach(booking => {
-      const city = booking.service_address?.city || 'Unknown'
+    createdBookings?.forEach((booking: any) => {
+      const city = (booking.service_address as any)?.city || 'Unknown'
       const current = locationStats.get(city) || { bookings: 0, revenue: 0 }
       locationStats.set(city, {
         bookings: current.bookings + 1,
@@ -160,7 +167,14 @@ export async function GET(request: NextRequest) {
     const dayStats = new Map<string, number>()
     const hourStats = new Map<string, number>()
 
-    currentBookings?.forEach(booking => {
+    // For operational performance, use scheduled date/time within the selected range
+    const { data: perfBookings } = await supabase
+      .from('bookings')
+      .select('scheduled_date, scheduled_start_time')
+      .gte('scheduled_date', startDate)
+      .lte('scheduled_date', endDate)
+
+    perfBookings?.forEach(booking => {
       const date = new Date(booking.scheduled_date)
       const dayName = date.toLocaleDateString('en-GB', { weekday: 'long' })
       dayStats.set(dayName, (dayStats.get(dayName) || 0) + 1)
@@ -181,11 +195,11 @@ export async function GET(request: NextRequest) {
       .slice(0, 5)
 
     // Calculate average job duration
-    const durationsMinutes = currentBookings
-      ?.filter(b => b.estimated_duration)
-      .map(b => b.estimated_duration) || []
+    const durationsMinutes = (createdBookings as Array<{ estimated_duration?: number }> | null | undefined)
+      ?.map((b) => b.estimated_duration || 0)
+      .filter((d) => d > 0) || []
     const averageJobDuration = durationsMinutes.length > 0 
-      ? durationsMinutes.reduce((sum, duration) => sum + duration, 0) / durationsMinutes.length
+      ? durationsMinutes.reduce((sum: number, duration: number) => sum + duration, 0) / durationsMinutes.length
       : 120 // Default 2 hours
 
     // Get customer analytics

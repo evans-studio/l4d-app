@@ -95,17 +95,21 @@ export async function GET(
       }
     }
 
-    // Get address if address_id exists, otherwise use embedded service_address  
+    // Merge address: prefer normalized table, but fill missing fields from embedded service_address
+    const embeddedAddress = booking.service_address || null
     if (booking.address_id) {
       const { data: addressData } = await dbClient
         .from('customer_addresses')
         .select('name, address_line_1, address_line_2, city, county, postal_code, country, special_instructions')
         .eq('id', booking.address_id)
         .single()
-      address = addressData
-    } else if (booking.service_address) {
-      // Use embedded address data
-      address = booking.service_address
+      // Merge fields
+      address = {
+        ...(embeddedAddress || {}),
+        ...(addressData || {})
+      }
+    } else if (embeddedAddress) {
+      address = embeddedAddress
     }
 
     // Get customer data
@@ -185,10 +189,18 @@ export async function GET(
         license_plate: vehicle.license_plate || vehicle.registration
       } : null,
       address: address ? {
-        address_line_1: address.address_line_1 || '',
-        address_line_2: address.address_line_2,
-        city: address.city || 'Unknown',
-        postal_code: address.postal_code || ''
+        // Prefer explicit street line; fall back to saved name or common alternate keys
+        address_line_1: (
+          address.address_line_1 ||
+          address.name ||
+          address.address ||
+          address.line1 ||
+          address.address1 ||
+          ''
+        ),
+        address_line_2: address.address_line_2 || address.line2 || null,
+        city: address.city || address.town || 'Unknown',
+        postal_code: address.postal_code || address.postcode || ''
       } : null,
       // Include reschedule request data if present
       has_pending_reschedule: !!rescheduleRequest,

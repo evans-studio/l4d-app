@@ -117,7 +117,8 @@ function AdminAnalyticsPage() {
   const loadAnalyticsData = useCallback(async () => {
     try {
       setIsLoading(true)
-      const response = await fetch(`/api/admin/analytics?start=${selectedRange.start}&end=${selectedRange.end}`)
+      const ts = Date.now()
+      const response = await fetch(`/api/admin/analytics?start=${selectedRange.start}&end=${selectedRange.end}&_ts=${ts}`, { cache: 'no-store' })
       const data = await response.json()
       
       if (data.success) {
@@ -136,7 +137,8 @@ function AdminAnalyticsPage() {
 
   const exportAnalytics = async () => {
     try {
-      const response = await fetch(`/api/admin/analytics/export?start=${selectedRange.start}&end=${selectedRange.end}`)
+      const ts = Date.now()
+      const response = await fetch(`/api/admin/analytics/export?start=${selectedRange.start}&end=${selectedRange.end}&_ts=${ts}`, { cache: 'no-store' })
       if (response.ok) {
         const blob = await response.blob()
         const url = window.URL.createObjectURL(blob)
@@ -179,8 +181,24 @@ function AdminAnalyticsPage() {
   if (isLoading) {
     return (
       <AdminLayout>
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-purple"></div>
+        <div className="space-y-6">
+          <div className="h-10 w-48 bg-surface-secondary rounded animate-pulse" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="bg-surface-secondary rounded-lg border border-border-primary p-6 animate-pulse">
+                <div className="h-6 w-24 bg-surface-tertiary rounded mb-4" />
+                <div className="h-8 w-32 bg-surface-tertiary rounded" />
+              </div>
+            ))}
+          </div>
+          <div className="bg-surface-secondary rounded-lg border border-border-primary p-6 animate-pulse">
+            <div className="h-6 w-40 bg-surface-tertiary rounded mb-4" />
+            <div className="space-y-2">
+              {[...Array(6)].map((_, i) => (
+                <div key={i} className="h-4 w-full bg-surface-tertiary rounded" />
+              ))}
+            </div>
+          </div>
         </div>
       </AdminLayout>
     )
@@ -232,7 +250,12 @@ function AdminAnalyticsPage() {
           </div>
         </div>
 
-        {analyticsData && (
+        {!analyticsData ? (
+          <div className="bg-surface-secondary rounded-lg border border-border-primary p-6 text-center">
+            <p className="text-text-secondary">No analytics available for the selected period.</p>
+            <Button onClick={loadAnalyticsData} className="mt-4">Reload</Button>
+          </div>
+        ) : (
           <>
             {/* Key Metrics */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">

@@ -1,6 +1,7 @@
-'use client'
+"use client"
 
 import { useState, useEffect, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { AdminLayout } from '@/components/layouts/AdminLayout'
 import { AdminRoute } from '@/components/ProtectedRoute'
 import { Card, CardHeader, CardContent } from '@/components/ui/composites/Card'
@@ -42,6 +43,12 @@ interface ReportData {
 }
 
 function ReportsPage() {
+  const router = useRouter()
+  useEffect(() => {
+    router.replace('/admin/analytics')
+  }, [router])
+
+  // Legacy content below is no longer used; page redirects to Analytics
   const [reportData, setReportData] = useState<ReportData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
@@ -311,7 +318,8 @@ function ReportsPage() {
                 <h2 className="text-lg font-semibold text-text-primary">Popular Services</h2>
               </CardHeader>
               <CardContent>
-                <div className="overflow-x-auto">
+                {/* Desktop table */}
+                <div className="hidden sm:block overflow-x-auto">
                   <table className="w-full">
                     <thead>
                       <tr className="border-b border-border-secondary">
@@ -329,16 +337,31 @@ function ReportsPage() {
                           <td className="py-3 px-4 text-text-secondary">{formatCurrency(service.revenue)}</td>
                           <td className="py-3 px-4">
                             <div className="w-full bg-gray-200 rounded-full h-2">
-                              <div 
-                                className="bg-brand-purple h-2 rounded-full" 
-                                style={{ width: `${(service.count / (reportData.services.popular[0]?.count || 1)) * 100}%` }}
-                              ></div>
+                              <div className="bg-brand-purple h-2 rounded-full" style={{ width: `${(service.count / (reportData.services.popular[0]?.count || 1)) * 100}%` }}></div>
                             </div>
                           </td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
+                </div>
+
+                {/* Mobile cards */}
+                <div className="block sm:hidden space-y-3">
+                  {reportData.services.popular.map((service, index) => (
+                    <div key={index} className="p-4 border border-border-secondary rounded-lg bg-surface-secondary">
+                      <div className="flex items-center justify-between">
+                        <div className="font-medium text-text-primary">{service.name}</div>
+                        <div className="text-xs text-text-secondary">{formatCurrency(service.revenue)}</div>
+                      </div>
+                      <div className="mt-2 text-sm text-text-secondary">Bookings: {service.count}</div>
+                      <div className="mt-3">
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div className="bg-brand-purple h-2 rounded-full" style={{ width: `${(service.count / (reportData.services.popular[0]?.count || 1)) * 100}%` }}></div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </CardContent>
             </Card>

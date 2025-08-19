@@ -6,8 +6,9 @@ import { useSessionRefresh } from '@/lib/hooks/useSessionRefresh'
 import { Button } from '@/components/ui/primitives/Button'
 import { Card, CardContent, CardGrid } from '@/components/ui/composites/Card'
 import { AdminLayout } from '@/components/layouts/AdminLayout'
+import { useOverlay } from '@/lib/overlay/context'
 import { AdminRoute } from '@/components/ProtectedRoute'
-import { BookingCard } from '@/components/admin/BookingCard'
+import { BookingCard as UnifiedBookingCard, type BookingData } from '@/components/ui/patterns/BookingCard'
 import { DashboardLogo } from '@/components/ui/primitives/Logo'
 import { 
   CalendarIcon, 
@@ -415,6 +416,7 @@ function MobileWidgetCarousel({ stats, router, formatTime }: MobileWidgetCarouse
 
 function AdminDashboard() {
   const router = useRouter()
+  const { openOverlay } = useOverlay()
   const { refreshSession } = useSessionRefresh()
   const [stats, setStats] = useState<AdminStats | null>(null)
   const [recentBookings, setRecentBookings] = useState<RecentBooking[]>([])
@@ -588,8 +590,30 @@ function AdminDashboard() {
   if (isLoading) {
     return (
       <AdminLayout>
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-purple"></div>
+        <div className="space-y-6 sm:space-y-8 overflow-x-hidden max-w-full p-4">
+          {/* Logo/Title skeleton */}
+          <div className="text-center space-y-6">
+            <div className="mx-auto h-24 w-48 bg-surface-secondary rounded animate-pulse" />
+            <div className="h-6 w-40 bg-surface-secondary rounded mx-auto animate-pulse" />
+          </div>
+          {/* Widgets skeleton */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="bg-surface-secondary rounded-lg border border-border-primary p-6 animate-pulse">
+                <div className="h-4 w-24 bg-surface-tertiary rounded mb-3" />
+                <div className="h-8 w-28 bg-surface-tertiary rounded" />
+              </div>
+            ))}
+          </div>
+          {/* Recent bookings skeleton */}
+          <div className="bg-surface-secondary rounded-lg border border-border-primary w-full overflow-hidden p-4 animate-pulse">
+            <div className="h-5 w-40 bg-surface-tertiary rounded mb-4" />
+            <div className="space-y-3">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="h-16 bg-surface-tertiary rounded" />
+              ))}
+            </div>
+          </div>
         </div>
       </AdminLayout>
     )
@@ -822,16 +846,38 @@ function AdminDashboard() {
               </div>
             ) : (
               <div className="space-y-3">
-                {recentBookings.slice(0, 5).map((booking) => (
-                  <BookingCard
-                    key={booking.id}
-                    booking={booking}
-                    variant="dashboard"
-                    onStatusUpdate={handleBookingAction}
-                    onMarkAsPaid={handleMarkAsPaid}
-                    showActions={true}
-                  />
-                ))}
+                {recentBookings.slice(0, 5).map((booking) => {
+                  const data: BookingData = {
+                    id: booking.id,
+                    bookingReference: booking.booking_reference,
+                    status: booking.status as BookingData['status'],
+                    scheduledDate: booking.scheduled_date,
+                    scheduledStartTime: booking.start_time,
+                    totalPrice: booking.total_price,
+                    createdAt: booking.created_at,
+                    services: (booking.services || []).map((s, i) => ({ id: `${booking.id}-svc-${i}`, name: s.name, price: 0 })),
+                    customer: {
+                      id: 'unknown',
+                      firstName: booking.customer_name,
+                      lastName: '',
+                      email: booking.customer_email,
+                      phone: undefined,
+                    },
+                    vehicle: booking.vehicle ? { make: booking.vehicle.make, model: booking.vehicle.model, year: booking.vehicle.year } as any : undefined,
+                    address: booking.address ? { addressLine1: booking.address.address_line_1, city: booking.address.city, postalCode: booking.address.postal_code } as any : undefined,
+                    specialInstructions: undefined,
+                    priority: 'normal',
+                  }
+                  return (
+                    <UnifiedBookingCard
+                      key={booking.id}
+                      booking={data}
+                      layout="compact"
+                      interactive
+                      onView={() => openOverlay({ type: 'booking-view', data: { bookingId: booking.id, booking } })}
+                    />
+                  )
+                })}
                 
                 {recentBookings.length > 5 && (
                   <div className="text-center pt-3">

@@ -36,20 +36,20 @@ const overlayVariants = cva(
 )
 
 const contentVariants = cva(
-  'relative bg-[var(--surface-primary)] shadow-xl transition-all duration-300 focus:outline-none',
+  'relative bg-[var(--surface-primary)] shadow-xl transition-all duration-300 focus:outline-none max-w-full',
   {
     variants: {
       size: {
-        xs: 'max-w-xs',
-        sm: 'max-w-sm',
-        md: 'max-w-md',
-        lg: 'max-w-lg',
-        xl: 'max-w-xl',
-        '2xl': 'max-w-2xl',
-        '3xl': 'max-w-3xl',
-        '4xl': 'max-w-4xl',
-        '5xl': 'max-w-5xl',
-        full: 'max-w-full',
+        xs: 'sm:max-w-xs',
+        sm: 'sm:max-w-sm',
+        md: 'sm:max-w-md',
+        lg: 'sm:max-w-lg',
+        xl: 'sm:max-w-xl',
+        '2xl': 'sm:max-w-2xl',
+        '3xl': 'sm:max-w-3xl',
+        '4xl': 'sm:max-w-4xl',
+        '5xl': 'sm:max-w-5xl',
+        full: 'sm:max-w-full',
       },
       variant: {
         default: 'rounded-lg',
@@ -77,7 +77,7 @@ const contentVariants = cva(
       // Mobile fullscreen overrides
       {
         mobile: 'fullscreen',
-        class: 'h-full w-full max-w-none sm:h-auto sm:max-w-md',
+        class: 'h-full w-full sm:h-auto',
       },
       // Mobile drawer overrides
       {

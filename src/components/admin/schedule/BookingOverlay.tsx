@@ -125,15 +125,15 @@ export function BookingOverlay({ slot, onClose, onUpdate }: BookingOverlayProps)
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg w-full max-w-md max-h-[90vh] overflow-y-auto">
+      <div className="bg-[var(--surface-primary)] border border-[var(--border-secondary)] rounded-lg w-full max-w-md max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">
+        <div className="flex items-center justify-between p-4 border-b border-[var(--border-secondary)]">
+          <h2 className="text-lg font-semibold text-[var(--text-primary)]">
             {formatDate(slot.slot_date)}
           </h2>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+            className="p-2 hover:bg-[var(--surface-hover)] rounded-full transition-colors"
           >
             <XIcon className="w-5 h-5" />
           </button>
@@ -143,15 +143,15 @@ export function BookingOverlay({ slot, onClose, onUpdate }: BookingOverlayProps)
         <div className="p-4 space-y-6">
           {/* Time Info */}
           <div className="text-center">
-            <div className="text-2xl font-bold text-gray-900 mb-1">
+            <div className="text-2xl font-bold text-[var(--text-primary)] mb-1">
               {formatTime(slot.start_time)} - {formatTime(getEndTime(slot.start_time))}
             </div>
             <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium ${
               slot.booking 
-                ? 'bg-blue-100 text-blue-800'
+                ? 'bg-blue-500/10 text-blue-600 border border-blue-500/20'
                 : slot.is_available
-                  ? 'bg-green-100 text-green-800' 
-                  : 'bg-gray-100 text-gray-600'
+                  ? 'bg-green-500/10 text-green-600 border border-green-500/20' 
+                  : 'bg-gray-500/10 text-gray-600 border border-gray-500/20'
             }`}>
               {slot.booking ? (
                 <>
@@ -177,86 +177,86 @@ export function BookingOverlay({ slot, onClose, onUpdate }: BookingOverlayProps)
             <div className="space-y-4">
               {/* Customer */}
               <div className="flex items-start gap-3">
-                <UserIcon className="w-5 h-5 text-gray-400 mt-0.5" />
+                <UserIcon className="w-5 h-5 text-[var(--text-secondary)] mt-0.5" />
                 <div>
-                  <div className="font-semibold text-gray-900">
+                  <div className="font-semibold text-[var(--text-primary)]">
                     {slot.booking.customer_name}
                   </div>
-                  <div className="text-sm text-gray-600">Customer</div>
+                  <div className="text-sm text-[var(--text-secondary)]">Customer</div>
                 </div>
               </div>
 
               {/* Service */}
               <div className="flex items-start gap-3">
-                <ClockIcon className="w-5 h-5 text-gray-400 mt-0.5" />
+                <ClockIcon className="w-5 h-5 text-[var(--text-secondary)] mt-0.5" />
                 <div>
-                  <div className="font-semibold text-gray-900">
+                  <div className="font-semibold text-[var(--text-primary)]">
                     {slot.booking.services.map(s => s.name).join(', ') || 'No services'}
                   </div>
-                  <div className="text-sm text-gray-600">Service</div>
+                  <div className="text-sm text-[var(--text-secondary)]">Service</div>
                 </div>
               </div>
 
               {/* Vehicle */}
               <div className="flex items-start gap-3">
-                <CarIcon className="w-5 h-5 text-gray-400 mt-0.5" />
+                <CarIcon className="w-5 h-5 text-[var(--text-secondary)] mt-0.5" />
                 <div>
-                  <div className="font-semibold text-gray-900">
+                  <div className="font-semibold text-[var(--text-primary)]">
                     {slot.booking.booking_reference}
                   </div>
-                  <div className="text-sm text-gray-600">Vehicle</div>
+                  <div className="text-sm text-[var(--text-secondary)]">Vehicle</div>
                 </div>
               </div>
 
               {/* Price */}
               <div className="flex items-start gap-3">
-                <PoundSterlingIcon className="w-5 h-5 text-gray-400 mt-0.5" />
+                <PoundSterlingIcon className="w-5 h-5 text-[var(--text-secondary)] mt-0.5" />
                 <div>
-                  <div className="font-semibold text-gray-900 text-lg">
+                  <div className="font-semibold text-[var(--text-primary)] text-lg">
                     £{slot.booking.total_price}
                   </div>
-                  <div className="text-sm text-gray-600">Total Price</div>
+                  <div className="text-sm text-[var(--text-secondary)]">Total Price</div>
                 </div>
               </div>
 
               {/* Status */}
               <div className="flex items-start gap-3">
-                <CheckCircleIcon className="w-5 h-5 text-green-500 mt-0.5" />
+                <CheckCircleIcon className="w-5 h-5 text-green-600 mt-0.5" />
                 <div>
-                  <div className="font-semibold text-gray-900">
+                  <div className="font-semibold text-[var(--text-primary)]">
                     {slot.booking.status}
                   </div>
-                  <div className="text-sm text-gray-600">Booking Status</div>
+                  <div className="text-sm text-[var(--text-secondary)]">Booking Status</div>
                 </div>
               </div>
 
               {/* Contact Info */}
-              <div className="bg-gray-50 rounded-lg p-4 space-y-3">
-                <h4 className="font-semibold text-gray-900">Contact Information</h4>
+              <div className="bg-[var(--surface-secondary)] border border-[var(--border-secondary)] rounded-lg p-4 space-y-3">
+                <h4 className="font-semibold text-[var(--text-primary)]">Contact Information</h4>
                 
                 <div className="flex items-center gap-3">
-                  <MailIcon className="w-4 h-4 text-gray-400" />
+                  <MailIcon className="w-4 h-4 text-[var(--text-secondary)]" />
                   <button
                     onClick={handleContactCustomer}
-                    className="text-blue-600 hover:text-blue-800 text-sm"
+                    className="text-brand-600 hover:text-brand-500 text-sm"
                   >
                     {slot.booking.customer_email || 'No email'}
                   </button>
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <PhoneIcon className="w-4 h-4 text-gray-400" />
+                  <PhoneIcon className="w-4 h-4 text-[var(--text-secondary)]" />
                   <button
                     onClick={handleCallCustomer}
-                    className="text-blue-600 hover:text-blue-800 text-sm"
+                    className="text-brand-600 hover:text-brand-500 text-sm"
                   >
                     {slot.booking.customer_phone || 'No phone'}
                   </button>
                 </div>
 
                 <div className="flex items-start gap-3">
-                  <MapPinIcon className="w-4 h-4 text-gray-400 mt-0.5" />
-                  <div className="text-sm text-gray-600">
+                  <MapPinIcon className="w-4 h-4 text-[var(--text-secondary)] mt-0.5" />
+                  <div className="text-sm text-[var(--text-secondary)]">
                     {slot.booking.special_instructions || 'No special instructions'}
                   </div>
                 </div>
@@ -269,14 +269,12 @@ export function BookingOverlay({ slot, onClose, onUpdate }: BookingOverlayProps)
                   variant="outline"
                   className="flex-1"
                 >
-                  <MailIcon className="w-4 h-4 mr-2" />
                   Email Customer
                 </Button>
                 <Button
                   onClick={handleCallCustomer}
                   className="flex-1"
                 >
-                  <PhoneIcon className="w-4 h-4 mr-2" />
                   Call Customer
                 </Button>
               </div>
@@ -284,7 +282,7 @@ export function BookingOverlay({ slot, onClose, onUpdate }: BookingOverlayProps)
           ) : (
             /* Available Slot Actions */
             <div className="text-center space-y-4">
-              <div className="text-gray-600">
+              <div className="text-[var(--text-secondary)]">
                 {slot.is_available 
                   ? "This slot is available for booking"
                   : "This slot is currently blocked"
@@ -330,7 +328,7 @@ export function BookingOverlay({ slot, onClose, onUpdate }: BookingOverlayProps)
             </div>
           )}
 
-          <div className="text-xs text-gray-500 text-center">
+          <div className="text-xs text-[var(--text-muted)] text-center">
             Created {new Date(slot.created_at).toLocaleDateString()}
           </div>
         </div>

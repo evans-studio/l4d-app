@@ -173,7 +173,6 @@ export function DayCard({ day, isToday, onAddSlot, onSlotUpdate }: DayCardProps)
             className="w-full"
             disabled={isPastDate(day.date)}
           >
-            <PlusIcon className="w-4 h-4 mr-2" />
             Add Time Slot
           </Button>
         </div>
@@ -191,7 +190,6 @@ export function DayCard({ day, isToday, onAddSlot, onSlotUpdate }: DayCardProps)
               </p>
               {!isPastDate(day.date) && (
                 <Button onClick={onAddSlot} size="sm">
-                  <PlusIcon className="w-4 h-4 mr-2" />
                   Add Time Slots
                 </Button>
               )}

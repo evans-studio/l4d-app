@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
+import '@/../sentry.client.config'
 import { env } from '@/lib/config/environment'
 import { AuthProvider } from '@/lib/auth-compat'
 import { ZustandAuthInitializer } from '@/providers/AuthProvider'

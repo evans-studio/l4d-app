@@ -71,9 +71,9 @@ function ScheduleCalendarContent() {
       const startDate = pastDate.toISOString().split('T')[0]
       const endDate = futureDate.toISOString().split('T')[0]
       
-      const url = `/api/admin/time-slots?start=${startDate}&end=${endDate}`
+      const url = `/api/admin/time-slots?start=${startDate}&end=${endDate}&_ts=${Date.now()}`
       
-      const response = await fetch(url)
+      const response = await fetch(url, { cache: 'no-store' })
       
       if (response.ok) {
         const data = await response.json()
@@ -97,19 +97,14 @@ function ScheduleCalendarContent() {
     setViewMode(prev => prev === 'swipe' ? 'calendar' : 'swipe')
   }
 
-  if (isLoading) {
-    return (
-      <AdminLayout>
-        <div className="flex items-center justify-center min-h-[50vh]">
-          <div className="animate-spin w-8 h-8 border-4 border-brand-600 border-t-transparent rounded-full"></div>
-        </div>
-      </AdminLayout>
-    )
-  }
-
   return (
     <AdminLayout>
-      <div className="max-w-4xl mx-auto space-y-6 p-4 sm:p-6">
+      <div className="relative max-w-4xl mx-auto space-y-6 p-4 sm:p-6">
+        {isLoading && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-[var(--surface-primary)]/60 backdrop-blur-[1px] rounded-xl">
+            <div className="animate-spin w-8 h-8 border-4 border-brand-600 border-t-transparent rounded-full"></div>
+          </div>
+        )}
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -121,24 +116,7 @@ function ScheduleCalendarContent() {
             </p>
           </div>
           
-          <Button
-            onClick={toggleViewMode}
-            variant="outline"
-            size="sm"
-            className="flex items-center gap-2"
-          >
-            {viewMode === 'swipe' ? (
-              <>
-                <CalendarIcon className="w-4 h-4" />
-                Calendar
-              </>
-            ) : (
-              <>
-                <ToggleRightIcon className="w-4 h-4" />
-                Cards
-              </>
-            )}
-          </Button>
+          {/* Calendar toggle removed per request */}
         </div>
 
         {/* Quick Stats */}
@@ -190,19 +168,7 @@ function ScheduleCalendarContent() {
           </div>
         )}
 
-        {/* Quick Guide */}
-        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 sm:p-6">
-          <h3 className="font-semibold text-blue-800 mb-3 flex items-center gap-2">
-            <CalendarIcon className="w-4 h-4" />
-            Quick Guide - Swipeable Cards
-          </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-blue-700 text-sm">
-            <div>• Swipe left/right to navigate days</div>
-            <div>• Tap time slots for booking details</div>
-            <div>• Use "Add Slot" for individual slots</div>
-            <div>• Use "Bulk Add" for multiple days</div>
-          </div>
-        </div>
+        {/* Quick Guide removed per request */}
       </div>
     </AdminLayout>
   )

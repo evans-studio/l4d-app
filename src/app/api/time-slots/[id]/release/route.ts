@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import { createClientFromRequest } from '@/lib/supabase/server'
 import { ApiResponseHandler } from '@/lib/api/response'
-import { sendBookingCancellation } from '@/lib/services/email-notifications'
+import { EmailService } from '@/lib/services/email'
 
 export const runtime = 'nodejs'
 
@@ -30,6 +30,7 @@ export async function PUT(
           id,
           booking_reference,
           customer_id,
+          status,
           total_price,
           special_instructions,
           service_address,
@@ -114,27 +115,26 @@ export async function PUT(
         // Don't fail the request for booking update errors
       }
 
-      // Send cancellation email
+      // Send cancellation email using unified branded templates
       if (customerDetails) {
-        const emailData = {
-          customerName: `${customerDetails.first_name} ${customerDetails.last_name}`,
-          customerEmail: customerDetails.email,
-          bookingReference: booking.booking_reference,
-          serviceName: booking.booking_services?.[0]?.service_details?.name || 'Vehicle Detailing',
-          scheduledDate: slot.slot_date,
-          scheduledTime: slot.start_time,
-          totalPrice: booking.total_price,
-          address: booking.service_address?.address_line_1 || '',
-          vehicleDetails: `${booking.vehicle_details?.make} ${booking.vehicle_details?.model}`,
-          cancellationReason: cancellation_reason,
-          businessName: 'Love 4 Detailing',
-          businessPhone: process.env.BUSINESS_PHONE || ''
-        }
-
-        // Send email in background (don't wait for it)
-        sendBookingCancellation(emailData).catch(error => {
-          console.error('Failed to send cancellation email:', error)
-        })
+        const emailService = new EmailService()
+        emailService
+          .sendBookingStatusUpdate(
+            customerDetails.email,
+            `${customerDetails.first_name} ${customerDetails.last_name}`.trim(),
+            {
+              ...booking,
+              status: 'cancelled',
+              cancellation_reason: cancellation_reason || booking.cancellation_reason,
+              scheduled_date: slot.slot_date,
+              scheduled_start_time: slot.start_time,
+            } as any,
+            booking.status || 'pending',
+            cancellation_reason || 'Time slot released'
+          )
+          .catch(err => {
+            console.error('Failed to send cancellation email:', err)
+          })
       }
     }
 

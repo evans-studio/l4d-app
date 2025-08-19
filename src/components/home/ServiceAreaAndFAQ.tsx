@@ -15,76 +15,32 @@ import {
   ChevronDown
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { calculateDistance as calculateDistanceKm } from '@/lib/services/distance'
 
-// Mock postcode validation - in real app this would call an API
-const validatePostcode = (postcode: string): Promise<{
+// Real postcode validation using postcodes.io (via our distance service)
+const FREE_RADIUS_MILES = 17.5
+const BUSINESS_POSTCODE = 'SW9'
+
+const validatePostcode = async (postcode: string): Promise<{
   valid: boolean
   covered: boolean
   distance?: number
   location?: string
   surcharge?: number
 }> => {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      const cleanPostcode = postcode.replace(/\s/g, '').toUpperCase()
-      
-      // Mock validation logic
-      const validFormat = /^[A-Z]{1,2}[0-9][0-9A-Z]?\s?[0-9][A-Z]{2}$/i.test(postcode)
-      
-      if (!validFormat) {
-        resolve({ valid: false, covered: false })
-        return
-      }
+  const clean = postcode.trim().toUpperCase()
+  const validFormat = /^[A-Z]{1,2}[0-9][0-9A-Z]?\s?[0-9][A-Z]{2}$/i.test(clean)
+  if (!validFormat) return { valid: false, covered: false }
 
-      // Mock coverage based on postcode prefix - SW9 and surrounding London areas
-      const coreAreas = ['SW9'] // Core service area
-      const nearbyAreas = ['SW8', 'SW10', 'SW11', 'SW12', 'SW2', 'SW4', 'SE5', 'SE21', 'SE24', 'SE27']
-      const extendedAreas = ['SW1', 'SW3', 'SW5', 'SW6', 'SW7', 'SW13', 'SW14', 'SW15', 'SE1', 'SE11', 'SE17', 'SE22']
-      
-      const prefix = cleanPostcode.substring(0, 3)
-      const shortPrefix = cleanPostcode.substring(0, 2)
-      
-      let result = { valid: true, covered: false, distance: 0, location: '', surcharge: 0 }
-      
-      if (coreAreas.some(area => cleanPostcode.startsWith(area))) {
-        result = {
-          valid: true,
-          covered: true,
-          distance: Math.floor(Math.random() * 3) + 1, // 1-3 miles
-          location: 'SW9 Core Area',
-          surcharge: 0
-        }
-      } else if (nearbyAreas.some(area => cleanPostcode.startsWith(area))) {
-        const distance = Math.floor(Math.random() * 8) + 4 // 4-12 miles
-        result = {
-          valid: true,
-          covered: true,
-          distance,
-          location: 'South London',
-          surcharge: distance > 17.5 ? Math.ceil((distance - 17.5) * 0.5) : 0
-        }
-      } else if (extendedAreas.some(area => cleanPostcode.startsWith(area))) {
-        const distance = Math.floor(Math.random() * 10) + 12 // 12-22 miles
-        result = {
-          valid: true,
-          covered: true,
-          distance,
-          location: 'Greater London',
-          surcharge: Math.ceil((distance - 17.5) * 0.5)
-        }
-      } else {
-        result = {
-          valid: true,
-          covered: false,
-          distance: Math.floor(Math.random() * 20) + 25, // 25+ miles
-          location: 'Outside Service Area',
-          surcharge: 0
-        }
-      }
-      
-      resolve(result)
-    }, 1000) // Simulate API delay
-  })
+  // Calculate haversine/driving distance using our service (falls back to haversine with postcodes.io)
+  const res = await calculateDistanceKm(BUSINESS_POSTCODE, clean)
+  if (!res.success || res.distance <= 0) {
+    return { valid: true, covered: false, distance: 0, location: 'Unknown', surcharge: 0 }
+  }
+  const distanceMiles = Math.round((res.distance * 0.621371) * 10) / 10
+  const covered = distanceMiles <= FREE_RADIUS_MILES
+  const surcharge = covered ? 0 : Math.max(0, Math.ceil((distanceMiles - FREE_RADIUS_MILES) * 0.5))
+  return { valid: true, covered, distance: distanceMiles, location: 'From SW9', surcharge }
 }
 
 const faqs = [
@@ -206,15 +162,11 @@ export function ServiceAreaAndFAQ() {
           )}>
             <CardContent className="p-6 lg:p-8">
               <div className="text-center mb-8">
-                <div className="inline-flex items-center gap-3 bg-brand-600/10 rounded-full px-4 py-2 mb-4">
-                  <MapPin className="w-4 h-4 text-brand-600" />
-                  <span className="text-brand-600 font-medium text-sm">Service Area Check</span>
-                </div>
-                <Heading size="h3" align="center" className="mb-3">
-                  Do We Service Your Area?
+                <Heading size="h3" align="center" className="mb-2">
+                  Check Your Postcode
                 </Heading>
-                <Text color="secondary" align="center">
-                  Based in SW9 · 17.5 miles free radius · Covering South London
+                <Text color="secondary" align="center" className="text-sm">
+                  SW9 base · 17.5 miles free radius · South London coverage
                 </Text>
               </div>
               
@@ -230,7 +182,7 @@ export function ServiceAreaAndFAQ() {
                         value={postcode}
                         onChange={(e) => setPostcode(e.target.value.toUpperCase())}
                         onKeyPress={handleKeyPress}
-                        className="w-full pl-10 pr-4 py-3 bg-white border border-border-secondary rounded-lg text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand-600 focus:border-transparent transition-all duration-200"
+                        className="w-full pl-10 pr-4 py-3 bg-white border border-border-secondary rounded-lg text-black placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-600 focus:border-transparent transition-all duration-200"
                         disabled={isChecking}
                       />
                     </div>
@@ -239,15 +191,8 @@ export function ServiceAreaAndFAQ() {
                       onClick={handleCheck}
                       disabled={!postcode.trim() || isChecking}
                       className="bg-brand-600 hover:bg-brand-700 py-3 px-6 min-h-[48px]"
-                      rightIcon={
-                        isChecking ? (
-                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        ) : (
-                          <Search className="w-4 h-4" />
-                        )
-                      }
                     >
-                      {isChecking ? 'Checking...' : 'Check'}
+                      {isChecking ? 'Checking…' : 'Check'}
                     </Button>
                   </div>
                 </div>
@@ -256,18 +201,18 @@ export function ServiceAreaAndFAQ() {
                 <div className="text-center space-y-6">
                   {result?.valid && result.covered && (
                     <div>
-                      <div className="inline-flex items-center justify-center w-16 h-16 bg-success-600/20 rounded-full mb-4">
-                        <CheckCircle className="w-8 h-8 text-success-600" />
+                      <div className="inline-flex items-center justify-center w-12 h-12 bg-success-600/15 rounded-full mb-3">
+                        <CheckCircle className="w-6 h-6 text-success-600" />
                       </div>
-                      <h3 className="text-xl font-bold text-success-600 mb-2">
-                        We Service Your Area!
+                      <h3 className="text-lg font-semibold text-success-700 mb-1">
+                        You're Covered
                       </h3>
-                      <p className="text-text-secondary mb-6">
-                        {postcode} · {result.distance} miles · {result.surcharge ? `£${result.surcharge} travel charge` : 'FREE travel'}
+                      <p className="text-text-secondary text-sm mb-5">
+                        {postcode} · {result.distance} miles · {result.surcharge ? `£${result.surcharge} travel` : 'Free travel'}
                       </p>
                       <div className="flex gap-3 justify-center">
                         <Link href="/book">
-                          <Button variant="primary" className="bg-brand-600 hover:bg-brand-700" rightIcon={<ArrowRight className="w-4 h-4" />}>
+                          <Button variant="primary" className="bg-brand-600 hover:bg-brand-700">
                             Book Now
                           </Button>
                         </Link>
@@ -280,14 +225,14 @@ export function ServiceAreaAndFAQ() {
                   
                   {result?.valid && !result.covered && (
                     <div>
-                      <div className="inline-flex items-center justify-center w-16 h-16 bg-error-600/20 rounded-full mb-4">
-                        <XCircle className="w-8 h-8 text-error-600" />
+                      <div className="inline-flex items-center justify-center w-12 h-12 bg-error-600/15 rounded-full mb-3">
+                        <XCircle className="w-6 h-6 text-error-600" />
                       </div>
-                      <h3 className="text-xl font-bold text-error-600 mb-2">
+                      <h3 className="text-lg font-semibold text-error-700 mb-1">
                         Outside Service Area
                       </h3>
-                      <p className="text-text-secondary mb-6">
-                        {postcode} is approximately {result.distance} miles from our base
+                      <p className="text-text-secondary text-sm mb-5">
+                        {postcode} is approximately {typeof result.distance === 'number' ? result.distance : '—'} miles from our base
                       </p>
                       <Button variant="outline" onClick={resetCheck}>
                         Try Another Postcode
@@ -297,13 +242,13 @@ export function ServiceAreaAndFAQ() {
                   
                   {!result?.valid && (
                     <div>
-                      <div className="inline-flex items-center justify-center w-16 h-16 bg-warning-600/20 rounded-full mb-4">
-                        <XCircle className="w-8 h-8 text-warning-600" />
+                      <div className="inline-flex items-center justify-center w-12 h-12 bg-warning-600/15 rounded-full mb-3">
+                        <XCircle className="w-6 h-6 text-warning-600" />
                       </div>
-                      <h3 className="text-xl font-bold text-warning-600 mb-2">
+                      <h3 className="text-lg font-semibold text-warning-700 mb-1">
                         Invalid Postcode
                       </h3>
-                      <p className="text-text-secondary mb-6">
+                      <p className="text-text-secondary text-sm mb-5">
                         Please check your postcode and try again
                       </p>
                       <Button variant="primary" onClick={resetCheck}>

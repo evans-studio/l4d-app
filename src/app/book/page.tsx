@@ -19,6 +19,7 @@ import { ArrowLeft, Phone, User, LogIn, Mail, Shield, CheckCircle } from 'lucide
 function BookingPageContent(): React.JSX.Element {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const isAdminMode = (searchParams.get('mode') || '').toLowerCase() === 'admin';
   const { 
     currentStep, 
     previousStep, 
@@ -76,6 +77,14 @@ function BookingPageContent(): React.JSX.Element {
   useEffect(() => {
     const checkAuth = async () => {
       try {
+        if (isAdminMode) {
+          // In admin mode we intentionally do NOT bind the admin's identity
+          // so the admin can enter the customer's details manually.
+          setIsAuthenticated(false);
+          setProfile(null);
+          setAuthLoading(false);
+          return;
+        }
         const response = await fetch('/api/auth/user');
         const data = await response.json();
         
@@ -119,7 +128,7 @@ function BookingPageContent(): React.JSX.Element {
     };
 
     checkAuth();
-  }, [router]);
+  }, [router, isAdminMode]);
 
   // Handle service pre-population from URL parameters
   useEffect(() => {
@@ -167,10 +176,10 @@ function BookingPageContent(): React.JSX.Element {
 
   // Auto-skip UserDetails step for authenticated users
   useEffect(() => {
-    if (isAuthenticated && profile && currentStep === 5) {
+    if (!isAdminMode && isAuthenticated && profile && currentStep === 5) {
       nextStep();
     }
-  }, [isAuthenticated, profile, currentStep, nextStep]);
+  }, [isAdminMode, isAuthenticated, profile, currentStep, nextStep]);
 
   const renderCurrentStep = (): React.JSX.Element | null => {
     switch (currentStep) {

@@ -11,7 +11,9 @@ import {
   BarChart3,
   Wrench,
   Plus,
-  CalendarClock
+  CalendarClock,
+  MoreHorizontal,
+  X
 } from 'lucide-react'
 import { Button } from '@/components/ui/primitives/Button'
 import { MinimalHeader } from '@/components/navigation/MinimalHeader'
@@ -109,7 +111,6 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                 <Button
                   variant="primary"
                   fullWidth
-                  leftIcon={<Plus className="w-4 h-4" />}
                   className="min-h-[44px]"
                 >
                   Quick Schedule
@@ -181,42 +182,102 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                 <div className="absolute inset-0 rounded-full bg-white/20 animate-ping" />
               </div>
             </Link>
-
-            {/* Last 2 navigation items - skip reschedule requests (index 2) and schedule (index 3) */}
-            {navigationItems.slice(4, 6).map((item) => {
-              const Icon = item.icon
-              const isActive = pathname === item.href || 
-                (item.href !== '/admin' && pathname.startsWith(item.href))
-
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={cn(
-                    "flex flex-col items-center gap-1 px-2 py-2 text-xs font-medium transition-all duration-200 min-h-[56px] justify-center rounded-lg mx-1 relative overflow-hidden touch-manipulation",
-                    "active:scale-95 active:bg-surface-hover/50",
-                    isActive
-                      ? "text-brand-600 bg-brand-600/10"
-                      : "text-text-secondary hover:text-text-primary hover:bg-surface-hover/30"
-                  )}
-                >
-                  {/* Active indicator */}
-                  {isActive && (
-                    <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-8 h-1 bg-brand-600 rounded-full" />
-                  )}
-                  <Icon className={cn(
-                    "w-5 h-5 transition-transform duration-200",
-                    isActive ? "scale-110" : "scale-100"
-                  )} />
-                  <span className="text-[10px] leading-tight font-medium">
-                    {item.name}
-                  </span>
-                </Link>
-              )
-            })}
+            {/* Customers and More */}
+            <MobileCustomersAndMore pathname={pathname} />
           </div>
         </div>
       </div>
     </div>
+  )
+}
+
+function MobileCustomersAndMore({ pathname }: { pathname: string }) {
+  const customers = navigationItems[4]!
+  const CustomersIcon = customers.icon
+  const isCustomers = pathname === customers.href || (customers.href !== '/admin' && pathname.startsWith(customers.href))
+  const [isMoreOpen, setIsMoreOpen] = React.useState(false)
+
+  return (
+    <>
+      {/* Customers link */}
+      <Link
+        key={customers.href}
+        href={customers.href}
+        className={cn(
+          "flex flex-col items-center gap-1 px-2 py-2 text-xs font-medium transition-all duration-200 min-h-[56px] justify-center rounded-lg mx-1 relative overflow-hidden touch-manipulation",
+          "active:scale-95 active:bg-surface-hover/50",
+          isCustomers ? "text-brand-600 bg-brand-600/10" : "text-text-secondary hover:text-text-primary hover:bg-surface-hover/30"
+        )}
+      >
+        {isCustomers && (
+          <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-8 h-1 bg-brand-600 rounded-full" />
+        )}
+        <CustomersIcon className={cn("w-5 h-5 transition-transform duration-200", isCustomers ? "scale-110" : "scale-100")} />
+        <span className="text-[10px] leading-tight font-medium">Customers</span>
+      </Link>
+
+      {/* More button */}
+      <button
+        type="button"
+        onClick={() => setIsMoreOpen(true)}
+        className={cn(
+          "flex flex-col items-center gap-1 px-2 py-2 text-xs font-medium transition-all duration-200 min-h-[56px] justify-center rounded-lg mx-1 relative overflow-hidden touch-manipulation",
+          "active:scale-95 active:bg-surface-hover/50",
+          "text-text-secondary hover:text-text-primary hover:bg-surface-hover/30"
+        )}
+        aria-label="More"
+      >
+        <MoreHorizontal className="w-5 h-5" />
+        <span className="text-[10px] leading-tight font-medium">More</span>
+      </button>
+
+      {/* More sheet */}
+      {isMoreOpen && (
+        <div className="fixed inset-0 z-[60]">
+          {/* Overlay */}
+          <button
+            type="button"
+            aria-label="Close"
+            onClick={() => setIsMoreOpen(false)}
+            className="absolute inset-0 bg-black/40"
+          />
+          {/* Sheet */}
+          <div className="absolute bottom-0 left-0 right-0 bg-surface-secondary border-t border-border-secondary rounded-t-2xl p-4 pb-[calc(env(safe-area-inset-bottom)+16px)]">
+            {/* Grab handle + close */}
+            <div className="max-w-md mx-auto">
+              <div className="relative mb-4 h-8">
+                <div className="mx-auto w-12 h-1.5 bg-border-secondary rounded-full" />
+                <button
+                  type="button"
+                  onClick={() => setIsMoreOpen(false)}
+                  aria-label="Close"
+                  className="absolute right-0 top-0 inline-flex items-center justify-center w-8 h-8 rounded-md text-text-secondary hover:text-text-primary hover:bg-surface-hover"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+            <div className="max-w-md mx-auto space-y-2">
+              {[
+                { name: 'Reschedule Requests', href: '/admin/reschedule-requests' },
+                { name: 'Services', href: '/admin/services' },
+                { name: 'Analytics', href: '/admin/analytics' },
+                { name: 'Settings', href: '/admin/settings' },
+                { name: 'New Booking', href: '/admin/bookings/new' },
+              ].map(link => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  onClick={() => setIsMoreOpen(false)}
+                  className="block w-full text-left px-4 py-3 rounded-lg bg-surface-primary border border-border-secondary text-text-primary active:scale-95 transition min-h-[44px]"
+                >
+                  {link.name}
+                </Link>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   )
 }

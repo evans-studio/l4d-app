@@ -470,7 +470,8 @@ function ServiceCategoriesPage() {
           </div>
         ) : (
           <div className="bg-[var(--surface-secondary)] rounded-lg border border-[var(--border-secondary)] overflow-hidden">
-            <div className="overflow-x-auto">
+            {/* Desktop table */}
+            <div className="hidden sm:block overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-[var(--surface-tertiary)] border-b border-[var(--border-secondary)]">
                   <tr>
@@ -573,6 +574,38 @@ function ServiceCategoriesPage() {
                   ))}
                 </tbody>
               </table>
+            </div>
+
+            {/* Mobile cards */}
+            <div className="block sm:hidden divide-y divide-[var(--border-secondary)]">
+              {categories
+                .sort((a, b) => a.display_order - b.display_order)
+                .map((category) => (
+                <div key={category.id} className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className={`${category.is_active ? 'bg-[var(--success-bg)] text-[var(--success)]' : 'bg-[var(--warning-bg)] text-[var(--warning)]'} w-10 h-10 rounded-lg flex items-center justify-center`}>
+                        <TagIcon className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-[var(--text-primary)]">{category.name}</p>
+                        <p className="text-xs text-[var(--text-muted)]">Created {new Date(category.created_at).toLocaleDateString()}</p>
+                      </div>
+                    </div>
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${category.is_active ? 'bg-[var(--success-bg)] text-[var(--success)]' : 'bg-[var(--warning-bg)] text-[var(--warning)]'}`}>{category.is_active ? 'Active' : 'Inactive'}</span>
+                  </div>
+                  {category.description && (
+                    <p className="mt-3 text-sm text-[var(--text-secondary)]">{category.description}</p>
+                  )}
+                  <div className="mt-3 flex items-center justify-between text-sm">
+                    <span className="text-[var(--text-secondary)]">Order: <span className="text-[var(--text-primary)] font-medium">{category.display_order}</span></span>
+                    <div className="flex gap-2">
+                      <Button onClick={() => handleEditCategory(category)} variant="outline" size="sm">Edit</Button>
+                      <Button onClick={() => handleDeleteCategory(category)} variant="outline" size="sm" className="text-[var(--error)] border-[var(--error)]">Delete</Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         )}

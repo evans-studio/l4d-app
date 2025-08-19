@@ -6,17 +6,17 @@ import { AdminRoute } from '@/components/ProtectedRoute'
 import { Card, CardHeader, CardContent } from '@/components/ui/composites/Card'
 import { Button } from '@/components/ui/primitives/Button'
 import { 
-  HelpCircleIcon, 
-  BookOpenIcon, 
-  MessageSquareIcon, 
-  PhoneIcon,
-  MailIcon,
-  ExternalLinkIcon,
-  SearchIcon,
-  ChevronDownIcon,
-  ChevronRightIcon,
-  VideoIcon,
-  FileTextIcon
+  HelpCircle, 
+  BookOpen, 
+  MessageSquare, 
+  Phone,
+  Mail,
+  ExternalLink,
+  Search,
+  ChevronDown,
+  ChevronRight,
+  Video,
+  FileText
 } from 'lucide-react'
 
 interface FAQ {
@@ -147,13 +147,13 @@ function HelpPage() {
   const getResourceIcon = (type: HelpResource['type']) => {
     switch (type) {
       case 'video':
-        return VideoIcon
+        return Video
       case 'article':
-        return FileTextIcon
+        return FileText
       case 'guide':
-        return BookOpenIcon
+        return BookOpen
       default:
-        return FileTextIcon
+        return FileText
     }
   }
 
@@ -172,7 +172,7 @@ function HelpPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card>
             <CardContent className="p-6 text-center">
-              <MessageSquareIcon className="w-8 h-8 text-brand-purple mx-auto mb-3" />
+              <MessageSquare className="w-8 h-8 text-brand-purple mx-auto mb-3" />
               <h3 className="font-semibold text-text-primary mb-2">Live Chat</h3>
               <p className="text-text-secondary text-sm mb-4">
                 Get instant help from our support team
@@ -185,13 +185,13 @@ function HelpPage() {
 
           <Card>
             <CardContent className="p-6 text-center">
-              <MailIcon className="w-8 h-8 text-blue-600 mx-auto mb-3" />
+              <Mail className="w-8 h-8 text-blue-600 mx-auto mb-3" />
               <h3 className="font-semibold text-text-primary mb-2">Email Support</h3>
               <p className="text-text-secondary text-sm mb-4">
                 Send us a detailed message
               </p>
               <Button variant="outline" size="sm">
-                <MailIcon className="w-4 h-4 mr-2" />
+                <Mail className="w-4 h-4 mr-2" />
                 support@love4detailing.com
               </Button>
             </CardContent>
@@ -199,13 +199,13 @@ function HelpPage() {
 
           <Card>
             <CardContent className="p-6 text-center">
-              <PhoneIcon className="w-8 h-8 text-green-600 mx-auto mb-3" />
+              <Phone className="w-8 h-8 text-green-600 mx-auto mb-3" />
               <h3 className="font-semibold text-text-primary mb-2">Phone Support</h3>
               <p className="text-text-secondary text-sm mb-4">
                 Speak directly with our team
               </p>
               <Button variant="outline" size="sm">
-                <PhoneIcon className="w-4 h-4 mr-2" />
+                <Phone className="w-4 h-4 mr-2" />
                 Call Now
               </Button>
             </CardContent>
@@ -230,7 +230,7 @@ function HelpPage() {
                       <div className="flex items-center justify-between mt-2">
                         <span className="text-text-muted text-xs">{resource.duration}</span>
                         <Button variant="outline" size="sm">
-                          <ExternalLinkIcon className="w-3 h-3 mr-1" />
+                          <ExternalLink className="w-3 h-3 mr-1" />
                           View
                         </Button>
                       </div>
@@ -251,7 +251,7 @@ function HelpPage() {
             {/* Search and Filter */}
             <div className="flex flex-col md:flex-row gap-4 mb-6">
               <div className="flex-1 relative">
-                <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-text-muted" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-text-muted" />
                 <input
                   type="text"
                   placeholder="Search FAQs..."
@@ -283,9 +283,9 @@ function HelpPage() {
                   >
                     <span className="font-medium text-text-primary">{faq.question}</span>
                     {expandedFAQ === index ? (
-                      <ChevronDownIcon className="w-4 h-4 text-text-muted" />
+                      <ChevronDown className="w-4 h-4 text-text-muted" />
                     ) : (
-                      <ChevronRightIcon className="w-4 h-4 text-text-muted" />
+                      <ChevronRight className="w-4 h-4 text-text-muted" />
                     )}
                   </button>
                   {expandedFAQ === index && (
@@ -299,7 +299,7 @@ function HelpPage() {
 
             {filteredFAQs.length === 0 && (
               <div className="text-center py-8">
-                <HelpCircleIcon className="w-12 h-12 text-text-muted mx-auto mb-4" />
+                <HelpCircle className="w-12 h-12 text-text-muted mx-auto mb-4" />
                 <p className="text-text-secondary">No FAQs found matching your search.</p>
               </div>
             )}
