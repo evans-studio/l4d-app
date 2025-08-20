@@ -1,3 +1,6 @@
+// Extend Jest matchers or set up test DOM helpers here
+import '@testing-library/jest-dom'
+
 /**
  * Jest Test Setup Configuration
  * 
