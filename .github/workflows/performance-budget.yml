@@ -48,20 +48,20 @@ jobs:
       - name: Create environment file
         run: |
           echo "NODE_ENV=production" >> .env.local
-          echo "NEXT_PUBLIC_SUPABASE_URL=https://example.supabase.co" >> .env.local
-          echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=placeholder_key" >> .env.local
-          echo "SUPABASE_SERVICE_ROLE_KEY=placeholder_service_key" >> .env.local
+          echo "NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}" >> .env.local
+          echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}" >> .env.local
+          echo "SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" >> .env.local
           echo "ACCESS_TOKEN_SECRET=placeholder_access_token_secret_min_32_chars" >> .env.local
           echo "REFRESH_TOKEN_SECRET=placeholder_refresh_token_secret_min_32_chars" >> .env.local
-          echo "RESEND_API_KEY=re_placeholder_resend_api_key" >> .env.local
-          echo "NEXT_PUBLIC_FROM_EMAIL=test@example.com" >> .env.local
-          echo "ADMIN_EMAIL=admin@example.com" >> .env.local
-          echo "EMAIL_REPLY_TO=noreply@example.com" >> .env.local
-          echo "PAYPAL_ME_USERNAME=testuser" >> .env.local
-          echo "PAYPAL_BUSINESS_EMAIL=test@paypal.com" >> .env.local
-          echo "NEXTAUTH_URL=http://localhost:3000" >> .env.local
-          echo "NEXTAUTH_SECRET=placeholder_nextauth_secret_min_32_chars" >> .env.local
-
+          echo "RESEND_API_KEY=${{ secrets.RESEND_API_KEY }}" >> .env.local
+          echo "NEXT_PUBLIC_FROM_EMAIL=${{ secrets.NEXT_PUBLIC_FROM_EMAIL }}" >> .env.local
+          echo "ADMIN_EMAIL=${{ secrets.ADMIN_EMAIL }}" >> .env.local
+          echo "EMAIL_REPLY_TO=${{ secrets.EMAIL_REPLY_TO }}" >> .env.local
+          echo "PAYPAL_ME_USERNAME=${{ secrets.PAYPAL_ME_USERNAME }}" >> .env.local
+          echo "PAYPAL_BUSINESS_EMAIL=${{ secrets.PAYPAL_BUSINESS_EMAIL }}" >> .env.local
+          echo "NEXTAUTH_URL=${{ secrets.NEXTAUTH_URL }}" >> .env.local
+          echo "NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }}" >> .env.local 
+          
       - name: Build application
         run: npm run build
 
