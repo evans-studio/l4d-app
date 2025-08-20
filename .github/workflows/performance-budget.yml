@@ -51,17 +51,28 @@ jobs:
           echo "NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}" >> .env.local
           echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}" >> .env.local
           echo "SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" >> .env.local
-          echo "ACCESS_TOKEN_SECRET=placeholder_access_token_secret_min_32_chars" >> .env.local
-          echo "REFRESH_TOKEN_SECRET=placeholder_refresh_token_secret_min_32_chars" >> .env.local
+          echo "ACCESS_TOKEN_SECRET=${{ secrets.ACCESS_TOKEN_SECRET }}" >> .env.local
+          echo "REFRESH_TOKEN_SECRET=${{ secrets.REFRESH_TOKEN_SECRET }}" >> .env.local
           echo "RESEND_API_KEY=${{ secrets.RESEND_API_KEY }}" >> .env.local
           echo "NEXT_PUBLIC_FROM_EMAIL=${{ secrets.NEXT_PUBLIC_FROM_EMAIL }}" >> .env.local
           echo "ADMIN_EMAIL=${{ secrets.ADMIN_EMAIL }}" >> .env.local
           echo "EMAIL_REPLY_TO=${{ secrets.EMAIL_REPLY_TO }}" >> .env.local
           echo "PAYPAL_ME_USERNAME=${{ secrets.PAYPAL_ME_USERNAME }}" >> .env.local
           echo "PAYPAL_BUSINESS_EMAIL=${{ secrets.PAYPAL_BUSINESS_EMAIL }}" >> .env.local
+          echo "NEXT_PUBLIC_APP_URL=${{ secrets.NEXT_PUBLIC_APP_URL }}" >> .env.local
           echo "NEXTAUTH_URL=${{ secrets.NEXTAUTH_URL }}" >> .env.local
-          echo "NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }}" >> .env.local 
-          
+          echo "NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }}" >> .env.local
+        shell: bash
+
+      - name: Fail early if required secrets are missing
+        run: |
+          required_vars=(NEXT_PUBLIC_SUPABASE_URL NEXT_PUBLIC_SUPABASE_ANON_KEY SUPABASE_SERVICE_ROLE_KEY)
+          for v in "${required_vars[@]}"; do
+            if ! grep -q "^$v=" .env.local || [[ -z $(grep "^$v=" .env.local | cut -d'=' -f2-) ]]; then
+              echo "Missing required secret: $v" >&2
+              exit 1
+            fi
+          done
       - name: Build application
         run: npm run build
 
@@ -91,18 +102,12 @@ jobs:
           script: |
             const fs = require('fs');
             const path = require('path');
-            
-            // Read Lighthouse CI results
             let lighthouseComment = '## 🚀 Performance Budget Results\n\n';
-            
             try {
-              // Find the latest Lighthouse CI results
               const resultsPath = '.lighthouseci';
               if (fs.existsSync(resultsPath)) {
                 lighthouseComment += '✅ Lighthouse CI audit completed successfully!\n\n';
                 lighthouseComment += 'See the full report in the workflow artifacts.\n\n';
-                
-                // Add performance tips
                 lighthouseComment += '### 💡 Performance Tips:\n';
                 lighthouseComment += '- Keep bundle sizes under budget limits\n';
                 lighthouseComment += '- Optimize images (WebP format recommended)\n';
@@ -115,10 +120,8 @@ jobs:
             } catch (error) {
               lighthouseComment += `❌ Error reading Lighthouse CI results: ${error.message}\n\n`;
             }
-            
             lighthouseComment += '---\n';
             lighthouseComment += '*This comment was generated automatically by the Performance Budget workflow.*';
-            
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
@@ -130,7 +133,6 @@ jobs:
     name: Bundle Size Analysis
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
-    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -147,19 +149,21 @@ jobs:
       - name: Create environment file
         run: |
           echo "NODE_ENV=production" >> .env.local
-          echo "NEXT_PUBLIC_SUPABASE_URL=https://example.supabase.co" >> .env.local
-          echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=placeholder_key" >> .env.local
-          echo "SUPABASE_SERVICE_ROLE_KEY=placeholder_service_key" >> .env.local
-          echo "ACCESS_TOKEN_SECRET=placeholder_access_token_secret_min_32_chars" >> .env.local
-          echo "REFRESH_TOKEN_SECRET=placeholder_refresh_token_secret_min_32_chars" >> .env.local
-          echo "RESEND_API_KEY=re_placeholder_resend_api_key" >> .env.local
-          echo "NEXT_PUBLIC_FROM_EMAIL=test@example.com" >> .env.local
-          echo "ADMIN_EMAIL=admin@example.com" >> .env.local
-          echo "EMAIL_REPLY_TO=noreply@example.com" >> .env.local
-          echo "PAYPAL_ME_USERNAME=testuser" >> .env.local
-          echo "PAYPAL_BUSINESS_EMAIL=test@paypal.com" >> .env.local
-          echo "NEXTAUTH_URL=http://localhost:3000" >> .env.local
-          echo "NEXTAUTH_SECRET=placeholder_nextauth_secret_min_32_chars" >> .env.local
+          echo "NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}" >> .env.local
+          echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}" >> .env.local
+          echo "SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" >> .env.local
+          echo "ACCESS_TOKEN_SECRET=${{ secrets.ACCESS_TOKEN_SECRET }}" >> .env.local
+          echo "REFRESH_TOKEN_SECRET=${{ secrets.REFRESH_TOKEN_SECRET }}" >> .env.local
+          echo "RESEND_API_KEY=${{ secrets.RESEND_API_KEY }}" >> .env.local
+          echo "NEXT_PUBLIC_FROM_EMAIL=${{ secrets.NEXT_PUBLIC_FROM_EMAIL }}" >> .env.local
+          echo "ADMIN_EMAIL=${{ secrets.ADMIN_EMAIL }}" >> .env.local
+          echo "EMAIL_REPLY_TO=${{ secrets.EMAIL_REPLY_TO }}" >> .env.local
+          echo "PAYPAL_ME_USERNAME=${{ secrets.PAYPAL_ME_USERNAME }}" >> .env.local
+          echo "PAYPAL_BUSINESS_EMAIL=${{ secrets.PAYPAL_BUSINESS_EMAIL }}" >> .env.local
+          echo "NEXT_PUBLIC_APP_URL=${{ secrets.NEXT_PUBLIC_APP_URL }}" >> .env.local
+          echo "NEXTAUTH_URL=${{ secrets.NEXTAUTH_URL }}" >> .env.local
+          echo "NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }}" >> .env.local
+        shell: bash
 
       - name: Build and analyze bundle
         run: |
@@ -171,16 +175,13 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            
             let bundleComment = '## 📦 Bundle Size Analysis\n\n';
-            
             try {
               const analysis = fs.readFileSync('bundle-analysis.txt', 'utf8');
               bundleComment += '```\n' + analysis + '\n```\n\n';
             } catch (error) {
               bundleComment += `❌ Could not read bundle analysis: ${error.message}\n\n`;
             }
-            
             bundleComment += '### Bundle Size Guidelines:\n';
             bundleComment += '- 📱 **Main Bundle**: < 250KB\n';
             bundleComment += '- 🎨 **CSS Bundle**: < 50KB\n';
@@ -189,7 +190,6 @@ jobs:
             bundleComment += '- 🔤 **Fonts**: < 200KB total\n\n';
             bundleComment += '---\n';
             bundleComment += '*Bundle analysis generated automatically by GitHub Actions.*';
-            
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
@@ -200,7 +200,6 @@ jobs:
   security-audit:
     name: Security & Performance Audit
     runs-on: ubuntu-latest
-    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -218,8 +217,6 @@ jobs:
         run: |
           echo "## 🔒 Security Audit Results" > security-audit.md
           echo "" >> security-audit.md
-          
-          # Run npm audit and capture output
           if npm audit --audit-level=moderate --json > audit.json 2>&1; then
             echo "✅ No security vulnerabilities found!" >> security-audit.md
           else
@@ -235,14 +232,11 @@ jobs:
           echo "" >> security-audit.md
           echo "## ⚡ Performance Anti-patterns Check" >> security-audit.md
           echo "" >> security-audit.md
-          
-          # Check for common performance issues
           if grep -r "console\.log" src/ --exclude-dir=node_modules; then
             echo "⚠️ Found console.log statements that should be removed in production" >> security-audit.md
           else
             echo "✅ No console.log statements found" >> security-audit.md
           fi
-          
           if grep -r "debugger" src/ --exclude-dir=node_modules; then
             echo "⚠️ Found debugger statements that should be removed" >> security-audit.md
           else
