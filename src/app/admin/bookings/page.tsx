@@ -38,16 +38,16 @@ function AdminBookingsContent() {
   // State
   const [filteredBookings, setFilteredBookings] = useState<Booking[]>([])
   const [searchTerm, setSearchTerm] = useState('')
-  const [activeTab, setActiveTab] = useState(searchParams.get('status') || 'all')
+  const [activeTab, setActiveTab] = useState<string>(searchParams?.get('status') || 'all')
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   
   // Check for error query param
   useEffect(() => {
-    const error = searchParams.get('error')
+    const error = searchParams?.get('error')
     if (error === 'booking-not-found') {
       setErrorMessage('The booking you tried to view no longer exists or has been removed.')
       // Clear the error from URL
-      const newParams = new URLSearchParams(searchParams)
+      const newParams = new URLSearchParams(searchParams || undefined)
       newParams.delete('error')
       router.replace(`/admin/bookings?${newParams.toString()}`)
     }

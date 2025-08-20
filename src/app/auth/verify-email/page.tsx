@@ -50,7 +50,7 @@ function VerifyEmailPageContent() {
         }
       } else {
         // No verification token, show resend verification page
-        const emailParam = searchParams.get('email')
+        const emailParam = searchParams?.get('email') || ''
         if (emailParam) {
           setEmail(emailParam)
         }

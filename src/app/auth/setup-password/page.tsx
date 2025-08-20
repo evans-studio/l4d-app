@@ -24,14 +24,14 @@ function SetupPasswordPageContent() {
   const searchParams = useSearchParams()
 
   useEffect(() => {
-    const token = searchParams.get('token')
-    const email = searchParams.get('email')
+    const token = searchParams?.get('token') || ''
+    const email = searchParams?.get('email') || ''
     
     if (!token) {
       setTokenError('Invalid or expired password setup link. Please contact support or try booking again.')
     } else {
       setSetupToken(token)
-      setUserEmail(email || '')
+      setUserEmail(email)
     }
   }, [searchParams])
 

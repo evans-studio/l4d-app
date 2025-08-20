@@ -25,7 +25,7 @@ function ResetPasswordPageContent() {
 
   useEffect(() => {
     // Check if we have the reset token from URL params (custom system)
-    const token = searchParams.get('token')
+    const token = searchParams?.get('token') || ''
     
     // Or check if we have Supabase hash parameters (fallback system)
     const hash = window.location.hash

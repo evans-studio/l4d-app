@@ -114,7 +114,14 @@ export default function HomePage() {
                   const minPrice = prices.length ? Math.min(...prices) : 0
                   const maxPrice = prices.length ? Math.max(...prices) : 0
                   const durationMinutes = service.duration || 0
-                  const durationHours = Math.max(1, Math.round(Math.max(0, durationMinutes) / 60))
+                  const formatDuration = (mins: number) => {
+                    const total = Math.max(0, Math.round(mins))
+                    const hours = Math.floor(total / 60)
+                    const rem = total % 60
+                    if (hours > 0 && rem > 0) return `${hours} hr ${rem} min`
+                    if (hours > 0) return `${hours} hr${hours > 1 ? 's' : ''}`
+                    return `${rem} min`
+                  }
 
                   return (
                     <Card
@@ -152,10 +159,12 @@ export default function HomePage() {
                             <div className="text-text-secondary">Contact for pricing</div>
                           )}
                           <div className="text-xs text-text-muted">Based on vehicle size</div>
-                          <div className="flex items-center justify-center gap-1 text-xs text-text-muted">
-                            <Car className="w-3 h-3" />
-                            <span>~{durationHours} hours</span>
-                          </div>
+                          {durationMinutes > 0 && (
+                            <div className="flex items-center justify-center gap-1 text-xs text-text-muted">
+                              <Car className="w-3 h-3" />
+                              <span>~{formatDuration(durationMinutes)}</span>
+                            </div>
+                          )}
                         </div>
                       </CardContent>
 
@@ -190,70 +199,7 @@ export default function HomePage() {
         <ServiceAreaAndFAQ />
       </FadeIn>
 
-      {/* Final CTA Section - Mobile-first spacing (48/64/80) */}
-      <FadeIn as="section" id="contact" className="relative z-10 py-12 sm:py-16 lg:py-20 border-t border-border-secondary/30">
-        <Container>
-          <div className="max-w-4xl mx-auto text-center">
-            {/* Strong Visual Separation */}
-            <div className="mb-12 lg:mb-16">
-              <div className="inline-flex items-center gap-3 bg-brand-600/10 rounded-full px-6 py-3 mb-8">
-                <Heart className="w-5 h-5 text-brand-600" />
-                <span className="text-brand-600 font-medium">Ready to Get Started?</span>
-              </div>
-              <Heading size="h2" align="center" className="mb-8 text-3xl md:text-4xl lg:text-5xl">
-                Ready for Proper Car Care?
-              </Heading>
-              <Text size="xl" color="secondary" align="center" className="mb-12 max-w-2xl mx-auto text-lg md:text-xl leading-relaxed">
-                Join thousands of customers across South London who trust Love 4 Detailing for premium mobile car detailing
-              </Text>
-            </div>
-            
-            {/* Enhanced CTA Buttons */}
-            <div className="flex flex-col sm:flex-row gap-6 justify-center items-center max-w-lg sm:max-w-none mx-auto mb-12">
-              <Link href="/book" className="w-full sm:w-auto">
-                <Button 
-                  variant="primary" 
-                  size="lg" 
-                  fullWidth 
-                  className="bg-brand-600 hover:bg-brand-700 shadow-purple-lg hover:shadow-purple-xl hover:scale-105 sm:w-auto min-h-[56px] text-base sm:text-lg px-10 transition-all duration-300"
-                >
-                  Book Your Service
-                </Button>
-              </Link>
-              <div className="flex items-center gap-4 text-text-muted">
-                <div className="hidden sm:block w-12 h-px bg-border-secondary"></div>
-                <Text size="sm" className="whitespace-nowrap">or</Text>
-                <div className="hidden sm:block w-12 h-px bg-border-secondary"></div>
-              </div>
-              <Button 
-                variant="outline" 
-                size="lg" 
-                fullWidth 
-                onClick={() => window.location.href = 'tel:+447908625581'} 
-                className="hover:border-brand-400 hover:text-brand-400 hover:bg-brand-400/5 sm:w-auto min-h-[56px] text-base sm:text-lg px-10 transition-all duration-300"
-              >
-                Call 07908 625581
-              </Button>
-            </div>
-
-            {/* Trust Indicators */}
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-6 sm:gap-12 text-text-muted">
-              <div className="flex items-center gap-2">
-                <Star className="w-4 h-4 text-yellow-500 fill-current" />
-                <Text size="sm">5★ Average Rating</Text>
-              </div>
-              <div className="flex items-center gap-2">
-                <Users className="w-4 h-4 text-brand-600" />
-                <Text size="sm">1000+ Happy Customers</Text>
-              </div>
-              <div className="flex items-center gap-2">
-                <Award className="w-4 h-4 text-brand-600" />
-                <Text size="sm">SW9 Based & Trusted</Text>
-              </div>
-            </div>
-          </div>
-        </Container>
-      </FadeIn>
+      
     </MainLayout>
   )
 }

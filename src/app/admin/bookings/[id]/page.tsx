@@ -117,7 +117,8 @@ const statusConfig = {
 }
 
 function AdminBookingDetailsPage() {
-  const params = useParams()
+  const params = useParams() as Record<string, string> | null
+  const bookingId = params?.id as string | undefined
   const router = useRouter()
   const [booking, setBooking] = useState<BookingDetails | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -128,7 +129,7 @@ function AdminBookingDetailsPage() {
     const fetchBooking = async () => {
       try {
         // Use the regular booking API route with admin authentication
-        const response = await fetch(`/api/bookings/${params.id}`)
+        const response = await fetch(`/api/bookings/${bookingId}`)
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}: ${response.statusText}`)
         }
@@ -140,12 +141,12 @@ function AdminBookingDetailsPage() {
           setAdminNotes(data.data.admin_notes || '')
         } else {
           console.error('Failed to fetch booking:', data.error)
-          console.error('Booking ID:', params.id)
+          console.error('Booking ID:', bookingId)
           console.error('Response status:', response.status)
         }
       } catch (error) {
         console.error('Failed to fetch booking:', error)
-        console.error('Booking ID:', params.id)
+        console.error('Booking ID:', bookingId)
         
         // Check if it's a 404 error (booking not found)
         if (error instanceof Error && error.message.includes('404')) {
@@ -159,10 +160,10 @@ function AdminBookingDetailsPage() {
       }
     }
 
-    if (params.id) {
+    if (bookingId) {
       fetchBooking()
     }
-  }, [params.id])
+  }, [bookingId])
 
   const updateBookingStatus = async (newStatus: string) => {
     if (!booking) return
