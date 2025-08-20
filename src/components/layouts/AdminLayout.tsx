@@ -67,7 +67,7 @@ const navigationItems = [
 ]
 
 export function AdminLayout({ children }: AdminLayoutProps) {
-  const pathname = usePathname()
+  const pathname = usePathname() || ''
 
   return (
     <div className="min-h-screen bg-surface-primary flex flex-col">

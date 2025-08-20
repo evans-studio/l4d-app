@@ -19,7 +19,7 @@ import { ArrowLeft, Phone, User, LogIn, Mail, Shield, CheckCircle } from 'lucide
 function BookingPageContent(): React.JSX.Element {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const isAdminMode = (searchParams.get('mode') || '').toLowerCase() === 'admin';
+  const isAdminMode = ((searchParams?.get('mode') || '') as string).toLowerCase() === 'admin';
   const { 
     currentStep, 
     previousStep, 
@@ -48,8 +48,8 @@ function BookingPageContent(): React.JSX.Element {
   useEffect(() => {
     if (hasHandledFreshStart) return;
 
-    const rebookingId = searchParams.get('rebook');
-    const serviceId = searchParams.get('service');
+    const rebookingId = searchParams?.get('rebook');
+    const serviceId = searchParams?.get('service');
     
     // Check if this is an explicit rebooking request
     const isExplicitRebooking = rebookingId !== null;
@@ -132,7 +132,7 @@ function BookingPageContent(): React.JSX.Element {
 
   // Handle service pre-population from URL parameters
   useEffect(() => {
-    const serviceId = searchParams.get('service');
+    const serviceId = searchParams?.get('service');
     if (serviceId) {
       
       setPreSelectedService(serviceId);

@@ -55,9 +55,9 @@ interface BookingDetails {
 
 function BookingSuccessContent() {
   const searchParams = useSearchParams()
-  const bookingRef = searchParams.get('ref')
-  const needsVerification = searchParams.get('verify') === 'true'
-  const isNewCustomer = searchParams.get('new') === 'true'
+  const bookingRef = (searchParams?.get('ref') || '') as string
+  const needsVerification = (searchParams?.get('verify') || '') === 'true'
+  const isNewCustomer = (searchParams?.get('new') || '') === 'true'
   const [booking, setBooking] = useState<BookingDetails | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)

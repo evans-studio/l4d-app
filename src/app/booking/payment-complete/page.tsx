@@ -18,8 +18,8 @@ interface PaymentCompleteContentProps {}
 function PaymentCompleteContent({}: PaymentCompleteContentProps) {
   const searchParams = useSearchParams()
   const router = useRouter()
-  const bookingRef = searchParams.get('ref')
-  const status = searchParams.get('status')
+  const bookingRef = (searchParams?.get('ref') || '') as string
+  const status = (searchParams?.get('status') || '') as string
   const [isUpdating, setIsUpdating] = useState(true)
   const [updateSuccess, setUpdateSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)

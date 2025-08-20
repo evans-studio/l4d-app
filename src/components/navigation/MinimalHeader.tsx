@@ -333,7 +333,7 @@ export const MinimalHeader: React.FC<MinimalHeaderProps> = ({ className, showMob
   const { user, profile, isLoading, logout } = useAuth()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const router = useRouter()
-  const pathname = usePathname()
+  const pathname = usePathname() || ''
   
   const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin'
   const isAuthPage = pathname.startsWith('/auth/')

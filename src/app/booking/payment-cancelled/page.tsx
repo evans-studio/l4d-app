@@ -15,7 +15,7 @@ import {
 
 function PaymentCancelledContent() {
   const searchParams = useSearchParams()
-  const bookingRef = searchParams.get('ref')
+  const bookingRef = (searchParams?.get('ref') || '') as string
 
   return (
     <div className="min-h-screen bg-surface-primary flex items-center justify-center">

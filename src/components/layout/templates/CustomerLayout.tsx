@@ -43,7 +43,7 @@ const navigationItems = [
 ];
 
 export const CustomerLayout: React.FC<CustomerLayoutProps> = ({ children }) => {
-  const pathname = usePathname();
+  const pathname = usePathname() || '';
 
   return (
     <div className="min-h-screen bg-surface-primary flex flex-col">

@@ -37,7 +37,7 @@ interface BookingDetails {
 function BookingSuccessContent(): React.JSX.Element {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const bookingRef = searchParams.get('booking');
+  const bookingRef = (searchParams?.get('booking') || '') as string;
   const [bookingDetails, setBookingDetails] = useState<BookingDetails | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 

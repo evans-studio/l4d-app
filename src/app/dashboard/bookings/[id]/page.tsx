@@ -122,7 +122,7 @@ export default function BookingDetailsPage({ params }: { params: Promise<{ id: s
 
   // Check for success message from reschedule
   useEffect(() => {
-    if (searchParams.get('rescheduled') === 'true') {
+    if ((searchParams?.get('rescheduled') || '') === 'true') {
       setShowSuccessMessage(true)
       // Remove the query parameter from URL
       const newUrl = window.location.pathname
