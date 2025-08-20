@@ -184,19 +184,48 @@ export default function HomePage() {
         </Container>
       </FadeIn>
 
-      {/* New Dashboard Preview Section - unified section spacing */}
-      <FadeIn className="relative z-10 py-12 sm:py-16 lg:py-20 px-4 sm:px-6 lg:px-8">
+      {/* New Dashboard Preview Section - spacing handled inside component */}
+      <FadeIn className="relative z-10">
         <DashboardPreview />
       </FadeIn>
 
-      {/* How It Works Section - unified section spacing */}
-      <FadeIn className="relative z-10 py-12 sm:py-16 lg:py-20 px-4 sm:px-6 lg:px-8">
+      {/* How It Works Section - spacing handled inside component */}
+      <FadeIn className="relative z-10">
         <HowItWorksSection />
       </FadeIn>
 
-      {/* Combined Service Area + FAQ Section - unified section spacing */}
+      {/* Combined Service Area + FAQ Section - keep existing padding */}
       <FadeIn className="relative z-10 py-12 sm:py-16 lg:py-20 px-4 sm:px-6 lg:px-8">
         <ServiceAreaAndFAQ />
+      </FadeIn>
+
+      {/* Final CTA - simple, brand-focused */}
+      <FadeIn as="section" id="cta" className="relative z-10 py-12 sm:py-16 lg:py-20">
+        <Container>
+          <div className="max-w-3xl mx-auto text-center px-4 sm:px-6 lg:px-8">
+            <div className="inline-flex items-center gap-2 bg-brand-600/10 rounded-full px-4 py-2 mb-6">
+              <span className="text-brand-600 text-sm font-medium">Ready to book?</span>
+            </div>
+            <Heading size="h2" align="center" className="mb-4 text-3xl md:text-4xl">
+              Premium mobile detailing, on your schedule
+            </Heading>
+            <Text size="lg" color="secondary" align="center" className="mb-8">
+              Choose a service and time that works for you. We bring everything to your location.
+            </Text>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+              <Link href="/book" className="w-full sm:w-auto">
+                <Button variant="primary" size="lg" fullWidth className="min-h-[52px]">
+                  Book now
+                </Button>
+              </Link>
+              <Link href="tel:+447908625581" className="w-full sm:w-auto">
+                <Button variant="outline" size="lg" fullWidth className="min-h-[52px]">
+                  07908 625581
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </Container>
       </FadeIn>
 
       
