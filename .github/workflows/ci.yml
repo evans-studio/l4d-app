@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Set environment variables for tests
+        run: |
+          echo "NEXT_PUBLIC_SUPABASE_URL=https://test.supabase.co" >> $GITHUB_ENV
+          echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=dummy" >> $GITHUB_ENV
+          echo "SUPABASE_SERVICE_ROLE_KEY=dummy" >> $GITHUB_ENV
+          echo "ACCESS_TOKEN_SECRET=0123456789abcdef0123456789abcdef" >> $GITHUB_ENV
+          echo "REFRESH_TOKEN_SECRET=abcdef0123456789abcdef0123456789" >> $GITHUB_ENV
+          echo "RESEND_API_KEY=dummy" >> $GITHUB_ENV
+          echo "NODE_ENV=test" >> $GITHUB_ENV
+
+      - name: Build
+        run: npm run build
+
+      - name: Test
+        run: npm test -- --ci --coverage --watchAll=false
+
+

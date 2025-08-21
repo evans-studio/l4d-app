@@ -40,6 +40,33 @@ jest.mock('next/navigation', () => ({
   useSearchParams: jest.fn(() => new URLSearchParams()),
 }))
 
+// Mock Next.js Image to a plain img for tests
+jest.mock('next/image', () => {
+  return {
+    __esModule: true,
+    default: ({ src, alt = '', ...rest }) => {
+      // eslint-disable-next-line jsx-a11y/alt-text
+      return <img src={typeof src === 'string' ? src : (src?.src || '')} alt={alt} {...rest} />
+    }
+  }
+})
+
+// Mock framer-motion to avoid animation/scroll hooks in JSDOM
+jest.mock('framer-motion', () => {
+  const React = require('react')
+  const faux = new Proxy({}, {
+    get: () => (props) => React.createElement('div', props)
+  })
+  return {
+    __esModule: true,
+    m: faux,
+    motion: faux,
+    AnimatePresence: ({ children }) => React.createElement(React.Fragment, null, children),
+    useScroll: () => ({ scrollY: { get: () => 0, on: () => () => {}, clearListeners: () => {} } }),
+    useTransform: () => 0,
+  }
+})
+
 // Mock environment variables for testing
 process.env.NODE_ENV = 'test'
 process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://test.supabase.co'
@@ -114,25 +141,24 @@ jest.mock('resend', () => ({
   })),
 }))
 
-// Mock fetch globally
-global.fetch = jest.fn()
+// Mock fetch globally with a default successful JSON response
+global.fetch = jest.fn().mockResolvedValue({
+  ok: true,
+  json: async () => ({ success: true, data: [] }),
+})
 
-// Mock window.location
-delete window.location
-window.location = {
-  href: 'http://localhost:3000',
-  origin: 'http://localhost:3000',
-  pathname: '/',
-  search: '',
-  hash: '',
-  hostname: 'localhost',
-  port: '3000',
-  protocol: 'http:',
-  host: 'localhost:3000',
-  reload: jest.fn(),
-  assign: jest.fn(),
-  replace: jest.fn(),
+// Mock IntersectionObserver for JSDOM
+class MockIntersectionObserver {
+  constructor() {}
+  observe() {}
+  unobserve() {}
+  disconnect() {}
 }
+// @ts-ignore
+global.IntersectionObserver = MockIntersectionObserver
+
+// Avoid overriding window.location; jsdom's implementation is non-configurable and setting it can trigger
+// navigation errors in tests. If tests need to assert navigation, spy on assign/replace in the test itself.
 
 // Mock console methods for cleaner test output
 const originalConsoleError = console.error

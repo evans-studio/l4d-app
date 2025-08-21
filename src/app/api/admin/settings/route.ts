@@ -8,30 +8,7 @@ interface BusinessSettings {
   businessAddress: string
   businessPhone: string
   businessEmail: string
-  operatingHours: {
-    monday: { open: string; close: string; isOpen: boolean }
-    tuesday: { open: string; close: string; isOpen: boolean }
-    wednesday: { open: string; close: string; isOpen: boolean }
-    thursday: { open: string; close: string; isOpen: boolean }
-    friday: { open: string; close: string; isOpen: boolean }
-    saturday: { open: string; close: string; isOpen: boolean }
-    sunday: { open: string; close: string; isOpen: boolean }
-  }
-  serviceRadius: number
-  minimumBookingNotice: number
-  maximumBookingAdvance: number
-  defaultServiceDuration: number
   cancellationPolicy: string
-  emailNotifications: {
-    newBookings: boolean
-    bookingConfirmations: boolean
-    bookingReminders: boolean
-    customerRegistrations: boolean
-  }
-  smsNotifications: {
-    bookingReminders: boolean
-    statusUpdates: boolean
-  }
 }
 
 const DEFAULT_SETTINGS: BusinessSettings = {
@@ -39,30 +16,7 @@ const DEFAULT_SETTINGS: BusinessSettings = {
   businessAddress: '',
   businessPhone: '',
   businessEmail: '',
-  operatingHours: {
-    monday: { open: '09:00', close: '17:00', isOpen: true },
-    tuesday: { open: '09:00', close: '17:00', isOpen: true },
-    wednesday: { open: '09:00', close: '17:00', isOpen: true },
-    thursday: { open: '09:00', close: '17:00', isOpen: true },
-    friday: { open: '09:00', close: '17:00', isOpen: true },
-    saturday: { open: '09:00', close: '15:00', isOpen: true },
-    sunday: { open: '10:00', close: '14:00', isOpen: false }
-  },
-  serviceRadius: 25,
-  minimumBookingNotice: 24,
-  maximumBookingAdvance: 90,
-  defaultServiceDuration: 120,
-  cancellationPolicy: '24 hours notice required for cancellations. Full refund available within policy.',
-  emailNotifications: {
-    newBookings: true,
-    bookingConfirmations: true,
-    bookingReminders: true,
-    customerRegistrations: true
-  },
-  smsNotifications: {
-    bookingReminders: false,
-    statusUpdates: false
-  }
+  cancellationPolicy: '24 hours notice required for cancellations. Full refund available within policy.'
 }
 
 export async function GET(request: NextRequest) {
@@ -98,14 +52,7 @@ export async function GET(request: NextRequest) {
       businessAddress: settingsData.business_address || DEFAULT_SETTINGS.businessAddress,
       businessPhone: settingsData.business_phone || DEFAULT_SETTINGS.businessPhone,
       businessEmail: settingsData.business_email || DEFAULT_SETTINGS.businessEmail,
-      operatingHours: settingsData.operating_hours || DEFAULT_SETTINGS.operatingHours,
-      serviceRadius: settingsData.service_radius || DEFAULT_SETTINGS.serviceRadius,
-      minimumBookingNotice: settingsData.minimum_booking_notice || DEFAULT_SETTINGS.minimumBookingNotice,
-      maximumBookingAdvance: settingsData.maximum_booking_advance || DEFAULT_SETTINGS.maximumBookingAdvance,
-      defaultServiceDuration: settingsData.default_service_duration || DEFAULT_SETTINGS.defaultServiceDuration,
-      cancellationPolicy: settingsData.cancellation_policy || DEFAULT_SETTINGS.cancellationPolicy,
-      emailNotifications: settingsData.email_notifications || DEFAULT_SETTINGS.emailNotifications,
-      smsNotifications: settingsData.sms_notifications || DEFAULT_SETTINGS.smsNotifications
+      cancellationPolicy: settingsData.cancellation_policy || DEFAULT_SETTINGS.cancellationPolicy
     }
 
     return ApiResponseHandler.success(settings)
@@ -140,14 +87,7 @@ export async function PUT(request: NextRequest) {
       business_address: settings.businessAddress,
       business_phone: settings.businessPhone,
       business_email: settings.businessEmail,
-      operating_hours: settings.operatingHours,
-      service_radius: settings.serviceRadius,
-      minimum_booking_notice: settings.minimumBookingNotice,
-      maximum_booking_advance: settings.maximumBookingAdvance,
-      default_service_duration: settings.defaultServiceDuration,
       cancellation_policy: settings.cancellationPolicy,
-      email_notifications: settings.emailNotifications,
-      sms_notifications: settings.smsNotifications,
       updated_at: new Date().toISOString()
     }
 
