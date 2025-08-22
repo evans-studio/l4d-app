@@ -138,15 +138,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         {/* Left Icon (suppressed when size is not icon) */}
         {!loading && leftIcon && size === 'icon' && (
           <span 
-            className={cn(
-              'flex items-center justify-center',
-              size === 'xs' ? 'h-3 w-3' :
-              size === 'sm' ? 'h-3.5 w-3.5' :
-              size === 'md' ? 'h-4 w-4' :
-              size === 'lg' ? 'h-4 w-4' :
-              size === 'xl' ? 'h-5 w-5' :
-              'h-4 w-4'
-            )}
+            className={cn('flex items-center justify-center h-4 w-4')}
             aria-hidden="true"
           >
             {leftIcon}
@@ -166,15 +158,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         {/* Right Icon (suppressed when size is not icon) */}
         {!loading && rightIcon && size === 'icon' && (
           <span 
-            className={cn(
-              'flex items-center justify-center',
-              size === 'xs' ? 'h-3 w-3' :
-              size === 'sm' ? 'h-3.5 w-3.5' :
-              size === 'md' ? 'h-4 w-4' :
-              size === 'lg' ? 'h-4 w-4' :
-              size === 'xl' ? 'h-5 w-5' :
-              'h-4 w-4'
-            )}
+            className={cn('flex items-center justify-center h-4 w-4')}
             aria-hidden="true"
           >
             {rightIcon}
