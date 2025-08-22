@@ -82,16 +82,19 @@ export async function POST(request: NextRequest) {
         const hashedToken = createHash('sha256').update(resetToken).digest('hex')
         const expiresAt = new Date(Date.now() + 60 * 60 * 1000) // 1 hour from now
 
-        // Store the reset token in database
+        // Store the reset token in database (delete previous tokens for this user to avoid constraint issues)
+        await supabaseAdmin
+          .from('password_reset_tokens')
+          .delete()
+          .eq('user_id', existingUser.id)
+
         const { error: tokenError } = await supabaseAdmin
           .from('password_reset_tokens')
-          .upsert({
+          .insert({
             user_id: existingUser.id,
             token_hash: hashedToken,
             expires_at: expiresAt.toISOString(),
             created_at: new Date().toISOString()
-          }, {
-            onConflict: 'user_id'
           })
 
         if (tokenError) {
