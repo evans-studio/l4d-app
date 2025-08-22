@@ -69,6 +69,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
         total_price,
         special_instructions,
         pricing_breakdown,
+        vehicle_details,
         service_address,
         payment_status,
         payment_deadline,
@@ -138,8 +139,10 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
     // Transform the data for frontend consumption
     const transformedBookings = bookings?.map((booking: any) => {
       const firstService = booking.booking_services?.[0]
-      const vehicle = booking.customer_vehicles?.[0]
-      const address = booking.customer_addresses?.[0]
+      const vehicleRel = booking.customer_vehicles?.[0]
+      const vehicleSnap = booking.vehicle_details
+      const addressRel = booking.customer_addresses?.[0]
+      const addressSnap = booking.service_address
       return {
         id: booking.id,
         booking_reference: booking.booking_reference,
@@ -159,21 +162,33 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
           short_description: firstService.service_details?.short_description || '',
           category: firstService.service_details?.category || ''
         } : { name: 'Vehicle Detailing Service', short_description: '', category: '' },
-        vehicle: vehicle ? {
-          make: vehicle.make,
-          model: vehicle.model,
-          year: vehicle.year,
-          color: vehicle.color
-        } : null,
-        address: address ? {
-          name: address.name,
-          address_line_1: address.address_line_1,
-          address_line_2: address.address_line_2,
-          city: address.city,
-          county: address.county,
-          postal_code: address.postal_code,
-          country: address.country
-        } : null
+        vehicle: vehicleRel ? {
+          make: vehicleRel.make,
+          model: vehicleRel.model,
+          year: vehicleRel.year,
+          color: vehicleRel.color
+        } : (vehicleSnap ? {
+          make: vehicleSnap.make,
+          model: vehicleSnap.model,
+          year: vehicleSnap.year,
+          color: vehicleSnap.color
+        } : null),
+        address: addressRel ? {
+          name: addressRel.name,
+          address_line_1: addressRel.address_line_1,
+          address_line_2: addressRel.address_line_2,
+          city: addressRel.city,
+          county: addressRel.county,
+          postal_code: addressRel.postal_code,
+          country: addressRel.country
+        } : (addressSnap ? {
+          address_line_1: addressSnap.address_line_1,
+          address_line_2: addressSnap.address_line_2,
+          city: addressSnap.city,
+          county: addressSnap.county,
+          postal_code: addressSnap.postal_code,
+          country: addressSnap.country
+        } : null)
       }
     }) || []
 

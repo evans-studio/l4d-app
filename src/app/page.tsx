@@ -35,6 +35,7 @@ interface ServiceData {
 export default function HomePage() {
   const [services, setServices] = React.useState<ServiceData[]>([])
   const [servicesLoading, setServicesLoading] = React.useState(true)
+  const baseUrl = typeof window === 'undefined' ? process.env.NEXT_PUBLIC_APP_URL || 'https://love4detailing.com' : window.location.origin
 
   // Fetch services data
   React.useEffect(() => {
@@ -60,6 +61,38 @@ export default function HomePage() {
 
   return (
     <MainLayout>
+      {/* LocalBusiness JSON-LD for SEO */}
+      <script
+        type="application/ld+json"
+        // eslint-disable-next-line react/no-danger
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'AutoDetailing',
+            name: 'Love 4 Detailing',
+            url: baseUrl,
+            telephone: '+44 7908 625581',
+            image: `${baseUrl}/logo.png`,
+            sameAs: ['https://www.instagram.com/love4detailing_'],
+            areaServed: {
+              '@type': 'AdministrativeArea',
+              name: 'SW9, South London, United Kingdom',
+            },
+            address: {
+              '@type': 'PostalAddress',
+              addressLocality: 'SW9',
+              addressRegion: 'London',
+              addressCountry: 'GB',
+            },
+            brand: {
+              '@type': 'Brand',
+              name: 'Love 4 Detailing',
+              logo: `${baseUrl}/logo.png`,
+            },
+            sameAsLinks: ['https://www.instagram.com/love4detailing_'],
+          }),
+        }}
+      />
       {/* New Full-Screen Hero Section */}
       <div className="relative z-0">
         <HeroSection />

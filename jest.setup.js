@@ -1,6 +1,34 @@
 // Extend Jest matchers or set up test DOM helpers here
 import '@testing-library/jest-dom'
 
+// Minimal Response polyfill for Node test environment
+if (typeof global.Response === 'undefined') {
+  function NodeResponse(body, init) {
+    this._body = body
+    this.status = (init && init.status) || 200
+    this._headers = new Map()
+    if (init && init.headers) {
+      Object.entries(init.headers).forEach(function ([k, v]) {
+        // @ts-ignore
+        this._headers.set(String(k).toLowerCase(), String(v))
+      }, this)
+    }
+    var self = this
+    this.headers = {
+      get: function (k) { return self._headers.get(String(k).toLowerCase()) || null },
+      set: function (k, v) { self._headers.set(String(k).toLowerCase(), String(v)) },
+    }
+  }
+  NodeResponse.prototype.json = async function () {
+    return this._body ? JSON.parse(this._body) : undefined
+  }
+  NodeResponse.prototype.text = async function () {
+    return this._body || ''
+  }
+  // @ts-ignore
+  global.Response = NodeResponse
+}
+
 /**
  * Jest Test Setup Configuration
  * 
@@ -66,6 +94,44 @@ jest.mock('framer-motion', () => {
     useTransform: () => 0,
   }
 })
+
+// Mock next/server to avoid Edge runtime polyfills in unit tests
+jest.mock('next/server', () => {
+  class NextRequest {}
+  const NextResponse = {
+    json: (body, init) => new Response(JSON.stringify(body), {
+      status: (init && init.status) || 200,
+      headers: { 'content-type': 'application/json' },
+    }),
+  }
+  return { __esModule: true, NextRequest, NextResponse }
+})
+
+// Mock authenticateAdmin to always return an admin user in tests
+jest.mock('@/lib/api/auth-handler', () => ({
+  authenticateAdmin: jest.fn(async () => ({
+    success: true,
+    user: { id: 'admin-user-id', email: 'admin@test.com', role: 'admin' }
+  })),
+}))
+
+// Mock Supabase admin client used by system export
+jest.mock('@/lib/supabase/direct', () => {
+  const fromMock = jest.fn(() => ({
+    select: jest.fn(async () => ({ data: [], error: null })),
+    insert: jest.fn(async () => ({ data: null, error: null })),
+    update: jest.fn(async () => ({ data: null, error: null })),
+  }))
+  return {
+    supabaseAdmin: { from: fromMock },
+  }
+})
+
+// Mock Next.js cache revalidation functions
+jest.mock('next/cache', () => ({
+  revalidatePath: jest.fn(),
+  revalidateTag: jest.fn(),
+}))
 
 // Mock environment variables for testing
 process.env.NODE_ENV = 'test'

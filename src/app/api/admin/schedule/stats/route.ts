@@ -48,56 +48,41 @@ export async function GET(request: NextRequest) {
     const start = searchParams.get('start')
     const end = searchParams.get('end')
 
-    // Build date filter
-    let dateFilter = ''
-    if (start && end) {
-      dateFilter = `slot_date.gte.${start},slot_date.lte.${end}`
-    }
+    // Compute statistics in code to correctly exclude past slots and avoid stale is_available
+    const now = new Date()
+    const nowIso = now.toISOString()
+    const currentDate = (nowIso.split('T')[0]) || ''
+    const currentTime = now.toTimeString().slice(0,5) || '00:00'
 
-    // Get total slots count
-    let totalSlotsQuery = supabaseAdmin
+    // Fetch candidate slots within the range (or all) to compute totals
+    let slotsQuery = supabaseAdmin
       .from('time_slots')
-      .select('id', { count: 'exact', head: true })
+      .select('id, slot_date, start_time, is_available')
 
     if (start && end) {
-      totalSlotsQuery = totalSlotsQuery.gte('slot_date', start).lte('slot_date', end)
+      slotsQuery = slotsQuery.gte('slot_date', start).lte('slot_date', end)
     }
 
-    const { count: totalSlots, error: totalSlotsError } = await totalSlotsQuery
+    const { data: allSlots, error: slotsError } = await slotsQuery
 
-    if (totalSlotsError) {
-      console.error('Error fetching total slots:', totalSlotsError)
+    if (slotsError) {
+      console.error('Error fetching slots for stats:', slotsError)
       return NextResponse.json(
         { success: false, error: { message: 'Failed to fetch schedule statistics' } },
         { status: 500 }
       )
     }
 
-    // Get available slots count
-    let availableSlotsQuery = supabaseAdmin
-      .from('time_slots')
-      .select('id', { count: 'exact', head: true })
-      .eq('is_available', true)
+    const futureSlots = (allSlots || []).filter(s =>
+      s.slot_date > currentDate || (s.slot_date === currentDate && s.start_time > currentTime)
+    )
 
-    if (start && end) {
-      availableSlotsQuery = availableSlotsQuery.gte('slot_date', start).lte('slot_date', end)
-    }
-
-    const { count: availableSlots, error: availableSlotsError } = await availableSlotsQuery
-
-    if (availableSlotsError) {
-      console.error('Error fetching available slots:', availableSlotsError)
-      return NextResponse.json(
-        { success: false, error: { message: 'Failed to fetch schedule statistics' } },
-        { status: 500 }
-      )
-    }
-
-    // Get booked slots with revenue calculation
+    // Get booked slots with revenue calculation (respect range)
     let bookedSlotsQuery = supabaseAdmin
       .from('bookings')
       .select(`
         id,
+        time_slot_id,
         total_price,
         time_slots!inner (
           slot_date
@@ -124,10 +109,17 @@ export async function GET(request: NextRequest) {
       return total + (parseFloat(booking.total_price?.toString() || '0'))
     }, 0) || 0
 
+    // Build sets to compute counts quickly
+    const bookedSlotIds = new Set((bookedSlots || []).map((b: any) => b.time_slot_id).filter(Boolean))
+
+    const totalSlots = futureSlots.length
+    const bookedCount = futureSlots.filter(s => bookedSlotIds.has(s.id)).length
+    const availableCount = futureSlots.filter(s => s.is_available === true && !bookedSlotIds.has(s.id)).length
+
     const stats = {
-      totalSlots: totalSlots || 0,
-      availableSlots: availableSlots || 0,
-      bookedSlots: bookedSlots?.length || 0,
+      totalSlots,
+      availableSlots: availableCount,
+      bookedSlots: bookedCount,
       revenue: Math.round(revenue * 100) / 100 // Round to 2 decimal places
     }
 

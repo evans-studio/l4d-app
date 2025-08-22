@@ -20,6 +20,7 @@ export const viewport: Viewport = {
 }
 
 export const metadata: Metadata = {
+  metadataBase: new URL(env.app.url),
   title: {
     default: `${env.business.name} - Professional Mobile Car Detailing`,
     template: `%s | ${env.business.name}`,
@@ -29,6 +30,9 @@ export const metadata: Metadata = {
   authors: [{ name: env.business.name }],
   creator: env.business.name,
   manifest: '/manifest.json',
+  alternates: {
+    canonical: '/',
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
@@ -41,11 +45,13 @@ export const metadata: Metadata = {
     title: `${env.business.name} - Professional Mobile Car Detailing`,
     description: 'Professional mobile car detailing services in your area.',
     siteName: env.business.name,
+    images: ['/logo.png'],
   },
   twitter: {
     card: 'summary_large_image',
     title: `${env.business.name} - Professional Mobile Car Detailing`,
     description: 'Professional mobile car detailing services in your area.',
+    images: ['/logo.png'],
   },
   robots: {
     index: true,

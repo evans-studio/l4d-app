@@ -1,7 +1,7 @@
 import type { MetadataRoute } from 'next'
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://love4detailing.co.uk'
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://love4detailing.com'
   const now = new Date().toISOString()
   return [
     { url: `${baseUrl}/`, lastModified: now, changeFrequency: 'weekly', priority: 1 },

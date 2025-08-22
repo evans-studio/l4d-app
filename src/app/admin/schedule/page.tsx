@@ -71,7 +71,7 @@ function ScheduleCalendarContent() {
       const startDate = pastDate.toISOString().split('T')[0]
       const endDate = futureDate.toISOString().split('T')[0]
       
-      const url = `/api/admin/time-slots?start=${startDate}&end=${endDate}&_ts=${Date.now()}`
+      const url = `/api/admin/time-slots?start=${startDate}&end=${endDate}&excludePast=true&_ts=${Date.now()}`
       
       const response = await fetch(url, { cache: 'no-store' })
       
@@ -127,19 +127,19 @@ function ScheduleCalendarContent() {
           </div>
           <div className="bg-[var(--surface-secondary)] rounded-xl border border-[var(--border-primary)] p-4 text-center">
             <div className="text-2xl font-bold text-green-600">
-              {timeSlots.filter(s => s.is_available).length}
+              {timeSlots.filter(s => s.is_available && !s.booking).length}
             </div>
             <div className="text-xs sm:text-sm text-[var(--text-secondary)]">Available</div>
           </div>
           <div className="bg-[var(--surface-secondary)] rounded-xl border border-[var(--border-primary)] p-4 text-center">
             <div className="text-2xl font-bold text-red-600">
-              {timeSlots.filter(s => !s.is_available).length}
+              {timeSlots.filter(s => !s.is_available && !s.booking).length}
             </div>
             <div className="text-xs sm:text-sm text-[var(--text-secondary)]">Blocked</div>
           </div>
           <div className="bg-[var(--surface-secondary)] rounded-xl border border-[var(--border-primary)] p-4 text-center">
             <div className="text-2xl font-bold text-blue-600">
-              {timeSlots.filter(s => s.booking).length}
+              {timeSlots.filter(s => !!s.booking).length}
             </div>
             <div className="text-xs sm:text-sm text-[var(--text-secondary)]">Booked</div>
           </div>

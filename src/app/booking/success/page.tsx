@@ -18,6 +18,7 @@ import {
   Download,
   ArrowRight 
 } from 'lucide-react'
+import { paypalService } from '@/lib/services/paypal'
 
 interface BookingDetails {
   id: string
@@ -28,6 +29,7 @@ interface BookingDetails {
   status: string
   total_price: number
   pricing_breakdown: any
+  payment_status?: string
   service: {
     name: string
     short_description: string
@@ -43,7 +45,20 @@ interface BookingDetails {
       price_multiplier: number
     }
   }
-  address: {
+  vehicle_details?: {
+    make?: string
+    model?: string
+    year?: number
+    color?: string
+  }
+  address?: {
+    address_line_1: string
+    address_line_2?: string
+    city: string
+    postal_code: string
+    county?: string
+  }
+  service_address?: {
     address_line_1: string
     address_line_2?: string
     city: string
@@ -61,6 +76,9 @@ function BookingSuccessContent() {
   const [booking, setBooking] = useState<BookingDetails | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [paymentLink, setPaymentLink] = useState<string | null>(null)
+  const [businessEmail, setBusinessEmail] = useState<string>('')
+  const [businessPhone, setBusinessPhone] = useState<string>('')
 
   useEffect(() => {
     if (bookingRef) {
@@ -71,6 +89,20 @@ function BookingSuccessContent() {
     }
   }, [bookingRef])
 
+  useEffect(() => {
+    // Load business contact details
+    ;(async () => {
+      try {
+        const res = await fetch('/api/config')
+        const json = await res.json()
+        if (json?.success && json?.data?.business) {
+          setBusinessEmail(json.data.business.email || '')
+          setBusinessPhone(json.data.business.phone || '')
+        }
+      } catch {}
+    })()
+  }, [])
+
   const fetchBookingDetails = async (reference: string) => {
     try {
       const response = await fetch(`/api/bookings?reference=${reference}`)
@@ -78,6 +110,14 @@ function BookingSuccessContent() {
       
       if (data.success && data.data) {
         setBooking(data.data)
+        try {
+          const amount = Number(data.data.total_price || data.data.pricing_breakdown?.totalPrice || 0)
+          if (amount > 0) {
+            const baseUrl = process.env.NEXT_PUBLIC_APP_URL || ''
+            const link = paypalService.generatePaymentLink(amount, reference, baseUrl)
+            setPaymentLink(link)
+          }
+        } catch {}
       } else {
         setError('Booking not found')
       }
@@ -119,7 +159,9 @@ function BookingSuccessContent() {
       start: startDate.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z',
       end: endDate.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z',
       description: `Vehicle detailing service for ${booking.vehicle.make} ${booking.vehicle.model}`,
-      location: `${booking.address.address_line_1}, ${booking.address.city}, ${booking.address.postal_code}`
+      location: booking.address 
+        ? `${booking.address.address_line_1}, ${booking.address.city}, ${booking.address.postal_code}`
+        : 'Service address provided separately'
     }
 
     const googleCalendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(event.title)}&dates=${event.start}/${event.end}&details=${encodeURIComponent(event.description)}&location=${encodeURIComponent(event.location)}`
@@ -268,7 +310,15 @@ function BookingSuccessContent() {
                     <div className="flex items-center gap-2">
                       <Car className="w-4 h-4 text-text-tertiary" />
                       <span className="text-text-secondary text-sm">
-                        {booking.vehicle ? `${booking.vehicle.color || ''} ${booking.vehicle.year || ''} ${booking.vehicle.make || ''} ${booking.vehicle.model || ''}`.trim() : 'Vehicle details not provided'}
+                        {(() => {
+                          const veh: any = booking.vehicle || (booking as any).vehicle_details
+                          if (!veh) return 'Vehicle details not provided'
+                          const color = veh.color || ''
+                          const year = veh.year || ''
+                          const make = veh.make || ''
+                          const model = veh.model || ''
+                          return `${color ? color + ' ' : ''}${year ? year + ' ' : ''}${make} ${model}`.trim()
+                        })()}
                       </span>
                     </div>
                     {booking.vehicle && (booking as any).vehicle?.vehicle_size?.name && (
@@ -313,17 +363,19 @@ function BookingSuccessContent() {
                 <div className="flex items-start gap-3">
                   <MapPin className="w-5 h-5 text-brand-600 mt-0.5" />
                   <div>
-                    <p className="font-medium text-text-primary">
-                      {booking.address.address_line_1}
-                    </p>
-                    {booking.address.address_line_2 && (
-                      <p className="text-text-secondary text-sm">
-                        {booking.address.address_line_2}
-                      </p>
-                    )}
-                    <p className="text-text-secondary text-sm">
-                      {booking.address.city}, {booking.address.postal_code}
-                    </p>
+                    {(() => {
+                      const addr = booking.address || (booking as any).service_address
+                      if (!addr) return <p className="text-text-secondary text-sm">Address not provided</p>
+                      return (
+                        <>
+                          <p className="font-medium text-text-primary">{addr.address_line_1}</p>
+                          {addr.address_line_2 && (
+                            <p className="text-text-secondary text-sm">{addr.address_line_2}</p>
+                          )}
+                          <p className="text-text-secondary text-sm">{addr.city}, {addr.postal_code}</p>
+                        </>
+                      )
+                    })()}
                   </div>
                 </div>
               </CardContent>
@@ -332,10 +384,31 @@ function BookingSuccessContent() {
 
           {/* Sidebar */}
           <div className="space-y-6">
-            {/* Pricing Breakdown */}
-            {booking.pricing_breakdown && (
-              <PricingBreakdown breakdown={booking.pricing_breakdown} />
-            )}
+            {/* Compact Pricing Summary */}
+            <Card>
+              <CardHeader>
+                <h3 className="text-lg font-semibold text-text-primary">
+                  Pricing Summary
+                </h3>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-text-secondary">Base Price</span>
+                  <span className="font-medium">£{Number((booking.pricing_breakdown?.basePrice ?? booking.total_price) || 0).toFixed(2)}</span>
+                </div>
+                {typeof booking.pricing_breakdown?.distanceSurcharge === 'number' && (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-text-secondary">Distance Surcharge</span>
+                    <span className="font-medium">£{Number(booking.pricing_breakdown.distanceSurcharge).toFixed(2)}</span>
+                  </div>
+                )}
+                <div className="h-px bg-border-secondary my-2" />
+                <div className="flex items-center justify-between">
+                  <span className="text-text-primary font-semibold">Total</span>
+                  <span className="text-text-primary font-bold">£{Number(booking.total_price || booking.pricing_breakdown?.totalPrice || 0).toFixed(2)}</span>
+                </div>
+              </CardContent>
+            </Card>
 
             {/* Quick Actions */}
             <Card>
@@ -345,28 +418,25 @@ function BookingSuccessContent() {
                 </h3>
               </CardHeader>
               <CardContent className="space-y-3">
+                {booking.payment_status !== 'paid' && paymentLink && (
+                  <a href={paymentLink} target="_blank" rel="noopener noreferrer">
+                    <Button className="w-full justify-center">
+                      Pay Now via PayPal
+                    </Button>
+                  </a>
+                )}
+                <Link href="/dashboard/bookings">
+                  <Button variant="outline" className="w-full justify-start">
+                    View All Bookings
+                  </Button>
+                </Link>
                 <Button 
                   variant="outline" 
                   className="w-full justify-start"
                   onClick={addToCalendar}
                 >
-                  <Calendar className="w-4 h-4 mr-2" />
                   Add to Calendar
                 </Button>
-                <Button 
-                  variant="outline" 
-                  className="w-full justify-start"
-                  onClick={downloadReceipt}
-                >
-                  <Download className="w-4 h-4 mr-2" />
-                  Download Receipt
-                </Button>
-                <Link href="/dashboard/bookings">
-                  <Button variant="outline" className="w-full justify-start">
-                    <ArrowRight className="w-4 h-4 mr-2" />
-                    View All Bookings
-                  </Button>
-                </Link>
               </CardContent>
             </Card>
 
@@ -381,13 +451,13 @@ function BookingSuccessContent() {
                 <div className="flex items-center gap-3">
                   <Mail className="w-4 h-4 text-brand-600" />
                   <span className="text-text-secondary text-sm">
-                    hello@love4detailing.com
+                    {businessEmail || 'hello@love4detailing.com'}
                   </span>
                 </div>
                 <div className="flex items-center gap-3">
                   <Phone className="w-4 h-4 text-brand-600" />
                   <span className="text-text-secondary text-sm">
-                    +44 (0) 123 456 789
+                    {businessPhone || '+44 (0) 123 456 789'}
                   </span>
                 </div>
                 <p className="text-text-tertiary text-xs mt-4">

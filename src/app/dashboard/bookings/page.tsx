@@ -7,6 +7,7 @@ import { useOverlay } from '@/lib/overlay/context'
 import { useCustomerRealTimeBookings, type CustomerBooking } from '@/hooks/useCustomerRealTimeBookings'
 import { Button } from '@/components/ui/primitives/Button'
 import { BookingCard as UnifiedBookingCard, type BookingData } from '@/components/ui/patterns/BookingCard'
+import { paypalService } from '@/lib/services/paypal'
 import { CustomerLayout } from '@/components/layout/templates/CustomerLayout'
 import { Container } from '@/components/layout/templates/PageLayout'
 import { CustomerRoute } from '@/components/ProtectedRoute'
@@ -315,12 +316,16 @@ export default function MyBookingsPage() {
                   specialInstructions: booking.special_instructions,
                   priority: 'normal',
                 }
+                const isPending = booking.status === 'pending'
+                const paymentLink = isPending ? paypalService.generatePaymentLink(booking.total_price, booking.booking_reference, process.env.NEXT_PUBLIC_APP_URL || '') : null
                 return (
                   <UnifiedBookingCard
                     key={booking.id}
                     booking={data}
                     layout="detailed"
                     interactive
+                    confirmLabel={isPending ? `Pay £${booking.total_price}` : undefined}
+                    onConfirm={isPending && paymentLink ? () => window.open(paymentLink!, '_blank') : undefined}
                     onView={() => openOverlay({ type: 'booking-view', data: { bookingId: booking.id, booking } })}
                     onEdit={() => openOverlay({ type: 'booking-reschedule', data: { bookingId: booking.id, booking } })}
                     onCancel={() => openOverlay({ type: 'booking-cancel', data: { bookingId: booking.id, booking } })}

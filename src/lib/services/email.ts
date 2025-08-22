@@ -65,7 +65,7 @@ export class EmailService {
    */
   private getLogoUrl(): string {
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || 'https://love4detailing.com'
-    return `${baseUrl}/logo1.png`
+    return `${baseUrl}/logo.png`
   }
 
   /**
@@ -385,38 +385,27 @@ export class EmailService {
       
       ${this.generateBookingDetailsCard(booking)}
       
-      <!-- PayPal Payment Section -->
-      <div class="highlight-card" style="background: linear-gradient(135deg, #0070ba 0%, #003d7a 100%); border: 2px solid #0070ba;">
-        <h4 style="color: #ffffff; margin-bottom: 16px;"> Secure Payment Required</h4>
-        <p style="color: rgba(255, 255, 255, 0.9); margin-bottom: 16px; font-size: 16px;">Complete your payment securely through PayPal to confirm your booking.</p>
-        
-        <div style="text-align: center; margin: 24px 0;">
-          <a href="${paypalPayment.paymentLink}" style="display: inline-block; background: #ffffff; color: #0070ba; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);">
-             Pay £${booking.total_price.toFixed(2)} with PayPal
+      <!-- PayPal Payment Section (minimal) -->
+      <div class="content-card">
+        <div class="card-content" style="text-align: center;">
+          <a href="${paypalPayment.paymentLink}" style="display: inline-block; background: #ffffff; color: #0070ba; padding: 12px 22px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 15px; border: 1px solid #cbd5e1;">
+            Pay £${booking.total_price.toFixed(2)} via PayPal
           </a>
-        </div>
-        
-        <div style="font-size: 14px; color: rgba(255, 255, 255, 0.8); margin-top: 16px;">
-          <p style="margin-bottom: 8px;"><strong>Payment Reference:</strong> ${booking.booking_reference}</p>
-          <p style="margin-bottom: 8px;"><strong>Payment Deadline:</strong> ${paypalPayment.deadline}</p>
-          <p style="margin-bottom: 0;">Important: Your booking will be automatically cancelled if payment is not received by the deadline.</p>
+          <p style="margin-top: 12px; font-size: 12px; color: #6b7280;">Ref: ${booking.booking_reference} • Deadline: ${paypalPayment.deadline}</p>
         </div>
       </div>
       
-      <div class="highlight-card">
-        <h4> What happens next?</h4>
-        <p style="margin-bottom: 16px;"><strong>1. Complete Payment:</strong> Use the PayPal link above to secure your booking within 48 hours.</p>
-        <p style="margin-bottom: 16px;"><strong>2. Service Delivery:</strong> Our professional team will arrive at your location at the scheduled time with all equipment needed.</p>
-        <p style="margin-bottom: 0;"><strong>3. Preparation:</strong> Please ensure access to water and electricity at your location.</p>
+      <div class="content-card">
+        <div class="card-content">
+          <h4> Next steps</h4>
+          <ul style="margin: 8px 0 0 18px; color: #374151;">
+            <li>Complete payment within 48h to secure your slot</li>
+            <li>We’ll see you at the scheduled time</li>
+          </ul>
+        </div>
       </div>
       
-      <div class="highlight-card">
-        <h4> Premium Service Guarantee</h4>
-        <p style="margin-bottom: 16px;">✓ Professional-grade equipment and products</p>
-        <p style="margin-bottom: 16px;">✓ Fully insured and experienced technicians</p>
-        <p style="margin-bottom: 16px;">✓ 100% satisfaction guarantee</p>
-        <p style="margin-bottom: 0;">✓ Before and after photos included</p>
-      </div>
+      <!-- Minimal reassurance note removed for cleaner layout -->
       
       <div class="content-card" style="text-align: center;">
         <div class="card-content">
@@ -484,26 +473,19 @@ This is an automated email. Please do not reply directly to this email.
 
     const content = `
       <div style="text-align: center; margin-bottom: 32px;">
-        <p style="color: rgba(255, 255, 255, 0.8); font-size: 16px; margin: 0;">Welcome to Love 4 Detailing, ${customerName}!</p>
-        <p style="color: #ffffff; font-size: 18px; margin: 16px 0 0 0; font-weight: 500;">Your account has been created and your booking is confirmed! We're excited to provide you with premium car detailing service.</p>
+        <p style="color: rgba(255, 255, 255, 0.85); font-size: 16px; margin: 0;">Welcome, ${customerName}.</p>
+        <p style="color: #ffffff; font-size: 18px; margin: 16px 0 0 0; font-weight: 500;">Your account is created and your booking is confirmed.</p>
       </div>
 
       ${requiresEmailVerification ? `
       <!-- Email Verification Reminder -->
-      <div class="highlight-card" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); border: 2px solid #f59e0b;">
-        <h4 style="color: #ffffff; margin-bottom: 16px;"> Email Verification Required</h4>
-        <p style="color: rgba(255, 255, 255, 0.9); margin-bottom: 16px; font-size: 16px;">To access your dashboard and manage your bookings, please verify your email address.</p>
-        
-        <div style="background: rgba(255, 255, 255, 0.15); border-radius: 8px; padding: 16px; margin: 16px 0;">
-          <p style="color: #ffffff; margin: 0; font-size: 14px;">
-            <strong>Check your inbox</strong> for a verification email and click the confirmation link.
-            <br>Don't see it? Check your spam folder.
-          </p>
+      <div class="content-card" style="border: 1px solid #f59e0b; background: #fffbeb;">
+        <div class="card-content">
+          <h4 style="color: #92400e;"> Email verification required</h4>
+          <p style="color: #92400e; margin-top: 8px;">Check your inbox and click the verification link to access your dashboard.</p>
         </div>
         
-        <p style="margin-bottom: 0; font-size: 14px; color: rgba(255, 255, 255, 0.8);">
-          Important: You'll need to verify your email to access your customer dashboard after your service.
-        </p>
+        <p style="margin: 8px 0 0 0; font-size: 12px; color: #92400e;">If you don’t see it, check your spam folder.</p>
       </div>
       ` : ''}
       
@@ -1711,8 +1693,7 @@ Love 4 Detailing - Admin Notifications
             <!-- Header Section -->
             <div class="email-header" style="background: ${headerGradient};">
               <div class="brand-logo">
-                <img src="${this.getLogoUrl()}" alt="Love 4 Detailing" class="logo-icon" style="width: 48px; height: 48px; object-fit: contain;" />
-                <div class="logo-text">Love 4 Detailing</div>
+                <img src="${this.getLogoUrl()}" alt="Love 4 Detailing" class="logo-icon" style="width: 64px; height: 64px; object-fit: contain;" />
               </div>
               <h1 class="header-title">${header.title}</h1>
               ${header.subtitle ? `<p class="header-subtitle">${header.subtitle}</p>` : ''}

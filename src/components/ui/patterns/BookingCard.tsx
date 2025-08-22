@@ -150,6 +150,7 @@ export interface BookingCardProps
   onEdit?: (booking: BookingData) => void
   onCancel?: (booking: BookingData) => void
   onConfirm?: (booking: BookingData) => void
+  confirmLabel?: string
   loading?: boolean
   interactive?: boolean
 }
@@ -166,6 +167,7 @@ const BookingCard = React.forwardRef<HTMLDivElement, BookingCardProps>(
     onEdit,
     onCancel,
     onConfirm,
+    confirmLabel,
     loading = false,
     interactive = false,
     ...props
@@ -481,7 +483,7 @@ const BookingCard = React.forwardRef<HTMLDivElement, BookingCardProps>(
                   fullWidth
                   className="sm:w-auto"
                 >
-                  Confirm Booking
+                  {confirmLabel || 'Confirm Booking'}
                 </Button>
               )}
               

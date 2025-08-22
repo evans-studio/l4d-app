@@ -449,6 +449,25 @@ export async function POST(request: NextRequest) {
       calculation: `£${servicePrice} + £${distanceSurcharge} = £${totalPrice}`
     }
 
+    // Guard: Ensure requested time slot is still available before creating booking
+    if (bookingData.timeSlot?.slotId) {
+      const { data: slotCheck, error: slotCheckError } = await supabaseAdmin
+        .from('time_slots')
+        .select('id, is_available, slot_date, start_time')
+        .eq('id', bookingData.timeSlot.slotId)
+        .single()
+      if (slotCheckError || !slotCheck) {
+        return ApiResponseHandler.notFound('Selected time slot not found')
+      }
+      const slotDateTime = new Date(`${slotCheck.slot_date}T${slotCheck.start_time}`)
+      if (slotDateTime <= new Date()) {
+        return ApiResponseHandler.badRequest('Cannot book time slots in the past')
+      }
+      if (!slotCheck.is_available) {
+        return ApiResponseHandler.conflict('Selected time slot is no longer available')
+      }
+    }
+
     // Step 7: Create booking record
     const bookingReference = `LFD-${Date.now().toString().slice(-8)}`
     
@@ -548,15 +567,29 @@ export async function POST(request: NextRequest) {
         created_at: new Date().toISOString()
       })
 
-    // Step 9: Update time slot availability (if slot ID provided)
+    // Step 9: Update time slot availability (if slot ID provided) with race protection
     if (bookingData.timeSlot.slotId) {
-      await supabaseAdmin
+      const { data: updatedSlot, error: updateError } = await supabaseAdmin
         .from('time_slots')
         .update({ 
           is_available: false,
           booking_reference: bookingReference
         })
         .eq('id', bookingData.timeSlot.slotId)
+        .eq('is_available', true)
+        .select('id')
+        .single()
+
+      if (updateError || !updatedSlot) {
+        // If we failed to reserve the slot, cancel the booking to avoid orphaned pending bookings
+        try {
+          await supabaseAdmin
+            .from('bookings')
+            .update({ status: 'cancelled', updated_at: new Date().toISOString(), admin_notes: 'Auto-cancelled due to slot race condition' })
+            .eq('id', newBooking.id)
+        } catch {}
+        return ApiResponseHandler.conflict('Selected time slot was just booked by another user')
+      }
     }
 
     // Step 10: Create audit trail
