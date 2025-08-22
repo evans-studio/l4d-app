@@ -15,8 +15,20 @@ export async function POST(request: NextRequest) {
     // Origin check (best-effort)
     const allowedOrigin = process.env.NEXT_PUBLIC_APP_URL
     const origin = request.headers.get('origin') || ''
-    if (allowedOrigin && origin && !origin.startsWith(allowedOrigin)) {
-      return ApiResponseHandler.forbidden('Invalid origin')
+    if (allowedOrigin && origin) {
+      try {
+        const allowed = new URL(allowedOrigin)
+        const originUrl = new URL(origin)
+        const wwwHost = allowed.host.startsWith('www.') ? allowed.host.slice(4) : `www.${allowed.host}`
+        const allowedHosts = new Set([allowed.host, wwwHost])
+        if (!allowedHosts.has(originUrl.host)) {
+          return ApiResponseHandler.forbidden('Invalid origin')
+        }
+      } catch {
+        if (!origin.startsWith(allowedOrigin)) {
+          return ApiResponseHandler.forbidden('Invalid origin')
+        }
+      }
     }
 
     // Simple per-user rate limit in-memory (per process)

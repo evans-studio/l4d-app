@@ -6,11 +6,6 @@ import { AdminRoute } from '@/components/ProtectedRoute'
 import { Card, CardHeader, CardContent } from '@/components/ui/composites/Card'
 import { Button } from '@/components/ui/primitives/Button'
 import { 
-  SettingsIcon, 
-  SaveIcon, 
-  ShieldIcon,
-  DatabaseIcon,
-  LockIcon,
   EyeIcon,
   EyeOffIcon,
   LoaderIcon
@@ -151,10 +146,10 @@ function SettingsPage() {
   }
 
   const tabs = [
-    { id: 'business', label: 'Business Info', icon: SettingsIcon },
-    { id: 'booking', label: 'Booking Rules', icon: ShieldIcon },
-    { id: 'password', label: 'Password', icon: LockIcon },
-    { id: 'system', label: 'System', icon: DatabaseIcon }
+    { id: 'business', label: 'Business Info' },
+    { id: 'booking', label: 'Booking Rules' },
+    { id: 'password', label: 'Password' },
+    { id: 'system', label: 'System' }
   ]
 
   return (
@@ -169,7 +164,6 @@ function SettingsPage() {
           <Button
             onClick={handleSave}
             disabled={isSaving}
-            leftIcon={isSaving ? undefined : <SaveIcon className="w-4 h-4" />}
           >
             {isSaving ? (
               <div className="flex items-center space-x-2">
@@ -195,22 +189,21 @@ function SettingsPage() {
         )}
 
         {/* Tabs */}
-        <div className="border-b border-border-secondary">
-          <nav className="flex space-x-8">
+        <div className="border-b border-border-secondary overflow-x-auto">
+          <nav className="flex gap-6 min-w-max px-1">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={`
-                  flex items-center space-x-2 py-2 px-1 border-b-2 font-medium text-sm transition-colors
+                  py-3 px-2 border-b-2 font-medium text-sm transition-colors whitespace-nowrap
                   ${activeTab === tab.id
                     ? 'border-brand-purple text-brand-purple'
                     : 'border-transparent text-text-secondary hover:text-text-primary hover:border-gray-300'
                   }
                 `}
               >
-                <tab.icon className="w-4 h-4" />
-                <span>{tab.label}</span>
+                {tab.label}
               </button>
             ))}
           </nav>
@@ -275,8 +268,6 @@ function SettingsPage() {
             </Card>
           )}
 
-          {/* Operating Hours removed */}
-
           {/* Booking Rules Tab */}
           {activeTab === 'booking' && (
             <Card>
@@ -298,8 +289,6 @@ function SettingsPage() {
               </CardContent>
             </Card>
           )}
-
-          {/* Notifications removed */}
 
           {/* Password Tab */}
           {activeTab === 'password' && (
@@ -401,10 +390,7 @@ function SettingsPage() {
                           Updating...
                         </>
                       ) : (
-                        <>
-                          <LockIcon className="w-4 h-4 mr-2" />
-                          Update Password
-                        </>
+                        'Update Password'
                       )}
                     </Button>
                   </div>
@@ -464,10 +450,7 @@ function SettingsPage() {
                           setIsLoading(false)
                         }
                       }}
-                    >
-                      <DatabaseIcon className="w-4 h-4 mr-2" />
-                      Export Data
-                    </Button>
+                    >Export Data</Button>
 
                     <Button
                       variant="outline"
@@ -490,10 +473,7 @@ function SettingsPage() {
                           setIsLoading(false)
                         }
                       }}
-                    >
-                      <ShieldIcon className="w-4 h-4 mr-2" />
-                      Security Audit
-                    </Button>
+                    >Security Audit</Button>
 
                     <Button
                       variant="outline"
@@ -513,9 +493,7 @@ function SettingsPage() {
                           setIsLoading(false)
                         }
                       }}
-                    >
-                      Clear Cache
-                    </Button>
+                    >Clear Cache</Button>
                   </div>
                 </div>
                 {auditResults && (

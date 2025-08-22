@@ -90,7 +90,10 @@ function ResetPasswordPageContent() {
         const data = await response.json()
 
         if (data.success) {
-          console.log('Password updated successfully via custom system')
+          if (process.env.NODE_ENV !== 'production') {
+            // eslint-disable-next-line no-console
+            console.log('Password updated successfully via custom system')
+          }
           setIsSuccess(true)
           
           // Redirect to login after a delay
@@ -121,7 +124,10 @@ function ResetPasswordPageContent() {
             setError(updateError.message || 'Failed to update password. Please try again.')
           }
         } else {
-          console.log('Password updated successfully via Supabase')
+          if (process.env.NODE_ENV !== 'production') {
+            // eslint-disable-next-line no-console
+            console.log('Password updated successfully via Supabase')
+          }
           setIsSuccess(true)
           
           // Redirect to login after a delay

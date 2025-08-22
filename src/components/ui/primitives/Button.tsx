@@ -100,15 +100,20 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   }, ref) => {
     const isDisabled = disabled || loading
     
+    const hideInnerIcons = size !== 'icon'
+
     return (
       <button
-        className={cn(buttonVariants({ 
-          variant, 
-          size, 
-          fullWidth, 
-          loading,
-          className 
-        }))}
+        className={cn(
+          buttonVariants({ 
+            variant, 
+            size, 
+            fullWidth, 
+            loading,
+            className 
+          }),
+          hideInnerIcons && 'hide-inner-icons'
+        )}
         ref={ref}
         disabled={isDisabled || undefined}
         aria-busy={loading}
@@ -130,8 +135,8 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
           />
         )}
         
-        {/* Left Icon */}
-        {!loading && leftIcon && (
+        {/* Left Icon (suppressed when size is not icon) */}
+        {!loading && leftIcon && size === 'icon' && (
           <span 
             className={cn(
               'flex items-center justify-center',
@@ -153,13 +158,13 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
           <span className={cn(
             'inline-block whitespace-nowrap',
             loading && 'opacity-0'
-          )}>
+          , 'btn-text')}>
             {loading && loadingText ? loadingText : children}
           </span>
         )}
         
-        {/* Right Icon */}
-        {!loading && rightIcon && size !== 'icon' && (
+        {/* Right Icon (suppressed when size is not icon) */}
+        {!loading && rightIcon && size === 'icon' && (
           <span 
             className={cn(
               'flex items-center justify-center',

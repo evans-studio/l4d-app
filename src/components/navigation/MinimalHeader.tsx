@@ -351,7 +351,10 @@ export const MinimalHeader: React.FC<MinimalHeaderProps> = ({ className, showMob
       await logout()
       // Logout method handles redirect
     } catch (error) {
-      console.error('Logout failed:', error)
+      if (process.env.NODE_ENV !== 'production') {
+        // eslint-disable-next-line no-console
+        console.error('Logout failed:', error)
+      }
     }
   }
 

@@ -66,7 +66,10 @@ function BookingPageContent(): React.JSX.Element {
     // 2. Has existing data that might be from previous session AND
     // 3. No service pre-selection (which indicates a fresh booking attempt)
     if (!isExplicitRebooking && hasExistingData && !serviceId) {
-      console.log('🔄 Detected fresh booking attempt with stale data - resetting flow');
+      if (process.env.NODE_ENV !== 'production') {
+        // eslint-disable-next-line no-console
+        console.log('🔄 Detected fresh booking attempt with stale data - resetting flow');
+      }
       resetFlow();
     }
 
