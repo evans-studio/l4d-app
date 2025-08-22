@@ -87,7 +87,6 @@ export async function POST(request: NextRequest) {
           .from('password_reset_tokens')
           .upsert({
             user_id: existingUser.id,
-            email: email.toLowerCase(),
             token_hash: hashedToken,
             expires_at: expiresAt.toISOString(),
             created_at: new Date().toISOString()

@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { supabaseAdmin } from '@/lib/supabase/direct'
 import { ApiResponseHandler } from '@/lib/api/response'
 import { ResetPasswordRequestSchema } from '@/schemas/auth.schema'
 import { createHash } from 'crypto'
@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
     const hashedToken = createHash('sha256').update(token).digest('hex')
 
     // Find the reset token in database
-    const { data: resetTokenData, error: tokenError } = await supabase
+    const { data: resetTokenData, error: tokenError } = await supabaseAdmin
       .from('password_reset_tokens')
       .select('*')
       .eq('token_hash', hashedToken)
@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
       console.log('Token expired at:', expiresAt)
       
       // Clean up expired token
-      await supabase
+      await supabaseAdmin
         .from('password_reset_tokens')
         .delete()
         .eq('id', resetTokenData.id)
@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
     console.log('Token verified for user:', resetTokenData.user_id)
 
     // Get user details
-    const { data: user, error: userError } = await supabase
+    const { data: user, error: userError } = await supabaseAdmin
       .from('user_profiles')
       .select('id, email')
       .eq('id', resetTokenData.user_id)
@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
 
     // Update the user's password using Supabase
     try {
-      const { error: updateError } = await supabase.auth.admin.updateUserById(
+      const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
         resetTokenData.user_id,
         { password: password }
       )
@@ -99,13 +99,13 @@ export async function POST(request: NextRequest) {
       console.log('Password updated successfully for user:', resetTokenData.user_id)
 
       // Delete the used reset token
-      await supabase
+      await supabaseAdmin
         .from('password_reset_tokens')
         .delete()
         .eq('id', resetTokenData.id)
 
       // Update the user profile timestamp
-      await supabase
+      await supabaseAdmin
         .from('user_profiles')
         .update({ updated_at: new Date().toISOString() })
         .eq('id', resetTokenData.user_id)
