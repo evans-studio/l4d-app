@@ -312,7 +312,7 @@ export function ScheduleSwiper({ timeSlots, onSlotsChange, isLoading }: Schedule
             onClick={() => navigateWeek('prev')}
             className="px-2"
           >
-            Previous
+            Previous Week
           </Button>
           
           <div className="text-center">
@@ -336,7 +336,7 @@ export function ScheduleSwiper({ timeSlots, onSlotsChange, isLoading }: Schedule
             onClick={() => navigateWeek('next')}
             className="px-2"
           >
-            Next
+            Next Week
           </Button>
         </div>
       </div>
@@ -382,7 +382,7 @@ export function ScheduleSwiper({ timeSlots, onSlotsChange, isLoading }: Schedule
           onClick={() => navigateDay('prev')}
           disabled={currentDayIndex === 0 && currentWeekStart <= new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)}
         >
-          Previous
+          Previous Day
         </Button>
 
         <Button
@@ -399,7 +399,7 @@ export function ScheduleSwiper({ timeSlots, onSlotsChange, isLoading }: Schedule
           size="sm"
           onClick={() => navigateDay('next')}
         >
-          Next
+          Next Day
         </Button>
       </div>
 
