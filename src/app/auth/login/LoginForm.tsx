@@ -39,7 +39,11 @@ export default function LoginForm() {
   useEffect(() => {
     if (isAuthenticated) {
       const urlParams = new URLSearchParams(window.location.search)
-      const redirectTo = urlParams.get('redirect') || (isAdmin ? '/admin' : '/dashboard')
+      const requested = urlParams.get('redirect') || ''
+      const isInternal = requested.startsWith('/') && !requested.startsWith('//')
+      const allowedPrefixes = ['/admin', '/dashboard', '/book', '/booking', '/settings', '/privacy-policy', '/terms-of-service']
+      const isAllowed = allowedPrefixes.some((p) => requested === p || requested.startsWith(p + '/'))
+      const redirectTo = (isInternal && isAllowed) ? requested : (isAdmin ? '/admin' : '/dashboard')
       router.replace(redirectTo)
     }
   }, [isAuthenticated, isAdmin, router])

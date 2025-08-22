@@ -80,11 +80,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Update the user's password using Supabase
+    // Update the user's password using Supabase and confirm email
     try {
       const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
         resetTokenData.user_id,
-        { password: password }
+        { password: password, email_confirm: true }
       )
 
       if (updateError) {
