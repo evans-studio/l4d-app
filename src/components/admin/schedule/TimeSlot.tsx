@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/primitives/Button'
 import { 
   CheckCircleIcon,
@@ -55,6 +55,8 @@ export function TimeSlot({ slot, onClick, onUpdate, onDelete, isPast }: TimeSlot
   const [showActions, setShowActions] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
   const [editTime, setEditTime] = useState(slot.start_time)
+  const menuButtonRef = useRef<HTMLButtonElement | null>(null)
+  const [menuPos, setMenuPos] = useState<{ top: number; left: number; openUp?: boolean }>({ top: 0, left: 0, openUp: false })
 
   const formatTime = (timeStr: string) => {
     const [hours, minutes] = timeStr.split(':')
@@ -123,6 +125,25 @@ export function TimeSlot({ slot, onClick, onUpdate, onDelete, isPast }: TimeSlot
     onDelete()
     setShowActions(false)
   }
+
+  // Position the actions menu via fixed coordinates to avoid clipping within containers
+  useEffect(() => {
+    if (showActions && menuButtonRef.current) {
+      const rect = menuButtonRef.current.getBoundingClientRect()
+      const estimatedMenuWidth = 200
+      const estimatedMenuHeight = 180
+      const margin = 8
+      let left = Math.min(window.innerWidth - estimatedMenuWidth - margin, Math.max(margin, rect.right - estimatedMenuWidth))
+      let top = rect.bottom + margin
+      let openUp = false
+      if (window.innerHeight - rect.bottom < estimatedMenuHeight + margin) {
+        // Not enough space below, open upwards
+        top = rect.top - margin
+        openUp = true
+      }
+      setMenuPos({ top, left, openUp })
+    }
+  }, [showActions])
 
   const statusInfo = getStatusInfo()
   const StatusIcon = statusInfo.icon
@@ -194,16 +215,20 @@ export function TimeSlot({ slot, onClick, onUpdate, onDelete, isPast }: TimeSlot
                 <button
                   onClick={(e) => {
                     e.stopPropagation()
-                    setShowActions(!showActions)
+                    setShowActions((v) => !v)
                   }}
                   className={`p-1 rounded hover:bg-[var(--surface-hover)] text-[var(--text-secondary)]`}
+                  ref={menuButtonRef}
                 >
                   <MoreHorizontalIcon className="w-4 h-4" />
                 </button>
 
                 {/* Action Menu */}
                 {showActions && (
-                  <div className="absolute right-0 top-8 bg-[var(--surface-primary)] border border-[var(--border-secondary)] rounded-lg shadow-lg z-20 min-w-[160px]">
+                  <div
+                    className="fixed bg-[var(--surface-primary)] border border-[var(--border-secondary)] rounded-lg shadow-lg z-50 min-w-[200px]"
+                    style={{ top: menuPos.openUp ? undefined : menuPos.top, bottom: menuPos.openUp ? (window.innerHeight - menuPos.top) : undefined, left: menuPos.left }}
+                  >
                     <div className="py-1">
                       <button
                         onClick={(e) => { e.stopPropagation(); onClick(); setShowActions(false) }}

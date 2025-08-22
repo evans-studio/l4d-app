@@ -89,15 +89,17 @@ export function DayCard({ day, isToday, onAddSlot, onSlotUpdate }: DayCardProps)
     if (!confirm('Delete this time slot?')) return
 
     try {
-      const response = await fetch(`/api/admin/time-slots/${slotId}`, {
-        method: 'DELETE'
-      })
-
+      const response = await fetch(`/api/admin/time-slots/${slotId}`, { method: 'DELETE' })
       if (response.ok) {
+        // Optimistic update: remove from current day list without hard refresh
         onSlotUpdate()
+      } else {
+        const err = await response.json().catch(() => ({}))
+        alert(err?.error?.message || 'Failed to delete time slot')
       }
     } catch (error) {
       console.error('Error deleting slot:', error)
+      alert('Failed to delete time slot')
     }
   }
 
