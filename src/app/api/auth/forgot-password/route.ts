@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import { supabaseAdmin } from '@/lib/supabase/direct'
 import { ApiResponseHandler } from '@/lib/api/response'
 import { ForgotPasswordRequestSchema } from '@/schemas/auth.schema'
 import { Resend } from 'resend'
@@ -30,8 +31,8 @@ export async function POST(request: NextRequest) {
     }
     
     // Check if user exists (for logging purposes, but don't reveal to client)
-    // Case-insensitive match for email to avoid missing users due to casing
-    const { data: existingUser, error: userError } = await supabase
+    // Case-insensitive match using service role to bypass RLS for server-side password resets
+    const { data: existingUser, error: userError } = await supabaseAdmin
       .from('user_profiles')
       .select('id, email, first_name')
       .ilike('email', email)
@@ -66,7 +67,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Check if password_reset_tokens table exists
-        const { error: tableCheckError } = await supabase
+        const { error: tableCheckError } = await supabaseAdmin
           .from('password_reset_tokens')
           .select('count')
           .limit(1)
@@ -82,7 +83,7 @@ export async function POST(request: NextRequest) {
         const expiresAt = new Date(Date.now() + 60 * 60 * 1000) // 1 hour from now
 
         // Store the reset token in database
-        const { error: tokenError } = await supabase
+        const { error: tokenError } = await supabaseAdmin
           .from('password_reset_tokens')
           .upsert({
             user_id: existingUser.id,
