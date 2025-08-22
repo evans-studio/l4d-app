@@ -25,7 +25,9 @@ export async function POST(request: NextRequest) {
     
     const { email } = validation.data
 
-    console.log('Password reset request for:', email.toLowerCase())
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('Password reset request for:', email.toLowerCase())
+    }
     
     // Check if user exists (for logging purposes, but don't reveal to client)
     const { data: existingUser, error: userError } = await supabase
@@ -34,11 +36,15 @@ export async function POST(request: NextRequest) {
       .eq('email', email.toLowerCase())
       .single()
 
-    console.log('User lookup result:', { existingUser: !!existingUser, userError: !!userError })
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('User lookup result:', { existingUser: !!existingUser, userError: !!userError })
+    }
 
     // If user doesn't exist, still return success for security (don't reveal whether email exists)
     if (userError && userError.code === 'PGRST116') {
-      console.log('User not found but returning success for security')
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('User not found but returning success for security')
+      }
       return ApiResponseHandler.success({
         message: 'If an account with this email exists, you will receive a password reset link.'
       })
@@ -48,7 +54,9 @@ export async function POST(request: NextRequest) {
     if (existingUser) {
       // First try our custom Resend approach
       try {
-        console.log('Attempting custom email with Resend...')
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('Attempting custom email with Resend...')
+        }
         
         // Check if we have required environment variables
         if (!process.env.RESEND_API_KEY) {
@@ -90,7 +98,8 @@ export async function POST(request: NextRequest) {
           throw new Error('Failed to store reset token')
         }
 
-        const resetUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://l4d-app.vercel.app'}/auth/reset-password?token=${resetToken}`
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://love4detailing.com'
+        const resetUrl = `${baseUrl}/auth/reset-password?token=${resetToken}`
         
         // Create email content
         const subject = 'Reset Your Password - Love 4 Detailing'
@@ -104,14 +113,12 @@ export async function POST(request: NextRequest) {
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>Reset Your Password</title>
           </head>
-          <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f5f5f5;">
-            <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff;">
-              <div style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); padding: 40px 20px; text-align: center;">
-                <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: bold;">Love 4 Detailing</h1>
-                <p style="color: #e0e7ff; margin: 10px 0 0 0; font-size: 16px;">Password Reset Request</p>
+          <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #0a0a0a;">
+            <div style="max-width: 600px; margin: 0 auto; background-color: #0a0a0a;">
+              <div style="padding: 32px 20px; text-align: center;">
+                <img src="${baseUrl}/logo.png" alt="Love 4 Detailing" width="64" height="64" style="display: inline-block;" />
               </div>
-              
-              <div style="padding: 40px 20px;">
+              <div style="padding: 32px 20px; background-color: #111827; border: 1px solid #1f2937; border-radius: 12px;">
                 <h2 style="color: #1f2937; margin: 0 0 20px 0; font-size: 24px;">Hi ${firstName}!</h2>
                 
                 <p style="color: #4b5563; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
@@ -119,7 +126,7 @@ export async function POST(request: NextRequest) {
                 </p>
                 
                 <div style="text-align: center; margin: 30px 0;">
-                  <a href="${resetUrl}" style="display: inline-block; background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: #ffffff; text-decoration: none; padding: 15px 30px; border-radius: 8px; font-weight: bold; font-size: 16px;">Reset My Password</a>
+                  <a href="${resetUrl}" style="display: inline-block; background: #7c3aed; color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 8px; font-weight: 600; font-size: 16px;">Reset My Password</a>
                 </div>
                 
                 <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin: 20px 0;">
@@ -132,11 +139,8 @@ export async function POST(request: NextRequest) {
                 </p>
               </div>
               
-              <div style="background-color: #f9fafb; padding: 20px; text-align: center; border-top: 1px solid #e5e7eb;">
-                <p style="color: #6b7280; font-size: 12px; margin: 0;">
-                  Love 4 Detailing - Professional Mobile Car Detailing<br>
-                  This email was sent because you requested a password reset.
-                </p>
+              <div style="padding: 16px; text-align: center;">
+                <p style="color: #9ca3af; font-size: 12px; margin: 0;">This email was sent because you requested a password reset.</p>
               </div>
             </div>
           </body>
@@ -173,15 +177,19 @@ export async function POST(request: NextRequest) {
           throw new Error(`Resend API error: ${emailError.message || 'Unknown error'}`)
         }
 
-        console.log('✅ Password reset email sent successfully via Resend')
-        console.log('Email ID:', data?.id)
-        console.log('Recipient:', email)
-        console.log('Sender:', process.env.NEXT_PUBLIC_FROM_EMAIL || 'zell@love4detailing.com')
-        console.log('Full Resend response:', JSON.stringify(data, null, 2))
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('✅ Password reset email sent successfully via Resend')
+          console.log('Email ID:', data?.id)
+          console.log('Recipient:', email)
+          console.log('Sender:', process.env.NEXT_PUBLIC_FROM_EMAIL || 'zell@love4detailing.com')
+          console.log('Full Resend response:', JSON.stringify(data, null, 2))
+        }
         
       } catch (customEmailError) {
         console.error('Custom email system failed:', customEmailError)
-        console.log('Falling back to Supabase built-in password reset...')
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('Falling back to Supabase built-in password reset...')
+        }
         
         // Fallback to Supabase's built-in password reset
         try {
@@ -198,7 +206,9 @@ export async function POST(request: NextRequest) {
             )
           }
 
-          console.log('Password reset email sent via Supabase fallback to:', email)
+          if (process.env.NODE_ENV !== 'production') {
+            console.log('Password reset email sent via Supabase fallback to:', email)
+          }
           
         } catch (fallbackError) {
           console.error('Both email systems failed:', fallbackError)
