@@ -30,10 +30,11 @@ export async function POST(request: NextRequest) {
     }
     
     // Check if user exists (for logging purposes, but don't reveal to client)
+    // Case-insensitive match for email to avoid missing users due to casing
     const { data: existingUser, error: userError } = await supabase
       .from('user_profiles')
       .select('id, email, first_name')
-      .eq('email', email.toLowerCase())
+      .ilike('email', email)
       .single()
 
     if (process.env.NODE_ENV !== 'production') {
