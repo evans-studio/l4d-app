@@ -11,8 +11,7 @@ import {
   Car, 
   MapPin, 
   CreditCard,
-  BarChart3,
-  ArrowRight
+  BarChart3
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -121,10 +120,7 @@ export function DashboardPreview() {
                     </div>
                   </div>
                   <div className="space-y-3">
-                    <Button size="sm" variant="primary" className="w-full justify-start min-h-[40px]">
-                      <ArrowRight className="w-4 h-4 mr-2" />
-                      Book New Service
-                    </Button>
+                    <Button size="sm" variant="primary" className="w-full justify-start min-h-[40px]">Book New Service</Button>
                   </div>
                 </div>
 
@@ -234,7 +230,6 @@ export function DashboardPreview() {
                 variant="primary" 
                 size="lg"
                 className="bg-brand-600 hover:bg-brand-700 shadow-purple-lg hover:shadow-purple-xl transition-all duration-300 min-h-[50px] px-8 text-base lg:text-lg"
-                rightIcon={<ArrowRight className="w-5 h-5" />}
               >
                 Create Your Account
               </Button>

@@ -120,19 +120,42 @@ export async function GET(request: NextRequest) {
     }
 
     // Get unique customers from this week vs previous periods to determine new vs returning
-    const thisWeekCustomers = [...new Set(customerBookingsRaw?.map(b => b.customer_id) || [])]
+    const thisWeekCustomersFromBookings = [...new Set(customerBookingsRaw?.map(b => b.customer_id) || [])]
+
+    // Also include brand new signups this week (even if they haven't booked yet)
+    const { data: thisWeekProfiles, error: profilesError } = await supabase
+      .from('user_profiles')
+      .select('id, role, created_at')
+      .gte('created_at', startOfWeek.toISOString())
+      .lte('created_at', endOfWeek.toISOString())
+
+    if (profilesError) {
+      console.error('Profiles this week error:', profilesError)
+    }
+
+    const signupIdsThisWeek = new Set(
+      (thisWeekProfiles || [])
+        .filter((p: any) => !['admin', 'super_admin'].includes(p.role || ''))
+        .map((p: any) => p.id)
+    )
     
     const { data: existingCustomers, error: existingCustomersError } = await supabase
       .from('bookings')
       .select('customer_id')
       .lt('created_at', startOfWeek.toISOString())
-      .in('customer_id', thisWeekCustomers)
+      .in('customer_id', thisWeekCustomersFromBookings)
 
     if (existingCustomersError) {
       console.error('Existing customers error:', existingCustomersError)
     }
 
     const existingCustomerIds = [...new Set(existingCustomers?.map(b => b.customer_id) || [])]
+
+    // Compute unions for activity metrics
+    const thisWeekUnionIds = new Set<string>([
+      ...thisWeekCustomersFromBookings.filter(Boolean) as string[],
+      ...Array.from(signupIdsThisWeek)
+    ])
 
     // Get all pending bookings that require admin action
     const { data: actionBookings, error: actionError } = await supabase
@@ -214,8 +237,13 @@ export async function GET(request: NextRequest) {
     const monthRevenue = monthBookings?.reduce((sum, booking) => sum + (booking.total_price || 0), 0) || 0
 
     // Transform customer activity
-    const newCustomers = thisWeekCustomers.filter(customerId => !existingCustomerIds.includes(customerId))
-    const returningCustomers = thisWeekCustomers.filter(customerId => existingCustomerIds.includes(customerId))
+    const newFromBookingsIds = new Set<string>(
+      thisWeekCustomersFromBookings.filter(customerId => !existingCustomerIds.includes(customerId)) as string[]
+    )
+    // New customers are unique union of signups this week and first-time bookers this week
+    const newCustomersIds = new Set<string>([...Array.from(signupIdsThisWeek), ...Array.from(newFromBookingsIds)])
+    const newCustomers = Array.from(newCustomersIds)
+    const returningCustomers = thisWeekCustomersFromBookings.filter(customerId => existingCustomerIds.includes(customerId))
     // Resolve names for activity
     const activityCustomerIds = [...new Set((customerBookingsRaw || []).map((b: any) => b.customer_id).filter(Boolean))]
     let activityProfiles: Record<string, any> = {}
@@ -259,7 +287,7 @@ export async function GET(request: NextRequest) {
       
       // Customer Activity Widget - Real customer metrics
       customerActivity: {
-        thisWeek: thisWeekCustomers.length,
+        thisWeek: thisWeekUnionIds.size,
         newCustomers: newCustomers.length,
         returningCustomers: returningCustomers.length,
         latestActivity: latestCustomerActivity
