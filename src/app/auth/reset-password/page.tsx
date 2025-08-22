@@ -31,6 +31,20 @@ function ResetPasswordPageContent() {
     const hash = window.location.hash
     const hasSupabaseToken = hash.includes('access_token') && hash.includes('type=recovery')
     
+    // If using Supabase recovery link, exchange the code for a session so updateUser works
+    if (hasSupabaseToken) {
+      void (async () => {
+        try {
+          await supabase.auth.exchangeCodeForSession(hash)
+          // Optional: clean up the hash from the URL
+          history.replaceState(null, '', window.location.pathname + window.location.search)
+        } catch (e) {
+          // eslint-disable-next-line no-console
+          console.error('Supabase exchangeCodeForSession failed:', e)
+        }
+      })()
+    }
+
     if (!token && !hasSupabaseToken) {
       setTokenError('Invalid or expired reset link. Please request a new password reset.')
     } else if (token) {
