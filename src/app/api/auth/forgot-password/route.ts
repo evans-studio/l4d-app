@@ -117,34 +117,29 @@ export async function POST(request: NextRequest) {
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>Reset Your Password</title>
           </head>
-          <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #0a0a0a;">
-            <div style="max-width: 600px; margin: 0 auto; background-color: #0a0a0a;">
-              <div style="padding: 32px 20px; text-align: center;">
-                <img src="${baseUrl}/logo.png" alt="Love 4 Detailing" width="64" height="64" style="display: inline-block;" />
+          <body style="margin:0; padding:0; background-color:#0a0a0a;">
+            <div style="max-width:600px; margin:0 auto; padding:24px 16px;">
+              <div style="text-align:center; padding:16px 0 24px 0;">
+                <img src="${baseUrl}/logo.png" alt="Love 4 Detailing" width="64" style="display:inline-block; height:auto;" />
               </div>
-              <div style="padding: 32px 20px; background-color: #111827; border: 1px solid #1f2937; border-radius: 12px;">
-                <h2 style="color: #1f2937; margin: 0 0 20px 0; font-size: 24px;">Hi ${firstName}!</h2>
-                
-                <p style="color: #4b5563; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
-                  We received a request to reset your password for your Love 4 Detailing account. If you made this request, click the button below to set a new password:
+              <div style="background-color:#0f172a; border:1px solid #1f2937; border-radius:12px; padding:28px 20px;">
+                <h2 style="color:#e5e7eb; margin:0 0 16px 0; font-size:22px; line-height:1.3;">Hi ${firstName}!</h2>
+                <p style="color:#cbd5e1; font-size:16px; line-height:1.6; margin:0 0 16px 0;">
+                  We received a request to reset your password for your Love 4 Detailing account. If you made this request, click the button below to set a new password.
                 </p>
-                
-                <div style="text-align: center; margin: 30px 0;">
-                  <a href="${resetUrl}" style="display: inline-block; background: #7c3aed; color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 8px; font-weight: 600; font-size: 16px;">Reset My Password</a>
+                <div style="text-align:center; margin:28px 0;">
+                  <a href="${resetUrl}" style="display:inline-block; background:#7c3aed; color:#ffffff; text-decoration:none; padding:14px 28px; border-radius:8px; font-weight:600; font-size:16px;">Reset My Password</a>
                 </div>
-                
-                <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin: 20px 0;">
-                  This link will expire in 1 hour for security reasons. If you didn't request this password reset, you can safely ignore this email.
+                <p style="color:#94a3b8; font-size:14px; line-height:1.6; margin:0 0 12px 0;">
+                  This link will expire in 1 hour. If you didn’t request this, you can safely ignore this email.
                 </p>
-                
-                <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin: 20px 0;">
-                  If the button doesn't work, you can copy and paste this link into your browser:<br>
-                  <span style="word-break: break-all; color: #6366f1;">${resetUrl}</span>
+                <p style="color:#94a3b8; font-size:13px; line-height:1.6; margin:0; word-break:break-all;">
+                  If the button doesn’t work, copy and paste this link into your browser:<br />
+                  <span style="color:#a78bfa;">${resetUrl}</span>
                 </p>
               </div>
-              
-              <div style="padding: 16px; text-align: center;">
-                <p style="color: #9ca3af; font-size: 12px; margin: 0;">This email was sent because you requested a password reset.</p>
+              <div style="text-align:center; padding:12px 0 0 0;">
+                <p style="color:#9ca3af; font-size:12px; margin:0;">Love 4 Detailing — Professional Mobile Car Detailing</p>
               </div>
             </div>
           </body>
