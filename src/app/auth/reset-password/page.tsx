@@ -30,12 +30,18 @@ function ResetPasswordPageContent() {
     // Or check if we have Supabase hash parameters (fallback system)
     const hash = window.location.hash
     const hasSupabaseToken = hash.includes('access_token') && hash.includes('type=recovery')
+    const qsCode = searchParams?.get('code') || ''
+    const qsType = searchParams?.get('type') || ''
     
     // If using Supabase recovery link, exchange the code for a session so updateUser works
-    if (hasSupabaseToken) {
+    if (hasSupabaseToken || (qsCode && qsType === 'recovery')) {
       void (async () => {
         try {
-          await supabase.auth.exchangeCodeForSession(hash)
+          if (hasSupabaseToken) {
+            await supabase.auth.exchangeCodeForSession(hash)
+          } else {
+            await supabase.auth.exchangeCodeForSession(window.location.href)
+          }
           // Optional: clean up the hash from the URL
           history.replaceState(null, '', window.location.pathname + window.location.search)
         } catch (e) {
@@ -45,7 +51,7 @@ function ResetPasswordPageContent() {
       })()
     }
 
-    if (!token && !hasSupabaseToken) {
+    if (!token && !hasSupabaseToken && !(qsCode && qsType === 'recovery')) {
       setTokenError('Invalid or expired reset link. Please request a new password reset.')
     } else if (token) {
       setResetToken(token)
