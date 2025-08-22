@@ -59,6 +59,7 @@ export async function middleware(request: NextRequest) {
     '/api/bookings/create',
     '/api/auth/register',
     '/api/auth/forgot-password',
+    '/api/auth/reset-password',
     '/api/auth/login',
     // Removed dev-only admin maintenance routes from public list
     '/api/admin/stats',
