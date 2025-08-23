@@ -25,13 +25,19 @@ jobs:
       - name: Set environment variables for tests
         run: |
           echo "NEXT_PUBLIC_SUPABASE_URL=https://test.supabase.co" >> $GITHUB_ENV
-          echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=dummy" >> $GITHUB_ENV
-          echo "SUPABASE_SERVICE_ROLE_KEY=dummy" >> $GITHUB_ENV
+          echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJ0ZXN0Iiwic3ViIjoidGVzdCJ9.testsignature" >> $GITHUB_ENV
+          echo "SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJ0ZXN0Iiwic3ViIjoidGVzdCJ9.testsignature" >> $GITHUB_ENV
           echo "ACCESS_TOKEN_SECRET=0123456789abcdef0123456789abcdef" >> $GITHUB_ENV
           echo "REFRESH_TOKEN_SECRET=abcdef0123456789abcdef0123456789" >> $GITHUB_ENV
           echo "RESEND_API_KEY=dummy" >> $GITHUB_ENV
           echo "NODE_ENV=test" >> $GITHUB_ENV
           echo "NEXT_PUBLIC_NEW_UI=true" >> $GITHUB_ENV
+          echo "NEXT_PUBLIC_APP_URL=https://example.com" >> $GITHUB_ENV
+          echo "NEXT_PUBLIC_FROM_EMAIL=staging@love4detailing.com" >> $GITHUB_ENV
+          echo "ADMIN_EMAIL=admin@love4detailing.com" >> $GITHUB_ENV
+          echo "EMAIL_REPLY_TO=support@love4detailing.com" >> $GITHUB_ENV
+          echo "PAYPAL_ME_USERNAME=love4detailing" >> $GITHUB_ENV
+          echo "PAYPAL_BUSINESS_EMAIL=payments@love4detailing.com" >> $GITHUB_ENV
           if [ "${{ github.ref_name }}" = "ui-refresh" ]; then echo "SKIP_PERF_BUDGET=true" >> $GITHUB_ENV; fi
 
       - name: Build
