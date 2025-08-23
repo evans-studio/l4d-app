@@ -3,9 +3,6 @@
 import { useState, useEffect } from 'react'
 import { AdminLayout } from '@/components/layouts/AdminLayout'
 import { AdminRoute } from '@/components/ProtectedRoute'
-import { ScheduleSwiper } from '@/components/admin/schedule/ScheduleSwiper'
-import AppointmentPicker from '@/components/booking/AppointmentPicker'
-import { isNewUIEnabled } from '@/lib/config/feature-flags'
 import { Button } from '@/components/ui/primitives/Button'
 import { EventCalendar, type CalendarEvent } from '@/components/event-calendar'
 import { 
@@ -53,8 +50,7 @@ interface CalendarDay {
 function ScheduleCalendarContent() {
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [viewMode, setViewMode] = useState<'swipe' | 'calendar'>('swipe')
-  const [jumpToDate, setJumpToDate] = useState<string | null>(null)
+  // Only EventCalendar is used; legacy views removed
   const [events, setEvents] = useState<CalendarEvent[]>([])
 
   useEffect(() => {
@@ -111,9 +107,7 @@ function ScheduleCalendarContent() {
     }
   }
 
-  const toggleViewMode = () => {
-    setViewMode(prev => prev === 'swipe' ? 'calendar' : 'swipe')
-  }
+  // Legacy toggle removed
 
   return (
     <AdminLayout>
@@ -163,68 +157,43 @@ function ScheduleCalendarContent() {
           </div>
         </div>
 
-        {/* New picker (feature-flagged) */}
-        {isNewUIEnabled() && (
-          <div className="space-y-4">
-            <AppointmentPicker onSelect={(s) => setJumpToDate(s.date)} adminMode />
-            <EventCalendar
-              events={events}
-              onEventAdd={async (ev) => {
-                await fetch('/api/admin/time-slots', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    slot_date: ev.start.toISOString().slice(0,10),
-                    start_time: ev.start.toTimeString().slice(0,5),
-                    is_available: true,
-                    notes: ev.title || null
-                  })
+        {/* Event Calendar - single source of truth for schedule */}
+        <div className="space-y-4">
+          <EventCalendar
+            events={events}
+            onEventAdd={async (ev) => {
+              await fetch('/api/admin/time-slots', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  slot_date: ev.start.toISOString().slice(0,10),
+                  start_time: ev.start.toTimeString().slice(0,5),
+                  is_available: true,
+                  notes: ev.title || null
                 })
-                await loadTimeSlots()
-              }}
-              onEventUpdate={async (ev) => {
-                await fetch(`/api/admin/time-slots/${ev.id}`, {
-                  method: 'PATCH',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    slot_date: ev.start.toISOString().slice(0,10),
-                    start_time: ev.start.toTimeString().slice(0,5)
-                  })
+              })
+              await loadTimeSlots()
+            }}
+            onEventUpdate={async (ev) => {
+              await fetch(`/api/admin/time-slots/${ev.id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  slot_date: ev.start.toISOString().slice(0,10),
+                  start_time: ev.start.toTimeString().slice(0,5)
                 })
-                await loadTimeSlots()
-              }}
-              onEventDelete={async (id) => {
-                await fetch(`/api/admin/time-slots/${id}`, { method: 'DELETE' })
-                await loadTimeSlots()
-              }}
-              initialView="week"
-            />
-          </div>
-        )}
-
-        {/* Main Content */}
-        {viewMode === 'swipe' ? (
-          <ScheduleSwiper
-            timeSlots={timeSlots}
-            onSlotsChange={loadTimeSlots}
-            isLoading={isLoading}
-            jumpToDate={jumpToDate || undefined}
+              })
+              await loadTimeSlots()
+            }}
+            onEventDelete={async (id) => {
+              await fetch(`/api/admin/time-slots/${id}`, { method: 'DELETE' })
+              await loadTimeSlots()
+            }}
+            initialView="week"
           />
-        ) : (
-          <div className="bg-[var(--surface-secondary)] rounded-xl border border-[var(--border-primary)] p-6 text-center">
-            <CalendarIcon className="w-12 h-12 text-[var(--text-muted)] mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-[var(--text-primary)] mb-2">
-              Calendar View Coming Soon
-            </h3>
-            <p className="text-[var(--text-secondary)] mb-4">
-              The traditional calendar view is being updated to work with the new system.
-            </p>
-            <Button onClick={toggleViewMode} size="sm">
-              <ToggleLeftIcon className="w-4 h-4 mr-2" />
-              Switch to Card View
-            </Button>
-          </div>
-        )}
+        </div>
+
+        {/* Legacy views removed */}
 
         {/* Quick Guide removed per request */}
       </div>
