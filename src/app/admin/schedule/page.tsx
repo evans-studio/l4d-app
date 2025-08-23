@@ -151,9 +151,7 @@ function ScheduleCalendarContent() {
         {/* New picker (feature-flagged) */}
         {isNewUIEnabled() && (
           <div>
-            <AppointmentPicker
-              onSelect={(s) => setJumpToDate(s.date)}
-            />
+            <AppointmentPicker onSelect={(s) => setJumpToDate(s.date)} adminMode />
           </div>
         )}
 

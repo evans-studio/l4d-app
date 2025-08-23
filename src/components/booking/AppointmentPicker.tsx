@@ -1,13 +1,16 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { format } from 'date-fns'
+import { format, startOfMonth, endOfMonth } from 'date-fns'
+import { eachDayOfInterval } from 'date-fns'
 import { isNewUIEnabled } from '@/lib/config/feature-flags'
 import { Button as ShadButton } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Button as L4DButton } from '@/components/ui/primitives/Button'
 import { Card, CardContent, CardHeader } from '@/components/ui/composites/Card'
+import { useMultiDateAvailability } from '@/hooks/useRealTimeAvailability'
+import { AddSlotModal } from '@/components/admin/schedule/AddSlotModal'
 
 type TimeSlot = {
   id: string
@@ -20,15 +23,38 @@ type TimeSlot = {
 interface AppointmentPickerProps {
   initialDate?: Date
   onSelect: (slot: { id: string; date: string; start: string; end: string }) => void
+  adminMode?: boolean
 }
 
-export function AppointmentPicker({ initialDate, onSelect }: AppointmentPickerProps) {
+export function AppointmentPicker({ initialDate, onSelect, adminMode = false }: AppointmentPickerProps) {
   const today = useMemo(() => new Date(), [])
   const [date, setDate] = useState<Date>(initialDate || today)
+  const [visibleMonth, setVisibleMonth] = useState<Date>(initialDate ? startOfMonth(initialDate) : startOfMonth(today))
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([])
   const [loading, setLoading] = useState(false)
+  const [showAddSlot, setShowAddSlot] = useState(false)
 
   const selectedDateIso = format(date, 'yyyy-MM-dd')
+
+  // Build visible month date list
+  const monthDates = useMemo(() => {
+    const start = startOfMonth(visibleMonth)
+    const end = endOfMonth(visibleMonth)
+    return eachDayOfInterval({ start, end }).map(d => format(d, 'yyyy-MM-dd'))
+  }, [visibleMonth])
+
+  // Pull availability for the visible month to show indicators
+  const { availabilityMap } = useMultiDateAvailability(monthDates, 120000)
+  const datesWithAvailable = useMemo(() => {
+    const s = new Set<string>()
+    monthDates.forEach(d => {
+      const slots = availabilityMap.get(d) || []
+      if (slots.some((sl: any) => sl.is_available)) {
+        s.add(d)
+      }
+    })
+    return s
+  }, [availabilityMap, monthDates])
 
   useEffect(() => {
     const load = async () => {
@@ -61,8 +87,11 @@ export function AppointmentPicker({ initialDate, onSelect }: AppointmentPickerPr
                   setDate(newDate)
                 }
               }}
+              onMonthChange={(m: Date) => setVisibleMonth(startOfMonth(m))}
               className="p-2 sm:pe-5"
               disabled={[{ before: today }]}
+              modifiers={{ hasSlots: (day: Date) => datesWithAvailable.has(format(day, 'yyyy-MM-dd')) }}
+              modifiersClassNames={{ hasSlots: 'after:absolute after:bottom-1 after:h-1.5 after:w-1.5 after:bg-[var(--primary)] after:rounded-full after:content-[\'\']' }}
             />
             <div className="relative w-full max-sm:h-48 sm:w-48">
               <div className="absolute inset-0 py-4 max-sm:border-t">
@@ -73,6 +102,17 @@ export function AppointmentPicker({ initialDate, onSelect }: AppointmentPickerPr
                         {format(date, 'EEEE, d')}
                       </p>
                     </div>
+                    {adminMode && (
+                      <div className="px-5">
+                        {isNewUIEnabled() ? (
+                          <ShadButton size="sm" onClick={() => setShowAddSlot(true)} className="w-full">Add Slot</ShadButton>
+                        ) : (
+                          <L4DButton size="md" onClick={() => setShowAddSlot(true)} fullWidth>
+                            Add Slot
+                          </L4DButton>
+                        )}
+                      </div>
+                    )}
                     <div className="grid gap-1.5 px-5 max-sm:grid-cols-2">
                       {loading && (
                         <div className="text-sm text-muted-foreground">Loading…</div>
@@ -93,7 +133,44 @@ export function AppointmentPicker({ initialDate, onSelect }: AppointmentPickerPr
                             }
                             disabled={!slot.is_available}
                           >
-                            {slot.start_time}
+                            <div className="w-full flex items-center justify-between">
+                              <span>{slot.start_time}</span>
+                              {adminMode && (
+                                <span className="flex items-center gap-2">
+                                  <button
+                                    type="button"
+                                    className="text-xs underline opacity-80 hover:opacity-100"
+                                    onClick={async (e) => {
+                                      e.stopPropagation()
+                                      await fetch(`/api/admin/time-slots/${slot.id}`, { method: 'DELETE' })
+                                      // refresh list
+                                      const res = await fetch(`/api/time-slots/availability?date=${selectedDateIso}`)
+                                      const json = await res.json()
+                                      setTimeSlots(json?.data || [])
+                                    }}
+                                  >
+                                    Delete
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="text-xs underline opacity-80 hover:opacity-100"
+                                    onClick={async (e) => {
+                                      e.stopPropagation()
+                                      await fetch(`/api/admin/time-slots/${slot.id}`, {
+                                        method: 'PATCH',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ is_available: !slot.is_available })
+                                      })
+                                      const res = await fetch(`/api/time-slots/availability?date=${selectedDateIso}`)
+                                      const json = await res.json()
+                                      setTimeSlots(json?.data || [])
+                                    }}
+                                  >
+                                    {slot.is_available ? 'Block' : 'Unblock'}
+                                  </button>
+                                </span>
+                              )}
+                            </div>
                           </ShadButton>
                         ) : (
                           <L4DButton
@@ -107,7 +184,43 @@ export function AppointmentPicker({ initialDate, onSelect }: AppointmentPickerPr
                             }
                             disabled={!slot.is_available}
                           >
-                            {slot.start_time}
+                            <div className="w-full flex items-center justify-between">
+                              <span>{slot.start_time}</span>
+                              {adminMode && (
+                                <span className="flex items-center gap-2 text-sm">
+                                  <button
+                                    type="button"
+                                    className="underline opacity-80 hover:opacity-100"
+                                    onClick={async (e) => {
+                                      e.stopPropagation()
+                                      await fetch(`/api/admin/time-slots/${slot.id}`, { method: 'DELETE' })
+                                      const res = await fetch(`/api/time-slots/availability?date=${selectedDateIso}`)
+                                      const json = await res.json()
+                                      setTimeSlots(json?.data || [])
+                                    }}
+                                  >
+                                    Delete
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="underline opacity-80 hover:opacity-100"
+                                    onClick={async (e) => {
+                                      e.stopPropagation()
+                                      await fetch(`/api/admin/time-slots/${slot.id}`, {
+                                        method: 'PATCH',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ is_available: !slot.is_available })
+                                      })
+                                      const res = await fetch(`/api/time-slots/availability?date=${selectedDateIso}`)
+                                      const json = await res.json()
+                                      setTimeSlots(json?.data || [])
+                                    }}
+                                  >
+                                    {slot.is_available ? 'Block' : 'Unblock'}
+                                  </button>
+                                </span>
+                              )}
+                            </div>
                           </L4DButton>
                         )
                       ))}
@@ -118,6 +231,18 @@ export function AppointmentPicker({ initialDate, onSelect }: AppointmentPickerPr
             </div>
           </div>
         </div>
+        {adminMode && showAddSlot && (
+          <AddSlotModal
+            date={selectedDateIso}
+            onClose={() => setShowAddSlot(false)}
+            onSuccess={async () => {
+              setShowAddSlot(false)
+              const res = await fetch(`/api/time-slots/availability?date=${selectedDateIso}`)
+              const json = await res.json()
+              setTimeSlots(json?.data || [])
+            }}
+          />
+        )}
       </CardContent>
     </Card>
   )
