@@ -3,6 +3,7 @@ import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '@/lib/utils'
 import { Loader2 } from 'lucide-react'
 import { isNewUIEnabled } from '@/lib/config/feature-flags'
+import { Button as ShadButton } from '@/components/ui/button'
 
 const buttonVariants = cva(
   // Base styles - Mobile-first with touch targets and purple focus ring
@@ -102,6 +103,68 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     const isDisabled = disabled || loading
     
     const hideInnerIcons = size !== 'icon'
+
+    if (isNewUIEnabled()) {
+      const mapVariant = (v: ButtonProps['variant']): 'default' | 'secondary' | 'outline' | 'ghost' | 'destructive' | 'link' | undefined => {
+        switch (v) {
+          case 'primary': return 'default'
+          case 'secondary': return 'secondary'
+          case 'outline': return 'outline'
+          case 'ghost': return 'ghost'
+          case 'destructive': return 'destructive'
+          case 'link': return 'link'
+          default: return 'default'
+        }
+      }
+      const mapSize = (s: ButtonProps['size']): 'sm' | 'default' | 'lg' | 'icon' | undefined => {
+        switch (s) {
+          case 'xs':
+          case 'sm': return 'sm'
+          case 'md': return 'default'
+          case 'lg':
+          case 'xl': return 'lg'
+          case 'icon': return 'icon'
+          default: return 'default'
+        }
+      }
+
+      return (
+        <ShadButton
+          ref={ref}
+          variant={mapVariant(variant)}
+          size={mapSize(size)}
+          disabled={isDisabled}
+          className={cn(fullWidth && 'w-full', className)}
+          data-ui="new"
+          {...props}
+        >
+          {loading && (
+            <Loader2 
+              className={cn(
+                'animate-spin mr-2',
+                size === 'xs' ? 'h-3 w-3' :
+                size === 'sm' ? 'h-3.5 w-3.5' :
+                size === 'md' ? 'h-4 w-4' :
+                size === 'lg' ? 'h-4 w-4' :
+                size === 'xl' ? 'h-5 w-5' :
+                'h-4 w-4'
+              )}
+              aria-hidden="true"
+            />
+          )}
+          {size !== 'icon' && (
+            <span className={cn('inline-block whitespace-nowrap', loading && 'opacity-70')}>
+              {loading && loadingText ? loadingText : children}
+            </span>
+          )}
+          {size === 'icon' && !loading && (
+            <span className="flex items-center justify-center h-4 w-4" aria-hidden="true">
+              {children}
+            </span>
+          )}
+        </ShadButton>
+      )
+    }
 
     return (
       <button
