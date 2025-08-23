@@ -7,6 +7,7 @@ import { ScheduleSwiper } from '@/components/admin/schedule/ScheduleSwiper'
 import AppointmentPicker from '@/components/booking/AppointmentPicker'
 import { isNewUIEnabled } from '@/lib/config/feature-flags'
 import { Button } from '@/components/ui/primitives/Button'
+import { EventCalendar, type CalendarEvent } from '@/components/event-calendar'
 import { 
   CalendarIcon,
   ClockIcon,
@@ -54,6 +55,7 @@ function ScheduleCalendarContent() {
   const [isLoading, setIsLoading] = useState(true)
   const [viewMode, setViewMode] = useState<'swipe' | 'calendar'>('swipe')
   const [jumpToDate, setJumpToDate] = useState<string | null>(null)
+  const [events, setEvents] = useState<CalendarEvent[]>([])
 
   useEffect(() => {
     loadTimeSlots()
@@ -81,8 +83,21 @@ function ScheduleCalendarContent() {
       if (response.ok) {
         const data = await response.json()
         if (data.success) {
-          
-          setTimeSlots(data.data || [])
+          const slots: TimeSlot[] = data.data || []
+          setTimeSlots(slots)
+          const mapped: CalendarEvent[] = slots.map(s => {
+            const start = new Date(`${s.slot_date}T${s.start_time}`)
+            const end = new Date(start.getTime() + 60 * 60 * 1000)
+            return {
+              id: s.id,
+              title: s.booking ? 'Booked' : (s.is_available ? 'Available' : 'Blocked'),
+              start,
+              end,
+              allDay: false,
+              color: s.booking ? 'rose' : (s.is_available ? 'emerald' : 'orange')
+            }
+          })
+          setEvents(mapped)
         } else {
           console.error('API returned error:', data.error)
         }
@@ -150,8 +165,40 @@ function ScheduleCalendarContent() {
 
         {/* New picker (feature-flagged) */}
         {isNewUIEnabled() && (
-          <div>
+          <div className="space-y-4">
             <AppointmentPicker onSelect={(s) => setJumpToDate(s.date)} adminMode />
+            <EventCalendar
+              events={events}
+              onEventAdd={async (ev) => {
+                await fetch('/api/admin/time-slots', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    slot_date: ev.start.toISOString().slice(0,10),
+                    start_time: ev.start.toTimeString().slice(0,5),
+                    is_available: true,
+                    notes: ev.title || null
+                  })
+                })
+                await loadTimeSlots()
+              }}
+              onEventUpdate={async (ev) => {
+                await fetch(`/api/admin/time-slots/${ev.id}`, {
+                  method: 'PATCH',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    slot_date: ev.start.toISOString().slice(0,10),
+                    start_time: ev.start.toTimeString().slice(0,5)
+                  })
+                })
+                await loadTimeSlots()
+              }}
+              onEventDelete={async (id) => {
+                await fetch(`/api/admin/time-slots/${id}`, { method: 'DELETE' })
+                await loadTimeSlots()
+              }}
+              initialView="week"
+            />
           </div>
         )}
 

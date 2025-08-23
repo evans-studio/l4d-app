@@ -70,6 +70,37 @@ export function AppointmentPicker({ initialDate, onSelect, adminMode = false }: 
     load()
   }, [selectedDateIso])
 
+  // Auto-select nearest date with available slots if current date has none
+  useEffect(() => {
+    if (loading) return
+    if (timeSlots.length > 0) return
+    // find next date in current visible month that has slots
+    const todayIso = format(today, 'yyyy-MM-dd')
+    const currentIso = selectedDateIso
+    const candidates = monthDates
+      .filter(d => d >= currentIso)
+      .filter(d => datesWithAvailable.has(d))
+    if (candidates.length > 0) {
+      const nextIso = candidates[0] as string
+      const [y, m, dd] = nextIso.split('-').map(Number)
+      if (y && m && dd) {
+        setDate(new Date(y, m - 1, dd))
+      }
+      return
+    }
+    // if nothing in current month and selected date is before today, try today within current month
+    if (currentIso < todayIso) {
+      const forward = monthDates.filter(d => d >= todayIso && datesWithAvailable.has(d))
+      if (forward.length > 0) {
+        const nextIso = forward[0] as string
+        const [y, m, dd] = nextIso.split('-').map(Number)
+        if (y && m && dd) {
+          setDate(new Date(y, m - 1, dd))
+        }
+      }
+    }
+  }, [timeSlots.length, loading, monthDates, datesWithAvailable, selectedDateIso, today])
+
 
   return (
     <Card data-ui={isNewUIEnabled() ? 'new' : 'old'}>
