@@ -62,6 +62,7 @@ export function EventDialog({
   const [error, setError] = useState<string | null>(null)
   const [startDateOpen, setStartDateOpen] = useState(false)
   const [endDateOpen, setEndDateOpen] = useState(false)
+  const [durationMin, setDurationMin] = useState<number>(SlotVisualDurationMin)
 
   // Debug log to check what event is being passed
   useEffect(() => {
@@ -143,7 +144,7 @@ export function EventDialog({
     // UI-only duration block for rendering
     const end = new Date(start)
     if (!allDay) {
-      end.setMinutes(end.getMinutes() + SlotVisualDurationMin)
+      end.setMinutes(end.getMinutes() + durationMin)
     } else {
       end.setHours(23, 59, 59, 999)
     }
@@ -231,7 +232,7 @@ export function EventDialog({
         )}
         <div className="grid gap-4 py-4">
           <div className="*:not-first:mt-1.5">
-            <Label htmlFor="title">Notes (optional)</Label>
+            <Label htmlFor="title">Title</Label>
             <Input
               id="title"
               value={title}
@@ -308,6 +309,23 @@ export function EventDialog({
                     {timeOptions.map((option) => (
                       <SelectItem key={option.value} value={option.value}>
                         {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            {!allDay && (
+              <div className="min-w-28 *:not-first:mt-1.5">
+                <Label htmlFor="duration">Duration</Label>
+                <Select value={String(durationMin)} onValueChange={(v) => setDurationMin(Number(v))}>
+                  <SelectTrigger id="duration">
+                    <SelectValue placeholder="Select duration" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[15,30,45,60,90,120].map((min) => (
+                      <SelectItem key={min} value={String(min)}>
+                        {min} minutes
                       </SelectItem>
                     ))}
                   </SelectContent>
