@@ -216,7 +216,7 @@ export function EventDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[360px]">
         <DialogHeader>
           <DialogTitle>{event?.id ? "Edit Slot" : "Add Slot"}</DialogTitle>
           <DialogDescription className="sr-only">
@@ -231,26 +231,7 @@ export function EventDialog({
           </div>
         )}
         <div className="grid gap-4 py-4">
-          <div className="*:not-first:mt-1.5">
-            <Label htmlFor="title">Title</Label>
-            <Input
-              id="title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-            />
-          </div>
-
-          <div className="*:not-first:mt-1.5">
-            <Label htmlFor="description">Description</Label>
-            <Textarea
-              id="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={3}
-            />
-          </div>
-
-          <div className="flex gap-4">
+          <div className="flex flex-wrap gap-3">
             <div className="flex-1 *:not-first:mt-1.5">
               <Label htmlFor="start-date">Start Date</Label>
               <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
@@ -299,7 +280,7 @@ export function EventDialog({
               </Popover>
             </div>
             {!allDay && (
-              <div className="min-w-28 *:not-first:mt-1.5">
+              <div className="w-28 *:not-first:mt-1.5">
                 <Label htmlFor="start-time">Start Time</Label>
                 <Select value={startTime} onValueChange={setStartTime}>
                   <SelectTrigger id="start-time">
@@ -316,7 +297,7 @@ export function EventDialog({
               </div>
             )}
             {!allDay && (
-              <div className="min-w-28 *:not-first:mt-1.5">
+              <div className="w-28 *:not-first:mt-1.5">
                 <Label htmlFor="duration">Duration</Label>
                 <Select value={String(durationMin)} onValueChange={(v) => setDurationMin(Number(v))}>
                   <SelectTrigger id="duration">
@@ -344,39 +325,7 @@ export function EventDialog({
             <Label htmlFor="all-day">All day</Label>
           </div>
 
-          <div className="*:not-first:mt-1.5">
-            <Label htmlFor="location">Location</Label>
-            <Input
-              id="location"
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-            />
-          </div>
-          <fieldset className="space-y-4">
-            <legend className="text-foreground text-sm leading-none font-medium">
-              Etiquette
-            </legend>
-            <RadioGroup
-              className="flex gap-1.5"
-              defaultValue={colorOptions[0]?.value}
-              value={color}
-              onValueChange={(value: EventColor) => setColor(value)}
-            >
-              {colorOptions.map((colorOption) => (
-                <RadioGroupItem
-                  key={colorOption.value}
-                  id={`color-${colorOption.value}`}
-                  value={colorOption.value}
-                  aria-label={colorOption.label}
-                  className={cn(
-                    "size-6 shadow-none",
-                    colorOption.bgClass,
-                    colorOption.borderClass
-                  )}
-                />
-              ))}
-            </RadioGroup>
-          </fieldset>
+          {/* Location and etiquette removed */}
         </div>
         <DialogFooter className="flex-row sm:justify-between">
           {event?.id && (
