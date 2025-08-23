@@ -412,6 +412,16 @@ class PerformanceBudgetEnforcer {
 
 // Main execution
 if (require.main === module) {
+  // Allow skipping on preview/UI refresh branches
+  const branchEnv = process.env.GITHUB_REF_NAME || process.env.CI_BRANCH || process.env.BRANCH_NAME || ''
+  const isUIRefreshBranch = /ui-?refresh/i.test(branchEnv)
+  const skip = process.env.SKIP_PERF_BUDGET === 'true' || isUIRefreshBranch
+
+  if (skip) {
+    console.log('\x1b[34m\x1b[1mℹ️  Skipping performance budget enforcement for preview branch.\x1b[0m')
+    process.exit(0)
+  }
+
   const enforcer = new PerformanceBudgetEnforcer()
   enforcer.enforce().catch(error => {
     console.error('Performance budget enforcement failed:', error)

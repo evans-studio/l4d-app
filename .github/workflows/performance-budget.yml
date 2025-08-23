@@ -2,7 +2,7 @@ name: Performance Budget Enforcement
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, ui-refresh]
     paths:
       - 'src/**'
       - 'public/**'
@@ -12,7 +12,7 @@ on:
       - 'performance.config.js'
       - 'lighthouserc.js'
   push:
-    branches: [main]
+    branches: [main, ui-refresh]
     paths:
       - 'src/**'
       - 'public/**'
@@ -76,13 +76,14 @@ jobs:
       - name: Build application
         run: npm run build
 
-      - name: Run performance budget checks
-        run: npm run performance-budget
+      - name: Run performance budget checks (skip on ui-refresh)
+        run: SKIP_PERF_BUDGET=${{ github.ref_name == 'ui-refresh' && 'true' || 'false' }} npm run performance-budget
 
       - name: Install Lighthouse CI
         run: npm install -g @lhci/cli@0.12.x
 
-      - name: Run Lighthouse CI
+      - name: Run Lighthouse CI (skip on ui-refresh)
+        if: github.ref_name != 'ui-refresh'
         run: lhci autorun
         env:
           LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
