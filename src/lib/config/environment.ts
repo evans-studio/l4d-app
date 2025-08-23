@@ -172,8 +172,8 @@ function createEnvironmentConfig(): EnvironmentConfig {
     const value = process.env[varName]
     if (!value) {
       missingVars.push(varName)
-    } else {
-      // Validate the format of existing variables
+    } else if (isProduction) {
+      // Only validate formats strictly in production
       const validationError = validateEnvironmentValue(varName, value)
       if (validationError) {
         invalidVars.push({ name: varName, reason: validationError })
