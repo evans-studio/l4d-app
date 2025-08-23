@@ -352,7 +352,7 @@ export function EventCalendar({
                 size={16}
                 aria-hidden="true"
               />
-              <span className="max-sm:sr-only">New event</span>
+              <span className="max-sm:sr-only">Add slot</span>
             </Button>
           </div>
         </div>

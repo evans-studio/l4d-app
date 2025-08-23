@@ -132,40 +132,27 @@ export function EventDialog({
 
   const handleSave = () => {
     const start = new Date(startDate)
-    const end = new Date(endDate)
+    const [startHours = 0, startMinutes = 0] = startTime.split(":").map(Number)
 
     if (!allDay) {
-      const [startHours = 0, startMinutes = 0] = startTime
-        .split(":")
-        .map(Number)
-      const [endHours = 0, endMinutes = 0] = endTime.split(":").map(Number)
-
-      if (
-        startHours < StartHour ||
-        startHours > EndHour ||
-        endHours < StartHour ||
-        endHours > EndHour
-      ) {
-        setError(
-          `Selected time must be between ${StartHour}:00 and ${EndHour}:00`
-        )
+      // Validate within working bounds
+      if (startHours < StartHour || startHours > EndHour) {
+        setError(`Selected time must be between ${StartHour}:00 and ${EndHour}:00`)
         return
       }
-
       start.setHours(startHours, startMinutes, 0)
-      end.setHours(endHours, endMinutes, 0)
     } else {
       start.setHours(0, 0, 0, 0)
+    }
+
+    // UI-only duration: 60 minutes block for rendering
+    const end = new Date(start)
+    if (!allDay) {
+      end.setMinutes(end.getMinutes() + 60)
+    } else {
       end.setHours(23, 59, 59, 999)
     }
 
-    // Validate that end date is not before start date
-    if (isBefore(end, start)) {
-      setError("End date cannot be before start date")
-      return
-    }
-
-    // Use generic title if empty
     const eventTitle = title.trim() ? title : "(no title)"
 
     onSave({
@@ -235,7 +222,7 @@ export function EventDialog({
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>{event?.id ? "Edit Event" : "Create Event"}</DialogTitle>
+          <DialogTitle>{event?.id ? "Edit Slot" : "Add Slot"}</DialogTitle>
           <DialogDescription className="sr-only">
             {event?.id
               ? "Edit the details of this event"
@@ -315,7 +302,6 @@ export function EventDialog({
                 </PopoverContent>
               </Popover>
             </div>
-
             {!allDay && (
               <div className="min-w-28 *:not-first:mt-1.5">
                 <Label htmlFor="start-time">Start Time</Label>
@@ -334,71 +320,7 @@ export function EventDialog({
               </div>
             )}
           </div>
-
-          <div className="flex gap-4">
-            <div className="flex-1 *:not-first:mt-1.5">
-              <Label htmlFor="end-date">End Date</Label>
-              <Popover open={endDateOpen} onOpenChange={setEndDateOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    id="end-date"
-                    variant={"outline"}
-                    className={cn(
-                      "group bg-background hover:bg-background border-input w-full justify-between px-3 font-normal outline-offset-0 outline-none focus-visible:outline-[3px]",
-                      !endDate && "text-muted-foreground"
-                    )}
-                  >
-                    <span
-                      className={cn(
-                        "truncate",
-                        !endDate && "text-muted-foreground"
-                      )}
-                    >
-                      {endDate ? format(endDate, "PPP") : "Pick a date"}
-                    </span>
-                    <RiCalendarLine
-                      size={16}
-                      className="text-muted-foreground/80 shrink-0"
-                      aria-hidden="true"
-                    />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-2" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={endDate}
-                    defaultMonth={endDate}
-                    disabled={{ before: startDate }}
-                    onSelect={(date) => {
-                      if (date) {
-                        setEndDate(date)
-                        setError(null)
-                        setEndDateOpen(false)
-                      }
-                    }}
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-
-            {!allDay && (
-              <div className="min-w-28 *:not-first:mt-1.5">
-                <Label htmlFor="end-time">End Time</Label>
-                <Select value={endTime} onValueChange={setEndTime}>
-                  <SelectTrigger id="end-time">
-                    <SelectValue placeholder="Select time" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {timeOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-          </div>
+          {/* End time hidden – slot duration fixed to 60m for rendering */}
 
           <div className="flex items-center gap-2">
             <Checkbox
