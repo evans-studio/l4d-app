@@ -1,0 +1,7 @@
+# Supabase CLI config placeholder
+# Run 'supabase init' to regenerate, or 'supabase link' to bind to a project.
+project_id = ""
+
+[db]
+# Logical default branch name in Supabase Branching
+branch = "main"
