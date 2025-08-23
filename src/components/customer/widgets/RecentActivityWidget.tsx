@@ -170,7 +170,7 @@ export function RecentActivityWidget({ recentBookings }: RecentActivityWidgetPro
           return (
             <div
               key={booking.id}
-              className="flex flex-col gap-4 p-5 rounded-xl bg-surface-tertiary hover:bg-surface-secondary transition-all duration-200 cursor-pointer min-h-[100px] touch-manipulation"
+              className="flex flex-col gap-4 p-5 rounded-xl bg-surface-tertiary border border-border-secondary hover:bg-surface-secondary transition-all duration-200 cursor-pointer min-h-[100px] touch-manipulation"
               onClick={() => openOverlay({
                 type: 'booking-view',
                 data: { bookingId: booking.id, booking }

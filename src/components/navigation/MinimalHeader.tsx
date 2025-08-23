@@ -362,7 +362,7 @@ export const MinimalHeader: React.FC<MinimalHeaderProps> = ({ className, showMob
   return (
     <>
       <header data-ui={isNewUIEnabled() ? 'new' : 'old'} className={cn(
-        "sticky top-0 z-40 w-full bg-surface-primary/95 backdrop-blur-sm border-b border-border-secondary",
+        "sticky top-0 z-[var(--z-header)] w-full bg-surface-primary/90 backdrop-blur supports-[backdrop-filter]:bg-[color:var(--surface-primary)/0.85] border-b border-border-secondary",
         className
       )}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

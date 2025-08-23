@@ -136,7 +136,7 @@ export function NextBookingWidget({ booking }: NextBookingWidgetProps) {
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Countdown */}
-        <div className="bg-brand-600/10 rounded-lg p-3 text-center">
+        <div className="bg-brand-600/10 rounded-lg p-3 text-center border border-brand-600/20">
           <p className="text-sm text-text-secondary mb-1">Starting</p>
           <p className="text-lg font-bold text-brand-400">{timeUntil}</p>
         </div>
@@ -144,7 +144,7 @@ export function NextBookingWidget({ booking }: NextBookingWidgetProps) {
         {/* Booking Details */}
         <div className="space-y-3">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-surface-tertiary flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-surface-tertiary border border-border-secondary flex items-center justify-center">
               <Calendar className="w-4 h-4 text-brand-400" />
             </div>
             <div>
@@ -158,7 +158,7 @@ export function NextBookingWidget({ booking }: NextBookingWidgetProps) {
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-surface-tertiary flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-surface-tertiary border border-border-secondary flex items-center justify-center">
               <Car className="w-4 h-4 text-brand-400" />
             </div>
             <div>
@@ -172,7 +172,7 @@ export function NextBookingWidget({ booking }: NextBookingWidgetProps) {
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-surface-tertiary flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-surface-tertiary border border-border-secondary flex items-center justify-center">
               <MapPin className="w-4 h-4 text-brand-400" />
             </div>
             <div>

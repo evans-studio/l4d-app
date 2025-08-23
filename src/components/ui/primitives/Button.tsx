@@ -6,18 +6,18 @@ import { isNewUIEnabled } from '@/lib/config/feature-flags'
 
 const buttonVariants = cva(
   // Base styles - Mobile-first with touch targets and purple focus ring
-  'inline-flex items-center justify-center font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-primary disabled:opacity-50 disabled:pointer-events-none disabled:cursor-not-allowed relative overflow-hidden',
+  'inline-flex items-center justify-center font-medium transition-all duration-200 focus-visible:outline-none focus-visible:[box-shadow:var(--focus-ring)] disabled:opacity-50 disabled:pointer-events-none disabled:cursor-not-allowed relative overflow-hidden',
   {
     variants: {
       variant: {
         // Strong purple primary buttons - Love4Detailing brand identity
-        primary: 'bg-brand-600 text-white hover:bg-brand-700 active:bg-brand-800 shadow-purple hover:shadow-purple-lg hover:animate-purple-glow border border-brand-500/20',
+        primary: 'bg-brand-600 text-white hover:bg-brand-700 active:bg-brand-800 shadow-[var(--elevation-1)] hover:shadow-[var(--elevation-2)] border border-brand-500/20',
         
         // Secondary with purple accents
-        secondary: 'bg-surface-tertiary text-text-primary border border-border-secondary hover:bg-surface-hover hover:border-border-purple active:bg-surface-active shadow-sm hover:shadow-purple',
+        secondary: 'bg-surface-tertiary text-text-primary border border-border-secondary hover:bg-surface-hover active:bg-surface-active shadow-[var(--elevation-1)] hover:shadow-[var(--elevation-2)]',
         
         // Outline with purple hover
-        outline: 'border border-border-secondary text-text-primary hover:bg-brand-600/10 hover:border-brand-500 hover:text-brand-300 active:bg-brand-600/20 backdrop-blur-sm',
+        outline: 'border border-border-secondary text-text-primary hover:bg-brand-600/10 hover:border-brand-500 hover:text-brand-300 active:bg-brand-600/20 backdrop-blur-sm shadow-[var(--elevation-1)]',
         
         // Ghost with purple hover background
         ghost: 'text-text-primary hover:bg-brand-600/10 hover:text-brand-300 active:bg-brand-600/20',

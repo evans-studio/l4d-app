@@ -50,9 +50,9 @@ export function MainHeader() {
   }, [])
 
   return (
-    <header className="bg-[var(--bg-secondary)] border-b border-[var(--border-primary)] sticky top-0 z-50" data-ui={isNewUIEnabled() ? 'new' : 'old'}>
+    <header className="bg-[var(--bg-secondary)]/95 backdrop-blur supports-[backdrop-filter]:bg-[color:var(--bg-secondary)/0.85] border-b border-[var(--border-primary)] sticky top-0 z-[var(--z-header)]" data-ui={isNewUIEnabled() ? 'new' : 'old'}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
+        <div className="flex justify-between items-center h-14 sm:h-16">
           {/* Logo */}
           <div className="flex items-center flex-1 sm:flex-initial">
             <Link href="/" className="flex items-center w-full sm:w-auto">

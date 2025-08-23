@@ -35,7 +35,7 @@ export function DashboardHeader({ onMenuClick, userType }: DashboardHeaderProps)
   }
 
   return (
-    <header className="bg-[var(--bg-secondary)] border-b border-[var(--border-primary)] px-6 py-4" data-ui={isNewUIEnabled() ? 'new' : 'old'}>
+    <header className="sticky top-0 z-[var(--z-header)] bg-[var(--bg-secondary)]/90 backdrop-blur supports-[backdrop-filter]:bg-[color:var(--bg-secondary)/0.85] border-b border-[var(--border-primary)] px-6 py-3" data-ui={isNewUIEnabled() ? 'new' : 'old'}>
       <div className="flex items-center justify-between">
         {/* Left Side */}
         <div className="flex items-center gap-4">
