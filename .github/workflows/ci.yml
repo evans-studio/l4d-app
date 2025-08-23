@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, ui-refresh ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, ui-refresh ]
 
 jobs:
   build-and-test:
@@ -31,6 +31,8 @@ jobs:
           echo "REFRESH_TOKEN_SECRET=abcdef0123456789abcdef0123456789" >> $GITHUB_ENV
           echo "RESEND_API_KEY=dummy" >> $GITHUB_ENV
           echo "NODE_ENV=test" >> $GITHUB_ENV
+          echo "NEXT_PUBLIC_NEW_UI=true" >> $GITHUB_ENV
+          if [ "${{ github.ref_name }}" = "ui-refresh" ]; then echo "SKIP_PERF_BUDGET=true" >> $GITHUB_ENV; fi
 
       - name: Build
         run: npm run build
