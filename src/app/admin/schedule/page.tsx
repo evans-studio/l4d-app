@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react'
 import { AdminLayout } from '@/components/layouts/AdminLayout'
 import { AdminRoute } from '@/components/ProtectedRoute'
 import { ScheduleSwiper } from '@/components/admin/schedule/ScheduleSwiper'
+import AppointmentPicker from '@/components/booking/AppointmentPicker'
+import { isNewUIEnabled } from '@/lib/config/feature-flags'
 import { Button } from '@/components/ui/primitives/Button'
 import { 
   CalendarIcon,
@@ -51,6 +53,7 @@ function ScheduleCalendarContent() {
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [viewMode, setViewMode] = useState<'swipe' | 'calendar'>('swipe')
+  const [jumpToDate, setJumpToDate] = useState<string | null>(null)
 
   useEffect(() => {
     loadTimeSlots()
@@ -145,12 +148,22 @@ function ScheduleCalendarContent() {
           </div>
         </div>
 
+        {/* New picker (feature-flagged) */}
+        {isNewUIEnabled() && (
+          <div>
+            <AppointmentPicker
+              onSelect={(s) => setJumpToDate(s.date)}
+            />
+          </div>
+        )}
+
         {/* Main Content */}
         {viewMode === 'swipe' ? (
           <ScheduleSwiper
             timeSlots={timeSlots}
             onSlotsChange={loadTimeSlots}
             isLoading={isLoading}
+            jumpToDate={jumpToDate || undefined}
           />
         ) : (
           <div className="bg-[var(--surface-secondary)] rounded-xl border border-[var(--border-primary)] p-6 text-center">

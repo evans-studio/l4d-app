@@ -212,14 +212,14 @@ function createEnvironmentConfig(): EnvironmentConfig {
       serviceRadiusMiles: parseFloat(getOptionalEnvVar('NEXT_PUBLIC_SERVICE_RADIUS_MILES', '17.5')!),
     },
     email: {
-      fromEmail: isProduction ? getRequiredEnvVar('NEXT_PUBLIC_FROM_EMAIL', true) : getOptionalEnvVar('NEXT_PUBLIC_FROM_EMAIL', 'zell@love4detailing.com')!,
-      adminEmail: isProduction ? getRequiredEnvVar('ADMIN_EMAIL', true) : getOptionalEnvVar('ADMIN_EMAIL', 'zell@love4detailing.com')!,
-      replyTo: isProduction ? getRequiredEnvVar('EMAIL_REPLY_TO', true) : getOptionalEnvVar('EMAIL_REPLY_TO', 'zell@love4detailing.com')!,
-      resendApiKey: isProduction ? getRequiredEnvVar('RESEND_API_KEY', true) : getOptionalEnvVar('RESEND_API_KEY', '')!,
+      fromEmail: (isProduction && !skipValidation) ? getRequiredEnvVar('NEXT_PUBLIC_FROM_EMAIL', true) : getOptionalEnvVar('NEXT_PUBLIC_FROM_EMAIL', 'zell@love4detailing.com')!,
+      adminEmail: (isProduction && !skipValidation) ? getRequiredEnvVar('ADMIN_EMAIL', true) : getOptionalEnvVar('ADMIN_EMAIL', 'zell@love4detailing.com')!,
+      replyTo: (isProduction && !skipValidation) ? getRequiredEnvVar('EMAIL_REPLY_TO', true) : getOptionalEnvVar('EMAIL_REPLY_TO', 'zell@love4detailing.com')!,
+      resendApiKey: (isProduction && !skipValidation) ? getRequiredEnvVar('RESEND_API_KEY', true) : getOptionalEnvVar('RESEND_API_KEY', '')!,
     },
     payment: {
-      paypalUsername: isProduction ? getRequiredEnvVar('PAYPAL_ME_USERNAME', true) : getOptionalEnvVar('PAYPAL_ME_USERNAME', 'love4detailing')!,
-      paypalBusinessEmail: isProduction ? getRequiredEnvVar('PAYPAL_BUSINESS_EMAIL', true) : getOptionalEnvVar('PAYPAL_BUSINESS_EMAIL', 'zell@love4detailing.com')!,
+      paypalUsername: (isProduction && !skipValidation) ? getRequiredEnvVar('PAYPAL_ME_USERNAME', true) : getOptionalEnvVar('PAYPAL_ME_USERNAME', 'love4detailing')!,
+      paypalBusinessEmail: (isProduction && !skipValidation) ? getRequiredEnvVar('PAYPAL_BUSINESS_EMAIL', true) : getOptionalEnvVar('PAYPAL_BUSINESS_EMAIL', 'zell@love4detailing.com')!,
     },
     monitoring: {
       sentryDsn: getOptionalEnvVar('SENTRY_DSN'),

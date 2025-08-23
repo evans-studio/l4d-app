@@ -60,9 +60,10 @@ interface ScheduleSwiperProps {
   timeSlots: TimeSlot[]
   onSlotsChange: () => void
   isLoading: boolean
+  jumpToDate?: string
 }
 
-export function ScheduleSwiper({ timeSlots, onSlotsChange, isLoading }: ScheduleSwiperProps) {
+export function ScheduleSwiper({ timeSlots, onSlotsChange, isLoading, jumpToDate }: ScheduleSwiperProps) {
   // Feature-flag to safely enable view state preservation
   const IMPROVED_SLOT_STATE_ENABLED = typeof process !== 'undefined' &&
     (process.env.NEXT_PUBLIC_IMPROVED_SLOT_STATE_ENABLED === 'true' || true)
@@ -188,6 +189,14 @@ export function ScheduleSwiper({ timeSlots, onSlotsChange, isLoading }: Schedule
       lastViewedDateRef.current = null
     }
   }, [timeSlots])
+
+  // Respond to external jump requests (admin picker)
+  useEffect(() => {
+    if (jumpToDate) {
+      setViewToDate(jumpToDate)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [jumpToDate])
 
   // Touch handlers for swipe navigation
   const onTouchStart = (e: React.TouchEvent) => {

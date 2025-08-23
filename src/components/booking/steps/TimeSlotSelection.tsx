@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react'
 import { useBookingFlowStore, useBookingStep } from '@/lib/store/bookingFlowStore'
 import { Button } from '@/components/ui/primitives/Button'
+import AppointmentPicker from '@/components/booking/AppointmentPicker'
+import { isNewUIEnabled } from '@/lib/config/feature-flags'
 import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/composites/Card'
 import { ChevronLeftIcon, ChevronRightIcon, CalendarIcon, ClockIcon, CheckCircleIcon, AlertCircleIcon } from 'lucide-react'
 import { addDays, format, startOfWeek, endOfWeek, isSameDay, isAfter, startOfDay, startOfMonth, endOfMonth, addMonths, isSameMonth } from 'date-fns'
@@ -294,7 +296,14 @@ export function TimeSlotSelection() {
           </CardHeader>
           
           <CardContent>
-            {/* Calendar Grid */}
+            {isNewUIEnabled() ? (
+              <div className="mb-6">
+                <AppointmentPicker
+                  initialDate={new Date(selectedDate)}
+                  onSelect={(s) => handleSlotSelect(s.id)}
+                />
+              </div>
+            ) : (
             <div className="space-y-4">
               {/* Day headers */}
               <div className="grid grid-cols-7 gap-2 text-center text-sm font-medium text-text-secondary">
@@ -345,6 +354,7 @@ export function TimeSlotSelection() {
                 </div>
               ))}
             </div>
+            )}
 
             {/* Selected Date Display */}
             {selectedDate && (
