@@ -196,13 +196,13 @@ function createEnvironmentConfig(): EnvironmentConfig {
       name: getOptionalEnvVar('NEXT_PUBLIC_COMPANY_NAME', 'Love 4 Detailing')!,
     },
     supabase: {
-      url: getRequiredEnvVar('NEXT_PUBLIC_SUPABASE_URL', isProduction),
-      anonKey: getRequiredEnvVar('NEXT_PUBLIC_SUPABASE_ANON_KEY', isProduction),
-      serviceRoleKey: getRequiredEnvVar('SUPABASE_SERVICE_ROLE_KEY', isProduction),
+      url: getRequiredEnvVar('NEXT_PUBLIC_SUPABASE_URL', isProduction && !skipValidation),
+      anonKey: getRequiredEnvVar('NEXT_PUBLIC_SUPABASE_ANON_KEY', isProduction && !skipValidation),
+      serviceRoleKey: getRequiredEnvVar('SUPABASE_SERVICE_ROLE_KEY', isProduction && !skipValidation),
     },
     auth: {
-      accessTokenSecret: getRequiredEnvVar('ACCESS_TOKEN_SECRET', isProduction),
-      refreshTokenSecret: getRequiredEnvVar('REFRESH_TOKEN_SECRET', isProduction),
+      accessTokenSecret: getRequiredEnvVar('ACCESS_TOKEN_SECRET', isProduction && !skipValidation),
+      refreshTokenSecret: getRequiredEnvVar('REFRESH_TOKEN_SECRET', isProduction && !skipValidation),
       cookieDomain: getOptionalEnvVar('COOKIE_DOMAIN'),
     },
     business: {
