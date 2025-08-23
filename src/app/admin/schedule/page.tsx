@@ -162,6 +162,14 @@ function ScheduleCalendarContent() {
         <div className="space-y-4">
           <EventCalendar
             events={events}
+            onEventClick={(ev) => {
+              const slot = ev.meta as TimeSlot | undefined
+              if (slot?.booking) {
+                window.location.href = `/admin/bookings/${slot.booking.id}`
+                return true
+              }
+              return false
+            }}
             onEventAdd={async (ev) => {
               await fetch('/api/admin/time-slots', {
                 method: 'POST',

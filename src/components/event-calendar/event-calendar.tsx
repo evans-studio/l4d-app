@@ -48,6 +48,7 @@ export interface EventCalendarProps {
   className?: string
   initialView?: CalendarView
   readonly?: boolean
+  onEventClick?: (event: CalendarEvent) => boolean | void
 }
 
 export function EventCalendar({
@@ -58,6 +59,7 @@ export function EventCalendar({
   className,
   initialView = "month",
   readonly = false,
+  onEventClick,
 }: EventCalendarProps) {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [view, setView] = useState<CalendarView>(initialView)
@@ -132,6 +134,9 @@ export function EventCalendar({
   }
 
   const handleEventSelect = (event: CalendarEvent) => {
+    // Allow caller to intercept. If returns truthy, treat as handled
+    const handled = onEventClick?.(event)
+    if (handled) return
     if (readonly) return
     console.log("Event selected:", event) // Debug log
     setSelectedEvent(event)
