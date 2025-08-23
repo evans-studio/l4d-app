@@ -5,7 +5,7 @@ import { isNewUIEnabled } from '@/lib/config/feature-flags'
 import { cn } from '@/lib/utils'
 
 export interface PopoverProps {
-  trigger: React.ReactElement
+  trigger: React.ReactElement<React.ButtonHTMLAttributes<HTMLButtonElement>>
   children: React.ReactNode
   className?: string
   align?: 'start' | 'center' | 'end'
@@ -13,25 +13,25 @@ export interface PopoverProps {
 
 export const Popover: React.FC<PopoverProps> = ({ trigger, children, className, align = 'start' }) => {
   const [open, setOpen] = React.useState(false)
-  const triggerRef = React.useRef<HTMLButtonElement | null>(null)
+  const wrapperRef = React.useRef<HTMLSpanElement | null>(null)
 
   const toggle = () => setOpen((o) => !o)
   const close = () => setOpen(false)
 
   React.useEffect(() => {
     const onDoc = (e: MouseEvent) => {
-      if (!triggerRef.current) return
-      if (!triggerRef.current.parentElement?.contains(e.target as Node)) close()
+      const wrapper = wrapperRef.current
+      if (!wrapper) return
+      if (!wrapper.contains(e.target as Node)) close()
     }
     if (open) document.addEventListener('mousedown', onDoc)
     return () => document.removeEventListener('mousedown', onDoc)
   }, [open])
 
   return (
-    <span className="relative inline-flex" data-ui={isNewUIEnabled() ? 'new' : 'old'}>
+    <span ref={wrapperRef} className="relative inline-flex" data-ui={isNewUIEnabled() ? 'new' : 'old'}>
       {React.cloneElement(trigger, {
-        onClick: toggle,
-        ref: (node: HTMLButtonElement) => { triggerRef.current = node }
+        onClick: () => toggle(),
       })}
       {open && (
         <div
