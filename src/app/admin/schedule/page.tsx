@@ -90,7 +90,8 @@ function ScheduleCalendarContent() {
               start,
               end,
               allDay: false,
-              color: s.booking ? 'rose' : (s.is_available ? 'emerald' : 'orange')
+              color: s.booking ? 'rose' : (s.is_available ? 'emerald' : 'orange'),
+              meta: s
             }
           })
           setEvents(mapped)
@@ -175,6 +176,12 @@ function ScheduleCalendarContent() {
               await loadTimeSlots()
             }}
             onEventUpdate={async (ev) => {
+              // If event is a booking, open details instead of editing time
+              const slot = ev.meta as TimeSlot | undefined
+              if (slot?.booking) {
+                window.location.href = `/admin/bookings/${slot.booking.id}`
+                return
+              }
               await fetch(`/api/admin/time-slots/${ev.id}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
@@ -189,7 +196,7 @@ function ScheduleCalendarContent() {
               await fetch(`/api/admin/time-slots/${id}`, { method: 'DELETE' })
               await loadTimeSlots()
             }}
-            initialView="week"
+            initialView="month"
           />
         </div>
 
