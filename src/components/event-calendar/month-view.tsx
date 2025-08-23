@@ -14,19 +14,13 @@ import {
   startOfWeek,
 } from "date-fns"
 
-import {
-  DraggableEvent,
-  DroppableCell,
-  EventGap,
-  EventHeight,
-  EventItem,
-  getAllEventsForDay,
-  getEventsForDay,
-  getSpanningEventsForDay,
-  sortEvents,
-  useEventVisibility,
-  type CalendarEvent,
-} from "@/components/event-calendar/event-calendar"
+import { DraggableEvent } from '@/components/event-calendar/draggable-event'
+import { DroppableCell } from '@/components/event-calendar/droppable-cell'
+import { EventItem } from '@/components/event-calendar/event-item'
+import { getAllEventsForDay, getEventsForDay, getSpanningEventsForDay, sortEvents } from '@/components/event-calendar/utils'
+import { useEventVisibility } from '@/components/event-calendar/hooks/use-event-visibility'
+import { EventGap, EventHeight } from '@/components/event-calendar/constants'
+import type { CalendarEvent } from '@/components/event-calendar/types'
 import { DefaultStartHour } from "@/components/event-calendar/constants"
 import {
   Popover,

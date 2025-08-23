@@ -2,7 +2,7 @@
 
 import { useDroppable } from "@dnd-kit/core"
 
-import { useCalendarDnd } from "@/components/event-calendar/event-calendar"
+import { useCalendarDnd } from "@/components/event-calendar/calendar-dnd-context"
 import { cn } from "@/lib/utils"
 
 interface DroppableCellProps {

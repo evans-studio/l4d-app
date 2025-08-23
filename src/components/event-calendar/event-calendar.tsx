@@ -21,21 +21,15 @@ import {
 } from "lucide-react"
 import { toast } from "sonner"
 
-import {
-  addHoursToDate,
-  AgendaDaysToShow,
-  AgendaView,
-  CalendarDndProvider,
-  CalendarEvent,
-  CalendarView,
-  DayView,
-  EventDialog,
-  EventGap,
-  EventHeight,
-  MonthView,
-  WeekCellsHeight,
-  WeekView,
-} from "@/components/event-calendar/event-calendar"
+import { AgendaDaysToShow, EventGap, EventHeight, WeekCellsHeight } from '@/components/event-calendar/constants'
+import { addHoursToDate } from '@/components/event-calendar/utils'
+import { CalendarDndProvider } from '@/components/event-calendar/calendar-dnd-context'
+import { DayView } from '@/components/event-calendar/day-view'
+import { EventDialog } from '@/components/event-calendar/event-dialog'
+import { MonthView } from '@/components/event-calendar/month-view'
+import { AgendaView } from '@/components/event-calendar/agenda-view'
+import { WeekView } from '@/components/event-calendar/week-view'
+import type { CalendarEvent, CalendarView } from '@/components/event-calendar/types'
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import {
@@ -411,3 +405,21 @@ export function EventCalendar({
     </div>
   )
 }
+
+// Back-compat re-exports: allow legacy imports from
+// "@/components/event-calendar/event-calendar" to keep working
+export { AgendaView } from './agenda-view'
+export { DayView } from './day-view'
+export { DraggableEvent } from './draggable-event'
+export { DroppableCell } from './droppable-cell'
+export { EventDialog } from './event-dialog'
+export { EventItem } from './event-item'
+export { EventsPopup } from './events-popup'
+export { MonthView } from './month-view'
+export { WeekView } from './week-view'
+export { CalendarDndProvider, useCalendarDnd } from './calendar-dnd-context'
+export * from './constants'
+export * from './utils'
+export * from './hooks/use-current-time-indicator'
+export * from './hooks/use-event-visibility'
+export type { CalendarEvent, CalendarView, EventColor } from './types'

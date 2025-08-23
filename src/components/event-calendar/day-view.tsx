@@ -13,15 +13,13 @@ import {
   startOfDay,
 } from "date-fns"
 
-import {
-  DraggableEvent,
-  DroppableCell,
-  EventItem,
-  isMultiDayEvent,
-  useCurrentTimeIndicator,
-  WeekCellsHeight,
-  type CalendarEvent,
-} from "@/components/event-calendar/event-calendar"
+import { DraggableEvent } from '@/components/event-calendar/draggable-event'
+import { DroppableCell } from '@/components/event-calendar/droppable-cell'
+import { EventItem } from '@/components/event-calendar/event-item'
+import { isMultiDayEvent } from '@/components/event-calendar/utils'
+import { useCurrentTimeIndicator } from '@/components/event-calendar/hooks/use-current-time-indicator'
+import { WeekCellsHeight } from '@/components/event-calendar/constants'
+import type { CalendarEvent } from '@/components/event-calendar/types'
 import {
   EndHour,
   StartHour,
