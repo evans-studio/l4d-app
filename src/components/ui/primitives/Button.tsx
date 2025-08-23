@@ -2,6 +2,7 @@ import React from 'react'
 import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '@/lib/utils'
 import { Loader2 } from 'lucide-react'
+import { isNewUIEnabled } from '@/lib/config/feature-flags'
 
 const buttonVariants = cva(
   // Base styles - Mobile-first with touch targets and purple focus ring
@@ -117,6 +118,9 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         ref={ref}
         disabled={isDisabled || undefined}
         aria-busy={loading}
+        data-ui={isNewUIEnabled() ? 'new' : 'old'}
+        data-variant={variant}
+        data-size={size}
         {...props}
       >
         {/* Loading Spinner */}

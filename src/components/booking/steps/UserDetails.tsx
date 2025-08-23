@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/primitives/Button'
 import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/composites/Card'
 import { Input } from '@/components/ui/primitives/Input'
 import { ChevronLeftIcon, ChevronRightIcon, UserIcon, CheckCircleIcon, AlertCircleIcon, Eye, EyeOff, Lock } from 'lucide-react'
+import { isNewUIEnabled } from '@/lib/config/feature-flags'
 
 export function UserDetails() {
   const {
@@ -169,7 +170,7 @@ export function UserDetails() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8" data-ui={isNewUIEnabled() ? 'new' : 'old'}>
       {/* Header */}
       <div className="text-center">
         <h2 className="text-3xl font-bold text-text-primary mb-2">

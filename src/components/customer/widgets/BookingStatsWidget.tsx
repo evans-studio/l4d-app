@@ -1,6 +1,7 @@
 'use client'
 
 import { Card, CardHeader, CardContent } from '@/components/ui/composites/Card'
+import { isNewUIEnabled } from '@/lib/config/feature-flags'
 import { 
   TrendingUp, 
   Calendar, 
@@ -38,7 +39,7 @@ export function BookingStatsWidget({ stats }: BookingStatsWidgetProps) {
   }
 
   return (
-    <Card className="h-full">
+    <Card className="h-full" data-ui={isNewUIEnabled() ? 'new' : 'old'}>
       <CardHeader>
         <h3 className="text-lg font-semibold text-text-primary flex items-center gap-2">
           <TrendingUp className="w-5 h-5 text-brand-400" />

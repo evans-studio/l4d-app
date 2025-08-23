@@ -16,6 +16,7 @@ import {
   Clock
 } from 'lucide-react'
 import { validateUKPostcode, formatUKPostcode } from '@/lib/utils/postcode-distance'
+import { isNewUIEnabled } from '@/lib/config/feature-flags'
 
 export function AddressCollection() {
   const {
@@ -118,7 +119,7 @@ export function AddressCollection() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8" data-ui={isNewUIEnabled() ? 'new' : 'old'}>
       {/* Header */}
       <div className="text-center">
         <h2 className="text-3xl font-bold text-text-primary mb-2">

@@ -23,6 +23,7 @@ import { Card, CardHeader, CardContent, CardFooter } from '../composites/Card'
 import { Button } from '../primitives/Button'
 import { Text, Heading } from '../primitives/Typography'
 import { Icon, IconButton } from '../primitives/Icon'
+import { isNewUIEnabled } from '@/lib/config/feature-flags'
 
 const bookingCardVariants = cva(
   'transition-all duration-300',
@@ -226,6 +227,7 @@ const BookingCard = React.forwardRef<HTMLDivElement, BookingCardProps>(
         variant={interactive ? 'interactive' : 'default'}
         clickable={interactive}
         onClick={handleCardClick}
+        data-ui={isNewUIEnabled() ? 'new' : 'old'}
         {...props}
       >
         {/* Header: Status, Reference, Actions */}

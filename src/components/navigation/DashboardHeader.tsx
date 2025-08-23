@@ -13,6 +13,7 @@ import {
   SettingsIcon,
   LogOutIcon
 } from 'lucide-react'
+import { isNewUIEnabled } from '@/lib/config/feature-flags'
 
 interface DashboardHeaderProps {
   onMenuClick: () => void
@@ -34,7 +35,7 @@ export function DashboardHeader({ onMenuClick, userType }: DashboardHeaderProps)
   }
 
   return (
-    <header className="bg-[var(--bg-secondary)] border-b border-[var(--border-primary)] px-6 py-4">
+    <header className="bg-[var(--bg-secondary)] border-b border-[var(--border-primary)] px-6 py-4" data-ui={isNewUIEnabled() ? 'new' : 'old'}>
       <div className="flex items-center justify-between">
         {/* Left Side */}
         <div className="flex items-center gap-4">

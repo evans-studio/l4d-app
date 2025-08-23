@@ -361,7 +361,7 @@ function MobileWidgetCarousel({ stats, router, formatTime }: MobileWidgetCarouse
   }
 
   return (
-    <div className="mobile-widget-carousel w-full max-w-full overflow-hidden">
+    <div className="mobile-widget-carousel w-full max-w-full overflow-hidden" role="region" aria-label="Dashboard widgets carousel">
       {/* Swipe hint text */}
       <div className="text-center mb-3">
         <p className="text-text-secondary text-xs font-medium">← Swipe between widgets →</p>
@@ -376,6 +376,14 @@ function MobileWidgetCarousel({ stats, router, formatTime }: MobileWidgetCarouse
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
+          role="listbox"
+          aria-roledescription="Carousel"
+          aria-label="Widgets"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === 'ArrowRight') { e.preventDefault(); goToNext() }
+            if (e.key === 'ArrowLeft') { e.preventDefault(); goToPrev() }
+          }}
           style={{ 
             scrollbarWidth: 'none', 
             msOverflowStyle: 'none',
@@ -387,6 +395,8 @@ function MobileWidgetCarousel({ stats, router, formatTime }: MobileWidgetCarouse
             <div 
               key={widgetType} 
               className="mobile-widget-item snap-center flex-shrink-0 w-full min-w-full max-w-full"
+              role="option"
+              aria-selected={widgetOrder[currentIndex] === widgetType}
             >
               {renderWidget(widgetType)}
             </div>

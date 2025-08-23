@@ -2,6 +2,7 @@
 
 import React, { forwardRef } from 'react'
 import { cva, type VariantProps } from 'class-variance-authority'
+import { isNewUIEnabled } from '@/lib/config/feature-flags'
 import { 
   CheckCircle, 
   AlertTriangle, 
@@ -97,6 +98,9 @@ export const Alert = forwardRef<HTMLDivElement, AlertProps>(
         ref={ref}
         role="alert"
         className={alertVariants({ variant, size, className })}
+        data-ui={isNewUIEnabled() ? 'new' : 'old'}
+        data-variant={variant}
+        data-size={size}
         {...props}
       >
         {getIcon()}

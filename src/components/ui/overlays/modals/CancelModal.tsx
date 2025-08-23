@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { Calendar, Clock, AlertTriangle, CheckCircle, XCircle } from 'lucide-react'
-import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from '@/components/ui/composites/Modal'
+import { Dialog, DialogHeader, DialogTitle, DialogBody, DialogFooter } from '@/components/ui/overlays/Dialog'
 import { BaseOverlayProps } from '@/lib/overlay/types'
 import { Button } from '@/components/ui/primitives/Button'
 import { Alert, AlertDescription } from '@/components/ui/primitives/Alert'
@@ -164,11 +164,11 @@ export const CancelModal: React.FC<CancelModalProps> = ({
   }
 
   return (
-    <Modal open={isOpen} onClose={onClose}>
-      <ModalContent size="md" mobile="fullscreen" onClose={onClose}>
-        <ModalHeader title="Cancel Booking" />
-        
-        <ModalBody scrollable maxHeight="60vh">
+    <Dialog open={isOpen} onOpenChange={(o) => !o && onClose()}>
+      <DialogHeader>
+        <DialogTitle>Cancel Booking</DialogTitle>
+      </DialogHeader>
+      <DialogBody>
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600"></div>
@@ -289,11 +289,11 @@ export const CancelModal: React.FC<CancelModalProps> = ({
 
             </form>
           ) : null}
-        </ModalBody>
+        </DialogBody>
 
         {/* Footer with actions only when booking is loaded */}
         {booking && policy && (
-          <ModalFooter className="sticky bottom-0 bg-surface-primary">
+          <DialogFooter className="sticky bottom-0 bg-surface-primary">
             <Button
               variant="outline"
               onClick={onClose}
@@ -315,9 +315,8 @@ export const CancelModal: React.FC<CancelModalProps> = ({
             >
               Confirm Cancellation
             </Button>
-          </ModalFooter>
+          </DialogFooter>
         )}
-      </ModalContent>
-    </Modal>
+    </Dialog>
   )
 }

@@ -2,6 +2,7 @@ import React from 'react'
 import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '@/lib/utils'
 import { Eye, EyeOff, AlertCircle, CheckCircle, Info } from 'lucide-react'
+import { isNewUIEnabled } from '@/lib/config/feature-flags'
 
 const inputVariants = cva(
   'flex w-full rounded-md border bg-surface-card transition-all duration-200 file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-text-muted focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50',
@@ -94,7 +95,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
     const hasRightIcon = rightIcon || type === 'password'
     
     return (
-      <div className="space-y-2">
+      <div className="space-y-2" data-ui={isNewUIEnabled() ? 'new' : 'old'}>
         {/* Label (standard) */}
         {!floating && label && (
           <label
@@ -141,6 +142,8 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
               error && errorId
             )}
             placeholder={floating ? (props.placeholder || ' ') : props.placeholder}
+            data-variant={currentVariant}
+            data-size={size}
             {...props}
           />
 
@@ -280,7 +283,7 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
     }[resize]
     
     return (
-      <div className="space-y-2">
+      <div className="space-y-2" data-ui={isNewUIEnabled() ? 'new' : 'old'}>
         {/* Label */}
         {label && (
           <label
@@ -310,6 +313,8 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
             helperText && helperId,
             error && errorId
           )}
+          data-variant={currentVariant}
+          data-size={size}
           {...props}
         />
         

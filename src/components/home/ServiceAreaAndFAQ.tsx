@@ -15,6 +15,7 @@ import {
   ChevronDown
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { isNewUIEnabled } from '@/lib/config/feature-flags'
 import { calculateDistance as calculateDistanceKm } from '@/lib/services/distance'
 
 // Real postcode validation using postcodes.io (via our distance service)
@@ -136,6 +137,7 @@ export function ServiceAreaAndFAQ() {
     <section 
       ref={sectionRef}
       className="relative overflow-hidden py-20 lg:py-28"
+      data-ui={isNewUIEnabled() ? 'new' : 'old'}
     >
       <Container>
         <div className="max-w-4xl mx-auto">

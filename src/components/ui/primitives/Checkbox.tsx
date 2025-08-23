@@ -2,6 +2,7 @@ import React from 'react'
 import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '@/lib/utils'
 import { Check, Minus } from 'lucide-react'
+import { isNewUIEnabled } from '@/lib/config/feature-flags'
 
 const checkboxVariants = cva(
   'peer h-4 w-4 shrink-0 rounded-sm border-2 shadow-sm transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
@@ -78,7 +79,7 @@ const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(
     }
     
     return (
-      <div className="space-y-2">
+      <div className="space-y-2" data-ui={isNewUIEnabled() ? 'new' : 'old'}>
         <div className="flex items-start space-x-3">
           <div className="relative flex items-center justify-center">
             <input
@@ -101,6 +102,8 @@ const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(
                 error && 'border-error-500'
               )}
               data-state={indeterminate ? 'indeterminate' : checked ? 'checked' : 'unchecked'}
+              data-variant={variant}
+              data-size={size}
             >
               {checked && !indeterminate && (
                 <Check 

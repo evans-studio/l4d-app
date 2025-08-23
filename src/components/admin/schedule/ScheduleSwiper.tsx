@@ -13,6 +13,7 @@ import {
   CalendarIcon
 } from 'lucide-react'
 import { safeConsole } from '@/lib/utils/logger'
+import { isNewUIEnabled } from '@/lib/config/feature-flags'
 
 interface TimeSlot {
   id: string
@@ -288,7 +289,7 @@ export function ScheduleSwiper({ timeSlots, onSlotsChange, isLoading }: Schedule
   }
 
   return (
-    <div className="max-w-md mx-auto bg-[var(--surface-secondary)] rounded-xl border border-[var(--border-secondary)] overflow-hidden">
+    <div className="max-w-md mx-auto bg-[var(--surface-secondary)] rounded-xl border border-[var(--border-secondary)] overflow-hidden" data-ui={isNewUIEnabled() ? 'new' : 'old'}>
       {/* Header */}
       <div className="bg-[var(--surface-primary)] border-b border-[var(--border-secondary)] p-4">
         <div className="flex items-center justify-between mb-3">

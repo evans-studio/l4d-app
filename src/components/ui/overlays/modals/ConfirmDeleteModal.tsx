@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import { AlertTriangle } from 'lucide-react'
-import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from '@/components/ui/composites/Modal'
+import { Dialog, DialogHeader, DialogTitle, DialogBody, DialogFooter } from '@/components/ui/overlays/Dialog'
 import { BaseOverlayProps } from '@/lib/overlay/types'
 import { Button } from '@/components/ui/primitives/Button'
 
@@ -42,11 +42,12 @@ export const ConfirmDeleteModal: React.FC<ConfirmDeleteModalProps> = ({
   }
 
   return (
-    <Modal open={isOpen} onClose={onClose}>
-      <ModalContent size="sm" mobile="drawer" onClose={onClose}>
-        <ModalHeader title={title} />
-        
-        <ModalBody>
+    <Dialog open={isOpen} onOpenChange={(o) => !o && onClose()}>
+      <DialogHeader>
+        <DialogTitle>{title}</DialogTitle>
+      </DialogHeader>
+
+      <DialogBody>
           <div className="space-y-6 text-center">
             {/* Warning Icon */}
             <div className="flex items-center justify-center">
@@ -58,9 +59,9 @@ export const ConfirmDeleteModal: React.FC<ConfirmDeleteModalProps> = ({
             {/* Message */}
             <p className="text-text-primary">{message}</p>
           </div>
-        </ModalBody>
+      </DialogBody>
 
-        <ModalFooter>
+      <DialogFooter>
           <Button
             variant="outline"
             onClick={onClose}
@@ -80,8 +81,7 @@ export const ConfirmDeleteModal: React.FC<ConfirmDeleteModalProps> = ({
           >
             {confirmText}
           </Button>
-        </ModalFooter>
-      </ModalContent>
-    </Modal>
+      </DialogFooter>
+    </Dialog>
   )
 }

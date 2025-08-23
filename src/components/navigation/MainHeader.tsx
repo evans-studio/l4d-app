@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/primitives/Button'
 import { ResponsiveLogo } from '@/components/ui/primitives/Logo'
 import { MenuIcon, XIcon, PhoneIcon, MailIcon, User, Settings, LogOut, Home } from 'lucide-react'
 import Link from 'next/link'
+import { isNewUIEnabled } from '@/lib/config/feature-flags'
 
 export function MainHeader() {
   const router = useRouter()
@@ -49,7 +50,7 @@ export function MainHeader() {
   }, [])
 
   return (
-    <header className="bg-[var(--bg-secondary)] border-b border-[var(--border-primary)] sticky top-0 z-50">
+    <header className="bg-[var(--bg-secondary)] border-b border-[var(--border-primary)] sticky top-0 z-50" data-ui={isNewUIEnabled() ? 'new' : 'old'}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}

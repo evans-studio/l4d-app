@@ -7,6 +7,7 @@ import { useAuth } from '@/lib/auth-compat'
 import { Button } from '@/components/ui/primitives/Button'
 import { Menu, X, User, Settings, LogOut, Home, Calendar } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { isNewUIEnabled } from '@/lib/config/feature-flags'
 
 interface MinimalHeaderProps {
   className?: string
@@ -360,7 +361,7 @@ export const MinimalHeader: React.FC<MinimalHeaderProps> = ({ className, showMob
 
   return (
     <>
-      <header className={cn(
+      <header data-ui={isNewUIEnabled() ? 'new' : 'old'} className={cn(
         "sticky top-0 z-40 w-full bg-surface-primary/95 backdrop-blur-sm border-b border-border-secondary",
         className
       )}>

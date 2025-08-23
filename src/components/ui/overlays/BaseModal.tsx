@@ -4,6 +4,7 @@ import React, { useEffect } from 'react'
 import { X } from 'lucide-react'
 import { Button } from '@/components/ui/primitives/Button'
 import { cn } from '@/lib/utils'
+import { isNewUIEnabled } from '@/lib/config/feature-flags'
 
 interface BaseModalProps {
   isOpen: boolean
@@ -65,8 +66,37 @@ export const BaseModal: React.FC<BaseModalProps> = ({
 
   if (!isOpen) return null
 
+  // Simple focus trap
+  const containerRef = React.useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!isOpen) return
+    const container = containerRef.current
+    if (!container) return
+
+    const focusable = container.querySelectorAll<HTMLElement>(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    )
+    const first = focusable[0]
+    const last = focusable[focusable.length - 1]
+    first?.focus()
+
+    const handleTab = (e: KeyboardEvent) => {
+      if (e.key !== 'Tab') return
+      if (focusable.length === 0) return
+      if (document.activeElement === last && !e.shiftKey) {
+        e.preventDefault()
+        first?.focus()
+      } else if (document.activeElement === first && e.shiftKey) {
+        e.preventDefault()
+        last?.focus()
+      }
+    }
+    document.addEventListener('keydown', handleTab)
+    return () => document.removeEventListener('keydown', handleTab)
+  }, [isOpen])
+
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 pb-20 sm:pb-4">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 pb-20 sm:pb-4" data-ui={isNewUIEnabled() ? 'new' : 'old'} role="dialog" aria-modal="true" aria-label={title || 'Modal dialog'}>
       {/* Backdrop */}
       <div 
         className="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity duration-300"
@@ -75,7 +105,7 @@ export const BaseModal: React.FC<BaseModalProps> = ({
       />
       
       {/* Modal */}
-      <div className={cn(
+      <div ref={containerRef} className={cn(
         "relative w-full bg-surface-primary border border-border-secondary rounded-lg shadow-xl transform transition-all duration-300 ease-out",
         "animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-2",
         "max-h-[calc(100vh-6rem)] sm:max-h-[calc(100vh-8rem)] overflow-y-auto",
