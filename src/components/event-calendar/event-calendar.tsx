@@ -47,6 +47,7 @@ export interface EventCalendarProps {
   onEventDelete?: (eventId: string) => void
   className?: string
   initialView?: CalendarView
+  readonly?: boolean
 }
 
 export function EventCalendar({
@@ -56,6 +57,7 @@ export function EventCalendar({
   onEventDelete,
   className,
   initialView = "month",
+  readonly = false,
 }: EventCalendarProps) {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [view, setView] = useState<CalendarView>(initialView)
@@ -130,6 +132,7 @@ export function EventCalendar({
   }
 
   const handleEventSelect = (event: CalendarEvent) => {
+    if (readonly) return
     console.log("Event selected:", event) // Debug log
     setSelectedEvent(event)
     setIsEventDialogOpen(true)
@@ -339,6 +342,7 @@ export function EventCalendar({
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+            {!readonly && (
             <Button
               className="max-[479px]:aspect-square max-[479px]:p-0!"
               size="sm"
@@ -354,6 +358,7 @@ export function EventCalendar({
               />
               <span className="max-sm:sr-only">Add slot</span>
             </Button>
+            )}
           </div>
         </div>
 
@@ -391,6 +396,7 @@ export function EventCalendar({
           )}
         </div>
 
+        {!readonly && (
         <EventDialog
           event={selectedEvent}
           isOpen={isEventDialogOpen}
@@ -401,6 +407,7 @@ export function EventCalendar({
           onSave={handleEventSave}
           onDelete={handleEventDelete}
         />
+        )}
       </CalendarDndProvider>
     </div>
   )

@@ -5,12 +5,7 @@ import { RiCalendarLine, RiDeleteBinLine } from "@remixicon/react"
 import { format, isBefore } from "date-fns"
 
 import type { CalendarEvent, EventColor } from "@/components/event-calendar/types"
-import {
-  DefaultEndHour,
-  DefaultStartHour,
-  EndHour,
-  StartHour,
-} from "@/components/event-calendar/constants"
+import { DefaultEndHour, DefaultStartHour, EndHour, StartHour, SlotVisualDurationMin } from "@/components/event-calendar/constants"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
@@ -145,10 +140,10 @@ export function EventDialog({
       start.setHours(0, 0, 0, 0)
     }
 
-    // UI-only duration: 60 minutes block for rendering
+    // UI-only duration block for rendering
     const end = new Date(start)
     if (!allDay) {
-      end.setMinutes(end.getMinutes() + 60)
+      end.setMinutes(end.getMinutes() + SlotVisualDurationMin)
     } else {
       end.setHours(23, 59, 59, 999)
     }
@@ -236,7 +231,7 @@ export function EventDialog({
         )}
         <div className="grid gap-4 py-4">
           <div className="*:not-first:mt-1.5">
-            <Label htmlFor="title">Title</Label>
+            <Label htmlFor="title">Notes (optional)</Label>
             <Input
               id="title"
               value={title}
