@@ -160,9 +160,12 @@ function getOptionalEnvVar(key: string, defaultValue?: string): string | undefin
 function createEnvironmentConfig(): EnvironmentConfig {
   const nodeEnv = process.env.NODE_ENV || 'development'
   const isProduction = nodeEnv === 'production'
+  const skipValidation = process.env.ALLOW_SKIP_ENV_VALIDATION === 'true'
   
   // Determine required variables based on environment
-  const requiredVars = isProduction ? REQUIRED_PRODUCTION_VARS : REQUIRED_DEVELOPMENT_VARS
+  const requiredVars = skipValidation
+    ? REQUIRED_DEVELOPMENT_VARS
+    : (isProduction ? REQUIRED_PRODUCTION_VARS : REQUIRED_DEVELOPMENT_VARS)
   
   const missingVars: string[] = []
   const invalidVars: Array<{ name: string; reason: string }> = []
@@ -182,7 +185,7 @@ function createEnvironmentConfig(): EnvironmentConfig {
   }
 
   // If there are validation errors, throw an error
-  if (missingVars.length > 0 || invalidVars.length > 0) {
+  if (!skipValidation && (missingVars.length > 0 || invalidVars.length > 0)) {
     throw new EnvironmentValidationError(missingVars, invalidVars)
   }
 
