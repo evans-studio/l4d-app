@@ -310,13 +310,11 @@ export function TimeSlotSelection() {
           
           <CardContent>
             {isNewUIEnabled() ? (
-              <div className="mb-6">
-                <AppointmentPicker
-                  initialDate={new Date(selectedDate)}
-                  onSelect={(s) => handlePickerSlotSelect(s)}
-                  selectedSlotId={formData.slot?.slotId}
-                />
-              </div>
+              <AppointmentPicker
+                initialDate={new Date(selectedDate)}
+                onSelect={(s) => handlePickerSlotSelect(s)}
+                selectedSlotId={formData.slot?.slotId}
+              />
             ) : (
             <div className="space-y-4">
               {/* Day headers */}
