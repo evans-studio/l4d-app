@@ -7,8 +7,6 @@ import { AdminLayout } from '@/components/layouts/AdminLayout'
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb'
 import { AdminRoute } from '@/components/ProtectedRoute'
 import { 
-  PlusIcon,
-  EditIcon,
   PackageIcon,
   DollarSignIcon,
   TagIcon
@@ -178,9 +176,9 @@ function AdminServicesPage() {
           <div className="w-full sm:w-auto mt-4 sm:mt-0">
             <Button
               onClick={() => router.push('/admin/services/new')}
-              className="flex items-center justify-center gap-2 w-full sm:w-auto"
+              size="sm"
+              className="w-full sm:w-auto"
             >
-              <PlusIcon className="w-4 h-4" />
               Add Service
             </Button>
           </div>
@@ -212,9 +210,8 @@ function AdminServicesPage() {
                   {
                     <Button
                       onClick={() => router.push('/admin/services/new')}
-                      className="flex items-center gap-2"
+                      size="sm"
                     >
-                      <PlusIcon className="w-4 h-4" />
                       Add Your First Service
                     </Button>
                   }
@@ -300,16 +297,15 @@ function AdminServicesPage() {
                       <Button
                         onClick={() => router.push(`/admin/services/${service.id}`)}
                         variant="outline"
-                        size="md"
-                        className="w-full sm:flex-1 flex items-center justify-center gap-2 min-h-[44px] touch-manipulation"
+                        size="sm"
+                        className="w-full sm:flex-1 min-h-[44px] touch-manipulation"
                       >
-                        <EditIcon className="w-4 h-4" />
                         Edit
                       </Button>
                       <Button
                         onClick={() => toggleServiceStatus(service.id, !service.is_active)}
                         variant={service.is_active ? "outline" : "primary"}
-                        size="md"
+                        size="sm"
                         className="w-full sm:flex-1 min-h-[44px] touch-manipulation"
                       >
                         {service.is_active ? 'Deactivate' : 'Activate'}
