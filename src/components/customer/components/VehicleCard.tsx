@@ -141,9 +141,9 @@ export function VehicleCard({
               </div>
               
               {/* Registration Row */}
-              {(vehicle.registration || vehicle.license_plate) && (
+              {vehicle.license_plate && (
                 <div className="text-sm text-text-secondary font-mono">
-                  {vehicle.registration || vehicle.license_plate}
+                  {vehicle.license_plate}
                 </div>
               )}
             </div>
@@ -207,9 +207,9 @@ export function VehicleCard({
                   </div>
                   <div>
                     <p className="font-semibold text-text-primary">{vehicle.color}</p>
-                    {(vehicle.registration || vehicle.license_plate) && (
+                    {vehicle.license_plate && (
                       <p className="text-sm text-text-secondary font-mono">
-                        {vehicle.registration || vehicle.license_plate}
+                        {vehicle.license_plate}
                       </p>
                     )}
                   </div>
