@@ -264,6 +264,41 @@ function ScheduleCalendarContent() {
                     <span className="text-[var(--text-secondary)]">Start</span>
                     <span className="text-[var(--text-primary)] font-medium">{selectedBooking.start_time}</span>
                   </div>
+                  {selectedBooking.vehicle && (
+                    <div className="pt-2 border-t border-[var(--border-secondary)] text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-[var(--text-secondary)]">Vehicle</span>
+                        <span className="text-[var(--text-primary)] font-medium">
+                          {(selectedBooking.vehicle.year ? selectedBooking.vehicle.year + ' ' : '')}
+                          {selectedBooking.vehicle.make} {selectedBooking.vehicle.model}
+                        </span>
+                      </div>
+                      {(selectedBooking.vehicle.color || selectedBooking.vehicle.license_plate) && (
+                        <div className="flex justify-between mt-1">
+                          <span className="text-[var(--text-secondary)]">Details</span>
+                          <span className="text-[var(--text-primary)]">
+                            {selectedBooking.vehicle.color || ''}
+                            {selectedBooking.vehicle.color && selectedBooking.vehicle.license_plate ? ' • ' : ''}
+                            {selectedBooking.vehicle.license_plate || ''}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {selectedBooking.address && (
+                    <div className="pt-2 border-t border-[var(--border-secondary)] text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-[var(--text-secondary)]">Address</span>
+                        <span className="text-right text-[var(--text-primary)]">
+                          <span className="block font-medium">{selectedBooking.address.address_line_1}</span>
+                          {selectedBooking.address.address_line_2 && (
+                            <span className="block">{selectedBooking.address.address_line_2}</span>
+                          )}
+                          <span className="block">{selectedBooking.address.city}, {selectedBooking.address.postal_code}</span>
+                        </span>
+                      </div>
+                    </div>
+                  )}
                   <div className="flex items-center gap-2 pt-2">
                     <Button onClick={() => { if (selectedBookingId) router.push(`/admin/bookings/${selectedBookingId}`) }} size="sm">
                       Open full booking

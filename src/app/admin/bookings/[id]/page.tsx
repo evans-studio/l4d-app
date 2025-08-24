@@ -393,9 +393,7 @@ function AdminBookingDetailsPage() {
                 onClick={() => router.push('/admin/bookings')}
                 variant="outline"
                 size="sm"
-                className="flex items-center gap-2"
               >
-                <ArrowLeftIcon className="w-4 h-4" />
                 Back
               </Button>
               <div>
@@ -467,8 +465,7 @@ function AdminBookingDetailsPage() {
                 </div>
                 <div>
                   <p className="text-[var(--text-secondary)] text-sm mb-1">Start Time</p>
-                  <p className="text-[var(--text-primary)] font-medium flex items-center gap-2">
-                    <ClockIcon className="w-4 h-4" />
+                  <p className="text-[var(--text-primary)] font-medium">
                     {formatTime(booking.start_time)}
                   </p>
                 </div>
@@ -639,18 +636,16 @@ function AdminBookingDetailsPage() {
                     <Button
                       onClick={() => setApproveOpen(true)}
                       disabled={isUpdating}
-                      className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white"
+                      className="bg-green-600 hover:bg-green-700 text-white"
                     >
-                      <CalendarCheckIcon className="w-4 h-4" />
                       Approve Request
                     </Button>
                     <Button
                       onClick={() => setDeclineOpen(true)}
                       disabled={isUpdating}
                       variant="outline"
-                      className="flex items-center gap-2 text-red-600 border-red-200 hover:bg-red-50"
+                      className="text-red-600 border-red-200 hover:bg-red-50"
                     >
-                      <CalendarXIcon className="w-4 h-4" />
                       Decline Request
                     </Button>
                   </div>
