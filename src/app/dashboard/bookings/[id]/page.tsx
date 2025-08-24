@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/primitives/Button'
 import { CustomerLayout } from '@/components/layout/templates/CustomerLayout'
 import { Container } from '@/components/layout/templates/PageLayout'
 import { CustomerRoute } from '@/components/ProtectedRoute'
+import { ConfirmDialog } from '@/components/ui/overlays/modals/ConfirmDialog'
 import { 
   ArrowLeft,
   Calendar,
@@ -592,36 +593,16 @@ export default function BookingDetailsPage({ params }: { params: Promise<{ id: s
             </div>
           </div>
 
-          {/* Cancel Booking Modal */}
-          {showCancelModal && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-              <div className="bg-surface-primary rounded-lg max-w-md w-full p-6">
-                <h3 className="text-lg font-semibold text-text-primary mb-4">
-                  Cancel Booking
-                </h3>
-                <p className="text-text-secondary mb-6">
-                  Are you sure you want to cancel this booking? This action cannot be undone.
-                </p>
-                <div className="flex gap-3 justify-end">
-                  <Button
-                    onClick={() => setShowCancelModal(false)}
-                    variant="outline"
-                    disabled={isCancelling}
-                  >
-                    Keep Booking
-                  </Button>
-                  <Button
-                    onClick={handleCancelBooking}
-                    variant="primary"
-                    className="bg-error-500 hover:bg-error-600"
-                    disabled={isCancelling}
-                  >
-                    {isCancelling ? 'Cancelling...' : 'Yes, Cancel Booking'}
-                  </Button>
-                </div>
-              </div>
-            </div>
-          )}
+          {/* Cancel Booking Modal - unified ConfirmDialog */}
+          <ConfirmDialog
+            open={showCancelModal}
+            onOpenChange={setShowCancelModal}
+            title="Cancel booking?"
+            description="Are you sure you want to cancel this booking? This action cannot be undone."
+            confirmLabel={isCancelling ? 'Cancelling...' : 'Yes, cancel booking'}
+            onConfirm={handleCancelBooking}
+            isLoading={isCancelling}
+          />
         </Container>
       </CustomerLayout>
     </CustomerRoute>
