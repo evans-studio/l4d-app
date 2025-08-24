@@ -561,7 +561,7 @@ export function VehicleDetails() {
                   floating
                   value={vehicleForm.registration}
                   onChange={(e) => handleFormChange('registration', e.target.value.toUpperCase())}
-                  placeholder="e.g., AB12 CDE"
+                  helperText="e.g., AB12 CDE"
                 />
               </div>
               
@@ -594,7 +594,7 @@ export function VehicleDetails() {
                   floating
                   value={vehicleForm.color}
                   onChange={(e) => handleFormChange('color', e.target.value)}
-                  placeholder="e.g., White, Black, Silver"
+                  helperText="e.g., White, Black, Silver"
                 />
               </div>
             </div>

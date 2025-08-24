@@ -204,7 +204,7 @@ export function AddressCollection() {
                 floating
                 value={addressForm.addressLine1}
                 onChange={(e) => handleFormChange('addressLine1', e.target.value)}
-                placeholder="e.g., 123 Main Street"
+                helperText="e.g., 123 Main Street"
                 required
               />
             </div>
@@ -216,7 +216,7 @@ export function AddressCollection() {
                   floating
                   value={addressForm.city}
                   onChange={(e) => handleFormChange('city', e.target.value)}
-                  placeholder="e.g., London"
+                  helperText="e.g., London"
                   required
                 />
               </div>
@@ -227,7 +227,7 @@ export function AddressCollection() {
                   floating
                   value={addressForm.postcode}
                   onChange={(e) => handleFormChange('postcode', e.target.value.toUpperCase())}
-                  placeholder="e.g., SW1A 1AA"
+                  helperText="e.g., SW1A 1AA"
                   required
                 />
               </div>

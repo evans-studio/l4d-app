@@ -376,7 +376,24 @@ function AdminBookingDetailsPage() {
               </BreadcrumbList>
             </Breadcrumb>
             <div className="flex items-center justify-between">
-              <h1 className="text-2xl sm:text-3xl font-bold text-[var(--text-primary)]">Booking #{booking.booking_reference}</h1>
+              <h1 className="text-2xl sm:text-3xl font-bold text-[var(--text-primary)]">
+                Booking 
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        onClick={() => navigator.clipboard.writeText(booking.booking_reference)}
+                        className="underline-offset-4 hover:underline ml-1 text-[var(--text-link)] hover:text-[var(--text-link-hover)]"
+                        aria-label="Copy booking reference"
+                      >
+                        #{booking.booking_reference}
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent>Click to copy</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </h1>
               <div className="flex items-center gap-2">
                 <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border ${status.bgColor} ${status.borderColor}`}>
                   <StatusIcon className={`w-4 h-4 ${status.color}`} />
@@ -516,7 +533,21 @@ function AdminBookingDetailsPage() {
                     {booking.vehicle.license_plate && (
                       <div>
                         <p className="text-[var(--text-secondary)] text-sm mb-1">License Plate</p>
-                        <p className="text-[var(--text-primary)] font-medium">{booking.vehicle.license_plate}</p>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                type="button"
+                                onClick={() => navigator.clipboard.writeText(booking.vehicle.license_plate || '')}
+                                className="text-[var(--text-link)] hover:text-[var(--text-link-hover)] font-medium underline-offset-4 hover:underline"
+                                aria-label="Copy license plate"
+                              >
+                                {booking.vehicle.license_plate}
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>Click to copy</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       </div>
                     )}
                   </>

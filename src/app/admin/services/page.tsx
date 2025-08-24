@@ -13,6 +13,7 @@ import {
   DollarSignIcon,
   TagIcon
 } from 'lucide-react'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/composites/Tabs'
 
 interface Service {
   id: string
@@ -187,127 +188,209 @@ function AdminServicesPage() {
 
         {/* Filters removed as requested */}
 
-        {/* Services Grid */}
-        {filteredServices.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="bg-[var(--surface-secondary)] rounded-lg p-8 max-w-md mx-auto">
-              <PackageIcon className="w-12 h-12 text-[var(--text-muted)] mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2">
-                No Services Found
-              </h3>
-              <p className="text-[var(--text-secondary)] text-sm mb-4">
-                Start by adding your first service.
-              </p>
-              {
-                <Button
-                  onClick={() => router.push('/admin/services/new')}
-                  className="flex items-center gap-2"
-                >
-                  <PlusIcon className="w-4 h-4" />
-                  Add Your First Service
-                </Button>
-              }
-            </div>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-            {filteredServices.map((service) => (
-              <div
-                key={service.id}
-                className="bg-[var(--surface-secondary)] rounded-lg p-4 sm:p-6 border border-[var(--border-secondary)] hover:border-[var(--border-primary)] transition-colors"
-              >
-                {/* Service Header */}
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                      service.is_active 
-                        ? 'bg-[var(--success-bg)] text-[var(--success)]' 
-                        : 'bg-[var(--warning-bg)] text-[var(--warning)]'
-                    }`}>
-                      <PackageIcon className="w-5 h-5" />
-                    </div>
-                    <div className="min-w-0">
-                      <h3 className="font-semibold text-[var(--text-primary)] truncate max-w-[220px] sm:max-w-none">{service.name}</h3>
-                      <div className="flex items-center gap-2 mt-1 flex-wrap">
-                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs ${
+        {/* Tabs Segmentation */}
+        <Tabs defaultValue="services" className="w-full">
+          <TabsList className="mb-4">
+            <TabsTrigger value="services">Services</TabsTrigger>
+            <TabsTrigger value="categories">Categories</TabsTrigger>
+            <TabsTrigger value="sizes">Vehicle Sizes</TabsTrigger>
+            <TabsTrigger value="pricing">Pricing</TabsTrigger>
+          </TabsList>
+
+          {/* Services Grid */}
+          <TabsContent value="services">
+            {filteredServices.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="bg-[var(--surface-secondary)] rounded-lg p-8 max-w-md mx-auto">
+                  <PackageIcon className="w-12 h-12 text-[var(--text-muted)] mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2">
+                    No Services Found
+                  </h3>
+                  <p className="text-[var(--text-secondary)] text-sm mb-4">
+                    Start by adding your first service.
+                  </p>
+                  {
+                    <Button
+                      onClick={() => router.push('/admin/services/new')}
+                      className="flex items-center gap-2"
+                    >
+                      <PlusIcon className="w-4 h-4" />
+                      Add Your First Service
+                    </Button>
+                  }
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                {filteredServices.map((service) => (
+                  <div
+                    key={service.id}
+                    className="bg-[var(--surface-secondary)] rounded-lg p-4 sm:p-6 border border-[var(--border-secondary)] hover:border-[var(--border-primary)] transition-colors"
+                  >
+                    {/* Service Header */}
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
                           service.is_active 
                             ? 'bg-[var(--success-bg)] text-[var(--success)]' 
                             : 'bg-[var(--warning-bg)] text-[var(--warning)]'
                         }`}>
-                          {service.is_active ? 'Active' : 'Inactive'}
-                        </span>
-                        {service.category && (
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-[var(--surface-tertiary)] text-[var(--text-secondary)]">
-                            <TagIcon className="w-3 h-3 mr-1" />
-                            {service.category.name}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Service Details */}
-                <div className="space-y-3 mb-4">
-                  <p className="text-[var(--text-secondary)] text-sm line-clamp-3">
-                    {service.description || service.short_description || 'No description available'}
-                  </p>
-                  
-                  <div className="flex items-start justify-between text-sm gap-3">
-                    <div className="flex items-start gap-2 text-[var(--text-primary)] overflow-hidden">
-                      <DollarSignIcon className="w-4 h-4 text-[var(--primary)]" />
-                      <div className="text-xs">
-                        {pricing[service.id] && vehicleSizes.length > 0 ? (
-                          <div className="space-y-0.5">
-                            {vehicleSizes.slice(0, 2).map(size => (
-                              <div key={size.id} className="flex justify-between min-w-0 gap-2">
-                                <span className="text-[var(--text-muted)]">{size.name}:</span>
-                                <span className="font-semibold">
-                                  £{(pricing[service.id]?.[size.id]?.price || 0).toFixed(2)}
-                                </span>
-                              </div>
-                            ))}
-                            {vehicleSizes.length > 2 && (
-                              <div className="text-[var(--text-muted)] text-xs">
-                                +{vehicleSizes.length - 2} more sizes
-                              </div>
+                          <PackageIcon className="w-5 h-5" />
+                        </div>
+                        <div className="min-w-0">
+                          <h3 className="font-semibold text-[var(--text-primary)] truncate max-w-[220px] sm:max-w-none">{service.name}</h3>
+                          <div className="flex items-center gap-2 mt-1 flex-wrap">
+                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs ${
+                              service.is_active 
+                                ? 'bg-[var(--success-bg)] text-[var(--success)]' 
+                                : 'bg-[var(--warning-bg)] text-[var(--warning)]'
+                            }`}>
+                              {service.is_active ? 'Active' : 'Inactive'}
+                            </span>
+                            {service.category && (
+                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-[var(--surface-tertiary)] text-[var(--text-secondary)]">
+                                <TagIcon className="w-3 h-3 mr-1" />
+                                {service.category.name}
+                              </span>
                             )}
                           </div>
-                        ) : (
-                          <span className="text-[var(--text-muted)] text-xs">No pricing set</span>
-                        )}
+                        </div>
                       </div>
                     </div>
-                    <div className="text-[var(--text-secondary)] whitespace-nowrap flex-shrink-0">
-                      {formatDuration(service.duration_minutes)}
+
+                    {/* Service Details */}
+                    <div className="space-y-3 mb-4">
+                      <p className="text-[var(--text-secondary)] text-sm line-clamp-3">
+                        {service.description || service.short_description || 'No description available'}
+                      </p>
+                      
+                      <div className="flex items-start justify-between text-sm gap-3">
+                        <div className="flex items-start gap-2 text-[var(--text-primary)] overflow-hidden">
+                          <DollarSignIcon className="w-4 h-4 text-[var(--primary)]" />
+                          <div className="text-xs">
+                            {pricing[service.id] && vehicleSizes.length > 0 ? (
+                              <div className="space-y-0.5">
+                                {vehicleSizes.slice(0, 2).map(size => (
+                                  <div key={size.id} className="flex justify-between min-w-0 gap-2">
+                                    <span className="text-[var(--text-muted)]">{size.name}:</span>
+                                    <span className="font-semibold">
+                                      £{(pricing[service.id]?.[size.id]?.price || 0).toFixed(2)}
+                                    </span>
+                                  </div>
+                                ))}
+                                {vehicleSizes.length > 2 && (
+                                  <div className="text-[var(--text-muted)] text-xs">
+                                    +{vehicleSizes.length - 2} more sizes
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-[var(--text-muted)] text-xs">No pricing set</span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="text-[var(--text-secondary)] whitespace-nowrap flex-shrink-0">
+                          {formatDuration(service.duration_minutes)}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex flex-col sm:flex-row items-center gap-3 pt-4 border-t border-[var(--border-secondary)]">
+                      <Button
+                        onClick={() => router.push(`/admin/services/${service.id}`)}
+                        variant="outline"
+                        size="md"
+                        className="w-full sm:flex-1 flex items-center justify-center gap-2 min-h-[44px] touch-manipulation"
+                      >
+                        <EditIcon className="w-4 h-4" />
+                        Edit
+                      </Button>
+                      <Button
+                        onClick={() => toggleServiceStatus(service.id, !service.is_active)}
+                        variant={service.is_active ? "outline" : "primary"}
+                        size="md"
+                        className="w-full sm:flex-1 min-h-[44px] touch-manipulation"
+                      >
+                        {service.is_active ? 'Deactivate' : 'Activate'}
+                      </Button>
                     </div>
                   </div>
-                </div>
-
-                {/* Actions */}
-                <div className="flex flex-col sm:flex-row items-center gap-3 pt-4 border-t border-[var(--border-secondary)]">
-                  <Button
-                    onClick={() => router.push(`/admin/services/${service.id}`)}
-                    variant="outline"
-                    size="md"
-                    className="w-full sm:flex-1 flex items-center justify-center gap-2 min-h-[44px] touch-manipulation"
-                  >
-                    <EditIcon className="w-4 h-4" />
-                    Edit
-                  </Button>
-                  <Button
-                    onClick={() => toggleServiceStatus(service.id, !service.is_active)}
-                    variant={service.is_active ? "outline" : "primary"}
-                    size="md"
-                    className="w-full sm:flex-1 min-h-[44px] touch-manipulation"
-                  >
-                    {service.is_active ? 'Deactivate' : 'Activate'}
-                  </Button>
-                </div>
+                ))}
               </div>
-            ))}
-          </div>
-        )}
+            )}
+          </TabsContent>
+
+          {/* Categories */}
+          <TabsContent value="categories">
+            <div className="space-y-3">
+              {categories.length === 0 ? (
+                <p className="text-[var(--text-secondary)]">No categories found.</p>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {categories.map(cat => (
+                    <div key={cat.id} className="bg-[var(--surface-secondary)] border border-[var(--border-secondary)] rounded-lg p-4">
+                      <h4 className="font-semibold text-[var(--text-primary)]">{cat.name}</h4>
+                      {cat.description && (
+                        <p className="text-sm text-[var(--text-secondary)] mt-1">{cat.description}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </TabsContent>
+
+          {/* Vehicle Sizes */}
+          <TabsContent value="sizes">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {vehicleSizes.length === 0 ? (
+                <p className="text-[var(--text-secondary)]">No vehicle sizes found.</p>
+              ) : (
+                vehicleSizes.map(sz => (
+                  <div key={sz.id} className="bg-[var(--surface-secondary)] border border-[var(--border-secondary)] rounded-lg p-4">
+                    <h4 className="font-semibold text-[var(--text-primary)]">{sz.name}</h4>
+                    <p className="text-xs text-[var(--text-secondary)]">Display order: {sz.display_order}</p>
+                  </div>
+                ))
+              )}
+            </div>
+          </TabsContent>
+
+          {/* Pricing overview */}
+          <TabsContent value="pricing">
+            <div className="space-y-4">
+              <p className="text-[var(--text-secondary)] text-sm">Quick overview of per-size pricing for each service.</p>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-[var(--text-secondary)] border-b border-[var(--border-secondary)]">
+                      <th className="py-2 pr-4 font-medium">Service</th>
+                      {vehicleSizes.slice(0,4).map(sz => (
+                        <th key={sz.id} className="py-2 pr-4 font-medium">{sz.name}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredServices.map(svc => (
+                      <tr key={svc.id} className="border-b border-[var(--border-secondary)] last:border-b-0">
+                        <td className="py-2 pr-4 text-[var(--text-primary)]">{svc.name}</td>
+                        {vehicleSizes.slice(0,4).map(sz => (
+                          <td key={sz.id} className="py-2 pr-4 text-[var(--text-primary)]">
+                            {(() => {
+                              const p = pricing[svc.id]?.[sz.id]?.price
+                              return p !== undefined && p !== null ? `£${p.toFixed(2)}` : '-'
+                            })()}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
     </AdminLayout>
   )

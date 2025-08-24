@@ -250,7 +250,16 @@ function ScheduleCalendarContent() {
                 <div className="space-y-4">
                   <div className="flex justify-between text-sm">
                     <span className="text-[var(--text-secondary)]">Reference</span>
-                    <span className="text-[var(--text-primary)] font-medium">#{selectedBooking.booking_reference}</span>
+                    <span className="text-[var(--text-primary)] font-medium">
+                      <button
+                        type="button"
+                        onClick={() => navigator.clipboard.writeText(String(selectedBooking.booking_reference))}
+                        className="underline-offset-4 hover:underline text-[var(--text-link)] hover:text-[var(--text-link-hover)]"
+                        aria-label="Copy booking reference"
+                      >
+                        #{selectedBooking.booking_reference}
+                      </button>
+                    </span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-[var(--text-secondary)]">Customer</span>
@@ -279,7 +288,16 @@ function ScheduleCalendarContent() {
                           <span className="text-[var(--text-primary)]">
                             {selectedBooking.vehicle.color || ''}
                             {selectedBooking.vehicle.color && selectedBooking.vehicle.license_plate ? ' • ' : ''}
-                            {selectedBooking.vehicle.license_plate || ''}
+                            {selectedBooking.vehicle.license_plate ? (
+                              <button
+                                type="button"
+                                onClick={() => navigator.clipboard.writeText(String(selectedBooking.vehicle.license_plate))}
+                                className="underline-offset-4 hover:underline text-[var(--text-link)] hover:text-[var(--text-link-hover)]"
+                                aria-label="Copy license plate"
+                              >
+                                {selectedBooking.vehicle.license_plate}
+                              </button>
+                            ) : null}
                           </span>
                         </div>
                       )}

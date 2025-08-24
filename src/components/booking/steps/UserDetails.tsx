@@ -199,7 +199,7 @@ export function UserDetails() {
               type="email"
               value={userForm.email}
               onChange={(e) => handleFormChange('email', e.target.value)}
-              placeholder="your.email@example.com"
+              helperText="e.g., your.email@example.com"
               required
             />
           </div>
@@ -212,7 +212,7 @@ export function UserDetails() {
               type="tel"
               value={userForm.phone}
               onChange={(e) => handleFormChange('phone', e.target.value)}
-              placeholder="07123 456789"
+              helperText="e.g., 07123 456789"
               required
             />
           </div>
@@ -226,7 +226,7 @@ export function UserDetails() {
               <Input
                 value={userForm.name}
                 onChange={(e) => handleFormChange('name', e.target.value)}
-                placeholder="Your full name"
+                helperText="e.g., John Smith"
                 required
               />
             </div>

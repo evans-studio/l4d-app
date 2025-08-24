@@ -267,7 +267,7 @@ function BookingPageContent(): React.JSX.Element {
         <div className="mx-auto max-w-4xl">
           <Stepper value={currentStep} onValueChange={() => {}}>
             {stepLabels.map(({ step }) => (
-              <StepperItem key={step} step={step} className="not-last:flex-1">
+              <StepperItem key={step} step={step} className="flex-1">
                 <StepperTrigger asChild>
                   <StepperIndicator />
                 </StepperTrigger>
