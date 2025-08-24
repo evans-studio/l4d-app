@@ -356,64 +356,68 @@ export function TimeSlotSelection() {
             </div>
             )}
 
-            {/* Selected Date Display */}
-            {selectedDate && (
-              <div className="mt-6 p-4 bg-brand-600/5 border border-brand-200 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <CalendarIcon className="w-5 h-5 text-brand-600" />
-                  <div>
-                    <p className="font-semibold text-text-primary">
-                      {formatDate(new Date(selectedDate))}
-                    </p>
-                    <p className="text-sm text-text-secondary">
-                      {timeSlots.length} slots available
-                    </p>
+            {!isNewUIEnabled() && (
+              <>
+                {/* Selected Date Display */}
+                {selectedDate && (
+                  <div className="mt-6 p-4 bg-brand-600/5 border border-brand-200 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <CalendarIcon className="w-5 h-5 text-brand-600" />
+                      <div>
+                        <p className="font-semibold text-text-primary">
+                          {formatDate(new Date(selectedDate))}
+                        </p>
+                        <p className="text-sm text-text-secondary">
+                          {timeSlots.length} slots available
+                        </p>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
-            )}
+                )}
 
-            {/* Available Slots for Selected Date */}
-            {selectedDate && timeSlots.length > 0 && (
-              <div className="mt-6">
-                <h4 className="font-semibold text-text-primary mb-4">Available Times</h4>
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                  {timeSlots.map((slot) => {
-                    const isPast = isSlotInPast(selectedDate, slot.start_time)
-                    const isAvailable = slot.is_available && !isPast
-                    const isSelected = formData.slot?.slotId === slot.id
-                    
-                    return (
-                      <Button
-                        key={slot.id}
-                        variant={isSelected ? 'primary' : 'outline'}
-                        onClick={() => isAvailable && handleSlotSelect(slot.id)}
-                        disabled={!isAvailable}
-                        className={`flex flex-col items-center p-4 h-auto transition-all ${
-                          !isAvailable ? 'opacity-50 cursor-not-allowed' : ''
-                        }`}
-                      >
-                        <ClockIcon className={`w-4 h-4 mb-1 ${!isAvailable ? 'text-text-muted' : ''}`} />
-                        <span className="text-sm font-medium">
-                          {formatTime(slot.start_time)}
-                        </span>
-                        <span className="text-xs opacity-75">
-                          {isPast ? 'Expired' : !slot.is_available ? 'Booked' : formatTime(slot.end_time)}
-                        </span>
-                      </Button>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
+                {/* Available Slots for Selected Date */}
+                {selectedDate && timeSlots.length > 0 && (
+                  <div className="mt-6">
+                    <h4 className="font-semibold text-text-primary mb-4">Available Times</h4>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                      {timeSlots.map((slot) => {
+                        const isPast = isSlotInPast(selectedDate, slot.start_time)
+                        const isAvailable = slot.is_available && !isPast
+                        const isSelected = formData.slot?.slotId === slot.id
+                        
+                        return (
+                          <Button
+                            key={slot.id}
+                            variant={isSelected ? 'primary' : 'outline'}
+                            onClick={() => isAvailable && handleSlotSelect(slot.id)}
+                            disabled={!isAvailable}
+                            className={`flex flex-col items-center p-4 h-auto transition-all ${
+                              !isAvailable ? 'opacity-50 cursor-not-allowed' : ''
+                            }`}
+                          >
+                            <ClockIcon className={`w-4 h-4 mb-1 ${!isAvailable ? 'text-text-muted' : ''}`} />
+                            <span className="text-sm font-medium">
+                              {formatTime(slot.start_time)}
+                            </span>
+                            <span className="text-xs opacity-75">
+                              {isPast ? 'Expired' : !slot.is_available ? 'Booked' : formatTime(slot.end_time)}
+                            </span>
+                          </Button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
 
-            {/* No slots message */}
-            {selectedDate && timeSlots.length === 0 && !slotsLoading && (
-              <div className="mt-6 text-center p-8 bg-surface-tertiary rounded-lg">
-                <AlertCircleIcon className="w-8 h-8 mx-auto mb-2 text-text-muted" />
-                <p className="text-text-secondary">No available slots for this date</p>
-                <p className="text-sm text-text-muted">Try selecting a different date</p>
-              </div>
+                {/* No slots message */}
+                {selectedDate && timeSlots.length === 0 && !slotsLoading && (
+                  <div className="mt-6 text-center p-8 bg-surface-tertiary rounded-lg">
+                    <AlertCircleIcon className="w-8 h-8 mx-auto mb-2 text-text-muted" />
+                    <p className="text-text-secondary">No available slots for this date</p>
+                    <p className="text-sm text-text-muted">Try selecting a different date</p>
+                  </div>
+                )}
+              </>
             )}
           </CardContent>
         </Card>
