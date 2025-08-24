@@ -329,22 +329,10 @@ export default function DashboardPage() {
                     </div>
                     
                     <div className="flex flex-col gap-3">
-                      <Button
-                        onClick={() => router.push('/book')}
-                        size="lg"
-                        className="bg-brand-600 hover:bg-brand-700 min-h-[48px]"
-                        rightIcon={<ArrowRight className="w-4 h-4" />}
-                        fullWidth
-                      >
+                      <Button onClick={() => router.push('/book')} size="lg" className="bg-brand-600 hover:bg-brand-700 min-h-[48px]" fullWidth>
                         Book Your First Service
                       </Button>
-                      <Button
-                        onClick={() => router.push('/dashboard/vehicles')}
-                        variant="outline"
-                        size="lg"
-                        className="min-h-[48px]"
-                        fullWidth
-                      >
+                      <Button onClick={() => router.push('/dashboard/vehicles')} variant="outline" size="lg" className="min-h-[48px]" fullWidth>
                         Add Your Vehicle
                       </Button>
                     </div>
@@ -382,13 +370,7 @@ export default function DashboardPage() {
                       Now you can book our professional mobile car detailing services with just a few clicks.
                     </p>
                     
-                    <Button
-                      onClick={() => router.push('/book')}
-                      size="lg"
-                      className="bg-brand-600 hover:bg-brand-700 min-h-[48px]"
-                      rightIcon={<ArrowRight className="w-4 h-4" />}
-                      fullWidth
-                    >
+                    <Button onClick={() => router.push('/book')} size="lg" className="bg-brand-600 hover:bg-brand-700 min-h-[48px]" fullWidth>
                       Book Your First Service
                     </Button>
                   </div>

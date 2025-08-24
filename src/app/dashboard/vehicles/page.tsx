@@ -175,13 +175,7 @@ export default function VehiclesPage() {
               Manage your vehicles for faster booking and accurate pricing
             </p>
           </div>
-          <Button
-            onClick={handleAddVehicle}
-            leftIcon={<Plus className="w-5 h-5" />}
-            className="sm:w-auto w-full"
-          >
-            Add Vehicle
-          </Button>
+          <Button onClick={handleAddVehicle} className="sm:w-auto w-full">Add Vehicle</Button>
         </div>
 
         {/* Error Message */}
@@ -212,9 +206,7 @@ export default function VehiclesPage() {
               <p className="text-text-secondary mb-6">
                 Add your first vehicle to get started with faster bookings and accurate pricing
               </p>
-              <Button onClick={handleAddVehicle} leftIcon={<Plus className="w-5 h-5" />}>
-                Add Your First Vehicle
-              </Button>
+              <Button onClick={handleAddVehicle}>Add Your First Vehicle</Button>
             </CardContent>
           </Card>
         ) : (

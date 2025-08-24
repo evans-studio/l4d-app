@@ -220,16 +220,7 @@ export default function MyBookingsPage() {
                 )}
               </div>
               
-              <Button
-                onClick={refreshBookings}
-                variant="outline"
-                size="sm"
-                disabled={isLoading}
-                className="min-h-[44px] touch-manipulation"
-              >
-                <Search className="w-4 h-4 mr-2" />
-                Refresh
-              </Button>
+              <Button onClick={refreshBookings} variant="outline" size="sm" disabled={isLoading} className="min-h-[44px] touch-manipulation">Refresh</Button>
             </div>
           </div>
 
