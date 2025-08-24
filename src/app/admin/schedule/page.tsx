@@ -5,6 +5,7 @@ import { AdminLayout } from '@/components/layouts/AdminLayout'
 import { AdminRoute } from '@/components/ProtectedRoute'
 import { Button } from '@/components/ui/primitives/Button'
 import { EventCalendar, type CalendarEvent } from '@/components/event-calendar'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { 
   CalendarIcon,
   ClockIcon,
@@ -52,6 +53,10 @@ function ScheduleCalendarContent() {
   const [isLoading, setIsLoading] = useState(true)
   // Only EventCalendar is used; legacy views removed
   const [events, setEvents] = useState<CalendarEvent[]>([])
+  const [bookingModalOpen, setBookingModalOpen] = useState(false)
+  const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null)
+  const [selectedBooking, setSelectedBooking] = useState<any | null>(null)
+  const [loadingBooking, setLoadingBooking] = useState(false)
 
   useEffect(() => {
     loadTimeSlots()
@@ -105,6 +110,19 @@ function ScheduleCalendarContent() {
       console.error('Error loading time slots:', error)
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const openBookingModal = async (bookingId: string) => {
+    try {
+      setSelectedBookingId(bookingId)
+      setBookingModalOpen(true)
+      setLoadingBooking(true)
+      const res = await fetch(`/api/bookings/${bookingId}`)
+      const json = await res.json()
+      if (json?.success) setSelectedBooking(json.data)
+    } finally {
+      setLoadingBooking(false)
     }
   }
 
@@ -165,7 +183,8 @@ function ScheduleCalendarContent() {
             onEventClick={(ev) => {
               const slot = ev.meta as TimeSlot | undefined
               if (slot?.booking) {
-                window.location.href = `/admin/bookings/${slot.booking.id}`
+                // Open lightweight modal with booking details
+                void openBookingModal(slot.booking.id)
                 return true
               }
               return false
@@ -206,6 +225,47 @@ function ScheduleCalendarContent() {
             }}
             initialView="month"
           />
+
+          {/* Booking quick-view modal */}
+          <Dialog open={bookingModalOpen} onOpenChange={(o) => { setBookingModalOpen(o); if (!o) { setSelectedBookingId(null); setSelectedBooking(null) } }}>
+            <DialogContent className="sm:max-w-[480px]">
+              <DialogHeader>
+                <DialogTitle>Booking Details</DialogTitle>
+              </DialogHeader>
+              {loadingBooking ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin w-8 h-8 border-4 border-[var(--primary)] border-t-transparent rounded-full" />
+                </div>
+              ) : selectedBooking ? (
+                <div className="space-y-4">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-[var(--text-secondary)]">Reference</span>
+                    <span className="text-[var(--text-primary)] font-medium">#{selectedBooking.booking_reference}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-[var(--text-secondary)]">Customer</span>
+                    <span className="text-[var(--text-primary)] font-medium">{selectedBooking.customer_name}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-[var(--text-secondary)]">Date</span>
+                    <span className="text-[var(--text-primary)] font-medium">{new Date(selectedBooking.scheduled_date).toLocaleDateString()}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-[var(--text-secondary)]">Start</span>
+                    <span className="text-[var(--text-primary)] font-medium">{selectedBooking.start_time}</span>
+                  </div>
+                  <div className="flex items-center gap-2 pt-2">
+                    <Button onClick={() => { if (selectedBookingId) window.location.href = `/admin/bookings/${selectedBookingId}` }} size="sm">
+                      Open full booking
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => setBookingModalOpen(false)}>Close</Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-sm text-[var(--text-secondary)] py-4">Booking not found.</div>
+              )}
+            </DialogContent>
+          </Dialog>
         </div>
 
         {/* Legacy views removed */}
