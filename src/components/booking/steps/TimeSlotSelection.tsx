@@ -152,9 +152,7 @@ export function TimeSlotSelection() {
       endTime: payload.end || calculateEndTime(payload.start, serviceDuration),
       duration: serviceDuration,
     })
-    if (canProceedToNextStep()) {
-      nextStep()
-    }
+    // Do not auto-advance; allow user to review and click Continue
   }
 
   // Helper function to calculate end time
