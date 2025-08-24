@@ -199,6 +199,7 @@ export function UserDetails() {
               type="email"
               value={userForm.email}
               onChange={(e) => handleFormChange('email', e.target.value)}
+              label="Email Address *"
               helperText="e.g., your.email@example.com"
               required
             />
@@ -212,6 +213,7 @@ export function UserDetails() {
               type="tel"
               value={userForm.phone}
               onChange={(e) => handleFormChange('phone', e.target.value)}
+              label="Phone Number *"
               helperText="e.g., 07123 456789"
               required
             />
@@ -226,6 +228,7 @@ export function UserDetails() {
               <Input
                 value={userForm.name}
                 onChange={(e) => handleFormChange('name', e.target.value)}
+                label="Full Name *"
                 helperText="e.g., John Smith"
                 required
               />

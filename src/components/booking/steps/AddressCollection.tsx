@@ -201,7 +201,6 @@ export function AddressCollection() {
             <div>
               <Input
                 label="Street Address *"
-                floating
                 value={addressForm.addressLine1}
                 onChange={(e) => handleFormChange('addressLine1', e.target.value)}
                 helperText="e.g., 123 Main Street"
@@ -213,7 +212,6 @@ export function AddressCollection() {
               <div>
                 <Input
                   label="City *"
-                  floating
                   value={addressForm.city}
                   onChange={(e) => handleFormChange('city', e.target.value)}
                   helperText="e.g., London"
@@ -224,7 +222,6 @@ export function AddressCollection() {
               <div>
                 <Input
                   label="Postcode *"
-                  floating
                   value={addressForm.postcode}
                   onChange={(e) => handleFormChange('postcode', e.target.value.toUpperCase())}
                   helperText="e.g., SW1A 1AA"

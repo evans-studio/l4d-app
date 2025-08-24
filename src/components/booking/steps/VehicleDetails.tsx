@@ -558,7 +558,6 @@ export function VehicleDetails() {
               <div>
                 <Input
                   label="Registration *"
-                  floating
                   value={vehicleForm.registration}
                   onChange={(e) => handleFormChange('registration', e.target.value.toUpperCase())}
                   helperText="e.g., AB12 CDE"
@@ -591,7 +590,6 @@ export function VehicleDetails() {
               <div>
                 <Input
                   label="Color (optional)"
-                  floating
                   value={vehicleForm.color}
                   onChange={(e) => handleFormChange('color', e.target.value)}
                   helperText="e.g., White, Black, Silver"
