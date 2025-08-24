@@ -73,7 +73,59 @@ export async function middleware(request: NextRequest) {
     // - /api/auth/setup-password (deprecated)
   ]
 
-  // Skip auth check for public routes
+  // Special handling for auth routes: if already authenticated, redirect away to avoid flicker
+  if (path.startsWith('/auth/')) {
+    try {
+      const supabase = createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        {
+          cookies: {
+            get(name: string) {
+              return request.cookies.get(name)?.value
+            },
+            set(name: string, value: string, options: any) {
+              response.cookies.set(name, value, options)
+            },
+            remove(name: string, options: any) {
+              response.cookies.set(name, '', { ...options, maxAge: 0 })
+            },
+          },
+        }
+      )
+
+      const { data: { user } } = await supabase.auth.getUser()
+      const isVerified = user && user.email_confirmed_at
+
+      if (isVerified) {
+        // Determine role to choose destination
+        const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+        const supabaseService = createServerClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          serviceKey!,
+          {
+            cookies: { get: () => null, set: () => {}, remove: () => {} },
+            auth: { autoRefreshToken: false, persistSession: false }
+          }
+        )
+
+        const { data: profile } = await supabaseService
+          .from('user_profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single()
+
+        const userRole = profile?.role || 'customer'
+        const dest = (userRole === 'admin' || userRole === 'super_admin') ? '/admin' : '/dashboard'
+        return NextResponse.redirect(new URL(dest, request.url))
+      }
+    } catch (_) {
+      // Fail-open to the auth page if any issue occurs
+    }
+    return response
+  }
+
+  // Skip auth check for other public routes
   if (publicRoutes.includes(path)) {
     return response
   }
