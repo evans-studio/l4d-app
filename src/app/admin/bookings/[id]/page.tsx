@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/primitives/Button'
 import { MarkAsPaidModal } from '@/components/admin/MarkAsPaidModal'
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb'
 import { Badge } from '@/components/ui/badge'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { isNewUIEnabled } from '@/lib/config/feature-flags'
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/primitives/Alert'
 import { ConfirmDialog } from '@/components/ui/overlays/modals/ConfirmDialog'
@@ -428,24 +429,38 @@ function AdminBookingDetailsPage() {
                 </div>
                 <div>
                   <p className="text-[var(--text-secondary)] text-sm mb-1">Email</p>
-                  <a 
-                    href={`mailto:${booking.customer_email}`}
-                    className="text-[var(--text-link)] hover:text-[var(--text-link-hover)] flex items-center gap-2"
-                  >
-                    <MailIcon className="w-4 h-4" />
-                    {booking.customer_email}
-                  </a>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <a 
+                          href={`mailto:${booking.customer_email}`}
+                          className="text-[var(--text-link)] hover:text-[var(--text-link-hover)] flex items-center gap-2"
+                        >
+                          <MailIcon className="w-4 h-4" />
+                          {booking.customer_email}
+                        </a>
+                      </TooltipTrigger>
+                      <TooltipContent>Click to email</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </div>
                 {booking.customer_phone && (
                   <div>
                     <p className="text-[var(--text-secondary)] text-sm mb-1">Phone</p>
-                    <a 
-                      href={`tel:${booking.customer_phone}`}
-                      className="text-[var(--text-link)] hover:text-[var(--text-link-hover)] flex items-center gap-2"
-                    >
-                      <PhoneIcon className="w-4 h-4" />
-                      {booking.customer_phone}
-                    </a>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <a 
+                            href={`tel:${booking.customer_phone}`}
+                            className="text-[var(--text-link)] hover:text-[var(--text-link-hover)] flex items-center gap-2"
+                          >
+                            <PhoneIcon className="w-4 h-4" />
+                            {booking.customer_phone}
+                          </a>
+                        </TooltipTrigger>
+                        <TooltipContent>Tap to call</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </div>
                 )}
               </div>
@@ -737,30 +752,6 @@ function AdminBookingDetailsPage() {
               </Button>
             </div>
 
-            {/* Booking Timeline */}
-            <div className="bg-[var(--surface-secondary)] rounded-lg p-6 border border-[var(--border-secondary)]">
-              <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">Timeline</h3>
-              <div className="space-y-3 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-[var(--text-secondary)]">Created</span>
-                  <span className="text-[var(--text-primary)]">
-                    {new Date(booking.created_at).toLocaleDateString()}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-[var(--text-secondary)]">Last Updated</span>
-                  <span className="text-[var(--text-primary)]">
-                    {new Date(booking.updated_at).toLocaleDateString()}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-[var(--text-secondary)]">Scheduled</span>
-                  <span className="text-[var(--text-primary)]">
-                    {formatDate(booking.scheduled_date)}
-                  </span>
-                </div>
-              </div>
-            </div>
           </div>
           {markPaidOpen && booking && (
             <MarkAsPaidModal

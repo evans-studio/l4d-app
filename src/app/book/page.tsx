@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/primitives/Button';
 import { ResponsiveLogo } from '@/components/ui/primitives/Logo';
 import { Container, Section } from '@/components/layout/templates/PageLayout';
 import { useBookingFlowStore } from '@/lib/store/bookingFlowStore';
-import { BookingFlowIndicator } from '@/components/booking/BookingFlowIndicator';
+// import { BookingFlowIndicator } from '@/components/booking/BookingFlowIndicator';
+import { Stepper, StepperItem, StepperIndicator, StepperSeparator, StepperTrigger } from '@/components/ui/stepper';
 import { ServiceSelection } from '@/components/booking/steps/ServiceSelection';
 import { VehicleDetails } from '@/components/booking/steps/VehicleDetails';
 import { TimeSlotSelection } from '@/components/booking/steps/TimeSlotSelection';
@@ -206,6 +207,15 @@ function BookingPageContent(): React.JSX.Element {
   // No auth gate - allow all users to proceed with booking
   // Account will be created automatically during the booking process
 
+  const stepLabels = [
+    { step: 1, label: 'Service' },
+    { step: 2, label: 'Vehicle' },
+    { step: 3, label: 'Time' },
+    { step: 4, label: 'Address' },
+    { step: 5, label: 'Details' },
+    { step: 6, label: 'Confirm' },
+  ];
+
   return (
     <div className="min-h-screen bg-surface-primary">
       {/* Simple Back to Home Link */}
@@ -252,10 +262,26 @@ function BookingPageContent(): React.JSX.Element {
       )}
 
 
-      {/* Progress Indicator - Responsive variants */}
-      <BookingFlowIndicator variant="mobile" />
-      <BookingFlowIndicator variant="compact" />
-      <BookingFlowIndicator variant="default" />
+      {/* Progress Stepper */}
+      <div className="px-4 py-3">
+        <div className="mx-auto max-w-4xl">
+          <Stepper value={currentStep} onValueChange={() => {}}>
+            {stepLabels.map(({ step }) => (
+              <StepperItem key={step} step={step} className="not-last:flex-1">
+                <StepperTrigger asChild>
+                  <StepperIndicator />
+                </StepperTrigger>
+                {step < stepLabels.length && <StepperSeparator />}
+              </StepperItem>
+            ))}
+          </Stepper>
+          <div className="mt-2 grid grid-cols-6 gap-2 text-center text-xs text-text-secondary">
+            {stepLabels.map(({ step, label }) => (
+              <div key={step} className={`${step === currentStep ? 'text-text-primary font-medium' : ''}`}>{label}</div>
+            ))}
+          </div>
+        </div>
+      </div>
 
       {/* Main Content */}
       <Section background="default" padding="lg">
