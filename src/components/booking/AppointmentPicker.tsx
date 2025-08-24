@@ -171,7 +171,7 @@ export function AppointmentPicker({ initialDate, onSelect, adminMode = false, se
                             key={slot.id}
                             variant={slot.is_available ? (selectedSlotId === slot.id ? 'default' : 'outline') : 'outline'}
                             size="sm"
-                            className="w-full justify-center"
+                            className="w-[200px] justify-center"
                             onClick={() =>
                               slot.is_available &&
                               onSelect({ id: slot.id, date: slot.slot_date, start: slot.start_time, end: slot.end_time })
@@ -185,7 +185,7 @@ export function AppointmentPicker({ initialDate, onSelect, adminMode = false, se
                             key={slot.id}
                             variant={slot.is_available ? (selectedSlotId === slot.id ? 'primary' : 'outline') : 'outline'}
                             size="md"
-                            className="w-full justify-center"
+                            className="w-[200px] justify-center"
                             onClick={() =>
                               slot.is_available &&
                               onSelect({ id: slot.id, date: slot.slot_date, start: slot.start_time, end: slot.end_time })
