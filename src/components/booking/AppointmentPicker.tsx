@@ -122,10 +122,13 @@ export function AppointmentPicker({ initialDate, onSelect, adminMode = false }: 
               className="p-2 sm:pe-5"
               disabled={[{ before: today }]}
               modifiers={{ hasSlots: (day: Date) => datesWithAvailable.has(format(day, 'yyyy-MM-dd')) }}
-              modifiersClassNames={{ hasSlots: 'after:absolute after:bottom-1 after:h-1.5 after:w-1.5 after:bg-[var(--primary)] after:rounded-full after:content-[\'\']' }}
+              modifiersClassNames={{
+                hasSlots: 'after:absolute after:bottom-1 after:h-1.5 after:w-1.5 after:bg-[var(--primary)] after:rounded-full after:content-[\'\']',
+                selected: 'bg-[var(--primary)] text-white'
+              }}
               classNames={{
                 // Make selected day more clearly active and tone down today's dot
-                day_button: 'group-data-selected:ring-2 group-data-selected:ring-[var(--primary)] group-data-selected:ring-offset-0',
+                day_button: 'group-data-selected:bg-[var(--primary)] group-data-selected:text-white group-data-selected:ring-0',
                 today: 'after:bg-[var(--border-secondary)] [&[data-selected]>*]:after:bg-transparent'
               }}
             />
