@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { format, startOfMonth, endOfMonth } from 'date-fns'
 import { eachDayOfInterval } from 'date-fns'
 import { isNewUIEnabled } from '@/lib/config/feature-flags'
-import { Button as ShadButton } from '@/components/ui/button'
+import { Button as ShadButton } from '@/components/ui/primitives/Button'
 import { Calendar } from '@/components/ui/calendar'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Button as L4DButton } from '@/components/ui/primitives/Button'
@@ -163,7 +163,7 @@ export function AppointmentPicker({ initialDate, onSelect, adminMode = false, se
                         isNewUIEnabled() ? (
                           <ShadButton
                             key={slot.id}
-                            variant={slot.is_available ? (selectedSlotId === slot.id ? 'default' : 'outline') : 'outline'}
+                            variant={slot.is_available ? (selectedSlotId === slot.id ? 'primary' : 'outline') : 'outline'}
                             size="sm"
                             className="w-auto px-3 justify-start"
                             onClick={() =>

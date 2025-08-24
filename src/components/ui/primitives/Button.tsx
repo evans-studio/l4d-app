@@ -128,13 +128,14 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         }
       }
 
+      const enforcedMinHeightClass = (size === 'xs' || size === 'sm') ? 'min-h-[44px]' : ''
       return (
         <ShadButton
           ref={ref}
           variant={mapVariant(variant)}
           size={mapSize(size)}
           disabled={isDisabled}
-          className={cn(fullWidth && 'w-full', className)}
+          className={cn(fullWidth && 'w-full', enforcedMinHeightClass, className)}
           data-ui="new"
           {...props}
         >
