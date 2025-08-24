@@ -20,6 +20,8 @@ import {
   DownloadIcon,
   RefreshCwIcon
 } from 'lucide-react'
+import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Checkbox } from '@/components/ui/checkbox'
 
 interface Customer {
   id: string
@@ -377,108 +379,50 @@ function AdminCustomersPage() {
           </div>
         </div>
 
-        {/* Customers List */}
-        <div className="bg-surface-secondary rounded-lg border border-border-primary">
-          <div className="overflow-x-auto">
-            {filteredCustomers.length === 0 ? (
-              <div className="text-center py-12">
-                <UsersIcon className="w-12 h-12 text-text-muted mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-text-primary mb-2">No Customers Found</h3>
-                <p className="text-text-secondary">No customers match your current filters.</p>
-              </div>
-            ) : (
-              <div className="space-y-1">
-                {filteredCustomers.map((customer) => (
-                  <div
-                    key={customer.id}
-                    className="p-6 border-b border-border-secondary last:border-b-0 hover:bg-surface-hover transition-colors"
-                  >
-                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                      {/* Customer Info */}
-                      <div className="flex-1">
-                        <div className="flex items-start justify-between mb-3">
-                          <div>
-                            <h3 className="text-lg font-semibold text-text-primary">
-                              {customer.first_name} {customer.last_name}
-                            </h3>
-                            <div className="flex items-center gap-3 mt-1">
-                              {getStatusBadge(customer.is_active)}
-                              <span className="text-text-muted text-sm">
-                                Member since {formatDate(customer.created_at)}
-                              </span>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-lg font-semibold text-text-primary">{customer.role}</p>
-                            <p className="text-text-muted text-sm">Role</p>
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          {/* Contact */}
-                          <div className="space-y-2">
-                            <p className="text-text-secondary text-xs font-medium">Contact</p>
-                            <div className="flex items-center gap-2">
-                              <MailIcon className="w-4 h-4 text-text-secondary" />
-                              <span className="text-text-primary text-sm truncate">{customer.email}</span>
-                            </div>
-                            {customer.phone && (
-                              <div className="flex items-center gap-2">
-                                <PhoneIcon className="w-4 h-4 text-text-secondary" />
-                                <span className="text-text-primary text-sm">{customer.phone}</span>
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Account Info */}
-                          <div className="space-y-2">
-                            <p className="text-text-secondary text-xs font-medium">Account</p>
-                            <div className="flex items-center gap-2">
-                              <CalendarIcon className="w-4 h-4 text-text-secondary" />
-                              <span className="text-text-primary text-sm">
-                                Registered {getDaysSinceRegistration(customer.created_at)}
-                              </span>
-                            </div>
-                            <p className="text-text-muted text-xs">
-                              Last updated {formatDate(customer.updated_at)}
-                            </p>
-                          </div>
-                        </div>
-
-                      </div>
-
-                      {/* Actions */}
-                      <div className="flex flex-col gap-2 min-w-[140px]">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => openOverlay({ type: 'customer-view', data: { customerId: customer.id } })}
-                          className="flex items-center gap-2"
-                        >
-                          <EyeIcon className="w-4 h-4" />
-                          View Details
+        {/* Customers Table - new UI */}
+        <div className="bg-surface-secondary rounded-lg border border-border-primary overflow-hidden">
+          {filteredCustomers.length === 0 ? (
+            <div className="text-center py-12">
+              <UsersIcon className="w-12 h-12 text-text-muted mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-text-primary mb-2">No Customers Found</h3>
+              <p className="text-text-secondary">No customers match your current filters.</p>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className="h-11"><Checkbox /></TableHead>
+                  <TableHead className="h-11">Name</TableHead>
+                  <TableHead className="h-11">Email</TableHead>
+                  <TableHead className="h-11">Phone</TableHead>
+                  <TableHead className="h-11">Registered</TableHead>
+                  <TableHead className="h-11">Status</TableHead>
+                  <TableHead className="h-11 text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredCustomers.map((c) => (
+                  <TableRow key={c.id}>
+                    <TableCell><Checkbox /></TableCell>
+                    <TableCell className="font-medium">{c.first_name} {c.last_name}</TableCell>
+                    <TableCell>{c.email}</TableCell>
+                    <TableCell>{c.phone || '-'}</TableCell>
+                    <TableCell>{formatDate(c.created_at)}</TableCell>
+                    <TableCell>{getStatusBadge(c.is_active)}</TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <Button variant="outline" size="sm" className="gap-2" onClick={() => openOverlay({ type: 'customer-view', data: { customerId: c.id } })}>
+                          <EyeIcon className="w-4 h-4" /> View
                         </Button>
-                        <div className="flex gap-2">
-                          <a
-                            href={`tel:${customer.phone}`}
-                            className="flex-1 flex items-center justify-center p-3 min-h-[48px] border border-border-secondary rounded hover:bg-surface-hover transition-colors touch-manipulation"
-                          >
-                            <PhoneIcon className="w-4 h-4 text-text-secondary" />
-                          </a>
-                          <a
-                            href={`mailto:${customer.email}`}
-                            className="flex-1 flex items-center justify-center p-3 min-h-[48px] border border-border-secondary rounded hover:bg-surface-hover transition-colors touch-manipulation"
-                          >
-                            <MailIcon className="w-4 h-4 text-text-secondary" />
-                          </a>
-                        </div>
+                        <a href={`tel:${c.phone || ''}`} className="px-3 py-2 text-sm border border-border-secondary rounded hover:bg-surface-hover transition-colors">Call</a>
+                        <a href={`mailto:${c.email}`} className="px-3 py-2 text-sm border border-border-secondary rounded hover:bg-surface-hover transition-colors">Email</a>
                       </div>
-                    </div>
-                  </div>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </div>
-            )}
-          </div>
+              </TableBody>
+            </Table>
+          )}
         </div>
       </div>
     </AdminLayout>
