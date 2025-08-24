@@ -5,10 +5,8 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/primitives/Button'
 import { AdminLayout } from '@/components/layouts/AdminLayout'
 import { AdminRoute } from '@/components/ProtectedRoute'
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb'
 import { 
-  ArrowLeftIcon,
-  PlusIcon,
-  EditIcon,
   TrashIcon,
   TagIcon,
   AlertCircleIcon,
@@ -413,31 +411,31 @@ function ServiceCategoriesPage() {
     <AdminLayout>
       <div className="max-w-6xl mx-auto">
         {/* Header */}
+        <div className="mb-4">
+          <Breadcrumb>
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbLink href="/admin">Admin</BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbLink href="/admin/services">Services</BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbPage>Categories</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+        </div>
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-[var(--text-primary)] mb-2">
-              Service Categories
-            </h1>
-            <p className="text-[var(--text-secondary)]">
-              Organize your services into categories for better navigation
-            </p>
+            <h1 className="text-3xl font-bold text-[var(--text-primary)] mb-2">Service Categories</h1>
+            <p className="text-[var(--text-secondary)]">Organize your services into categories for better navigation</p>
           </div>
-          
           <div className="flex items-center gap-3">
-            <Button
-              onClick={() => router.push('/admin/services')}
-              variant="outline"
-            >
-              <ArrowLeftIcon className="w-4 h-4 mr-2" />
-              Back to Services
-            </Button>
-            <Button
-              onClick={handleCreateCategory}
-              className="flex items-center gap-2"
-            >
-              <PlusIcon className="w-4 h-4" />
-              Add Category
-            </Button>
+            <Button onClick={() => router.push('/admin/services')} variant="outline">Back to Services</Button>
+            <Button onClick={handleCreateCategory}>Add Category</Button>
           </div>
         </div>
 
@@ -459,13 +457,7 @@ function ServiceCategoriesPage() {
               <p className="text-[var(--text-secondary)] text-sm mb-4">
                 Start by creating your first service category.
               </p>
-              <Button
-                onClick={handleCreateCategory}
-                className="flex items-center gap-2"
-              >
-                <PlusIcon className="w-4 h-4" />
-                Create First Category
-              </Button>
+              <Button onClick={handleCreateCategory}>Create First Category</Button>
             </div>
           </div>
         ) : (
@@ -550,15 +542,7 @@ function ServiceCategoriesPage() {
                       </td>
                       <td className="py-4 px-6">
                         <div className="flex items-center gap-2 justify-end">
-                          <Button
-                            onClick={() => handleEditCategory(category)}
-                            variant="outline"
-                            size="sm"
-                            className="flex items-center gap-1"
-                          >
-                            <EditIcon className="w-3 h-3" />
-                            Edit
-                          </Button>
+                          <Button onClick={() => handleEditCategory(category)} variant="outline" size="sm">Edit</Button>
                           <Button
                             onClick={() => handleDeleteCategory(category)}
                             variant="outline"
