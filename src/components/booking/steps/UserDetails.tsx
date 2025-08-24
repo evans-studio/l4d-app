@@ -192,9 +192,6 @@ export function UserDetails() {
         
         <CardContent className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-text-primary mb-2">
-              Email Address *
-            </label>
             <Input
               type="email"
               value={userForm.email}
@@ -206,9 +203,6 @@ export function UserDetails() {
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-text-primary mb-2">
-              Phone Number *
-            </label>
             <Input
               type="tel"
               value={userForm.phone}
@@ -222,9 +216,6 @@ export function UserDetails() {
           {/* Name field - required for new users */}
           {(validationStatus === 'new' || (!isExistingUser && userForm.email && userForm.phone)) && (
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-2">
-                Full Name *
-              </label>
               <Input
                 value={userForm.name}
                 onChange={(e) => handleFormChange('name', e.target.value)}
@@ -304,28 +295,22 @@ export function UserDetails() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-text-primary mb-2">
-                    Password *
-                  </label>
                   <Input
                     type={showPasswords ? 'text' : 'password'}
                     value={userForm.password}
                     onChange={(e) => handleFormChange('password', e.target.value)}
-                    placeholder="Enter your password"
+                    label="Password *"
                     required
                     className="w-full"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-text-primary mb-2">
-                    Confirm Password *
-                  </label>
                   <Input
                     type={showPasswords ? 'text' : 'password'}
                     value={userForm.confirmPassword}
                     onChange={(e) => handleFormChange('confirmPassword', e.target.value)}
-                    placeholder="Confirm your password"
+                    label="Confirm Password *"
                     required
                     className="w-full"
                   />
