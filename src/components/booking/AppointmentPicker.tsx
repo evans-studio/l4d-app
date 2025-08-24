@@ -24,9 +24,10 @@ interface AppointmentPickerProps {
   initialDate?: Date
   onSelect: (slot: { id: string; date: string; start: string; end: string }) => void
   adminMode?: boolean
+  selectedSlotId?: string
 }
 
-export function AppointmentPicker({ initialDate, onSelect, adminMode = false }: AppointmentPickerProps) {
+export function AppointmentPicker({ initialDate, onSelect, adminMode = false, selectedSlotId }: AppointmentPickerProps) {
   const today = useMemo(() => new Date(), [])
   const [date, setDate] = useState<Date>(initialDate || today)
   const [visibleMonth, setVisibleMonth] = useState<Date>(initialDate ? startOfMonth(initialDate) : startOfMonth(today))
@@ -168,7 +169,7 @@ export function AppointmentPicker({ initialDate, onSelect, adminMode = false }: 
                         isNewUIEnabled() ? (
                           <ShadButton
                             key={slot.id}
-                            variant={slot.is_available ? 'default' : 'outline'}
+                            variant={slot.is_available ? (selectedSlotId === slot.id ? 'default' : 'outline') : 'outline'}
                             size="sm"
                             className="w-full"
                             onClick={() =>
@@ -219,7 +220,7 @@ export function AppointmentPicker({ initialDate, onSelect, adminMode = false }: 
                         ) : (
                           <L4DButton
                             key={slot.id}
-                            variant={slot.is_available ? 'primary' : 'outline'}
+                            variant={slot.is_available ? (selectedSlotId === slot.id ? 'primary' : 'outline') : 'outline'}
                             size="md"
                             className="w-full"
                             onClick={() =>

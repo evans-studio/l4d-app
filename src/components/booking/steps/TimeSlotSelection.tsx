@@ -316,6 +316,7 @@ export function TimeSlotSelection() {
                 <AppointmentPicker
                   initialDate={new Date(selectedDate)}
                   onSelect={(s) => handlePickerSlotSelect(s)}
+                  selectedSlotId={formData.slot?.slotId}
                 />
               </div>
             ) : (
@@ -461,29 +462,29 @@ export function TimeSlotSelection() {
 
       {/* Selected Slot Summary */}
       {formData.slot && (
-        <Card>
+        <Card className="border-[var(--border-secondary)] bg-[var(--surface-secondary)]">
           <CardHeader>
-            <h3 className="text-lg font-semibold text-text-primary">Selected Appointment</h3>
+            <h3 className="text-lg font-semibold text-[var(--text-primary)]">Selected Appointment</h3>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-lg p-4">
+            <div className="flex items-center justify-between rounded-lg p-4 border border-[var(--border-secondary)] bg-[color:rgba(151,71,255,0.08)]">
               <div className="flex items-center gap-3">
-                <CheckCircleIcon className="w-6 h-6 text-green-600" />
+                <CheckCircleIcon className="w-6 h-6 text-[var(--primary)]" />
                 <div>
-                  <p className="font-semibold text-text-primary">
+                  <p className="font-semibold text-[var(--text-primary)]">
                     {formatDate(new Date(formData.slot.slot_date))}
                   </p>
-                  <p className="text-sm text-text-secondary">
+                  <p className="text-sm text-[var(--text-secondary)]">
                     {formatTime(formData.slot.startTime)} - {formatTime(formData.slot.endTime)}
                   </p>
-                  <p className="text-xs text-text-muted">
+                  <p className="text-xs text-[var(--text-muted)]">
                     Duration: {Math.round(formData.slot.duration / 60)} hours
                   </p>
                 </div>
               </div>
               <div className="text-right">
-                <p className="text-sm text-green-700 font-medium">Slot Reserved</p>
-                <p className="text-xs text-green-600">Ready to confirm booking</p>
+                <p className="text-sm font-medium text-[var(--primary)]">Slot Reserved</p>
+                <p className="text-xs text-[var(--text-secondary)]">Ready to confirm booking</p>
               </div>
             </div>
           </CardContent>
