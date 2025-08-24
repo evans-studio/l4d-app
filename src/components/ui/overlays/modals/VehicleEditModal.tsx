@@ -285,7 +285,6 @@ const [formData, setFormData] = useState({
           <Select
             label="Year (Optional)"
             placeholder="Select year"
-            required
             options={availableYears.map(year => ({ value: year.toString(), label: year.toString() }))}
             value={formData.year.toString()}
             onChange={(e) => handleFormChange('year', parseInt(e.target.value))}
