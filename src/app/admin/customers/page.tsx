@@ -81,7 +81,7 @@ function AdminCustomersPage() {
       
       // Load customers and stats in parallel
       const [customersResponse, statsResponse] = await Promise.all([
-        fetch('/api/admin/customers/simple'),
+        fetch('/api/admin/customers'),
         fetch('/api/admin/customers/stats')
       ])
       
