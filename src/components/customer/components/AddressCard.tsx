@@ -233,7 +233,7 @@ export function AddressCard({
                     </p>
                     {(address.booking_count ?? 0) > 0 && (
                       <p className="text-sm text-text-secondary">
-                        Used in {address.booking_count} booking{address.booking_count > 1 ? 's' : ''}
+                        Used in {(address.booking_count ?? 0)} booking{(address.booking_count ?? 0) > 1 ? 's' : ''}
                       </p>
                     )}
                   </div>
