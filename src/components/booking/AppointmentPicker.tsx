@@ -123,6 +123,11 @@ export function AppointmentPicker({ initialDate, onSelect, adminMode = false }: 
               disabled={[{ before: today }]}
               modifiers={{ hasSlots: (day: Date) => datesWithAvailable.has(format(day, 'yyyy-MM-dd')) }}
               modifiersClassNames={{ hasSlots: 'after:absolute after:bottom-1 after:h-1.5 after:w-1.5 after:bg-[var(--primary)] after:rounded-full after:content-[\'\']' }}
+              classNames={{
+                // Make selected day more clearly active and tone down today's dot
+                day_button: 'group-data-selected:ring-2 group-data-selected:ring-[var(--primary)] group-data-selected:ring-offset-0',
+                today: 'after:bg-[var(--border-secondary)] [&[data-selected]>*]:after:bg-transparent'
+              }}
             />
             <div className="relative w-full max-sm:h-48 sm:w-48">
               <div className="absolute inset-0 py-4 max-sm:border-t">
