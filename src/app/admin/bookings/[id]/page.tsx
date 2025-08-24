@@ -381,7 +381,6 @@ function AdminBookingDetailsPage() {
                   <StatusIcon className={`w-4 h-4 ${status.color}`} />
                   <span className={`text-sm font-medium ${status.color}`}>{status.label}</span>
                 </div>
-                {renderPaymentBadge()}
               </div>
             </div>
             <p className="text-[var(--text-secondary)]">Created {formatDate(booking.created_at)}</p>
@@ -659,6 +658,11 @@ function AdminBookingDetailsPage() {
             {/* Status Actions */}
             <div className="bg-[var(--surface-secondary)] rounded-lg p-6 border border-[var(--border-secondary)]">
               <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">Actions</h3>
+              {/* Payment status (moved from header to avoid duplicate badges) */}
+              <div className="mb-3 text-sm flex items-center justify-between">
+                <span className="text-[var(--text-secondary)]">Payment Status</span>
+                {renderPaymentBadge()}
+              </div>
               <div className="space-y-3">
                 {booking.payment_status !== 'paid' && (
                   <Button
@@ -673,18 +677,16 @@ function AdminBookingDetailsPage() {
                     <Button
                       onClick={() => updateBookingStatus('confirmed')}
                       disabled={isUpdating}
-                      className="w-full flex items-center gap-2"
+                      className="w-full"
                     >
-                      <CheckIcon className="w-4 h-4" />
                       Confirm Booking
                     </Button>
                     <Button
                       onClick={() => updateBookingStatus('cancelled')}
                       disabled={isUpdating}
                       variant="outline"
-                      className="w-full flex items-center gap-2"
+                      className="w-full"
                     >
-                      <XIcon className="w-4 h-4" />
                       Cancel Booking
                     </Button>
                   </>
@@ -694,9 +696,8 @@ function AdminBookingDetailsPage() {
                   <Button
                     onClick={() => updateBookingStatus('in_progress')}
                     disabled={isUpdating}
-                    className="w-full flex items-center gap-2"
+                    className="w-full"
                   >
-                    <ClockIcon className="w-4 h-4" />
                     Start Service
                   </Button>
                 )}
@@ -705,9 +706,8 @@ function AdminBookingDetailsPage() {
                   <Button
                     onClick={() => updateBookingStatus('completed')}
                     disabled={isUpdating}
-                    className="w-full flex items-center gap-2"
+                    className="w-full"
                   >
-                    <CheckCircleIcon className="w-4 h-4" />
                     Complete Service
                   </Button>
                 )}
