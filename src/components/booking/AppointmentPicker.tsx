@@ -131,7 +131,10 @@ export function AppointmentPicker({ initialDate, onSelect, adminMode = false }: 
               onMonthChange={(m: Date) => setVisibleMonth(startOfMonth(m))}
               className="p-2 sm:pe-5"
               disabled={[{ before: today }]}
-              modifiers={{ hasSlots: (day: Date) => datesWithAvailable.has(format(day, 'yyyy-MM-dd')) }}
+              modifiers={{
+                hasSlots: (day: Date) => datesWithAvailable.has(format(day, 'yyyy-MM-dd')),
+                selected: (day: Date) => format(day, 'yyyy-MM-dd') === selectedDateIso
+              }}
               modifiersClassNames={{
                 hasSlots: 'after:absolute after:bottom-1 after:h-1.5 after:w-1.5 after:bg-[var(--primary)] after:rounded-full after:content-[\'\']',
                 selected: 'bg-[var(--primary)] text-white'
