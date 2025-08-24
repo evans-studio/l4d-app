@@ -67,7 +67,8 @@ export function AddressCard({
   }
 
   const formatDistance = (distance?: number) => {
-    if (!distance) return null
+    // Allow 0 miles as a valid value; only treat undefined/null as missing
+    if (distance === undefined || distance === null) return null
     
     const roundedDistance = Math.round(distance * 10) / 10
     const isFree = distance <= 17.5
@@ -105,6 +106,7 @@ export function AddressCard({
   }
 
   const distanceInfo = formatDistance(address.distance_from_business)
+  const hasUsage = Boolean(address.last_used) || ((address.booking_count ?? 0) > 0)
 
   if (variant === 'compact') {
     return (
@@ -220,7 +222,7 @@ export function AddressCard({
               )}
 
               {/* Usage Stats */}
-              {(address.last_used || address.booking_count) && (
+              {hasUsage && (
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-lg bg-surface-tertiary flex items-center justify-center">
                     <Calendar className="w-5 h-5 text-text-secondary" />
@@ -229,7 +231,7 @@ export function AddressCard({
                     <p className="font-medium text-text-primary">
                       {formatLastUsed(address.last_used)}
                     </p>
-                    {address.booking_count && (
+                    {(address.booking_count ?? 0) > 0 && (
                       <p className="text-sm text-text-secondary">
                         Used in {address.booking_count} booking{address.booking_count > 1 ? 's' : ''}
                       </p>
