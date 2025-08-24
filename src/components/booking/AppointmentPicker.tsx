@@ -78,36 +78,22 @@ export function AppointmentPicker({ initialDate, onSelect, adminMode = false }: 
     }
   }, [date, visibleMonth])
 
-  // Auto-select nearest date with available slots if current date has none
+  // On mount and when visible month availability changes, ensure selected date is a day with slots
   useEffect(() => {
     if (loading) return
     if (timeSlots.length > 0) return
-    // find next date in current visible month that has slots
-    const todayIso = format(today, 'yyyy-MM-dd')
     const currentIso = selectedDateIso
-    const candidates = monthDates
-      .filter(d => d >= currentIso)
-      .filter(d => datesWithAvailable.has(d))
-    if (candidates.length > 0) {
+    const candidates = monthDates.filter(d => datesWithAvailable.has(d))
+    if (candidates.length > 0 && !datesWithAvailable.has(currentIso)) {
       const nextIso = candidates[0] as string
-      const [y, m, dd] = nextIso.split('-').map(Number)
+      const [y, m, dd] = (nextIso || '').split('-').map(Number)
       if (y && m && dd) {
-        setDate(new Date(y, m - 1, dd))
-      }
-      return
-    }
-    // if nothing in current month and selected date is before today, try today within current month
-    if (currentIso < todayIso) {
-      const forward = monthDates.filter(d => d >= todayIso && datesWithAvailable.has(d))
-      if (forward.length > 0) {
-        const nextIso = forward[0] as string
-        const [y, m, dd] = nextIso.split('-').map(Number)
-        if (y && m && dd) {
-          setDate(new Date(y, m - 1, dd))
-        }
+        const nextDate = new Date(y, m - 1, dd)
+        setDate(nextDate)
+        setVisibleMonth(startOfMonth(nextDate))
       }
     }
-  }, [timeSlots.length, loading, monthDates, datesWithAvailable, selectedDateIso, today])
+  }, [loading, timeSlots.length, monthDates, datesWithAvailable])
 
 
   return (

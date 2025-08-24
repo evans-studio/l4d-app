@@ -142,6 +142,21 @@ export function TimeSlotSelection() {
     }
   }
 
+  // New UI: handle selection payload directly from AppointmentPicker
+  const handlePickerSlotSelect = async (payload: { id: string; date: string; start: string; end: string }) => {
+    const serviceDuration = formData.service?.duration || 60
+    setSlotSelection({
+      slotId: payload.id,
+      slot_date: payload.date,
+      startTime: payload.start,
+      endTime: payload.end || calculateEndTime(payload.start, serviceDuration),
+      duration: serviceDuration,
+    })
+    if (canProceedToNextStep()) {
+      nextStep()
+    }
+  }
+
   // Helper function to calculate end time
   const calculateEndTime = (startTime: string, durationMinutes: number) => {
     const [hours, minutes] = startTime.split(':').map(Number)
@@ -300,7 +315,7 @@ export function TimeSlotSelection() {
               <div className="mb-6">
                 <AppointmentPicker
                   initialDate={new Date(selectedDate)}
-                  onSelect={(s) => handleSlotSelect(s.id)}
+                  onSelect={(s) => handlePickerSlotSelect(s)}
                 />
               </div>
             ) : (
