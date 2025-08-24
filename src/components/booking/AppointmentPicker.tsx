@@ -178,44 +178,7 @@ export function AppointmentPicker({ initialDate, onSelect, adminMode = false, se
                             }
                             disabled={!slot.is_available}
                           >
-                            <div className="w-full flex items-center justify-between">
-                              <span>{slot.start_time}</span>
-                              {adminMode && (
-                                <span className="flex items-center gap-2">
-                                  <button
-                                    type="button"
-                                    className="text-xs underline opacity-80 hover:opacity-100"
-                                    onClick={async (e) => {
-                                      e.stopPropagation()
-                                      await fetch(`/api/admin/time-slots/${slot.id}`, { method: 'DELETE' })
-                                      // refresh list
-                                      const res = await fetch(`/api/time-slots/availability?date=${selectedDateIso}`)
-                                      const json = await res.json()
-                                      setTimeSlots(json?.data || [])
-                                    }}
-                                  >
-                                    Delete
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className="text-xs underline opacity-80 hover:opacity-100"
-                                    onClick={async (e) => {
-                                      e.stopPropagation()
-                                      await fetch(`/api/admin/time-slots/${slot.id}`, {
-                                        method: 'PATCH',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({ is_available: !slot.is_available })
-                                      })
-                                      const res = await fetch(`/api/time-slots/availability?date=${selectedDateIso}`)
-                                      const json = await res.json()
-                                      setTimeSlots(json?.data || [])
-                                    }}
-                                  >
-                                    {slot.is_available ? 'Block' : 'Unblock'}
-                                  </button>
-                                </span>
-                              )}
-                            </div>
+                            <span className="w-full text-center">{slot.start_time}</span>
                           </ShadButton>
                         ) : (
                           <L4DButton
@@ -229,43 +192,7 @@ export function AppointmentPicker({ initialDate, onSelect, adminMode = false, se
                             }
                             disabled={!slot.is_available}
                           >
-                            <div className="w-full flex items-center justify-between">
-                              <span>{slot.start_time}</span>
-                              {adminMode && (
-                                <span className="flex items-center gap-2 text-sm">
-                                  <button
-                                    type="button"
-                                    className="underline opacity-80 hover:opacity-100"
-                                    onClick={async (e) => {
-                                      e.stopPropagation()
-                                      await fetch(`/api/admin/time-slots/${slot.id}`, { method: 'DELETE' })
-                                      const res = await fetch(`/api/time-slots/availability?date=${selectedDateIso}`)
-                                      const json = await res.json()
-                                      setTimeSlots(json?.data || [])
-                                    }}
-                                  >
-                                    Delete
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className="underline opacity-80 hover:opacity-100"
-                                    onClick={async (e) => {
-                                      e.stopPropagation()
-                                      await fetch(`/api/admin/time-slots/${slot.id}`, {
-                                        method: 'PATCH',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({ is_available: !slot.is_available })
-                                      })
-                                      const res = await fetch(`/api/time-slots/availability?date=${selectedDateIso}`)
-                                      const json = await res.json()
-                                      setTimeSlots(json?.data || [])
-                                    }}
-                                  >
-                                    {slot.is_available ? 'Block' : 'Unblock'}
-                                  </button>
-                                </span>
-                              )}
-                            </div>
+                            <span className="w-full text-center">{slot.start_time}</span>
                           </L4DButton>
                         )
                       ))}

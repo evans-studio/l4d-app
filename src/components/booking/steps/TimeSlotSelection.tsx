@@ -250,15 +250,7 @@ export function TimeSlotSelection() {
         </Card>
       )}
 
-      {/* Booking Notice */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-        <div className="flex items-start gap-2">
-          <AlertCircleIcon className="w-4 h-4 text-blue-600 mt-0.5" />
-          <p className="text-sm text-blue-800">
-            Bookings require at least 30 minutes advance notice. Slots starting within the next 30 minutes cannot be booked.
-          </p>
-        </div>
-      </div>
+      {/* Booking Notice - keep minimal and non-blocking */}
 
       {/* Calendar View */}
         <Card>
