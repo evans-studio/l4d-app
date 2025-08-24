@@ -71,13 +71,7 @@ export function AppointmentPicker({ initialDate, onSelect, adminMode = false, se
     load()
   }, [selectedDateIso])
 
-  // Keep visible month in sync with selected date
-  useEffect(() => {
-    const selMonth = startOfMonth(date)
-    if (selMonth.getTime() !== visibleMonth.getTime()) {
-      setVisibleMonth(selMonth)
-    }
-  }, [date, visibleMonth])
+  // Allow nav arrows to change month independently; we update month when user selects a day
 
   // On mount and when visible month availability changes, ensure selected date is a day with slots
   useEffect(() => {
@@ -112,11 +106,11 @@ export function AppointmentPicker({ initialDate, onSelect, adminMode = false, se
               month={visibleMonth}
               styles={{
                 day_selected: { backgroundColor: 'var(--primary)', color: 'var(--primary-foreground, #fff)' },
-                day_button: {},
               }}
               onSelect={(newDate) => {
                 if (newDate) {
                   setDate(newDate)
+                  setVisibleMonth(startOfMonth(newDate))
                 }
               }}
               onMonthChange={(m: Date) => setVisibleMonth(startOfMonth(m))}
@@ -171,7 +165,7 @@ export function AppointmentPicker({ initialDate, onSelect, adminMode = false, se
                             key={slot.id}
                             variant={slot.is_available ? (selectedSlotId === slot.id ? 'default' : 'outline') : 'outline'}
                             size="sm"
-                            className="w-[200px] justify-center"
+                            className="w-auto px-4 justify-center"
                             onClick={() =>
                               slot.is_available &&
                               onSelect({ id: slot.id, date: slot.slot_date, start: slot.start_time, end: slot.end_time })
@@ -185,7 +179,7 @@ export function AppointmentPicker({ initialDate, onSelect, adminMode = false, se
                             key={slot.id}
                             variant={slot.is_available ? (selectedSlotId === slot.id ? 'primary' : 'outline') : 'outline'}
                             size="md"
-                            className="w-[200px] justify-center"
+                            className="w-auto px-4 justify-center"
                             onClick={() =>
                               slot.is_available &&
                               onSelect({ id: slot.id, date: slot.slot_date, start: slot.start_time, end: slot.end_time })
