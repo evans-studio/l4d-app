@@ -25,7 +25,7 @@ export function ProtectedRoute({
         return
       }
 
-      if (profile && !allowedRoles.includes(profile.role)) {
+      if (profile && profile.role && !allowedRoles.includes(profile.role)) {
         // Redirect based on user's actual role
         const userRedirectTo = profile.role === 'admin' || profile.role === 'super_admin' ? '/admin' : '/dashboard'
         router.push(userRedirectTo)
