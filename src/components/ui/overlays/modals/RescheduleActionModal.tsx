@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import { CalendarCheckIcon, CalendarXIcon, ClockIcon, CalendarIcon } from 'lucide-react'
-import { BaseModal } from '../BaseModal'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { BaseOverlayProps } from '@/lib/overlay/types'
 import { Button } from '@/components/ui/primitives/Button'
 
@@ -63,14 +63,14 @@ export const RescheduleActionModal: React.FC<RescheduleActionModalProps> = ({
       setError('')
 
       const endpoint = isApprove 
-        ? `/api/admin/bookings/${data.bookingId}/reschedule/approve`
+        ? `/api/admin/bookings/${data.bookingId}/reschedule`
         : `/api/admin/bookings/${data.bookingId}/reschedule/decline`
 
       const payload = isApprove
         ? {
-            reschedule_request_id: rescheduleRequest.id,
-            new_date: rescheduleRequest.requested_date,
-            new_time: rescheduleRequest.requested_time
+            newDate: rescheduleRequest.requested_date,
+            newTime: rescheduleRequest.requested_time,
+            reason: rescheduleRequest.reason
           }
         : {
             reschedule_request_id: rescheduleRequest.id,
@@ -105,13 +105,12 @@ export const RescheduleActionModal: React.FC<RescheduleActionModalProps> = ({
   }
 
   return (
-    <BaseModal
-      isOpen={isOpen}
-      onClose={onClose}
-      title={isApprove ? 'Approve Reschedule Request' : 'Decline Reschedule Request'}
-      size="lg"
-    >
-      <div className="space-y-6">
+    <Dialog open={isOpen} onOpenChange={(o) => { if (!o) onClose() }}>
+      <DialogContent className="sm:max-w-[640px]">
+        <DialogHeader>
+          <DialogTitle>{isApprove ? 'Approve Reschedule Request' : 'Decline Reschedule Request'}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-6">
         {/* Action Header */}
         <div className="flex items-start gap-3">
           <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
@@ -251,6 +250,7 @@ export const RescheduleActionModal: React.FC<RescheduleActionModalProps> = ({
           </Button>
         </div>
       </div>
-    </BaseModal>
+      </DialogContent>
+    </Dialog>
   )
 }

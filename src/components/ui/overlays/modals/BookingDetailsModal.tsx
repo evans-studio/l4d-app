@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { Calendar, Clock, MapPin, Car, User, Phone, Mail, CheckCircle, AlertCircle, XCircle, Clock as PendingIcon, FileText, RefreshCw, DollarSign, UserX } from 'lucide-react'
-import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from '@/components/ui/composites/Modal'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { BaseOverlayProps } from '@/lib/overlay/types'
 import { Button } from '@/components/ui/primitives/Button'
 import { Badge } from '@/components/ui/primitives/Badge'
@@ -283,37 +283,37 @@ export const BookingDetailsModal: React.FC<BaseOverlayProps> = ({
 
   if (isLoading) {
     return (
-      <Modal open={isOpen} onClose={onClose}>
-        <ModalContent size="lg" position="center" mobile="fullscreen" onClose={onClose}>
-          <ModalHeader title="Booking Details" />
-          <ModalBody>
-            <div className="flex items-center justify-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600"></div>
-            </div>
-          </ModalBody>
-        </ModalContent>
-      </Modal>
+      <Dialog open={isOpen} onOpenChange={(o) => { if (!o) onClose?.() }}>
+        <DialogContent className="sm:max-w-[720px]">
+          <DialogHeader>
+            <DialogTitle>Booking Details</DialogTitle>
+          </DialogHeader>
+          <div className="flex items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600"></div>
+          </div>
+        </DialogContent>
+      </Dialog>
     )
   }
 
   if (error || !booking) {
     return (
-      <Modal open={isOpen} onClose={onClose}>
-        <ModalContent size="lg" position="center" mobile="fullscreen" onClose={onClose}>
-          <ModalHeader title="Booking Details" />
-          <ModalBody>
-            <div className="text-center py-12">
-              <XCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-              <p className="text-red-600 mb-4">{error || 'Booking not found'}</p>
-              {data?.bookingId && (
-                <Button onClick={loadBookingDetails} variant="outline">
-                  Try Again
-                </Button>
-              )}
-            </div>
-          </ModalBody>
-        </ModalContent>
-      </Modal>
+      <Dialog open={isOpen} onOpenChange={(o) => { if (!o) onClose?.() }}>
+        <DialogContent className="sm:max-w-[720px]">
+          <DialogHeader>
+            <DialogTitle>Booking Details</DialogTitle>
+          </DialogHeader>
+          <div className="text-center py-12">
+            <XCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+            <p className="text-red-600 mb-4">{error || 'Booking not found'}</p>
+            {data?.bookingId && (
+              <Button onClick={loadBookingDetails} variant="outline">
+                Try Again
+              </Button>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     )
   }
 
@@ -323,10 +323,12 @@ export const BookingDetailsModal: React.FC<BaseOverlayProps> = ({
 
   return (
     <>
-    <Modal open={isOpen} onClose={onClose}>
-      <ModalContent size="lg" position="center" mobile="fullscreen" onClose={onClose}>
-        <ModalHeader title="Booking Details" />
-        <ModalBody scrollable>
+    <Dialog open={isOpen} onOpenChange={(o) => { if (!o) onClose?.() }}>
+      <DialogContent className="sm:max-w-[720px]">
+        <DialogHeader>
+          <DialogTitle>Booking Details</DialogTitle>
+        </DialogHeader>
+        <div className="max-h-[75vh] overflow-y-auto pr-1">
           <div className="space-y-6">
             {/* Header */}
             <div className="pb-6 border-b border-border-secondary">
@@ -510,8 +512,8 @@ export const BookingDetailsModal: React.FC<BaseOverlayProps> = ({
               </div>
             )}
           </div>
-        </ModalBody>
-        <ModalFooter className="sticky bottom-0 bg-surface-primary">
+        </div>
+        <div className="sticky bottom-0 bg-surface-primary mt-4 pt-4 border-t border-border-secondary flex gap-3">
           {booking.status === 'pending' && (
             <>
               <Button
@@ -585,15 +587,17 @@ export const BookingDetailsModal: React.FC<BaseOverlayProps> = ({
               Close
             </Button>
           )}
-        </ModalFooter>
-      </ModalContent>
-    </Modal>
+        </div>
+      </DialogContent>
+    </Dialog>
 
     {/* Cancel Prompt */}
-    <Modal open={showCancelPrompt} onClose={() => setShowCancelPrompt(false)}>
-      <ModalContent size="md" position="center" mobile="fullscreen" onClose={() => setShowCancelPrompt(false)}>
-        <ModalHeader title="Cancel Booking" />
-        <ModalBody>
+    <Dialog open={showCancelPrompt} onOpenChange={(o) => { if (!o) setShowCancelPrompt(false) }}>
+      <DialogContent className="sm:max-w-[520px]">
+        <DialogHeader>
+          <DialogTitle>Cancel Booking</DialogTitle>
+        </DialogHeader>
+        <div>
           <div className="space-y-4">
             <p className="text-text-secondary text-sm">Please provide a reason for cancelling this booking. The reason may be included in customer notifications.</p>
             <textarea
@@ -603,13 +607,13 @@ export const BookingDetailsModal: React.FC<BaseOverlayProps> = ({
               className="w-full min-h-[100px] rounded-md border border-border-secondary bg-surface-secondary p-3 text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand-600"
             />
           </div>
-        </ModalBody>
-        <ModalFooter>
+        </div>
+        <div className="mt-4 flex justify-end gap-2">
           <Button variant="outline" onClick={() => setShowCancelPrompt(false)} className="min-h-[44px]">Back</Button>
           <Button onClick={submitCancellation} disabled={!cancelReason.trim()} className="min-h-[44px] bg-red-600 hover:bg-red-700 text-white">Confirm Cancel</Button>
-        </ModalFooter>
-      </ModalContent>
-    </Modal>
+        </div>
+      </DialogContent>
+    </Dialog>
     </>
   )
 }
