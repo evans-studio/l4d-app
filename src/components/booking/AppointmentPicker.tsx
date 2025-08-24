@@ -165,28 +165,28 @@ export function AppointmentPicker({ initialDate, onSelect, adminMode = false, se
                             key={slot.id}
                             variant={slot.is_available ? (selectedSlotId === slot.id ? 'default' : 'outline') : 'outline'}
                             size="sm"
-                            className="w-auto px-4 justify-center"
+                            className="w-auto px-3 justify-start"
                             onClick={() =>
                               slot.is_available &&
                               onSelect({ id: slot.id, date: slot.slot_date, start: slot.start_time, end: slot.end_time })
                             }
                             disabled={!slot.is_available}
                           >
-                            <span className="w-full text-left pl-2">{slot.start_time}</span>
+                            <span className="text-left">{slot.start_time}</span>
                           </ShadButton>
                         ) : (
                           <L4DButton
                             key={slot.id}
                             variant={slot.is_available ? (selectedSlotId === slot.id ? 'primary' : 'outline') : 'outline'}
                             size="md"
-                            className="w-auto px-4 justify-center"
+                            className="w-auto px-3 justify-start"
                             onClick={() =>
                               slot.is_available &&
                               onSelect({ id: slot.id, date: slot.slot_date, start: slot.start_time, end: slot.end_time })
                             }
                             disabled={!slot.is_available}
                           >
-                            <span className="w-full text-left pl-2">{slot.start_time}</span>
+                            <span className="text-left">{slot.start_time}</span>
                           </L4DButton>
                         )
                       ))}
