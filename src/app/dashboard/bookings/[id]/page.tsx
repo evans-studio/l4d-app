@@ -305,14 +305,7 @@ export default function BookingDetailsPage({ params }: { params: Promise<{ id: s
           {/* Header */}
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center gap-4">
-              <Button
-                onClick={() => router.push('/dashboard')}
-                variant="outline"
-                size="sm"
-                leftIcon={<ArrowLeft className="w-4 h-4" />}
-              >
-                Back to Dashboard
-              </Button>
+              <Button onClick={() => router.push('/dashboard')} variant="outline" size="sm">Back to Dashboard</Button>
               <div>
                 <h1 className="text-3xl font-bold text-text-primary">
                   Booking #{booking.booking_reference}
@@ -326,14 +319,7 @@ export default function BookingDetailsPage({ params }: { params: Promise<{ id: s
 
             <div className="flex items-center gap-3">
               {canReschedule && (
-                <Button
-                  onClick={() => router.push(`/dashboard/bookings/${booking.id}/reschedule`)}
-                  variant="outline"
-                  className="flex items-center gap-2"
-                >
-                  <Edit2 className="w-4 h-4" />
-                  Reschedule
-                </Button>
+                <Button onClick={() => router.push(`/dashboard/bookings/${booking.id}/reschedule`)} variant="outline">Reschedule</Button>
               )}
               {canCancel && (
                 <Button
