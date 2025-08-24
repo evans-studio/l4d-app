@@ -207,8 +207,8 @@ function BookingSuccessContent() {
       <div className="max-w-4xl mx-auto px-4 py-8">
         {/* Success Header */}
         <div className="text-center mb-8">
-          <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <CheckCircle className="w-10 h-10 text-green-600" />
+          <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 bg-[var(--primary-bg)]">
+            <CheckCircle className="w-10 h-10 text-[var(--primary)]" />
           </div>
           <h1 className="text-3xl font-bold text-text-primary mb-2">
             Booking Confirmed!
@@ -242,14 +242,14 @@ function BookingSuccessContent() {
           
           {/* Email Verification for Existing Users */}
           {needsVerification && !isNewCustomer && (
-            <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg max-w-2xl mx-auto">
+            <div className="mt-6 p-4 rounded-lg max-w-2xl mx-auto bg-[var(--primary-bg)] border border-[var(--border-secondary)]">
               <div className="flex items-start gap-3">
-                <Mail className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                <Mail className="w-5 h-5 text-[var(--primary)] mt-0.5 flex-shrink-0" />
                 <div className="text-left">
-                  <h3 className="font-semibold text-blue-800 mb-1">
+                  <h3 className="font-semibold text-text-primary mb-1">
                     Email verification sent
                   </h3>
-                  <p className="text-sm text-blue-700">
+                  <p className="text-sm text-text-secondary">
                     We've sent you a verification email with your booking confirmation. 
                     Please check your inbox to verify your email address.
                   </p>
@@ -263,7 +263,7 @@ function BookingSuccessContent() {
           {/* Main Booking Details */}
           <div className="lg:col-span-2 space-y-6">
             {/* Booking Reference */}
-            <Card>
+            <Card className="bg-[var(--surface-secondary)] border-[var(--border-secondary)]">
               <CardHeader>
                 <h2 className="text-xl font-semibold text-text-primary">
                   Booking Details
@@ -277,7 +277,7 @@ function BookingSuccessContent() {
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Badge variant="outline" className="bg-surface-secondary border-border-secondary capitalize">
+                  <Badge variant="outline" className="bg-[var(--surface-tertiary)] border-[var(--border-secondary)] capitalize">
                     {booking.status}
                   </Badge>
                   {booking.confirmation_sent_at && (
@@ -290,7 +290,7 @@ function BookingSuccessContent() {
             </Card>
 
             {/* Service & Vehicle Details */}
-            <Card>
+            <Card className="bg-[var(--surface-secondary)] border-[var(--border-secondary)]">
               <CardHeader>
                 <h3 className="text-lg font-semibold text-text-primary">
                   Service & Vehicle
@@ -334,7 +334,7 @@ function BookingSuccessContent() {
             </Card>
 
             {/* Date & Time */}
-            <Card>
+            <Card className="bg-[var(--surface-secondary)] border-[var(--border-secondary)]">
               <CardHeader>
                 <h3 className="text-lg font-semibold text-text-primary">
                   Appointment Details
@@ -387,7 +387,7 @@ function BookingSuccessContent() {
           {/* Sidebar */}
           <div className="space-y-6">
             {/* Compact Pricing Summary */}
-            <Card>
+            <Card className="bg-[var(--surface-secondary)] border-[var(--border-secondary)]">
               <CardHeader>
                 <h3 className="text-lg font-semibold text-text-primary">
                   Pricing Summary
@@ -413,7 +413,7 @@ function BookingSuccessContent() {
             </Card>
 
             {/* Quick Actions */}
-            <Card>
+            <Card className="bg-[var(--surface-secondary)] border-[var(--border-secondary)]">
               <CardHeader>
                 <h3 className="text-lg font-semibold text-text-primary">
                   Quick Actions
@@ -443,7 +443,7 @@ function BookingSuccessContent() {
             </Card>
 
             {/* Contact Info */}
-            <Card>
+            <Card className="bg-[var(--surface-secondary)] border-[var(--border-secondary)]">
               <CardHeader>
                 <h3 className="text-lg font-semibold text-text-primary">
                   Need Help?
