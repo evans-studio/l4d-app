@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/primitives/Button'
 import { Input } from '@/components/ui/primitives/Input'
 import { Card, CardContent, CardGrid } from '@/components/ui/composites/Card'
 // Removed Tabs import - using custom tab implementation
-import { StatusBadge } from '@/components/ui/patterns/StatusBadge'
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb'
 
 // Layout Components
 import { AdminLayout } from '@/components/layouts/AdminLayout'
@@ -413,6 +413,17 @@ function AdminBookingsContent() {
       <Container size="xl" padding="none" className="space-y-6 overflow-x-hidden">
         {/* Header - Mobile First */}
         <div className="space-y-4">
+          <Breadcrumb>
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbLink href="/admin">Admin</BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbPage>Bookings</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-text-primary">Customer Bookings</h1>
             <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-2">

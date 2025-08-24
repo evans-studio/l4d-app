@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { Card, CardHeader, CardContent } from '@/components/ui/composites/Card'
 import { Button } from '@/components/ui/primitives/Button'
 import { PricingBreakdown } from '@/components/ui/patterns/PricingBreakdown'
-import { StatusBadge } from '@/components/ui/patterns/StatusBadge'
+import { Badge } from '@/components/ui/badge'
 import { 
   CheckCircle, 
   Calendar, 
@@ -277,7 +277,9 @@ function BookingSuccessContent() {
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <StatusBadge status={booking.status as any} />
+                  <Badge variant="outline" className="bg-surface-secondary border-border-secondary capitalize">
+                    {booking.status}
+                  </Badge>
                   {booking.confirmation_sent_at && (
                     <span className="text-xs text-text-tertiary">
                       Confirmation sent

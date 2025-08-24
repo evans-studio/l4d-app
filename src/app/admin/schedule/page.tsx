@@ -6,7 +6,8 @@ import { AdminLayout } from '@/components/layouts/AdminLayout'
 import { AdminRoute } from '@/components/ProtectedRoute'
 import { Button } from '@/components/ui/primitives/Button'
 import { EventCalendar, type CalendarEvent } from '@/components/event-calendar'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { QuickViewDialog } from '@/components/ui/overlays/modals/QuickViewDialog'
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb'
 import { 
   CalendarIcon,
   ClockIcon,
@@ -139,17 +140,28 @@ function ScheduleCalendarContent() {
           </div>
         )}
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-[var(--text-primary)]">
-              Schedule Management
-            </h1>
-            <p className="text-[var(--text-secondary)] mt-1">
-              Manage your available booking slots
-            </p>
+        <div className="space-y-2">
+          <Breadcrumb>
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbLink href="/admin">Admin</BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbPage>Schedule</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold text-[var(--text-primary)]">
+                Schedule Management
+              </h1>
+              <p className="text-[var(--text-secondary)] mt-1">
+                Manage your available booking slots
+              </p>
+            </div>
           </div>
-          
-          {/* Calendar toggle removed per request */}
         </div>
 
         {/* Quick Stats */}
@@ -229,11 +241,7 @@ function ScheduleCalendarContent() {
           />
 
           {/* Booking quick-view modal */}
-          <Dialog open={bookingModalOpen} onOpenChange={(o) => { setBookingModalOpen(o); if (!o) { setSelectedBookingId(null); setSelectedBooking(null) } }}>
-            <DialogContent className="sm:max-w-[480px]">
-              <DialogHeader>
-                <DialogTitle>Booking Details</DialogTitle>
-              </DialogHeader>
+          <QuickViewDialog open={bookingModalOpen} onOpenChange={(o) => { setBookingModalOpen(o); if (!o) { setSelectedBookingId(null); setSelectedBooking(null) } }} title="Booking Details">
               {loadingBooking ? (
                 <div className="flex items-center justify-center py-8">
                   <div className="animate-spin w-8 h-8 border-4 border-[var(--primary)] border-t-transparent rounded-full" />
@@ -266,8 +274,7 @@ function ScheduleCalendarContent() {
               ) : (
                 <div className="text-sm text-[var(--text-secondary)] py-4">Booking not found.</div>
               )}
-            </DialogContent>
-          </Dialog>
+          </QuickViewDialog>
         </div>
 
         {/* Legacy views removed */}

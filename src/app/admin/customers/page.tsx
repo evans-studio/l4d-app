@@ -6,6 +6,7 @@ import { useOverlay } from '@/lib/overlay/context'
 import { AdminLayout } from '@/components/layouts/AdminLayout'
 import { AdminRoute } from '@/components/ProtectedRoute'
 import { Button } from '@/components/ui/primitives/Button'
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb'
 import { 
   UsersIcon,
   SearchIcon,
@@ -227,6 +228,19 @@ function AdminCustomersPage() {
     <AdminLayout>
       <div className="space-y-6">
         {/* Header */}
+        <div className="mb-2">
+          <Breadcrumb>
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbLink href="/admin">Admin</BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbPage>Customers</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+        </div>
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-text-primary">Customer Database</h1>

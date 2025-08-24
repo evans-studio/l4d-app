@@ -19,9 +19,10 @@ import {
 
 import { Button } from '@/components/ui/primitives/Button'
 import { Card, CardContent, CardGrid } from '@/components/ui/composites/Card'
-import { StatusBadge } from '@/components/ui/patterns/StatusBadge'
+import { Badge } from '@/components/ui/badge'
 import { AdminLayout } from '@/components/layouts/AdminLayout'
 import { AdminRoute } from '@/components/ProtectedRoute'
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb'
 
 interface RescheduleRequest {
   id: string
@@ -87,13 +88,13 @@ function AdminRescheduleRequestsPage() {
   const handleApproveRequest = async (request: RescheduleRequest) => {
     setActionLoading(request.id)
     try {
-      const response = await fetch(`/api/admin/bookings/${request.booking_id}/reschedule/approve`, {
+      const response = await fetch(`/api/admin/bookings/${request.booking_id}/reschedule`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          reschedule_request_id: request.id,
-          new_date: request.requested_date,
-          new_time: request.requested_time
+          newDate: request.requested_date,
+          newTime: request.requested_time,
+          reason: request.reason
         })
       })
 
@@ -193,6 +194,19 @@ function AdminRescheduleRequestsPage() {
     <AdminLayout>
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
+        <div className="mb-2">
+          <Breadcrumb>
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbLink href="/admin">Admin</BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbPage>Reschedule Requests</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+        </div>
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-[var(--text-primary)]">
@@ -359,7 +373,7 @@ function RescheduleRequestCard({
           </div>
           <div className="text-right">
             <p className="text-xl font-bold text-[var(--primary)]">£{request.total_price}</p>
-            <StatusBadge status={request.booking_status as 'pending' | 'confirmed' | 'rescheduled' | 'in_progress' | 'completed' | 'cancelled' | 'declined' | 'no_show'} />
+            <Badge variant="outline" className="capitalize">{request.booking_status}</Badge>
           </div>
         </div>
 

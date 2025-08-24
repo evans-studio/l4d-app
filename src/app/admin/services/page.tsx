@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/primitives/Button'
 import { AdminLayout } from '@/components/layouts/AdminLayout'
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb'
 import { AdminRoute } from '@/components/ProtectedRoute'
 import { 
   PlusIcon,
@@ -150,6 +151,19 @@ function AdminServicesPage() {
     <AdminLayout>
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
         {/* Header */}
+        <div className="mb-4">
+          <Breadcrumb>
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbLink href="/admin">Admin</BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbPage>Services</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+        </div>
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-3">
           <div>
             <h1 className="text-3xl font-bold text-[var(--text-primary)] mb-2">
