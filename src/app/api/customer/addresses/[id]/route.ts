@@ -86,8 +86,10 @@ export async function PUT(
           
           if (distanceResponse.ok) {
             const distanceResult = await distanceResponse.json()
-            if (distanceResult.success && distanceResult.data?.distance !== undefined) {
-              updateObject.distance_from_business = distanceResult.data.distance
+            // Convert km -> miles for storage/display consistency on customer UI
+            if (distanceResult.success && distanceResult.data?.distanceKm !== undefined) {
+              const miles = distanceResult.data.distanceKm * 0.621371
+              updateObject.distance_from_business = Math.round(miles * 10) / 10
             }
           }
         } catch (distanceError) {
