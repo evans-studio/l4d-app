@@ -70,6 +70,14 @@ export function AppointmentPicker({ initialDate, onSelect, adminMode = false }: 
     load()
   }, [selectedDateIso])
 
+  // Keep visible month in sync with selected date
+  useEffect(() => {
+    const selMonth = startOfMonth(date)
+    if (selMonth.getTime() !== visibleMonth.getTime()) {
+      setVisibleMonth(selMonth)
+    }
+  }, [date, visibleMonth])
+
   // Auto-select nearest date with available slots if current date has none
   useEffect(() => {
     if (loading) return
@@ -111,8 +119,10 @@ export function AppointmentPicker({ initialDate, onSelect, adminMode = false }: 
         <div className="rounded-md border">
           <div className="flex max-sm:flex-col">
             <Calendar
+              key={selectedDateIso}
               mode="single"
               selected={date}
+              month={visibleMonth}
               onSelect={(newDate) => {
                 if (newDate) {
                   setDate(newDate)
@@ -129,7 +139,8 @@ export function AppointmentPicker({ initialDate, onSelect, adminMode = false }: 
               classNames={{
                 // Make selected day more clearly active and tone down today's dot
                 day_button: 'group-data-selected:bg-[var(--primary)] group-data-selected:text-white group-data-selected:ring-0',
-                today: 'after:bg-[var(--border-secondary)] [&[data-selected]>*]:after:bg-transparent'
+                today: 'after:bg-[var(--border-secondary)] [&[data-selected]>*]:after:bg-transparent',
+                day_selected: 'bg-[var(--primary)] text-white'
               }}
             />
             <div className="relative w-full max-sm:h-48 sm:w-48">
