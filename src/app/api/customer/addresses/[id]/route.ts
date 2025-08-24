@@ -75,27 +75,25 @@ export async function PUT(
     if (updateData.postal_code) {
       updateObject.postal_code = updateData.postal_code.trim().toUpperCase()
       
-      // Recalculate distance if postcode changed
-      if (updateObject.postal_code !== existingAddress.postal_code) {
-        try {
-          const distanceResponse = await fetch(`${request.nextUrl.origin}/api/pricing/distance`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ postcode: updateObject.postal_code })
-          })
-          
-          if (distanceResponse.ok) {
-            const distanceResult = await distanceResponse.json()
-            // Convert km -> miles for storage/display consistency on customer UI
-            if (distanceResult.success && distanceResult.data?.distanceKm !== undefined) {
-              const miles = distanceResult.data.distanceKm * 0.621371
-              updateObject.distance_from_business = Math.round(miles * 10) / 10
-            }
+      // Recalculate distance whenever a postcode is provided on update
+      try {
+        const distanceResponse = await fetch(`${request.nextUrl.origin}/api/pricing/distance`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ postcode: updateObject.postal_code })
+        })
+        
+        if (distanceResponse.ok) {
+          const distanceResult = await distanceResponse.json()
+          // Convert km -> miles for storage/display consistency on customer UI
+          if (distanceResult.success && distanceResult.data?.distanceKm !== undefined) {
+            const miles = distanceResult.data.distanceKm * 0.621371
+            updateObject.distance_from_business = Math.round(miles * 10) / 10
           }
-        } catch (distanceError) {
-          console.error('Distance calculation failed:', distanceError)
-          // Continue without updating distance
         }
+      } catch (distanceError) {
+        console.error('Distance calculation failed:', distanceError)
+        // Continue without updating distance
       }
     }
     if (updateData.country !== undefined) updateObject.country = updateData.country?.trim() || 'United Kingdom'
