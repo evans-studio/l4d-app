@@ -152,7 +152,7 @@ export function AppointmentPicker({ initialDate, onSelect, adminMode = false, se
                         )}
                       </div>
                     )}
-                    <div className="grid gap-1.5 px-5 max-sm:grid-cols-2">
+                    <div className="flex flex-col gap-1.5 px-5 items-start">
                       {loading && (
                         <div className="text-sm text-muted-foreground">Loading…</div>
                       )}
