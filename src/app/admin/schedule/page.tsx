@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { AdminLayout } from '@/components/layouts/AdminLayout'
 import { AdminRoute } from '@/components/ProtectedRoute'
 import { Button } from '@/components/ui/primitives/Button'
@@ -49,6 +50,7 @@ interface CalendarDay {
 }
 
 function ScheduleCalendarContent() {
+  const router = useRouter()
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([])
   const [isLoading, setIsLoading] = useState(true)
   // Only EventCalendar is used; legacy views removed
@@ -206,7 +208,7 @@ function ScheduleCalendarContent() {
               // If event is a booking, open details instead of editing time
               const slot = ev.meta as TimeSlot | undefined
               if (slot?.booking) {
-                window.location.href = `/admin/bookings/${slot.booking.id}`
+                router.push(`/admin/bookings/${slot.booking.id}`)
                 return
               }
               await fetch(`/api/admin/time-slots/${ev.id}`, {
@@ -255,7 +257,7 @@ function ScheduleCalendarContent() {
                     <span className="text-[var(--text-primary)] font-medium">{selectedBooking.start_time}</span>
                   </div>
                   <div className="flex items-center gap-2 pt-2">
-                    <Button onClick={() => { if (selectedBookingId) window.location.href = `/admin/bookings/${selectedBookingId}` }} size="sm">
+                    <Button onClick={() => { if (selectedBookingId) router.push(`/admin/bookings/${selectedBookingId}`) }} size="sm">
                       Open full booking
                     </Button>
                     <Button variant="outline" size="sm" onClick={() => setBookingModalOpen(false)}>Close</Button>
