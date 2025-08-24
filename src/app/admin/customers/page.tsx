@@ -10,15 +10,9 @@ import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbP
 import { 
   UsersIcon,
   SearchIcon,
-  PhoneIcon,
-  MailIcon,
-  CalendarIcon,
   DollarSignIcon,
   TrendingUpIcon,
-  EyeIcon,
-  UserCheckIcon,
-  DownloadIcon,
-  RefreshCwIcon
+  UserCheckIcon
 } from 'lucide-react'
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -251,20 +245,10 @@ function AdminCustomersPage() {
             </p>
           </div>
           <div className="flex items-center gap-3 mt-4 sm:mt-0">
-            <Button
-              variant="outline"
-              onClick={exportCustomers}
-              className="flex items-center gap-2"
-            >
-              <DownloadIcon className="w-4 h-4" />
+            <Button variant="outline" onClick={exportCustomers} size="sm">
               Export CSV
             </Button>
-            <Button
-              variant="outline"
-              onClick={loadCustomerData}
-              className="flex items-center gap-2"
-            >
-              <RefreshCwIcon className="w-4 h-4" />
+            <Button variant="outline" onClick={loadCustomerData} size="sm">
               Refresh
             </Button>
           </div>
@@ -411,11 +395,28 @@ function AdminCustomersPage() {
                     <TableCell>{getStatusBadge(c.is_active)}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <Button variant="outline" size="sm" className="gap-2" onClick={() => openOverlay({ type: 'customer-view', data: { customerId: c.id } })}>
-                          <EyeIcon className="w-4 h-4" /> View
+                        <Button variant="outline" size="sm" onClick={() => openOverlay({ type: 'customer-view', data: { customerId: c.id } })}>
+                          View
                         </Button>
-                        <a href={`tel:${c.phone || ''}`} className="px-3 py-2 text-sm border border-border-secondary rounded hover:bg-surface-hover transition-colors">Call</a>
-                        <a href={`mailto:${c.email}`} className="px-3 py-2 text-sm border border-border-secondary rounded hover:bg-surface-hover transition-colors">Email</a>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            if (c.phone) window.location.href = `tel:${c.phone}`
+                          }}
+                          disabled={!c.phone}
+                        >
+                          Call
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            window.location.href = `mailto:${c.email}`
+                          }}
+                        >
+                          Email
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
