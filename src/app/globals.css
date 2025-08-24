@@ -265,3 +265,9 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Ensure react-day-picker highlights the selected day clearly */
+.rdp-day[aria-selected="true"] .rdp-day_button {
+  background-color: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+}

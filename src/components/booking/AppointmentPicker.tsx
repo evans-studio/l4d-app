@@ -123,6 +123,10 @@ export function AppointmentPicker({ initialDate, onSelect, adminMode = false }: 
               mode="single"
               selected={date}
               month={visibleMonth}
+              styles={{
+                day_selected: { backgroundColor: 'var(--primary)', color: 'var(--primary-foreground, #fff)' },
+                day_button: {},
+              }}
               onSelect={(newDate) => {
                 if (newDate) {
                   setDate(newDate)
@@ -143,7 +147,8 @@ export function AppointmentPicker({ initialDate, onSelect, adminMode = false }: 
                 // Make selected day more clearly active and tone down today's dot
                 day_button: 'group-data-selected:bg-[var(--primary)] group-data-selected:text-white group-data-selected:ring-0',
                 today: 'after:bg-[var(--border-secondary)] [&[data-selected]>*]:after:bg-transparent',
-                day_selected: 'bg-[var(--primary)] text-white [&_.rdp-day_button]:bg-[var(--primary)] [&_.rdp-day_button]:text-white'
+                day_selected: 'bg-[var(--primary)] text-white',
+                day: 'group size-9 px-0 py-px text-sm [&[aria-selected=true]_.rdp-day_button]:bg-[var(--primary)] [&[aria-selected=true]_.rdp-day_button]:text-white'
               }}
             />
             <div className="relative w-full max-sm:h-48 sm:w-48">
