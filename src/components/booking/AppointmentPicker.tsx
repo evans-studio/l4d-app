@@ -178,7 +178,7 @@ export function AppointmentPicker({ initialDate, onSelect, adminMode = false, se
                             }
                             disabled={!slot.is_available}
                           >
-                            <span className="w-full text-center">{slot.start_time}</span>
+                            <span className="w-full text-left pl-2">{slot.start_time}</span>
                           </ShadButton>
                         ) : (
                           <L4DButton
@@ -192,7 +192,7 @@ export function AppointmentPicker({ initialDate, onSelect, adminMode = false, se
                             }
                             disabled={!slot.is_available}
                           >
-                            <span className="w-full text-center">{slot.start_time}</span>
+                            <span className="w-full text-left pl-2">{slot.start_time}</span>
                           </L4DButton>
                         )
                       ))}

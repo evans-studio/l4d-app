@@ -20,7 +20,7 @@ function Calendar({
     month_caption:
       "relative mx-10 mb-1 flex h-9 items-center justify-center z-20",
     caption_label: "text-sm font-medium",
-    nav: "absolute top-0 flex w-full justify-between z-10",
+    nav: "absolute top-0 flex w-full justify-between z-20",
     button_previous: cn(
       buttonVariants({ variant: "ghost" }),
       "size-9 text-muted-foreground/80 hover:text-foreground p-0"
