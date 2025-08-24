@@ -132,7 +132,7 @@ export async function PUT(
       model: updatedVehicle.model,
       year: updatedVehicle.year,
       color: updatedVehicle.color,
-      license_plate: updatedVehicle.license_plate || updatedVehicle.registration,
+      license_plate: updatedVehicle.registration || updatedVehicle.license_plate,
       registration: updatedVehicle.registration || updatedVehicle.license_plate,
       is_primary: updatedVehicle.is_primary,
       is_default: updatedVehicle.is_default,

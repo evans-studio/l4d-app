@@ -108,7 +108,7 @@ export async function GET(request: NextRequest) {
           model: vehicle.model,
           year: vehicle.year,
           color: vehicle.color,
-          license_plate: vehicle.license_plate || vehicle.registration,
+          license_plate: vehicle.registration || vehicle.license_plate,
           registration: vehicle.registration || vehicle.license_plate,
           is_primary: vehicle.is_primary,
           is_default: vehicle.is_default,
