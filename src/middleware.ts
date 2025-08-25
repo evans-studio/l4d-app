@@ -256,7 +256,7 @@ export async function middleware(request: NextRequest) {
     return response
   }
 
-  // Handle page routes - redirect to login if not authenticated, preserving exact destination
+  // Handle page routes - if not verified, redirect to login (preserving destination). If verified, never redirect.
   if (!isVerified) {
     const loginUrl = new URL('/auth/login', request.url)
     loginUrl.searchParams.set('redirect', request.nextUrl.pathname + request.nextUrl.search)
