@@ -135,14 +135,27 @@ export async function POST(
       const newDate = rescheduleRequest.requested_date
       const newTime = rescheduleRequest.requested_time
 
-      // Update booking with new date and time and set status to rescheduled
+      // Attempt to reserve the requested time slot if it exists and is available
+      const { data: newSlot, error: findSlotError } = await supabase
+        .from('time_slots')
+        .select('id, is_available')
+        .eq('slot_date', newDate)
+        .eq('start_time', newTime)
+        .eq('is_available', true)
+        .single()
+
+      if (findSlotError || !newSlot) {
+        return ApiResponseHandler.badRequest('Requested time slot is no longer available')
+      }
+
+      // Update booking with new date and time and set status to rescheduled, link to new slot
       const { error: bookingUpdateError } = await supabase
         .from('bookings')
         .update({
           scheduled_date: newDate,
           scheduled_start_time: newTime,
           status: 'rescheduled',
-          time_slot_id: null, // Clear existing time slot link
+          time_slot_id: newSlot.id,
           updated_at: new Date().toISOString()
         })
         .eq('id', booking.id)
@@ -150,6 +163,28 @@ export async function POST(
       if (bookingUpdateError) {
         console.error('Error updating booking:', bookingUpdateError)
         return ApiResponseHandler.serverError('Failed to update booking')
+      }
+
+      // Mark the new time slot as unavailable
+      const { error: reserveNewSlotError } = await supabase
+        .from('time_slots')
+        .update({ is_available: false })
+        .eq('id', newSlot.id)
+
+      if (reserveNewSlotError) {
+        console.error('Error reserving new time slot:', reserveNewSlotError)
+        // Roll back booking link to avoid dangling reference
+        await supabase
+          .from('bookings')
+          .update({
+            scheduled_date: booking.scheduled_date,
+            scheduled_start_time: booking.scheduled_start_time,
+            status: booking.status,
+            time_slot_id: booking.time_slot_id,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', booking.id)
+        return ApiResponseHandler.serverError('Failed to reserve the requested time slot')
       }
 
       // Free up the old time slot if it was linked

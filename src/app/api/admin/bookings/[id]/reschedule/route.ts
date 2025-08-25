@@ -177,6 +177,30 @@ export async function POST(
       // Don't fail the request for history error, just log it
     }
 
+    // If there is a pending reschedule request for this booking matching the new date/time, mark it approved for consistency
+    try {
+      const { data: pendingReq } = await supabase
+        .from('booking_reschedule_requests')
+        .select('id')
+        .eq('booking_id', id)
+        .eq('requested_date', newDate)
+        .eq('requested_time', newTime)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+      if (pendingReq?.id) {
+        await supabase
+          .from('booking_reschedule_requests')
+          .update({ status: 'approved', responded_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+          .eq('id', pendingReq.id)
+          .eq('status', 'pending')
+      }
+    } catch (e) {
+      console.error('Failed to mark reschedule request approved after direct reschedule', e)
+    }
+
     // Send reschedule notification email to customer
     const { data: customer } = await supabase
       .from('user_profiles')
