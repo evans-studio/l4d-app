@@ -11,10 +11,7 @@ import {
   PhoneIcon,
   MailIcon,
   CarIcon,
-  CalendarCheckIcon,
-  CalendarXIcon,
-  AlertTriangleIcon,
-  RefreshCwIcon
+  AlertTriangleIcon
 } from 'lucide-react'
 
 import { Button } from '@/components/ui/primitives/Button'
@@ -218,23 +215,8 @@ function AdminRescheduleRequestsPage() {
           </div>
           
           <div className="flex items-center gap-2">
-            <Button
-              onClick={fetchRescheduleRequests}
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-2"
-              disabled={isLoading}
-            >
-              <RefreshCwIcon className="w-4 h-4" />
-              Refresh
-            </Button>
-            <Button
-              onClick={() => router.push('/admin/bookings')}
-              variant="outline"
-              size="sm"
-            >
-              Back to Bookings
-            </Button>
+            <Button onClick={fetchRescheduleRequests} variant="outline" size="sm" disabled={isLoading}>Refresh</Button>
+            <Button onClick={() => router.push('/admin/bookings')} variant="outline" size="sm">Back to Bookings</Button>
           </div>
         </div>
 
@@ -480,25 +462,8 @@ function RescheduleRequestCard({
           
           {request.status === 'pending' && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              <Button
-                onClick={onApprove}
-                disabled={isActionLoading}
-                size="sm"
-                className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2"
-              >
-                <CalendarCheckIcon className="w-4 h-4" />
-                Approve Request
-              </Button>
-              <Button
-                onClick={onDecline}
-                disabled={isActionLoading}
-                variant="outline"
-                size="sm"
-                className="text-red-600 border-red-200 hover:bg-red-50 flex items-center gap-2"
-              >
-                <CalendarXIcon className="w-4 h-4" />
-                Decline Request
-              </Button>
+              <Button onClick={onApprove} disabled={isActionLoading} size="sm">Approve Request</Button>
+              <Button onClick={onDecline} disabled={isActionLoading} variant="destructive" size="sm">Decline Request</Button>
             </div>
           )}
         </div>
