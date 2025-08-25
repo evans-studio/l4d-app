@@ -2281,6 +2281,13 @@ Love 4 Detailing - Admin Notifications
       totalPrice: booking.total_price ? `£${Number(booking.total_price).toFixed(2)}` : null
     }
 
+    // Extract address/location details (supports both shapes)
+    const svcAddress = booking?.service_address || booking?.address || {}
+    const addressLine1 = svcAddress.address_line_1 || svcAddress.addressLine1 || ''
+    const addressLine2 = svcAddress.address_line_2 || svcAddress.addressLine2 || ''
+    const city = svcAddress.city || ''
+    const postalCode = svcAddress.postal_code || svcAddress.postalCode || svcAddress.postcode || ''
+
     return this.generateUnifiedEmailHTML({
       title: `${headerEmoji} ${headerMessage}`,
       header: {
@@ -2290,13 +2297,13 @@ Love 4 Detailing - Admin Notifications
       },
       content: `
         <!-- Greeting -->
-        <p style="font-size: 16px; margin: 0 0 24px 0; color: #374151; font-weight: 400;">Dear ${customerName},</p>
+        <p style="font-size: 16px; margin: 0 0 24px 0; color: #e5e7eb; font-weight: 400;">Dear ${customerName},</p>
         
         <!-- Status Message -->
-        <div style="background: ${action === 'approve' ? '#f0f9f4' : action === 'reject' ? '#fef2f2' : '#f8f4ff'}; border: 2px solid ${actionColor}; border-radius: 12px; padding: 24px; margin: 24px 0; text-align: center;">
+        <div style="background: rgba(255,255,255,0.04); border: 1px solid ${actionColor}33; border-radius: 12px; padding: 20px; margin: 24px 0; text-align: center;">
           <div style="font-size: 48px; margin: 0 0 16px 0;">${headerEmoji}</div>
           <h2 style="color: ${actionColor}; margin: 0 0 12px 0; font-size: 20px; font-weight: 600;">${headerMessage}</h2>
-          <p style="color: #374151; margin: 0; font-size: 16px;">
+          <p style="color: #cbd5e1; margin: 0; font-size: 16px;">
             ${action === 'approve' ? 
               'Great news! Your reschedule request has been approved and your booking has been updated.' :
               action === 'reject' ?
@@ -2307,50 +2314,58 @@ Love 4 Detailing - Admin Notifications
         </div>
 
         <!-- Booking Details Card -->
-        <div style="background: #f8fafc; border: 2px solid #e5e7eb; border-radius: 12px; padding: 24px; margin: 32px 0;">
-          <h3 style="color: #111827; margin: 0 0 20px 0; font-size: 18px; font-weight: 600;">
+        <div style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.10); border-radius: 12px; padding: 20px; margin: 28px 0;">
+          <h3 style="color: #ffffff; margin: 0 0 16px 0; font-size: 18px; font-weight: 700;">
             ${action === 'approve' ? 'Updated Booking Details' : 'Booking Information'}
           </h3>
           <div style="space-y: 16px;">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid #e5e7eb;">
-              <span style="font-weight: 500; color: #374151;">Booking Reference</span>
-              <span style="font-weight: 600; color: #111827; font-family: monospace; text-align: right;">${bookingDetails.reference}</span>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px solid rgba(255,255,255,0.10);">
+              <span style="font-weight: 500; color: #cbd5e1;">Booking Reference</span>
+              <span style="font-weight: 700; color: #ffffff; font-family: monospace; text-align: right;">${bookingDetails.reference}</span>
             </div>
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid #e5e7eb;">
-              <span style="font-weight: 500; color: #374151;">Service</span>
-              <span style="color: #111827; font-weight: 500; text-align: right; max-width: 200px;">${bookingDetails.services}</span>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px solid rgba(255,255,255,0.10);">
+              <span style="font-weight: 500; color: #cbd5e1;">Service</span>
+              <span style="color: #e5e7eb; font-weight: 500; text-align: right; max-width: 260px;">${bookingDetails.services}</span>
             </div>
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid #e5e7eb;">
-              <span style="font-weight: 500; color: #374151;">Vehicle</span>
-              <span style="color: #111827; font-weight: 500; text-align: right; max-width: 200px;">${bookingDetails.vehicle}</span>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px solid rgba(255,255,255,0.10);">
+              <span style="font-weight: 500; color: #cbd5e1;">Vehicle</span>
+              <span style="color: #e5e7eb; font-weight: 500; text-align: right; max-width: 260px;">${bookingDetails.vehicle}</span>
             </div>
             ${bookingDetails.totalPrice ? `
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid #e5e7eb;">
-              <span style="font-weight: 500; color: #374151;">Total Price</span>
-              <span style="color: #9747FF; font-weight: 700; font-size: 18px; text-align: right;">${bookingDetails.totalPrice}</span>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px solid rgba(255,255,255,0.10);">
+              <span style="font-weight: 500; color: #cbd5e1;">Total Price</span>
+              <span style="color: #B269FF; font-weight: 700; font-size: 18px; text-align: right;">${bookingDetails.totalPrice}</span>
             </div>
             ` : ''}
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid #e5e7eb;">
-              <span style="font-weight: 500; color: #374151;">Original Date & Time</span>
-              <span style="color: #6b7280; text-align: right; max-width: 200px;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px solid rgba(255,255,255,0.10);">
+              <span style="font-weight: 500; color: #cbd5e1;">Original Date & Time</span>
+              <span style="color: #94a3b8; text-align: right; max-width: 260px;">
                 ${this.formatEmailDate(rescheduleRequest.original_date)}<br>
                 <strong>${this.formatEmailTime(rescheduleRequest.original_time)}</strong>
               </span>
             </div>
             ${action === 'approve' ? `
             <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-              <span style="font-weight: 500; color: #374151;">New Date & Time</span>
-              <span style="color: #10b981; font-weight: 700; text-align: right; max-width: 200px;">
+              <span style="font-weight: 500; color: #cbd5e1;">New Date & Time</span>
+              <span style="color: #34d399; font-weight: 700; text-align: right; max-width: 260px;">
                 ${this.formatEmailDate(rescheduleRequest.requested_date)}<br>
                 <strong>${this.formatEmailTime(rescheduleRequest.requested_time)}</strong>
               </span>
             </div>
             ` : action === 'propose' && proposedDate && proposedTime ? `
             <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-              <span style="font-weight: 500; color: #374151;">Proposed Date & Time</span>
-              <span style="color: #9747FF; font-weight: 700; text-align: right; max-width: 200px;">
+              <span style="font-weight: 500; color: #cbd5e1;">Proposed Date & Time</span>
+              <span style="color: #B269FF; font-weight: 700; text-align: right; max-width: 260px;">
                 ${this.formatEmailDate(proposedDate)}<br>
                 <strong>${this.formatEmailTime(proposedTime)}</strong>
+              </span>
+            </div>
+            ` : ''}
+            ${(addressLine1 || city || postalCode) ? `
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-top: 14px;">
+              <span style="font-weight: 500; color: #cbd5e1;">Service Address</span>
+              <span style="color: #e5e7eb; text-align: right; max-width: 260px;">
+                ${addressLine1 || ''}${addressLine2 ? `<br>${addressLine2}` : ''}${(city || postalCode) ? `<br>${city}${city && postalCode ? ', ' : ''}${postalCode}` : ''}
               </span>
             </div>
             ` : ''}
@@ -2393,20 +2408,7 @@ Love 4 Detailing - Admin Notifications
           `}
         </div>
 
-        <!-- Contact Information -->
-        <div style="border-top: 2px solid #e5e7eb; padding-top: 24px; margin-top: 40px;">
-          <h4 style="color: #111827; margin: 0 0 16px 0; font-size: 16px; font-weight: 600;">Questions or Need Help?</h4>
-          <p style="color: #6b7280; font-size: 14px; margin: 0; line-height: 1.6;">
-            Our team is here to help with any questions about your reschedule request:<br>
-            <strong style="color: #374151;"> Email:</strong> <a href="mailto:zell@love4detailing.com" style="color: #9747FF; text-decoration: none;">zell@love4detailing.com</a><br>
-            <strong style="color: #374151;">Response Time:</strong> Within 24 hours
-          </p>
-        </div>
         
-        <p style="color: #374151; margin: 32px 0 0 0; font-size: 16px;">
-          Thank you for choosing Love 4 Detailing!<br>
-          <strong>The Love 4 Detailing Team</strong>
-        </p>
       `
     })
   }
