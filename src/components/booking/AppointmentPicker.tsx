@@ -57,6 +57,17 @@ export function AppointmentPicker({ initialDate, onSelect, adminMode = false, se
     return s
   }, [availabilityMap, monthDates])
 
+  const datesFullyBooked = useMemo(() => {
+    const s = new Set<string>()
+    monthDates.forEach(d => {
+      const slots = availabilityMap.get(d) || []
+      if (slots.length > 0 && slots.every((sl: any) => !sl.is_available)) {
+        s.add(d)
+      }
+    })
+    return s
+  }, [availabilityMap, monthDates])
+
   useEffect(() => {
     const load = async () => {
       try {
@@ -118,10 +129,12 @@ export function AppointmentPicker({ initialDate, onSelect, adminMode = false, se
               disabled={[{ before: today }]}
               modifiers={{
                 hasSlots: (day: Date) => datesWithAvailable.has(format(day, 'yyyy-MM-dd')),
+                fullyBooked: (day: Date) => datesFullyBooked.has(format(day, 'yyyy-MM-dd')),
                 selected: (day: Date) => format(day, 'yyyy-MM-dd') === selectedDateIso
               }}
               modifiersClassNames={{
-                hasSlots: 'after:absolute after:bottom-1 after:h-1.5 after:w-1.5 after:bg-[var(--primary)] after:rounded-full after:content-[\'\']',
+                hasSlots: 'after:absolute after:bottom-1 after:h-1.5 after:w-1.5 after:bg-[var(--success)] after:rounded-full after:content-[\'\']',
+                fullyBooked: 'after:absolute after:bottom-1 after:h-1.5 after:w-1.5 after:bg-[var(--error)] after:rounded-full after:content-[\'\']',
                 selected: 'bg-[var(--primary)] text-white'
               }}
               classNames={{
