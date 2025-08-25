@@ -14,6 +14,7 @@ import { BookingStatsWidget } from '@/components/customer/widgets/BookingStatsWi
 import { RecentActivityWidget } from '@/components/customer/widgets/RecentActivityWidget'
 import { Card, CardContent, CardHeader } from '@/components/ui/composites/Card'
 import { ArrowRight, Calendar, Car, MapPin, Star, AlertCircle, RefreshCw } from 'lucide-react'
+import Image from 'next/image'
 
 interface DashboardBooking {
   id: string
@@ -267,14 +268,19 @@ export default function DashboardPage() {
         <Container>
           {/* Header - Mobile First Responsive */}
           <div className="mb-6 sm:mb-8">
-            <h1 className="text-2xl sm:text-3xl font-bold text-text-primary mb-1">
-              My Dashboard
-            </h1>
-            {profile && (
-              <p className="text-text-secondary text-sm sm:text-base">
-                {bookings.length === 0 ? `Welcome to Love 4 Detailing, ${profile.first_name || 'Customer'}!` : `Welcome back, ${profile.first_name || 'Customer'}`}
-              </p>
-            )}
+            <div className="flex items-center gap-3 sm:gap-4 mb-2">
+              <div className="relative w-10 h-10 sm:w-12 sm:h-12">
+                <Image src="/logo.png" alt="Love 4 Detailing" fill priority sizes="48px" className="object-contain rounded" />
+              </div>
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-bold text-text-primary leading-tight">Customer Dashboard</h1>
+                {profile && (
+                  <p className="text-text-secondary text-sm sm:text-base">
+                    {bookings.length === 0 ? `Welcome to Love 4 Detailing, ${profile.first_name || 'Customer'}!` : `Welcome back, ${profile.first_name || 'Customer'}`}
+                  </p>
+                )}
+              </div>
+            </div>
           </div>
 
           {/* New User Welcome Experience - Show only when no bookings AND no vehicles AND no addresses */}
