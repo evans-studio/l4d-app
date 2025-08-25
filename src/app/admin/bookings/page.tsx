@@ -66,7 +66,7 @@ function AdminBookingsContent() {
     rescheduleBooking: realtimeRescheduleBooking
   } = useRealTimeBookings({
     enableRealTimeUpdates: true,
-    pollInterval: 30000 // 30 seconds
+    pollInterval: 5000 // faster sync to reflect reschedules
   })
   
   // Modal states

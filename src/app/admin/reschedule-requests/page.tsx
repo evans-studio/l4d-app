@@ -57,6 +57,7 @@ function AdminRescheduleRequestsPage() {
   const [error, setError] = useState<string | null>(null)
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all')
   const [actionLoading, setActionLoading] = useState<string | null>(null)
+  const [localStatusMap, setLocalStatusMap] = useState<Record<string, { status: 'approved' | 'rejected'; ts: number }>>({})
 
   const fetchRescheduleRequests = async () => {
     try {
@@ -65,7 +66,16 @@ function AdminRescheduleRequestsPage() {
       const data = await response.json()
       
       if (data.success) {
-        setRequests(data.data.reschedule_requests)
+        const now = Date.now()
+        // Apply short-lived local overrides to prevent flicker back to pending
+        const reconciled = (data.data.reschedule_requests as RescheduleRequest[]).map((r) => {
+          const override = localStatusMap[r.id]
+          if (override && now - override.ts < 60_000) {
+            return { ...r, status: override.status, responded_at: r.responded_at || new Date().toISOString() }
+          }
+          return r
+        })
+        setRequests(reconciled)
         setError(null)
       } else {
         setError(data.error?.message || 'Failed to fetch reschedule requests')
@@ -87,6 +97,7 @@ function AdminRescheduleRequestsPage() {
     setActionLoading(request.id)
     const prev = [...requests]
     setRequests(rs => rs.map(r => r.id === request.id ? { ...r, status: 'approved', responded_at: new Date().toISOString() } : r))
+    setLocalStatusMap(map => ({ ...map, [request.id]: { status: 'approved', ts: Date.now() } }))
     try {
       const response = await fetch(`/api/admin/reschedule-requests/${request.id}/respond`, {
         method: 'POST',
@@ -100,8 +111,8 @@ function AdminRescheduleRequestsPage() {
 
       const data = await response.json()
       if (data.success) {
-        // Keep optimistic state and soft refresh
-        await fetchRescheduleRequests()
+        // Soft refresh after a brief delay to allow DB consistency
+        setTimeout(() => { fetchRescheduleRequests() }, 750)
       } else {
         // Fallback: try booking endpoint if request appears stale
         if (data?.error?.code === 'NOT_FOUND') {
@@ -116,7 +127,7 @@ function AdminRescheduleRequestsPage() {
           })
           const fbJson = await fb.json()
           if (fb.ok && fbJson?.success) {
-            await fetchRescheduleRequests()
+            setTimeout(() => { fetchRescheduleRequests() }, 750)
             setActionLoading(null)
             return
           }
@@ -143,6 +154,7 @@ function AdminRescheduleRequestsPage() {
     setActionLoading(request.id)
     const prev = [...requests]
     setRequests(rs => rs.map(r => r.id === request.id ? { ...r, status: 'rejected', responded_at: new Date().toISOString() } : r))
+    setLocalStatusMap(map => ({ ...map, [request.id]: { status: 'rejected', ts: Date.now() } }))
     try {
       const response = await fetch(`/api/admin/reschedule-requests/${request.id}/respond`, {
         method: 'POST',
@@ -156,7 +168,7 @@ function AdminRescheduleRequestsPage() {
 
       const data = await response.json()
       if (data.success) {
-        await fetchRescheduleRequests()
+        setTimeout(() => { fetchRescheduleRequests() }, 750)
       } else {
         setRequests(prev)
         console.error('Failed to decline reschedule:', data.error)
