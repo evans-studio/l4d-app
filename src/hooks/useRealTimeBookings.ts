@@ -99,9 +99,10 @@ export function useRealTimeBookings({
       }
 
       const queryString = params.toString()
-      const url = `/api/admin/bookings/all${queryString ? `?${queryString}` : ''}`
+      const urlBase = `/api/admin/bookings/all${queryString ? `?${queryString}` : ''}`
+      const url = `${urlBase}${urlBase.includes('?') ? '&' : '?'}_ts=${Date.now()}`
       
-      const response = await fetch(url)
+      const response = await fetch(url, { cache: 'no-store' })
       
       if (!response.ok) {
         throw new Error(`Failed to fetch bookings: ${response.status}`)
