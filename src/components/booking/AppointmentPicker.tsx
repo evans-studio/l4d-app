@@ -36,6 +36,7 @@ export function AppointmentPicker({ initialDate, onSelect, adminMode = false, se
   const [showAddSlot, setShowAddSlot] = useState(false)
 
   const selectedDateIso = format(date, 'yyyy-MM-dd')
+  const todayIso = useMemo(() => format(today, 'yyyy-MM-dd'), [today])
 
   // Build visible month date list
   const monthDates = useMemo(() => {
@@ -44,29 +45,32 @@ export function AppointmentPicker({ initialDate, onSelect, adminMode = false, se
     return eachDayOfInterval({ start, end }).map(d => format(d, 'yyyy-MM-dd'))
   }, [visibleMonth])
 
+  // Build list of dates to query for indicators (today and future only to avoid 400s)
+  const availabilityDates = useMemo(() => monthDates.filter(d => d >= todayIso), [monthDates, todayIso])
+
   // Pull availability for the visible month to show indicators
-  const { availabilityMap } = useMultiDateAvailability(monthDates, 120000)
+  const { availabilityMap } = useMultiDateAvailability(availabilityDates, 120000)
   const datesWithAvailable = useMemo(() => {
     const s = new Set<string>()
-    monthDates.forEach(d => {
+    availabilityDates.forEach(d => {
       const slots = availabilityMap.get(d) || []
       if (slots.some((sl: any) => sl.is_available)) {
         s.add(d)
       }
     })
     return s
-  }, [availabilityMap, monthDates])
+  }, [availabilityMap, availabilityDates])
 
   const datesFullyBooked = useMemo(() => {
     const s = new Set<string>()
-    monthDates.forEach(d => {
+    availabilityDates.forEach(d => {
       const slots = availabilityMap.get(d) || []
       if (slots.length > 0 && slots.every((sl: any) => !sl.is_available)) {
         s.add(d)
       }
     })
     return s
-  }, [availabilityMap, monthDates])
+  }, [availabilityMap, availabilityDates])
 
   useEffect(() => {
     const load = async () => {
@@ -133,8 +137,8 @@ export function AppointmentPicker({ initialDate, onSelect, adminMode = false, se
                 selected: (day: Date) => format(day, 'yyyy-MM-dd') === selectedDateIso
               }}
               modifiersClassNames={{
-                hasSlots: '[&_.rdp-day_button]:after:pointer-events-none [&_.rdp-day_button]:after:absolute [&_.rdp-day_button]:after:bottom-1 [&_.rdp-day_button]:after:start-1/2 [&_.rdp-day_button]:after:z-10 [&_.rdp-day_button]:after:size-[3px] [&_.rdp-day_button]:after:-translate-x-1/2 [&_.rdp-day_button]:after:rounded-full [&_.rdp-day_button]:after:bg-[var(--success)]',
-                fullyBooked: '[&_.rdp-day_button]:after:pointer-events-none [&_.rdp-day_button]:after:absolute [&_.rdp-day_button]:after:bottom-1 [&_.rdp-day_button]:after:start-1/2 [&_.rdp-day_button]:after:z-10 [&_.rdp-day_button]:after:size-[3px] [&_.rdp-day_button]:after:-translate-x-1/2 [&_.rdp-day_button]:after:rounded-full [&_.rdp-day_button]:after:bg-[var(--error)]',
+                hasSlots: '[&_.rdp-day_button]:after:content-[""] [&_.rdp-day_button]:after:pointer-events-none [&_.rdp-day_button]:after:absolute [&_.rdp-day_button]:after:bottom-1 [&_.rdp-day_button]:after:start-1/2 [&_.rdp-day_button]:after:z-10 [&_.rdp-day_button]:after:size-[3px] [&_.rdp-day_button]:after:-translate-x-1/2 [&_.rdp-day_button]:after:rounded-full [&_.rdp-day_button]:after:bg-[var(--success)]',
+                fullyBooked: '[&_.rdp-day_button]:after:content-[""] [&_.rdp-day_button]:after:pointer-events-none [&_.rdp-day_button]:after:absolute [&_.rdp-day_button]:after:bottom-1 [&_.rdp-day_button]:after:start-1/2 [&_.rdp-day_button]:after:z-10 [&_.rdp-day_button]:after:size-[3px] [&_.rdp-day_button]:after:-translate-x-1/2 [&_.rdp-day_button]:after:rounded-full [&_.rdp-day_button]:after:bg-[var(--error)]',
                 selected: 'bg-[var(--primary)] text-white'
               }}
               classNames={{
