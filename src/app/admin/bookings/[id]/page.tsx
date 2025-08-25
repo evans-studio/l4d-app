@@ -231,22 +231,16 @@ function AdminBookingDetailsPage() {
 
   const handleApproveReschedule = async (rescheduleRequest: NonNullable<BookingDetails['reschedule_request']>) => {
     if (!booking) return
-    
     setIsUpdating(true)
     try {
-      const response = await fetch(`/api/admin/bookings/${booking.id}/reschedule`, {
+      const response = await fetch(`/api/admin/reschedule-requests/${rescheduleRequest.id}/respond`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          newDate: rescheduleRequest.requested_date,
-          newTime: rescheduleRequest.requested_time,
-          reason: rescheduleRequest.reason
-        })
+        body: JSON.stringify({ action: 'approve', adminResponse: '', adminNotes: '' })
       })
-
       const data = await response.json()
       if (data.success) {
-        // Refresh booking data to show updated status
+        // Refresh booking data to show updated status/time
         window.location.reload()
       } else {
         console.error('Failed to approve reschedule:', data.error)
@@ -262,23 +256,16 @@ function AdminBookingDetailsPage() {
 
   const handleDeclineReschedule = async (rescheduleRequest: NonNullable<BookingDetails['reschedule_request']>) => {
     if (!booking) return
-    
     const declineReason = window.prompt('Optional: Provide a reason for declining this reschedule request:')
-    
     setIsUpdating(true)
     try {
-      const response = await fetch(`/api/admin/bookings/${booking.id}/reschedule/decline`, {
+      const response = await fetch(`/api/admin/reschedule-requests/${rescheduleRequest.id}/respond`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          reschedule_request_id: rescheduleRequest.id,
-          decline_reason: declineReason || undefined
-        })
+        body: JSON.stringify({ action: 'reject', adminResponse: declineReason || '', adminNotes: '' })
       })
-
       const data = await response.json()
       if (data.success) {
-        // Refresh booking data to show updated status
         window.location.reload()
       } else {
         console.error('Failed to decline reschedule:', data.error)
