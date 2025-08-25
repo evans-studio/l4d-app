@@ -26,6 +26,18 @@ export class EmailService {
     this.config = { ...defaultConfig, ...config }
   }
 
+  // Public wrapper for unified template generation
+  public createUnifiedEmail(args: {
+    title: string,
+    header: { title: string, subtitle?: string, type?: 'default' | 'success' | 'warning' | 'error' },
+    content: string,
+    footer?: string
+  }): string {
+    // Delegate to the private generator to keep a single source of truth
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return (this as any).generateUnifiedEmailHTML(args)
+  }
+
   /**
    * Format price with proper validation and fallback
    */

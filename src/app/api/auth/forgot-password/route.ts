@@ -109,42 +109,25 @@ export async function POST(request: NextRequest) {
         const subject = 'Reset Your Password - Love 4 Detailing'
         const firstName = existingUser.first_name || 'there'
         
-        const html = `
-          <!DOCTYPE html>
-          <html>
-          <head>
-            <meta charset="utf-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Reset Your Password</title>
-          </head>
-          <body style="margin:0; padding:0; background-color:#0a0a0a;">
-            <div style="max-width:600px; margin:0 auto; padding:24px 16px;">
-              <div style="text-align:center; padding:16px 0 24px 0;">
-                <img src="${baseUrl}/logo.png" alt="Love 4 Detailing" width="64" style="display:inline-block; height:auto;" />
-              </div>
-              <div style="background-color:#0f172a; border:1px solid #1f2937; border-radius:12px; padding:28px 20px;">
-                <h2 style="color:#e5e7eb; margin:0 0 16px 0; font-size:22px; line-height:1.3;">Hi ${firstName}!</h2>
-                <p style="color:#cbd5e1; font-size:16px; line-height:1.6; margin:0 0 16px 0;">
-                  We received a request to reset your password for your Love 4 Detailing account. If you made this request, click the button below to set a new password.
-                </p>
-                <div style="text-align:center; margin:28px 0;">
-                  <a href="${resetUrl}" style="display:inline-block; background:#7c3aed; color:#ffffff; text-decoration:none; padding:14px 28px; border-radius:8px; font-weight:600; font-size:16px;">Reset My Password</a>
+        const { EmailService } = await import('@/lib/services/email')
+        const emailService = new EmailService()
+        const html = emailService.createUnifiedEmail({
+          title: 'Reset Your Password',
+          header: { title: 'Reset Your Password', subtitle: 'Secure your account access', type: 'default' },
+          content: `
+            <div class="content-card">
+              <div class="card-content">
+                <p>Hi ${firstName},</p>
+                <p>We received a request to reset your password for your Love 4 Detailing account. If you made this request, click the button below to set a new password.</p>
+                <div style="text-align:center; margin:24px 0;">
+                  <a href="${resetUrl}" class="button-primary">Reset My Password</a>
                 </div>
-                <p style="color:#94a3b8; font-size:14px; line-height:1.6; margin:0 0 12px 0;">
-                  This link will expire in 1 hour. If you didn’t request this, you can safely ignore this email.
-                </p>
-                <p style="color:#94a3b8; font-size:13px; line-height:1.6; margin:0; word-break:break-all;">
-                  If the button doesn’t work, copy and paste this link into your browser:<br />
-                  <span style="color:#a78bfa;">${resetUrl}</span>
-                </p>
-              </div>
-              <div style="text-align:center; padding:12px 0 0 0;">
-                <p style="color:#9ca3af; font-size:12px; margin:0;">Love 4 Detailing — Professional Mobile Car Detailing</p>
+                <p class="muted">This link will expire in 1 hour. If you didn’t request this, you can safely ignore this email.</p>
+                <p class="muted">If the button doesn’t work, copy and paste this link into your browser:<br /><span>${resetUrl}</span></p>
               </div>
             </div>
-          </body>
-          </html>
-        `
+          `
+        })
         
         const text = `
           Hi ${firstName}!
