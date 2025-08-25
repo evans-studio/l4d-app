@@ -25,6 +25,7 @@ const overlayComponents: Record<OverlayType, React.ComponentType<any>> = {
   // Booking overlays
   'booking-view': BookingDetailsModal,
   'booking-reschedule': RescheduleModal,
+  'booking-reschedule-admin': RescheduleModal,
   'booking-cancel': CancelModal,
   'booking-confirm': ConfirmBookingModal,
   'booking-decline': DeclineBookingModal,

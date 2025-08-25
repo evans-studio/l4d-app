@@ -11,6 +11,7 @@ export type OverlayType =
   // Booking overlays
   | 'booking-view'
   | 'booking-reschedule'
+  | 'booking-reschedule-admin'
   | 'booking-cancel'
   | 'booking-confirm'
   | 'booking-decline'

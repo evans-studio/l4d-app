@@ -5,6 +5,7 @@ import { Calendar, Clock, MapPin, Car, User, Phone, Mail, CheckCircle, AlertCirc
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { BaseOverlayProps } from '@/lib/overlay/types'
 import { Button } from '@/components/ui/primitives/Button'
+import { AdminReschedulePanel } from '@/components/ui/overlays/modals/RescheduleAdminPanel'
 import { Badge } from '@/components/ui/primitives/Badge'
 
 interface BookingDetails {
@@ -115,6 +116,7 @@ export const BookingDetailsModal: React.FC<BaseOverlayProps> = ({
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
   const [actionLoading, setActionLoading] = useState<string | null>(null)
+  const [showReschedule, setShowReschedule] = useState(false)
   const [showCancelPrompt, setShowCancelPrompt] = useState(false)
   const [cancelReason, setCancelReason] = useState('')
 
@@ -496,9 +498,17 @@ export const BookingDetailsModal: React.FC<BaseOverlayProps> = ({
             )}
           </div>
         </div>
-        <div className="sticky bottom-0 bg-surface-primary mt-4 pt-4 border-t border-border-secondary flex gap-3">
-          {booking.status === 'pending' && (
+        <div className="sticky bottom-0 bg-surface-primary mt-4 pt-4 border-t border-border-secondary flex flex-wrap gap-3">
+          {['pending', 'confirmed', 'rescheduled'].includes(booking.status) && (
             <>
+              <Button
+                onClick={() => setShowReschedule(true)}
+                variant="primary"
+                size="lg"
+                className="flex-1 min-h-[48px] touch-manipulation"
+              >
+                Reschedule
+              </Button>
               <Button
                 onClick={() => setShowCancelPrompt(true)}
                 variant="outline"
@@ -511,25 +521,14 @@ export const BookingDetailsModal: React.FC<BaseOverlayProps> = ({
             </>
           )}
           {booking.status === 'confirmed' && (
-            <>
-              <Button
-                onClick={() => setShowCancelPrompt(true)}
-                variant="outline"
-                size="lg"
-                className="flex-1 min-h-[48px] touch-manipulation"
-                loading={actionLoading === 'cancelled'}
-              >
-                Cancel Booking
-              </Button>
-              <Button
-                onClick={() => updateStatus('in_progress')}
-                size="lg"
-                className="flex-1 min-h-[48px] touch-manipulation bg-blue-600 hover:bg-blue-700 text-white"
-                loading={actionLoading === 'in_progress'}
-              >
-                Start Service
-              </Button>
-            </>
+            <Button
+              onClick={() => updateStatus('in_progress')}
+              size="lg"
+              className="flex-1 min-h-[48px] touch-manipulation bg-blue-600 hover:bg-blue-700 text-white"
+              loading={actionLoading === 'in_progress'}
+            >
+              Start Service
+            </Button>
           )}
           {booking.status === 'in_progress' && (
             <>
@@ -588,6 +587,19 @@ export const BookingDetailsModal: React.FC<BaseOverlayProps> = ({
         <div className="mt-4 flex justify-end gap-2">
           <Button variant="outline" onClick={() => setShowCancelPrompt(false)} className="min-h-[44px]">Back</Button>
           <Button onClick={submitCancellation} disabled={!cancelReason.trim()} className="min-h-[44px] bg-red-600 hover:bg-red-700 text-white">Confirm Cancel</Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+
+    {/* Admin Reschedule */}
+    <Dialog open={showReschedule} onOpenChange={(o) => { if (!o) setShowReschedule(false) }}>
+      <DialogContent className="sm:max-w-[720px]">
+        <DialogHeader>
+          <DialogTitle>Reschedule Booking (Admin)</DialogTitle>
+        </DialogHeader>
+        <div className="py-2">
+          <p className="text-sm text-text-secondary mb-4">Choose a new slot for this booking. Customer will be notified.</p>
+          <AdminReschedulePanel bookingId={booking.id} onDone={() => setShowReschedule(false)} />
         </div>
       </DialogContent>
     </Dialog>
