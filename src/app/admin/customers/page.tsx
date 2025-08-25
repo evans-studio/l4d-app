@@ -25,8 +25,9 @@ interface Customer {
   phone?: string
   created_at: string
   updated_at: string
-  role: string
-  is_active: boolean
+  role?: string
+  status: 'active' | 'inactive' | 'vip'
+  is_active?: boolean
 }
 
 interface CustomerStats {
@@ -131,12 +132,12 @@ function AdminCustomersPage() {
       )
     }
 
-    // Status filter (based on is_active)
+    // Status filter (based on engagement status from API)
     if (statusFilter !== 'all') {
       if (statusFilter === 'active') {
-        filtered = filtered.filter(customer => customer.is_active)
+        filtered = filtered.filter(customer => customer.status === 'active' || customer.status === 'vip')
       } else if (statusFilter === 'inactive') {
-        filtered = filtered.filter(customer => !customer.is_active)
+        filtered = filtered.filter(customer => customer.status === 'inactive')
       }
     }
 
@@ -190,9 +191,9 @@ function AdminCustomersPage() {
     })
   }
 
-  const getStatusBadge = (isActive: boolean) => {
-    const status = isActive ? 'active' : 'inactive'
-    const config = statusConfig[status as keyof typeof statusConfig]
+  const getStatusBadge = (status: Customer['status']) => {
+    const mapped = status === 'vip' ? 'vip' : (status === 'active' ? 'active' : 'inactive')
+    const config = statusConfig[mapped as keyof typeof statusConfig]
     
     return (
       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${config.bgColor} ${config.borderColor} ${config.color}`}>
@@ -392,7 +393,7 @@ function AdminCustomersPage() {
                     <TableCell>{c.email}</TableCell>
                     <TableCell>{c.phone || '-'}</TableCell>
                     <TableCell>{formatDate(c.created_at)}</TableCell>
-                    <TableCell>{getStatusBadge(c.is_active)}</TableCell>
+                    <TableCell>{getStatusBadge(c.status)}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
                         <Button variant="outline" size="sm" onClick={() => openOverlay({ type: 'customer-view', data: { customerId: c.id } })}>
