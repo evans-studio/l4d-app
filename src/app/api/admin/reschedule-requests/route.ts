@@ -96,7 +96,9 @@ export async function GET(request: NextRequest) {
     return ApiResponseHandler.success({
       reschedule_requests: transformedRequests,
       total_count: transformedRequests.length,
-      pending_count: transformedRequests.filter(r => r.status === 'pending').length
+      pending_count: transformedRequests.filter(r => r.status === 'pending').length,
+      approved_count: transformedRequests.filter(r => r.status === 'approved').length,
+      rejected_count: transformedRequests.filter(r => r.status === 'rejected').length
     })
 
   } catch (error) {
