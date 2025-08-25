@@ -276,7 +276,7 @@ export default function BookingDetailsPage({ params }: { params: Promise<{ id: s
     )
   }
 
-  const status = statusConfig[booking.status]
+  const status = statusConfig[booking.status] || statusConfig.pending
   const StatusIcon = status.icon
   const canCancel = booking.status === 'pending'
   const canReschedule = ['pending', 'confirmed'].includes(booking.status)

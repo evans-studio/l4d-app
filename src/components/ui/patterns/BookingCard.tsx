@@ -174,7 +174,7 @@ const BookingCard = React.forwardRef<HTMLDivElement, BookingCardProps>(
     ...props
   }, ref) => {
     const status = statusProp || 'pending'
-    const statusInfo = statusConfig[status]
+    const statusInfo = statusConfig[status as keyof typeof statusConfig] || statusConfig.pending
     const StatusIcon = statusInfo.icon
     
     const formatDate = (dateStr: string) => {
