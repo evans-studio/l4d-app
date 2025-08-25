@@ -728,7 +728,22 @@ function AdminBookingDetailsPage() {
                       Confirm Booking
                     </Button>
                     <Button
-                      onClick={() => updateBookingStatus('cancelled')}
+                      onClick={async () => {
+                        if (!booking) return
+                        setIsUpdating(true)
+                        try {
+                          const res = await fetch(`/api/admin/bookings/${booking.id}/cancel`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ reason: 'Cancelled by admin via booking page' })
+                          })
+                          const json = await res.json()
+                          if (json?.success) {
+                            setBooking(prev => prev ? { ...prev, status: 'cancelled' } : prev)
+                          }
+                        } catch (_) {}
+                        setIsUpdating(false)
+                      }}
                       disabled={isUpdating}
                       variant="outline"
                       className="w-full"
