@@ -62,19 +62,19 @@ export const RescheduleActionModal: React.FC<RescheduleActionModalProps> = ({
       setIsSubmitting(true)
       setError('')
 
-      const endpoint = isApprove 
-        ? `/api/admin/bookings/${data.bookingId}/reschedule`
-        : `/api/admin/bookings/${data.bookingId}/reschedule/decline`
+      // Use canonical respond endpoint so request state updates atomically
+      const endpoint = `/api/admin/reschedule-requests/${rescheduleRequest.id}/respond`
 
       const payload = isApprove
         ? {
-            newDate: rescheduleRequest.requested_date,
-            newTime: rescheduleRequest.requested_time,
-            reason: rescheduleRequest.reason
+            action: 'approve',
+            adminResponse: '',
+            adminNotes: ''
           }
         : {
-            reschedule_request_id: rescheduleRequest.id,
-            decline_reason: declineNotes
+            action: 'reject',
+            adminResponse: declineNotes || '',
+            adminNotes: ''
           }
 
       const response = await fetch(endpoint, {
