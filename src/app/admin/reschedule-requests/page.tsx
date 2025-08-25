@@ -106,6 +106,7 @@ function AdminRescheduleRequestsPage() {
           action: 'approve',
           adminResponse: '',
           adminNotes: '',
+          bookingId: request.booking_id,
         })
       })
 
@@ -162,7 +163,8 @@ function AdminRescheduleRequestsPage() {
         body: JSON.stringify({
           action: 'reject',
           adminResponse: declineReason || '',
-          adminNotes: ''
+          adminNotes: '',
+          bookingId: request.booking_id,
         })
       })
 

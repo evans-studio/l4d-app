@@ -8,7 +8,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { action, adminResponse, adminNotes, proposedDate, proposedTime } = await request.json()
+    const { action, adminResponse, adminNotes, proposedDate, proposedTime, bookingId: bodyBookingId } = await request.json()
     const { id } = await params
     
     if (!action || !['approve', 'reject', 'propose'].includes(action)) {
@@ -19,7 +19,7 @@ export async function POST(
     const supabase = supabaseAdmin
     
     // First, get the reschedule request with booking details
-    const { data: rescheduleRequest, error: requestError } = await supabase
+    let { data: rescheduleRequest, error: requestError } = await supabase
       .from('booking_reschedule_requests')
       .select(`
         id,
@@ -48,8 +48,47 @@ export async function POST(
       .eq('id', id)
       .single()
 
+    // Fallback: If not found by id, try to find by bookingId from body (latest pending)
     if (requestError || !rescheduleRequest) {
-      return ApiResponseHandler.notFound('Reschedule request not found')
+      if (bodyBookingId) {
+        const { data: fallbackReq } = await supabase
+          .from('booking_reschedule_requests')
+          .select(`
+            id,
+            booking_id,
+            requested_date,
+            requested_time,
+            reason,
+            status,
+            original_date,
+            original_time,
+            bookings!booking_id (
+              id,
+              booking_reference,
+              status,
+              customer_id,
+              scheduled_date,
+              scheduled_start_time,
+              time_slot_id,
+              user_profiles!customer_id (
+                email,
+                first_name,
+                last_name
+              )
+            )
+          `)
+          .eq('booking_id', bodyBookingId)
+          .eq('status', 'pending')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+        if (fallbackReq) {
+          rescheduleRequest = fallbackReq as any
+        }
+      }
+      if (!rescheduleRequest) {
+        return ApiResponseHandler.notFound('Reschedule request not found')
+      }
     }
 
     if (rescheduleRequest.status !== 'pending') {
@@ -67,7 +106,7 @@ export async function POST(
     }
 
     // Update the reschedule request
-    const { error: updateError } = await supabase
+    const { error: updateError, count } = await supabase
       .from('booking_reschedule_requests')
       .update({
         status: newStatus,
@@ -76,7 +115,7 @@ export async function POST(
         responded_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       })
-      .eq('id', id)
+      .eq('id', rescheduleRequest.id)
       .eq('status', 'pending')
 
     if (updateError) {
@@ -88,7 +127,7 @@ export async function POST(
     const { data: afterUpdate } = await supabase
       .from('booking_reschedule_requests')
       .select('id, status')
-      .eq('id', id)
+      .eq('id', rescheduleRequest.id)
       .single()
 
     // If approved, update the actual booking
