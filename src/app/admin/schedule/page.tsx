@@ -72,7 +72,7 @@ function ScheduleCalendarContent() {
       // Add date range to ensure we get recent slots
       const today = new Date()
       const pastDate = new Date(today)
-      pastDate.setDate(today.getDate() - 30) // 30 days ago
+      pastDate.setDate(today.getDate() - 30) // 30 days ago (can adjust via query later)
       
       const futureDate = new Date(today)
       futureDate.setDate(today.getDate() + 180) // 180 days ahead
@@ -80,7 +80,7 @@ function ScheduleCalendarContent() {
       const startDate = pastDate.toISOString().split('T')[0]
       const endDate = futureDate.toISOString().split('T')[0]
       
-      const url = `/api/admin/time-slots?start=${startDate}&end=${endDate}&excludePast=true&_ts=${Date.now()}`
+      const url = `/api/admin/time-slots?start=${startDate}&end=${endDate}&excludePast=false&_ts=${Date.now()}`
       
       const response = await fetch(url, { cache: 'no-store' })
       
