@@ -93,11 +93,7 @@ function AdminRescheduleRequestsPage() {
   }, [])
 
   const handleApproveRequest = async (request: RescheduleRequest) => {
-    // Optimistic update
     setActionLoading(request.id)
-    const prev = [...requests]
-    setRequests(rs => rs.map(r => r.id === request.id ? { ...r, status: 'approved', responded_at: new Date().toISOString() } : r))
-    setLocalStatusMap(map => ({ ...map, [request.id]: { status: 'approved', ts: Date.now() } }))
     try {
       const response = await fetch(`/api/admin/reschedule-requests/${request.id}/respond`, {
         method: 'POST',
@@ -112,10 +108,8 @@ function AdminRescheduleRequestsPage() {
 
       const data = await response.json()
       if (data.success) {
-        // Soft refresh after a brief delay to allow DB consistency
-        setTimeout(() => { fetchRescheduleRequests() }, 750)
+        await fetchRescheduleRequests()
       } else {
-        // Fallback: try booking endpoint if request appears stale
         if (data?.error?.code === 'NOT_FOUND') {
           const fb = await fetch(`/api/admin/bookings/${request.booking_id}/reschedule`, {
             method: 'POST',
@@ -128,19 +122,15 @@ function AdminRescheduleRequestsPage() {
           })
           const fbJson = await fb.json()
           if (fb.ok && fbJson?.success) {
-            setTimeout(() => { fetchRescheduleRequests() }, 750)
+            await fetchRescheduleRequests()
             setActionLoading(null)
             return
           }
         }
-        // Revert optimistic on error
-        setRequests(prev)
         console.error('Failed to approve reschedule:', data.error)
         alert('Failed to approve reschedule request: ' + (data.error?.message || 'Unknown error'))
       }
     } catch (error) {
-      // Revert optimistic on exception
-      setRequests(prev)
       console.error('Failed to approve reschedule:', error)
       alert('Failed to approve reschedule request')
     } finally {
@@ -151,11 +141,7 @@ function AdminRescheduleRequestsPage() {
   const handleDeclineRequest = async (request: RescheduleRequest) => {
     const declineReason = window.prompt('Optional: Provide a reason for declining this reschedule request:')
     
-    // Optimistic update
     setActionLoading(request.id)
-    const prev = [...requests]
-    setRequests(rs => rs.map(r => r.id === request.id ? { ...r, status: 'rejected', responded_at: new Date().toISOString() } : r))
-    setLocalStatusMap(map => ({ ...map, [request.id]: { status: 'rejected', ts: Date.now() } }))
     try {
       const response = await fetch(`/api/admin/reschedule-requests/${request.id}/respond`, {
         method: 'POST',
@@ -170,14 +156,12 @@ function AdminRescheduleRequestsPage() {
 
       const data = await response.json()
       if (data.success) {
-        setTimeout(() => { fetchRescheduleRequests() }, 750)
+        await fetchRescheduleRequests()
       } else {
-        setRequests(prev)
         console.error('Failed to decline reschedule:', data.error)
         alert('Failed to decline reschedule request: ' + (data.error?.message || 'Unknown error'))
       }
     } catch (error) {
-      setRequests(prev)
       console.error('Failed to decline reschedule:', error)
       alert('Failed to decline reschedule request')
     } finally {
