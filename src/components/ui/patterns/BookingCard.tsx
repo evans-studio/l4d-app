@@ -261,13 +261,6 @@ const BookingCard = React.forwardRef<HTMLDivElement, BookingCardProps>(
                 >
                   #{booking.bookingReference}
                 </Text>
-                <Text 
-                  size="xs" 
-                  color="muted"
-                  className="hidden sm:block"
-                >
-                  {formatDate(booking.createdAt)}
-                </Text>
               </div>
             </div>
             
