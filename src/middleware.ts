@@ -73,7 +73,8 @@ export async function middleware(request: NextRequest) {
     // - /api/auth/setup-password (deprecated)
   ]
 
-  // Special handling for auth routes: if already authenticated, redirect away to avoid flicker
+  // Special handling for auth routes: if already authenticated, redirect away to avoid flicker,
+  // but always preserve intended destination via redirect param
   if (path.startsWith('/auth/')) {
     try {
       const supabase = createServerClient(
@@ -102,6 +103,12 @@ export async function middleware(request: NextRequest) {
         const redirectTarget = request.nextUrl.searchParams.get('redirect')
         if (redirectTarget && redirectTarget.startsWith('/')) {
           return NextResponse.redirect(new URL(redirectTarget, request.url))
+        }
+
+        // Otherwise, keep user on current page if it isn't a login/register/reset page to avoid jumping
+        const authLanding = ['/auth/login', '/auth/register', '/auth/forgot-password', '/auth/reset-password']
+        if (!authLanding.includes(path)) {
+          return response
         }
 
         // Determine role to choose destination
@@ -249,7 +256,7 @@ export async function middleware(request: NextRequest) {
     return response
   }
 
-  // Handle page routes - redirect to login if not authenticated
+  // Handle page routes - redirect to login if not authenticated, preserving exact destination
   if (!isVerified) {
     const loginUrl = new URL('/auth/login', request.url)
     loginUrl.searchParams.set('redirect', request.nextUrl.pathname + request.nextUrl.search)
@@ -288,10 +295,10 @@ export async function middleware(request: NextRequest) {
     isAdminPath: path.startsWith('/admin/')
   })
 
-  // Role-based access control
+  // Role-based access control - defer admin checks to CSR guard to prevent SSR flicker
   if (path.startsWith('/admin/')) {
-    // Temporarily bypass middleware check - let AdminRoute handle it
-    logger.debug('Middleware: Temporarily bypassing admin check', { userRole })
+    // Let the client-side AdminRoute gate access to avoid server-side redirects on refresh
+    logger.debug('Middleware: Deferring admin role enforcement to CSR guard', { userRole })
     
     // if (userRole !== 'admin' && userRole !== 'super_admin') {
     //   logger.debug('Middleware: Redirecting to dashboard - role not allowed', { userRole })
@@ -301,10 +308,7 @@ export async function middleware(request: NextRequest) {
     logger.debug('Middleware: Admin access granted (bypassed)', { userRole })
   }
 
-  // If user is admin trying to access /dashboard, redirect to /admin
-  if (path.startsWith('/dashboard/') && (userRole === 'admin' || userRole === 'super_admin')) {
-    return NextResponse.redirect(new URL('/admin', request.url))
-  }
+  // Do not auto-redirect admins off customer pages on refresh; allow CSR to handle
 
   return response
 }
