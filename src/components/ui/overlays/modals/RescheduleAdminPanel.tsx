@@ -94,7 +94,7 @@ export const AdminReschedulePanel: React.FC<{ bookingId: string, currentDate?: s
         setError(json?.error?.message || 'Failed to reschedule booking')
         return
       }
-      if (onDone) onDone()
+      if (onDone) await onDone()
     } catch (_) {
       setError('Network error occurred')
     } finally {

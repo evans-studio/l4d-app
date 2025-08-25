@@ -618,7 +618,15 @@ export const BookingDetailsModal: React.FC<BaseOverlayProps> = ({
         </DialogHeader>
         <div className="py-2">
           <p className="text-sm text-text-secondary mb-4">Choose a new slot for this booking. Customer will be notified.</p>
-          <AdminReschedulePanel bookingId={booking.id} currentDate={booking.scheduled_date} currentTime={(booking.start_time || booking.scheduled_start_time) as string} onDone={() => setShowReschedule(false)} />
+          <AdminReschedulePanel
+            bookingId={booking.id}
+            currentDate={booking.scheduled_date}
+            currentTime={(booking.start_time || booking.scheduled_start_time) as string}
+            onDone={async () => {
+              setShowReschedule(false)
+              await loadBookingDetails()
+            }}
+          />
         </div>
       </DialogContent>
     </Dialog>
