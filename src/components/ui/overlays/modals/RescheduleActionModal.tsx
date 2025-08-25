@@ -91,6 +91,24 @@ export const RescheduleActionModal: React.FC<RescheduleActionModalProps> = ({
         }
         onClose()
       } else {
+        // Fallback: if request not found (stale), try booking endpoint directly with the requested date/time
+        if (isApprove && result?.error?.code === 'NOT_FOUND') {
+          const fallback = await fetch(`/api/admin/bookings/${data.bookingId}/reschedule`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              newDate: rescheduleRequest.requested_date,
+              newTime: rescheduleRequest.requested_time,
+              reason: rescheduleRequest.reason
+            })
+          })
+          const fbJson = await fallback.json()
+          if (fbJson?.success) {
+            if (onConfirm) await onConfirm(fbJson.data)
+            onClose()
+            return
+          }
+        }
         setError(result.error?.message || `Failed to ${isApprove ? 'approve' : 'decline'} reschedule request`)
       }
     } catch (error) {

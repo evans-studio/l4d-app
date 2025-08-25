@@ -243,6 +243,23 @@ function AdminBookingDetailsPage() {
         // Refresh booking data to show updated status/time
         window.location.reload()
       } else {
+        // Fallback to booking endpoint if request not found
+        if (data?.error?.code === 'NOT_FOUND') {
+          const fb = await fetch(`/api/admin/bookings/${booking.id}/reschedule`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              newDate: rescheduleRequest.requested_date,
+              newTime: rescheduleRequest.requested_time,
+              reason: rescheduleRequest.reason
+            })
+          })
+          const fbJson = await fb.json()
+          if (fbJson?.success) {
+            window.location.reload()
+            return
+          }
+        }
         console.error('Failed to approve reschedule:', data.error)
         alert('Failed to approve reschedule request: ' + (data.error?.message || 'Unknown error'))
       }
