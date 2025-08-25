@@ -68,6 +68,29 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Reconciliation: find any approved reschedule requests for these bookings
+    const bookingIds = bookings.map((b: any) => b.id)
+    let approvedReschedules: Record<string, { requested_date: string, requested_time: string, responded_at: string }> = {}
+    if (bookingIds.length > 0) {
+      const { data: resReqs } = await supabase
+        .from('booking_reschedule_requests')
+        .select('booking_id, requested_date, requested_time, responded_at, status')
+        .in('booking_id', bookingIds)
+        .eq('status', 'approved')
+        .order('responded_at', { ascending: false })
+      if (resReqs) {
+        for (const r of resReqs) {
+          if (!approvedReschedules[r.booking_id]) {
+            approvedReschedules[r.booking_id] = {
+              requested_date: r.requested_date as unknown as string,
+              requested_time: r.requested_time as unknown as string,
+              responded_at: r.responded_at as unknown as string
+            }
+          }
+        }
+      }
+    }
+
     // Transform the data for the frontend using embedded JSON and separate profile data
     const allBookings = bookings.map((booking: any) => {
       // Get customer info from separate profile data
@@ -100,6 +123,13 @@ export async function GET(request: NextRequest) {
           )
         : null
 
+      // If booking status still reads pending but we have an approved reschedule recorded,
+      // reflect it as rescheduled to avoid stale UI when approval and list read race.
+      const approved = approvedReschedules[booking.id]
+      const effectiveStatus = approved && booking.status === 'pending' ? 'rescheduled' : booking.status
+      const effectiveDate = approved && booking.status === 'pending' ? approved.requested_date : booking.scheduled_date
+      const effectiveStart = approved && booking.status === 'pending' ? approved.requested_time : booking.scheduled_start_time
+
       return {
         id: booking.id,
         booking_reference: booking.booking_reference,
@@ -107,9 +137,9 @@ export async function GET(request: NextRequest) {
         customer_name: customerName,
         customer_email: customer.email || '',
         customer_phone: customer.phone || '',
-        scheduled_date: booking.scheduled_date,
-        start_time: booking.scheduled_start_time,
-        status: booking.status,
+        scheduled_date: effectiveDate,
+        start_time: effectiveStart,
+        status: effectiveStatus,
         payment_status: booking.payment_status || 'pending',
         total_price: booking.total_price || 0,
         special_instructions: booking.special_instructions,
