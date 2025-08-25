@@ -76,8 +76,12 @@ export class EmailService {
    * Get logo URL with proper fallback
    */
   private getLogoUrl(): string {
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || 'https://love4detailing.com'
-    return `${baseUrl}/logo.png`
+    let baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || ''
+    // Ensure absolute URL; fallback to production domain
+    if (!baseUrl || !/^https?:\/\//i.test(baseUrl)) {
+      baseUrl = 'https://love4detailing.com'
+    }
+    return `${baseUrl.replace(/\/$/, '')}/logo.png`
   }
 
   /**
@@ -390,40 +394,17 @@ export class EmailService {
     )
 
     const content = `
-      <div style="text-align: center; margin-bottom: 32px;">
-        <p style="color: rgba(255, 255, 255, 0.8); font-size: 16px; margin: 0;">Dear ${customerName},</p>
-        <p style="color: #ffffff; font-size: 18px; margin: 16px 0 0 0; font-weight: 500;">Thank you for choosing Love 4 Detailing! Your booking has been confirmed and is ready for service.</p>
+      <div style="text-align: center; margin-bottom: 24px;">
+        <p style="color: rgba(255, 255, 255, 0.85); font-size: 16px; margin: 0;">Dear ${customerName},</p>
+        <p style="color: #ffffff; font-size: 18px; margin: 12px 0 0 0; font-weight: 600;">Thank you for your booking!</p>
       </div>
-      
       ${this.generateBookingDetailsCard(booking)}
-      
-      <!-- PayPal Payment Section (minimal) -->
       <div class="content-card">
         <div class="card-content" style="text-align: center;">
-          <a href="${paypalPayment.paymentLink}" style="display: inline-block; background: #ffffff; color: #0070ba; padding: 12px 22px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 15px; border: 1px solid #cbd5e1;">
+          <a href="${paypalPayment.paymentLink}" style="display: inline-block; background: #fff; color: #0070ba; padding: 12px 22px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 15px; border: 1px solid #cbd5e1;">
             Pay £${booking.total_price.toFixed(2)} via PayPal
           </a>
-          <p style="margin-top: 12px; font-size: 12px; color: #6b7280;">Ref: ${booking.booking_reference} • Deadline: ${paypalPayment.deadline}</p>
-        </div>
-      </div>
-      
-      <div class="content-card">
-        <div class="card-content">
-          <h4> Next steps</h4>
-          <ul style="margin: 8px 0 0 18px; color: #374151;">
-            <li>Complete payment within 48h to secure your slot</li>
-            <li>We’ll see you at the scheduled time</li>
-          </ul>
-        </div>
-      </div>
-      
-      <!-- Minimal reassurance note removed for cleaner layout -->
-      
-      <div class="content-card" style="text-align: center;">
-        <div class="card-content">
-          <h4 style="color: #B269FF; margin-bottom: 16px;">Need assistance?</h4>
-          <p style="margin-bottom: 12px;"> <a href="mailto:${this.config.adminEmail}" class="footer-link">${this.config.adminEmail}</a></p>
-          <p style="margin-bottom: 0; color: rgba(255, 255, 255, 0.7); font-size: 14px;">We're here to make your experience exceptional!</p>
+          <p style="margin-top: 10px; font-size: 12px; color: rgba(255,255,255,0.7);">Ref: ${booking.booking_reference} • Deadline: ${paypalPayment.deadline}</p>
         </div>
       </div>
     `
@@ -491,22 +472,22 @@ This is an automated email. Please do not reply directly to this email.
 
       ${requiresEmailVerification ? `
       <!-- Email Verification Reminder -->
-      <div class="content-card" style="border: 1px solid #f59e0b; background: #fffbeb;">
+      <div class="content-card" style="border: 1px solid rgba(245, 158, 11, 0.4); background: rgba(245, 158, 11, 0.08);">
         <div class="card-content">
-          <h4 style="color: #92400e;"> Email verification required</h4>
-          <p style="color: #92400e; margin-top: 8px;">Check your inbox and click the verification link to access your dashboard.</p>
+          <h4 style="color: #fbbf24;"> Email verification required</h4>
+          <p style="color: #fde68a; margin-top: 8px;">Check your inbox and click the verification link to access your dashboard.</p>
         </div>
         
-        <p style="margin: 8px 0 0 0; font-size: 12px; color: #92400e;">If you don’t see it, check your spam folder.</p>
+        <p style="margin: 8px 0 0 0; font-size: 12px; color: #fde68a;">If you don’t see it, check your spam folder.</p>
       </div>
       ` : ''}
       
       ${this.generateBookingDetailsCard(booking)}
       
       <!-- PayPal Payment Section -->
-      <div class="highlight-card" style="background: linear-gradient(135deg, #0070ba 0%, #003d7a 100%); border: 2px solid #0070ba;">
-        <h4 style="color: #ffffff; margin-bottom: 16px;"> Secure Your Booking with Payment</h4>
-        <p style="color: rgba(255, 255, 255, 0.9); margin-bottom: 16px; font-size: 16px;">Complete your payment securely through PayPal to guarantee your service slot.</p>
+      <div class="highlight-card" style="background: linear-gradient(135deg, #1f2937 0%, #111827 100%); border: 1px solid rgba(255,255,255,0.1);">
+        <h4 style="color: #B269FF; margin-bottom: 12px;"> Secure Your Booking with Payment</h4>
+        <p style="color: rgba(255, 255, 255, 0.85); margin-bottom: 12px; font-size: 15px;">Complete your payment securely through PayPal to guarantee your service slot.</p>
         
         <div style="text-align: center; margin: 24px 0;">
           <a href="${paypalPayment.paymentLink}" style="display: inline-block; background: #ffffff; color: #0070ba; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);">
