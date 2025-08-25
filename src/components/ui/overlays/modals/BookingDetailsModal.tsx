@@ -5,6 +5,7 @@ import { Calendar, Clock, MapPin, Car, User, Phone, Mail, CheckCircle, AlertCirc
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { BaseOverlayProps } from '@/lib/overlay/types'
 import { Button } from '@/components/ui/primitives/Button'
+import { MarkAsPaidModal } from '@/components/admin/MarkAsPaidModal'
 import { Badge } from '@/components/ui/primitives/Badge'
 
 interface BookingDetails {
@@ -115,6 +116,7 @@ export const BookingDetailsModal: React.FC<BaseOverlayProps> = ({
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
   const [actionLoading, setActionLoading] = useState<string | null>(null)
+  const [markAsPaidOpen, setMarkAsPaidOpen] = useState(false)
   const [showCancelPrompt, setShowCancelPrompt] = useState(false)
   const [cancelReason, setCancelReason] = useState('')
 
@@ -175,23 +177,11 @@ export const BookingDetailsModal: React.FC<BaseOverlayProps> = ({
     }
   }
 
-  const confirmBooking = async () => {
-    if (!booking?.id) return
-    setActionLoading('confirmed')
-    try {
-      const response = await fetch(`/api/admin/bookings/${booking.id}/confirm`, { method: 'POST' })
-      const result = await response.json()
-      if (result?.success && result?.data) {
-        setBooking({ ...booking, status: 'confirmed' })
-        setError('')
-      } else {
-        setError(result?.error?.message || 'Failed to confirm booking')
-      }
-    } catch (e) {
-      setError('Network error occurred')
-    } finally {
-      setActionLoading(null)
-    }
+  // When mark-as-paid succeeds, reflect in UI
+  const handleMarkAsPaidSuccess = () => {
+    if (!booking) return
+    setBooking({ ...booking, status: 'confirmed', payment_status: 'paid' as any })
+    setMarkAsPaidOpen(false)
   }
 
   const submitCancellation = async () => {
@@ -526,12 +516,11 @@ export const BookingDetailsModal: React.FC<BaseOverlayProps> = ({
                 Cancel Booking
               </Button>
               <Button
-                onClick={confirmBooking}
+                onClick={() => setMarkAsPaidOpen(true)}
                 size="lg"
-                className="flex-1 min-h-[48px] touch-manipulation bg-blue-600 hover:bg-blue-700 text-white"
-                loading={actionLoading === 'confirmed'}
+                className="flex-1 min-h-[48px] touch-manipulation"
               >
-                Mark as Paid / Confirm
+                Mark as Paid
               </Button>
             </>
           )}
@@ -590,6 +579,21 @@ export const BookingDetailsModal: React.FC<BaseOverlayProps> = ({
         </div>
       </DialogContent>
     </Dialog>
+
+    {booking && (
+      <MarkAsPaidModal
+        booking={{
+          id: booking.id,
+          booking_reference: booking.booking_reference,
+          customer_name: customerData.name,
+          total_price: booking.total_price,
+          payment_status: booking.payment_status as any
+        }}
+        open={markAsPaidOpen}
+        onClose={() => setMarkAsPaidOpen(false)}
+        onSuccess={handleMarkAsPaidSuccess}
+      />
+    )}
 
     {/* Cancel Prompt */}
     <Dialog open={showCancelPrompt} onOpenChange={(o) => { if (!o) setShowCancelPrompt(false) }}>
