@@ -65,7 +65,7 @@ export async function POST(
         cancelled_at: new Date().toISOString(),
         cancellation_reason: reason,
         refund_amount: refundAmount || null,
-        internal_notes: cancellationNotes,
+        admin_notes: cancellationNotes,
         time_slot_id: null, // Unlink from time slot
         updated_at: new Date().toISOString()
       })
