@@ -33,6 +33,7 @@ const bookingCardVariants = cva(
         draft: 'border-l-4 border-l-[var(--text-muted)]',
         pending: 'border-l-4 border-l-[var(--warning)]',
         confirmed: 'border-l-4 border-l-[var(--success)]',
+        rescheduled: 'border-l-4 border-l-[var(--primary)]',
         in_progress: 'border-l-4 border-l-[var(--primary)]',
         completed: 'border-l-4 border-l-[var(--success)]',
         cancelled: 'border-l-4 border-l-[var(--error)]',
@@ -76,6 +77,12 @@ const statusConfig = {
     label: 'Confirmed',
     color: 'text-[var(--success)]',
     bgColor: 'bg-[var(--success)]/10',
+  },
+  rescheduled: {
+    icon: Calendar,
+    label: 'Rescheduled',
+    color: 'text-[var(--primary)]',
+    bgColor: 'bg-[var(--primary)]/10',
   },
   in_progress: {
     icon: Loader2,
