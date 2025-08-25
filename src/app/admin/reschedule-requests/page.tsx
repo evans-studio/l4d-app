@@ -85,13 +85,13 @@ function AdminRescheduleRequestsPage() {
   const handleApproveRequest = async (request: RescheduleRequest) => {
     setActionLoading(request.id)
     try {
-      const response = await fetch(`/api/admin/bookings/${request.booking_id}/reschedule`, {
+      const response = await fetch(`/api/admin/reschedule-requests/${request.id}/respond`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          newDate: request.requested_date,
-          newTime: request.requested_time,
-          reason: request.reason
+          action: 'approve',
+          adminResponse: '',
+          adminNotes: '',
         })
       })
 
@@ -115,12 +115,13 @@ function AdminRescheduleRequestsPage() {
     
     setActionLoading(request.id)
     try {
-      const response = await fetch(`/api/admin/bookings/${request.booking_id}/reschedule/decline`, {
+      const response = await fetch(`/api/admin/reschedule-requests/${request.id}/respond`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          reschedule_request_id: request.id,
-          decline_reason: declineReason || undefined
+          action: 'reject',
+          adminResponse: declineReason || '',
+          adminNotes: ''
         })
       })
 
