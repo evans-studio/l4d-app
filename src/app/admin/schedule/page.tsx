@@ -75,7 +75,7 @@ function ScheduleCalendarContent() {
       pastDate.setDate(today.getDate() - 30) // 30 days ago
       
       const futureDate = new Date(today)
-      futureDate.setDate(today.getDate() + 60) // 60 days ahead
+      futureDate.setDate(today.getDate() + 180) // 180 days ahead
       
       const startDate = pastDate.toISOString().split('T')[0]
       const endDate = futureDate.toISOString().split('T')[0]
