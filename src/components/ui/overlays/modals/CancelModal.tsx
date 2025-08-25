@@ -57,7 +57,7 @@ export const CancelModal: React.FC<CancelModalProps> = ({
       setIsLoading(true)
       setError('')
       
-      const response = await fetch(`/api/bookings/${data.bookingId}`)
+      const response = await fetch(`/api/customer/bookings/${data.bookingId}`)
       const result = await response.json()
 
       if (result.success) {
@@ -65,7 +65,7 @@ export const CancelModal: React.FC<CancelModalProps> = ({
         setBooking(bookingData)
         
         // Calculate cancellation policy
-        const appointmentDate = new Date(`${bookingData.scheduled_date}T${bookingData.scheduled_start_time}`)
+        const appointmentDate = new Date(`${bookingData.scheduled_date}T${bookingData.scheduled_start_time || bookingData.scheduled_end_time || '00:00:00'}`)
         const now = new Date()
         const hoursUntil = Math.ceil((appointmentDate.getTime() - now.getTime()) / (1000 * 60 * 60))
         
@@ -213,7 +213,7 @@ export const CancelModal: React.FC<CancelModalProps> = ({
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-text-secondary">Service:</span>
-                <span className="font-medium">{booking.service.name}</span>
+                <span className="font-medium">{(booking as any).service?.name || (booking as any).services?.name || 'Service'}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-text-secondary">Date:</span>

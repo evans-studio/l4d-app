@@ -231,14 +231,15 @@ export default function BookingDetailsPage({ params }: { params: Promise<{ id: s
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          reason: 'Cancelled by customer'
+          reason: 'Cancelled by customer',
+          acknowledgeNoRefund: true
         })
       })
 
       if (response.ok) {
         const data = await response.json()
         if (data.success) {
-          setBooking(prev => prev ? { ...prev, status: 'cancelled', cancellation_reason: 'Cancelled by customer' } : null)
+          setBooking(prev => prev ? { ...prev, status: 'cancelled', cancellation_reason: 'Cancelled by customer', cancelled_at: new Date().toISOString() } : null)
           setShowCancelModal(false)
         }
       }
