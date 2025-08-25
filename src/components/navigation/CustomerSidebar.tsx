@@ -77,8 +77,8 @@ export function CustomerSidebar({ isOpen, onClose }: CustomerSidebarProps) {
   return (
     <>
       {/* Desktop Sidebar */}
-      <div className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0" data-ui={isNewUIEnabled() ? 'new' : 'old'}>
-        <div className="flex flex-col flex-grow bg-[var(--bg-secondary)] border-r border-[var(--border-primary)] overflow-y-auto">
+      <div className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0 lg:left-0" data-ui={isNewUIEnabled() ? 'new' : 'old'}>
+        <div className="flex flex-col flex-grow bg-[var(--bg-secondary)] border-r border-[var(--border-primary)] overflow-y-auto overflow-x-hidden">
           {/* Logo */}
           <div className="flex items-center gap-3 px-6 py-6 border-b border-[var(--border-secondary)]">
             <Image
