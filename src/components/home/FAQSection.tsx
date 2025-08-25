@@ -5,6 +5,7 @@ import { Container } from '@/components/layout/templates/PageLayout'
 import { Heading, Text } from '@/components/ui/primitives/Typography'
 import { ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { isNewUIEnabled } from '@/lib/config/feature-flags'
 
 const faqs = [
   {
@@ -63,6 +64,7 @@ export function FAQSection() {
     <section 
       ref={sectionRef}
       className="relative overflow-hidden py-16 lg:py-24"
+      data-ui={isNewUIEnabled() ? 'new' : 'old'}
     >
       
       <Container>

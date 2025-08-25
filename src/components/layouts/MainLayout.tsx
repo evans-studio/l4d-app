@@ -3,6 +3,7 @@
 import { ReactNode } from 'react'
 import { MinimalHeader } from '@/components/navigation/MinimalHeader'
 import { MainFooter } from '@/components/navigation/MainFooter'
+import { isNewUIEnabled } from '@/lib/config/feature-flags'
 
 interface MainLayoutProps {
   children: ReactNode
@@ -10,7 +11,7 @@ interface MainLayoutProps {
 
 export function MainLayout({ children }: MainLayoutProps) {
   return (
-    <div className="min-h-screen flex flex-col relative">
+    <div className="min-h-screen flex flex-col relative" data-ui={isNewUIEnabled() ? 'new' : 'old'}>
       {/* Global Dark Gradient Background with Automotive Texture and Sparkles */}
       <div className="fixed inset-0 z-[-1] bg-gradient-to-br from-gray-900 via-gray-800 to-black">
         {/* Subtle automotive-inspired pattern overlay */}

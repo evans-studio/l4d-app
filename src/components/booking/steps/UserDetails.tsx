@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/primitives/Button'
 import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/composites/Card'
 import { Input } from '@/components/ui/primitives/Input'
 import { ChevronLeftIcon, ChevronRightIcon, UserIcon, CheckCircleIcon, AlertCircleIcon, Eye, EyeOff, Lock } from 'lucide-react'
+import { isNewUIEnabled } from '@/lib/config/feature-flags'
 
 export function UserDetails() {
   const {
@@ -169,7 +170,7 @@ export function UserDetails() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8" data-ui={isNewUIEnabled() ? 'new' : 'old'}>
       {/* Header */}
       <div className="text-center">
         <h2 className="text-3xl font-bold text-text-primary mb-2">
@@ -191,27 +192,23 @@ export function UserDetails() {
         
         <CardContent className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-text-primary mb-2">
-              Email Address *
-            </label>
             <Input
               type="email"
               value={userForm.email}
               onChange={(e) => handleFormChange('email', e.target.value)}
-              placeholder="your.email@example.com"
+              label="Email Address *"
+              helperText="e.g., your.email@example.com"
               required
             />
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-text-primary mb-2">
-              Phone Number *
-            </label>
             <Input
               type="tel"
               value={userForm.phone}
               onChange={(e) => handleFormChange('phone', e.target.value)}
-              placeholder="07123 456789"
+              label="Phone Number *"
+              helperText="e.g., 07123 456789"
               required
             />
           </div>
@@ -219,13 +216,11 @@ export function UserDetails() {
           {/* Name field - required for new users */}
           {(validationStatus === 'new' || (!isExistingUser && userForm.email && userForm.phone)) && (
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-2">
-                Full Name *
-              </label>
               <Input
                 value={userForm.name}
                 onChange={(e) => handleFormChange('name', e.target.value)}
-                placeholder="Your full name"
+                label="Full Name *"
+                helperText="e.g., John Smith"
                 required
               />
             </div>
@@ -300,28 +295,22 @@ export function UserDetails() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-text-primary mb-2">
-                    Password *
-                  </label>
                   <Input
                     type={showPasswords ? 'text' : 'password'}
                     value={userForm.password}
                     onChange={(e) => handleFormChange('password', e.target.value)}
-                    placeholder="Enter your password"
+                    label="Password *"
                     required
                     className="w-full"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-text-primary mb-2">
-                    Confirm Password *
-                  </label>
                   <Input
                     type={showPasswords ? 'text' : 'password'}
                     value={userForm.confirmPassword}
                     onChange={(e) => handleFormChange('confirmPassword', e.target.value)}
-                    placeholder="Confirm your password"
+                    label="Confirm Password *"
                     required
                     className="w-full"
                   />

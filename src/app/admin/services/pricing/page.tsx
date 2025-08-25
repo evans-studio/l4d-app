@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { AdminLayout } from '@/components/layouts/AdminLayout'
 import { AdminRoute } from '@/components/ProtectedRoute'
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb'
 import { Button } from '@/components/ui/primitives/Button'
 import { 
   DollarSignIcon,
@@ -11,9 +12,7 @@ import {
   TrendingDownIcon,
   CarIcon,
   PackageIcon,
-  SaveIcon,
   RefreshCwIcon,
-  ArrowLeftIcon,
   AlertCircleIcon,
   PercentIcon,
   BarChart3Icon,
@@ -230,39 +229,36 @@ function ServicePricingPage() {
     <AdminLayout>
       <div className="space-y-6">
         {/* Header */}
+        <div className="mb-4">
+          <Breadcrumb>
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbLink href="/admin">Admin</BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbLink href="/admin/services">Services</BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbPage>Pricing</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+        </div>
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-text-primary">Service Pricing Management</h1>
-            <p className="text-text-secondary mt-2">
-              Manage pricing matrices, bulk adjustments, and profitability analysis
-            </p>
+            <p className="text-text-secondary mt-2">Manage pricing matrices, bulk adjustments, and profitability analysis</p>
           </div>
           <div className="flex items-center gap-3 mt-4 sm:mt-0">
-            <Button
-              variant="outline"
-              onClick={() => router.push('/admin/services')}
-            >
-              <ArrowLeftIcon className="w-4 h-4 mr-2" />
-              Back to Services
-            </Button>
-            <Button
-              variant="outline"
-              onClick={loadPricingData}
-            >
-              <RefreshCwIcon className="w-4 h-4 mr-2" />
-              Refresh
-            </Button>
+            <Button variant="outline" onClick={() => router.push('/admin/services')}>Back to Services</Button>
+            <Button variant="outline" onClick={loadPricingData}>Refresh</Button>
             {hasUnsavedChanges && (
-              <Button
-                onClick={savePricingMatrix}
-                disabled={isSaving}
-                className="flex items-center gap-2"
-              >
+              <Button onClick={savePricingMatrix} disabled={isSaving} className="flex items-center gap-2">
                 {isSaving ? (
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                ) : (
-                  <SaveIcon className="w-4 h-4" />
-                )}
+                ) : null}
                 Save Changes
               </Button>
             )}

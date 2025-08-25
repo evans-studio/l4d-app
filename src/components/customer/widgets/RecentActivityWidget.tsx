@@ -5,6 +5,7 @@ import { useOverlay } from '@/lib/overlay/context'
 import { Button } from '@/components/ui/primitives/Button'
 import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/composites/Card'
 import { Badge } from '@/components/ui/primitives/Badge'
+import { isNewUIEnabled } from '@/lib/config/feature-flags'
 import { 
   Activity, 
   Calendar, 
@@ -113,7 +114,7 @@ export function RecentActivityWidget({ recentBookings }: RecentActivityWidgetPro
 
   if (recentBookings.length === 0) {
     return (
-      <Card className="h-full">
+      <Card className="h-full" data-ui={isNewUIEnabled() ? 'new' : 'old'}>
         <CardHeader>
           <h3 className="text-lg font-semibold text-text-primary flex items-center gap-2">
             <Activity className="w-5 h-5 text-brand-400" />
@@ -142,7 +143,7 @@ export function RecentActivityWidget({ recentBookings }: RecentActivityWidgetPro
   }
 
   return (
-    <Card className="h-full">
+    <Card className="h-full" data-ui={isNewUIEnabled() ? 'new' : 'old'}>
       <CardHeader>
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold text-text-primary flex items-center gap-2">
@@ -152,7 +153,8 @@ export function RecentActivityWidget({ recentBookings }: RecentActivityWidgetPro
           {recentBookings.length > 3 && (
             <Button
               variant="ghost"
-              size="sm"
+              size="icon"
+              aria-label="Go to bookings"
               onClick={() => router.push('/dashboard/bookings')}
             >
               <ChevronRight className="w-4 h-4" />
@@ -168,7 +170,7 @@ export function RecentActivityWidget({ recentBookings }: RecentActivityWidgetPro
           return (
             <div
               key={booking.id}
-              className="flex flex-col gap-4 p-5 rounded-xl bg-surface-tertiary hover:bg-surface-secondary transition-all duration-200 cursor-pointer min-h-[100px] touch-manipulation"
+              className="flex flex-col gap-4 p-5 rounded-xl bg-surface-tertiary border border-border-secondary hover:bg-surface-secondary transition-all duration-200 cursor-pointer min-h-[100px] touch-manipulation"
               onClick={() => openOverlay({
                 type: 'booking-view',
                 data: { bookingId: booking.id, booking }
@@ -225,7 +227,6 @@ export function RecentActivityWidget({ recentBookings }: RecentActivityWidgetPro
             variant="outline"
             onClick={() => router.push('/dashboard/bookings')}
             className="w-full min-h-[48px] touch-manipulation"
-            rightIcon={<ChevronRight className="w-4 h-4" />}
             fullWidth
           >
             View All Bookings ({recentBookings.length})

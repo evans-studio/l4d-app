@@ -18,6 +18,7 @@ import {
 import { Button } from '@/components/ui/primitives/Button'
 import { MinimalHeader } from '@/components/navigation/MinimalHeader'
 import { cn } from '@/lib/utils'
+import { isNewUIEnabled } from '@/lib/config/feature-flags'
 
 interface AdminLayoutProps {
   children: React.ReactNode
@@ -70,7 +71,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   const pathname = usePathname() || ''
 
   return (
-    <div className="min-h-screen bg-surface-primary flex flex-col">
+    <div className="min-h-screen bg-surface-primary flex flex-col" data-ui={isNewUIEnabled() ? 'new' : 'old'}>
       {/* Global Header - PWA handles navigation on mobile */}
       <MinimalHeader showMobileMenu={false} />
       

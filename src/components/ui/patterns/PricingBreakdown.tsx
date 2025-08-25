@@ -1,6 +1,7 @@
 'use client'
 
 import { Card, CardContent } from '@/components/ui/composites/Card'
+import { isNewUIEnabled } from '@/lib/config/feature-flags'
 import { Calculator, Car, MapPin } from 'lucide-react'
 
 interface PricingBreakdownProps {
@@ -27,7 +28,7 @@ export function PricingBreakdown({
   className = '' 
 }: PricingBreakdownProps) {
   return (
-    <Card className={`${className}`}>
+    <Card className={`${className}`} data-ui={isNewUIEnabled() ? 'new' : 'old'}>
       <CardContent className={compact ? 'p-4' : 'p-6'}>
         {showTitle && (
           <div className="flex items-center gap-2 mb-4">

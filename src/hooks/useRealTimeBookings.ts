@@ -66,7 +66,7 @@ interface UseRealTimeBookingsReturn {
  * Provides automatic polling, optimistic updates, and real-time sync
  */
 export function useRealTimeBookings({
-  pollInterval = 30000,
+  pollInterval = 5000,
   enableRealTimeUpdates = true,
   statusFilter,
   customerFilter

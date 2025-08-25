@@ -5,10 +5,9 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/primitives/Button'
 import { AdminLayout } from '@/components/layouts/AdminLayout'
 import { AdminRoute } from '@/components/ProtectedRoute'
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb'
 import { 
-  ArrowLeftIcon,
   PlusIcon,
-  EditIcon,
   TrashIcon,
   CarIcon,
   DollarSignIcon,
@@ -533,31 +532,31 @@ function VehicleSizesPage() {
     <AdminLayout>
       <div className="max-w-6xl mx-auto">
         {/* Header */}
+        <div className="mb-4">
+          <Breadcrumb>
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbLink href="/admin">Admin</BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbLink href="/admin/services">Services</BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbPage>Vehicle Sizes</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+        </div>
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-[var(--text-primary)] mb-2">
-              Vehicle Sizes
-            </h1>
-            <p className="text-[var(--text-secondary)]">
-              Manage vehicle size categories and pricing multipliers
-            </p>
+            <h1 className="text-3xl font-bold text-[var(--text-primary)] mb-2">Vehicle Sizes</h1>
+            <p className="text-[var(--text-secondary)]">Manage vehicle size categories and pricing multipliers</p>
           </div>
-          
           <div className="flex items-center gap-3">
-            <Button
-              onClick={() => router.push('/admin/services')}
-              variant="outline"
-            >
-              <ArrowLeftIcon className="w-4 h-4 mr-2" />
-              Back to Services
-            </Button>
-            <Button
-              onClick={handleCreateVehicleSize}
-              className="flex items-center gap-2"
-            >
-              <PlusIcon className="w-4 h-4" />
-              Add Vehicle Size
-            </Button>
+            <Button onClick={() => router.push('/admin/services')} variant="outline">Back to Services</Button>
+            <Button onClick={handleCreateVehicleSize}>Add Vehicle Size</Button>
           </div>
         </div>
 
@@ -657,15 +656,7 @@ function VehicleSizesPage() {
 
                 {/* Actions */}
                 <div className="flex items-center gap-2 pt-4 border-t border-[var(--border-secondary)]">
-                  <Button
-                    onClick={() => handleEditVehicleSize(vehicleSize)}
-                    variant="outline"
-                    size="sm"
-                    className="flex-1 flex items-center gap-2"
-                  >
-                    <EditIcon className="w-3 h-3" />
-                    Edit
-                  </Button>
+                  <Button onClick={() => handleEditVehicleSize(vehicleSize)} variant="outline" size="sm" className="flex-1">Edit</Button>
                   <Button
                     onClick={() => toggleVehicleSizeStatus(vehicleSize)}
                     variant={vehicleSize.is_active ? "outline" : "primary"}

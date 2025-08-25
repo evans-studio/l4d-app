@@ -77,11 +77,19 @@ export async function POST(
         updated_at: new Date().toISOString()
       })
       .eq('id', id)
+      .eq('status', 'pending')
 
     if (updateError) {
       console.error('Error updating reschedule request:', updateError)
       return ApiResponseHandler.serverError('Failed to update reschedule request')
     }
+
+    // If no rows were updated (already processed), try to load it again to surface state
+    const { data: afterUpdate } = await supabase
+      .from('booking_reschedule_requests')
+      .select('id, status')
+      .eq('id', id)
+      .single()
 
     // If approved, update the actual booking
     if (action === 'approve' && booking) {

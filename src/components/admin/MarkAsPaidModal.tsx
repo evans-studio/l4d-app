@@ -102,7 +102,7 @@ export function MarkAsPaidModal({
   const SelectedMethodIcon = selectedMethodInfo?.icon || CreditCard
 
   return (
-    <Modal open={open} onClose={handleClose}>
+    <Modal open={open} onClose={handleClose} className="z-[60]">
       <ModalContent size="lg" position="center" mobile="fullscreen" onClose={handleClose}>
         <ModalHeader>
           <div className="flex items-center gap-3">

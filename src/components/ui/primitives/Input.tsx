@@ -2,23 +2,24 @@ import React from 'react'
 import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '@/lib/utils'
 import { Eye, EyeOff, AlertCircle, CheckCircle, Info } from 'lucide-react'
+import { isNewUIEnabled } from '@/lib/config/feature-flags'
 
 const inputVariants = cva(
-  'flex w-full rounded-md border bg-surface-card transition-all duration-200 file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-text-muted focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50',
+  'flex w-full rounded-md border bg-surface-card transition-all duration-200 file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-text-muted focus-visible:outline-none focus-visible:[box-shadow:var(--focus-ring)] disabled:cursor-not-allowed disabled:opacity-50',
   {
     variants: {
       variant: {
         // Default with purple focus - Love4Detailing brand
-        default: 'border-border-secondary bg-surface-card text-text-primary focus-visible:border-brand-500 focus-visible:ring-2 focus-visible:ring-brand-500/20 hover:border-border-hover',
+        default: 'border-border-secondary bg-surface-card text-text-primary hover:border-border-hover focus-visible:border-brand-500',
         
         // Error with subtle purple undertone
-        error: 'border-error-500 bg-surface-card text-text-primary focus-visible:border-error-purple focus-visible:ring-2 focus-visible:ring-error-purple/20',
+        error: 'border-error-500 bg-surface-card text-text-primary focus-visible:border-error-500',
         
         // Success with purple-tinted success
-        success: 'border-success-500 bg-surface-card text-text-primary focus-visible:border-success-purple focus-visible:ring-2 focus-visible:ring-success-purple/20',
+        success: 'border-success-500 bg-surface-card text-text-primary focus-visible:border-success-500',
         
         // Warning with purple undertone
-        warning: 'border-warning-500 bg-surface-card text-text-primary focus-visible:border-warning-purple focus-visible:ring-2 focus-visible:ring-warning-purple/20',
+        warning: 'border-warning-500 bg-surface-card text-text-primary focus-visible:border-warning-500',
       },
       size: {
         sm: 'h-10 px-3 py-1 text-sm sm:h-9',
@@ -94,7 +95,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
     const hasRightIcon = rightIcon || type === 'password'
     
     return (
-      <div className="space-y-2">
+      <div className="space-y-2" data-ui={isNewUIEnabled() ? 'new' : 'old'}>
         {/* Label (standard) */}
         {!floating && label && (
           <label
@@ -141,6 +142,8 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
               error && errorId
             )}
             placeholder={floating ? (props.placeholder || ' ') : props.placeholder}
+            data-variant={currentVariant}
+            data-size={size}
             {...props}
           />
 
@@ -280,7 +283,7 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
     }[resize]
     
     return (
-      <div className="space-y-2">
+      <div className="space-y-2" data-ui={isNewUIEnabled() ? 'new' : 'old'}>
         {/* Label */}
         {label && (
           <label
@@ -310,6 +313,8 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
             helperText && helperId,
             error && errorId
           )}
+          data-variant={currentVariant}
+          data-size={size}
           {...props}
         />
         

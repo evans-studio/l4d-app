@@ -39,8 +39,6 @@ export default function VehiclesPage() {
   const [error, setError] = useState<string | null>(null)
   const { openOverlay } = useOverlay()
 
-  // Local state for delete action tracking
-  const [vehicleToDelete, setVehicleToDelete] = useState<Vehicle | null>(null)
 
   // Fetch vehicles
   useEffect(() => {
@@ -84,39 +82,29 @@ export default function VehiclesPage() {
 
   const handleDeleteVehicle = (vehicleId: string) => {
     const vehicle = vehicles.find(v => v.id === vehicleId)
-    if (vehicle) {
-      setVehicleToDelete(vehicle)
-      openOverlay({
-        type: 'confirm-delete',
-        data: {
-          title: 'Delete Vehicle',
-          message: `Are you sure you want to delete the ${vehicle.year} ${vehicle.make} ${vehicle.model}? This action cannot be undone.`,
-          confirmText: 'Delete Vehicle',
-          itemName: 'vehicle'
-        },
-        onConfirm: async () => {
-          await confirmDeleteVehicle()
+    if (!vehicle) return
+    openOverlay({
+      type: 'confirm-delete',
+      data: {
+        title: 'Delete Vehicle',
+        message: `Are you sure you want to delete the ${vehicle.year} ${vehicle.make} ${vehicle.model}? This action cannot be undone.`,
+        confirmText: 'Delete Vehicle',
+        itemName: 'vehicle'
+      },
+      onConfirm: async () => {
+        try {
+          const response = await fetch(`/api/customer/vehicles/${vehicleId}`, { method: 'DELETE' })
+          const result = await response.json()
+          if (result.success) {
+            await fetchVehicles()
+          } else {
+            setError(result.error?.message || 'Failed to delete vehicle')
+          }
+        } catch (_) {
+          setError('Failed to delete vehicle')
         }
-      })
-    }
-  }
-
-  const confirmDeleteVehicle = async () => {
-    if (!vehicleToDelete) return
-    try {
-      const response = await fetch(`/api/customer/vehicles/${vehicleToDelete.id}`, {
-        method: 'DELETE'
-      })
-      const result = await response.json()
-      if (result.success) {
-        await fetchVehicles()
-        setVehicleToDelete(null)
-      } else {
-        setError(result.error?.message || 'Failed to delete vehicle')
       }
-    } catch (err) {
-      setError('Failed to delete vehicle')
-    }
+    })
   }
 
   const handleSetDefault = async (vehicleId: string) => {
@@ -175,13 +163,7 @@ export default function VehiclesPage() {
               Manage your vehicles for faster booking and accurate pricing
             </p>
           </div>
-          <Button
-            onClick={handleAddVehicle}
-            leftIcon={<Plus className="w-5 h-5" />}
-            className="sm:w-auto w-full"
-          >
-            Add Vehicle
-          </Button>
+          <Button onClick={handleAddVehicle} className="sm:w-auto w-full">Add Vehicle</Button>
         </div>
 
         {/* Error Message */}
@@ -212,9 +194,7 @@ export default function VehiclesPage() {
               <p className="text-text-secondary mb-6">
                 Add your first vehicle to get started with faster bookings and accurate pricing
               </p>
-              <Button onClick={handleAddVehicle} leftIcon={<Plus className="w-5 h-5" />}>
-                Add Your First Vehicle
-              </Button>
+              <Button onClick={handleAddVehicle}>Add Your First Vehicle</Button>
             </CardContent>
           </Card>
         ) : (

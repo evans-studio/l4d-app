@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { Calendar, Clock, ChevronRight, AlertCircle } from 'lucide-react'
-import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from '@/components/ui/composites/Modal'
+import { Dialog, DialogHeader, DialogTitle, DialogBody } from '@/components/ui/overlays/Dialog'
 import { BaseOverlayProps } from '@/lib/overlay/types'
 import { Button } from '@/components/ui/primitives/Button'
 
@@ -90,9 +90,13 @@ export const RescheduleModal: React.FC<RescheduleModalProps> = ({
       return
     }
 
-    // Debug logging
-    console.log('Selected slot:', selectedSlot)
-    console.log('Reason:', reason)
+    // Debug logging (dev only)
+    if (process.env.NODE_ENV !== 'production') {
+      // eslint-disable-next-line no-console
+      console.log('Selected slot:', selectedSlot)
+      // eslint-disable-next-line no-console
+      console.log('Reason:', reason)
+    }
     
     const requestData = {
       date: selectedSlot.date,
@@ -100,7 +104,10 @@ export const RescheduleModal: React.FC<RescheduleModalProps> = ({
       reason: reason.trim()
     }
     
-    console.log('Request data being sent:', requestData)
+    if (process.env.NODE_ENV !== 'production') {
+      // eslint-disable-next-line no-console
+      console.log('Request data being sent:', requestData)
+    }
 
     try {
       setIsSubmitting(true)
@@ -155,10 +162,11 @@ export const RescheduleModal: React.FC<RescheduleModalProps> = ({
   }
 
   return (
-    <Modal open={isOpen} onClose={onClose}>
-      <ModalContent size="lg" position="center" mobile="fullscreen" onClose={onClose}>
-        <ModalHeader title="Reschedule Booking" />
-        <ModalBody scrollable>
+    <Dialog open={isOpen} onOpenChange={(o) => !o && onClose()}>
+      <DialogHeader>
+        <DialogTitle>Reschedule Booking</DialogTitle>
+      </DialogHeader>
+      <DialogBody>
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600"></div>
@@ -349,8 +357,7 @@ export const RescheduleModal: React.FC<RescheduleModalProps> = ({
               </div>
             </form>
           ) : null}
-        </ModalBody>
-      </ModalContent>
-    </Modal>
+      </DialogBody>
+    </Dialog>
   )
 }

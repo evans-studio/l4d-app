@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { AdminLayout } from '@/components/layouts/AdminLayout'
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb'
 import { AdminRoute } from '@/components/ProtectedRoute'
 import { Card, CardHeader, CardContent } from '@/components/ui/composites/Card'
 import { Button } from '@/components/ui/primitives/Button'
@@ -161,11 +162,24 @@ function HelpPage() {
     <AdminLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-text-primary">Help & Support</h1>
-          <p className="text-text-secondary mt-2">
-            Find answers to common questions and learn how to make the most of your admin system
-          </p>
+        <div className="space-y-3">
+          <Breadcrumb>
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbLink href="/admin">Admin</BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbPage>Help</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-text-primary">Help & Support</h1>
+            <p className="text-text-secondary mt-2">
+              Find answers to common questions and learn how to make the most of your admin system
+            </p>
+          </div>
         </div>
 
         {/* Quick Actions */}

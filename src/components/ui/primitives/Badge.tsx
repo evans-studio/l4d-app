@@ -4,6 +4,7 @@ import React from 'react';
 import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 import { X, Check, AlertCircle, Clock, Star } from 'lucide-react';
+import { isNewUIEnabled } from '@/lib/config/feature-flags';
 
 const badgeVariants = cva(
   'inline-flex items-center font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
@@ -54,6 +55,9 @@ export const Badge = React.forwardRef<HTMLDivElement, BadgeProps>(
       <div
         ref={ref}
         className={cn(badgeVariants({ variant, size, shape }), className)}
+        data-ui={isNewUIEnabled() ? 'new' : 'old'}
+        data-variant={variant}
+        data-size={size}
         {...props}
       >
         {icon && <span className="flex-shrink-0">{icon}</span>}

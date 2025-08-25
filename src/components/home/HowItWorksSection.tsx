@@ -5,6 +5,7 @@ import { Container } from '@/components/layout/templates/PageLayout'
 import { Heading, Text } from '@/components/ui/primitives/Typography'
 import { Calendar, MapPin, CheckCircle2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { isNewUIEnabled } from '@/lib/config/feature-flags'
 
 const steps: Array<{
   title: string
@@ -61,6 +62,7 @@ export function HowItWorksSection() {
     <section 
       ref={sectionRef}
       className="relative overflow-hidden py-24 lg:py-32"
+      data-ui={isNewUIEnabled() ? 'new' : 'old'}
     >
       <Container>
         <div className="max-w-7xl mx-auto">

@@ -185,11 +185,7 @@ const [formData, setFormData] = useState({
       return
     }
     
-    // Check if vehicle size was auto-detected
-    if (!formData.vehicle_size_id) {
-      setError('Sorry, we don\'t have pricing information for this vehicle. Please contact us for assistance.')
-      return
-    }
+    // Note: vehicle_size_id is optional for edits/creates; backend computes size for display
 
     try {
       setIsSubmitting(true)
@@ -289,7 +285,6 @@ const [formData, setFormData] = useState({
           <Select
             label="Year (Optional)"
             placeholder="Select year"
-            required
             options={availableYears.map(year => ({ value: year.toString(), label: year.toString() }))}
             value={formData.year.toString()}
             onChange={(e) => handleFormChange('year', parseInt(e.target.value))}

@@ -4,6 +4,7 @@
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/primitives/Button'
 import { Card, CardHeader, CardContent } from '@/components/ui/composites/Card'
+import { isNewUIEnabled } from '@/lib/config/feature-flags'
 import { 
   Calendar, 
   Car,
@@ -46,7 +47,7 @@ export function QuickRebookWidget({ lastBooking }: QuickRebookWidgetProps) {
 
   if (!lastBooking) {
     return (
-      <Card className="h-full">
+      <Card className="h-full" data-ui={isNewUIEnabled() ? 'new' : 'old'}>
         <CardHeader>
           <h3 className="text-lg font-semibold text-text-primary flex items-center gap-2">
             <RefreshCw className="w-5 h-5 text-brand-400" />
@@ -67,7 +68,7 @@ export function QuickRebookWidget({ lastBooking }: QuickRebookWidgetProps) {
   }
 
   return (
-    <Card className="h-full">
+    <Card className="h-full" data-ui={isNewUIEnabled() ? 'new' : 'old'}>
       <CardHeader>
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold text-text-primary flex items-center gap-2">
@@ -76,7 +77,8 @@ export function QuickRebookWidget({ lastBooking }: QuickRebookWidgetProps) {
           </h3>
           <Button
             variant="ghost"
-            size="sm"
+            size="icon"
+            aria-label="Go to bookings"
             onClick={() => router.push('/dashboard/bookings')}
           >
             <ChevronRight className="w-4 h-4" />

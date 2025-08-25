@@ -108,8 +108,8 @@ export async function GET(request: NextRequest) {
           model: vehicle.model,
           year: vehicle.year,
           color: vehicle.color,
-          license_plate: vehicle.license_plate || vehicle.registration,
-          registration: vehicle.registration || vehicle.license_plate,
+          license_plate: vehicle.license_plate,
+          registration: vehicle.registration,
           is_primary: vehicle.is_primary,
           is_default: vehicle.is_default,
           last_used: vehicleStats[vehicle.id]?.last_used || null,
@@ -183,13 +183,16 @@ export async function POST(request: NextRequest) {
       set_as_default: vehicleData.set_as_default
     })
 
-    // Validate required fields - only make, model, and license_plate are required
-    // Color and year are optional, vehicle_size_id should be provided for pricing
-    if (!vehicleData.make || !vehicleData.model || !vehicleData.license_plate) {
+    // Normalize plate fields: prefer registration if provided
+    const normalizedPlate: string | null = (vehicleData.registration?.trim() || vehicleData.license_plate?.trim() || null)
+
+    // Validate required fields - only make, model, and a plate value are required
+    // Color and year are optional
+    if (!vehicleData.make || !vehicleData.model || !normalizedPlate) {
       const missingFields = []
       if (!vehicleData.make) missingFields.push('make')
       if (!vehicleData.model) missingFields.push('model') 
-      if (!vehicleData.license_plate) missingFields.push('license_plate')
+      if (!normalizedPlate) missingFields.push('registration/license_plate')
       
       console.error('❌ [Backend] Validation failed - missing fields:', missingFields)
       return NextResponse.json({
@@ -225,8 +228,9 @@ export async function POST(request: NextRequest) {
         model: vehicleData.model.trim(),
         year: vehicleData.year ? parseInt(vehicleData.year) : new Date().getFullYear(),
         color: vehicleData.color?.trim() || null,
-        license_plate: vehicleData.license_plate?.trim() || null,
-        registration: vehicleData.registration?.trim() || vehicleData.license_plate?.trim() || null,
+        // Keep both columns in sync using the normalized value
+        license_plate: normalizedPlate,
+        registration: normalizedPlate,
         vehicle_size_id: null, // No vehicle_sizes table exists - denormalized structure
         is_primary: isFirstVehicle,
         is_default: isFirstVehicle || vehicleData.set_as_default === true,

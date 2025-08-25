@@ -192,8 +192,10 @@ export async function POST(request: NextRequest) {
         
         if (distanceResponse.ok) {
           const distanceResult = await distanceResponse.json()
-          if (distanceResult.success && distanceResult.data?.distance !== undefined) {
-            distanceFromBusiness = distanceResult.data.distance
+          // Convert km -> miles for storage/display consistency on customer UI
+          if (distanceResult.success && distanceResult.data?.distanceKm !== undefined) {
+            const miles = distanceResult.data.distanceKm * 0.621371
+            distanceFromBusiness = Math.round(miles * 10) / 10
           }
         }
       } catch (distanceError) {

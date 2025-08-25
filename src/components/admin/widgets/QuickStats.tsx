@@ -12,6 +12,7 @@ import {
   AlertCircleIcon,
   StarIcon
 } from 'lucide-react'
+import { isNewUIEnabled } from '@/lib/config/feature-flags'
 
 interface QuickStatsProps {
   stats: {
@@ -95,7 +96,7 @@ export function QuickStats({ stats, loading = false }: QuickStatsProps) {
   ]
 
   return (
-    <Card>
+    <Card data-ui={isNewUIEnabled() ? 'new' : 'old'}>
       <CardHeader>
         <h3 className="text-lg font-semibold text-text-primary">Quick Stats</h3>
         <p className="text-sm text-text-secondary">Real-time business metrics overview</p>

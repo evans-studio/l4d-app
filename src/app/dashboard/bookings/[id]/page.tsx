@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/primitives/Button'
 import { CustomerLayout } from '@/components/layout/templates/CustomerLayout'
 import { Container } from '@/components/layout/templates/PageLayout'
 import { CustomerRoute } from '@/components/ProtectedRoute'
+import { ConfirmDialog } from '@/components/ui/overlays/modals/ConfirmDialog'
 import { 
   ArrowLeft,
   Calendar,
@@ -230,14 +231,15 @@ export default function BookingDetailsPage({ params }: { params: Promise<{ id: s
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          reason: 'Cancelled by customer'
+          reason: 'Cancelled by customer',
+          acknowledgeNoRefund: true
         })
       })
 
       if (response.ok) {
         const data = await response.json()
         if (data.success) {
-          setBooking(prev => prev ? { ...prev, status: 'cancelled', cancellation_reason: 'Cancelled by customer' } : null)
+          setBooking(prev => prev ? { ...prev, status: 'cancelled', cancellation_reason: 'Cancelled by customer', cancelled_at: new Date().toISOString() } : null)
           setShowCancelModal(false)
         }
       }
@@ -275,7 +277,7 @@ export default function BookingDetailsPage({ params }: { params: Promise<{ id: s
     )
   }
 
-  const status = statusConfig[booking.status]
+  const status = statusConfig[booking.status] || statusConfig.pending
   const StatusIcon = status.icon
   const canCancel = booking.status === 'pending'
   const canReschedule = ['pending', 'confirmed'].includes(booking.status)
@@ -305,14 +307,7 @@ export default function BookingDetailsPage({ params }: { params: Promise<{ id: s
           {/* Header */}
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center gap-4">
-              <Button
-                onClick={() => router.push('/dashboard')}
-                variant="outline"
-                size="sm"
-                leftIcon={<ArrowLeft className="w-4 h-4" />}
-              >
-                Back to Dashboard
-              </Button>
+              <Button onClick={() => router.push('/dashboard')} variant="outline" size="sm">Back to Dashboard</Button>
               <div>
                 <h1 className="text-3xl font-bold text-text-primary">
                   Booking #{booking.booking_reference}
@@ -326,14 +321,7 @@ export default function BookingDetailsPage({ params }: { params: Promise<{ id: s
 
             <div className="flex items-center gap-3">
               {canReschedule && (
-                <Button
-                  onClick={() => router.push(`/dashboard/bookings/${booking.id}/reschedule`)}
-                  variant="outline"
-                  className="flex items-center gap-2"
-                >
-                  <Edit2 className="w-4 h-4" />
-                  Reschedule
-                </Button>
+                <Button onClick={() => router.push(`/dashboard/bookings/${booking.id}/reschedule`)} variant="outline">Reschedule</Button>
               )}
               {canCancel && (
                 <Button
@@ -606,36 +594,16 @@ export default function BookingDetailsPage({ params }: { params: Promise<{ id: s
             </div>
           </div>
 
-          {/* Cancel Booking Modal */}
-          {showCancelModal && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-              <div className="bg-surface-primary rounded-lg max-w-md w-full p-6">
-                <h3 className="text-lg font-semibold text-text-primary mb-4">
-                  Cancel Booking
-                </h3>
-                <p className="text-text-secondary mb-6">
-                  Are you sure you want to cancel this booking? This action cannot be undone.
-                </p>
-                <div className="flex gap-3 justify-end">
-                  <Button
-                    onClick={() => setShowCancelModal(false)}
-                    variant="outline"
-                    disabled={isCancelling}
-                  >
-                    Keep Booking
-                  </Button>
-                  <Button
-                    onClick={handleCancelBooking}
-                    variant="primary"
-                    className="bg-error-500 hover:bg-error-600"
-                    disabled={isCancelling}
-                  >
-                    {isCancelling ? 'Cancelling...' : 'Yes, Cancel Booking'}
-                  </Button>
-                </div>
-              </div>
-            </div>
-          )}
+          {/* Cancel Booking Modal - unified ConfirmDialog */}
+          <ConfirmDialog
+            open={showCancelModal}
+            onOpenChange={setShowCancelModal}
+            title="Cancel booking?"
+            description="Are you sure you want to cancel this booking? This action cannot be undone."
+            confirmLabel={isCancelling ? 'Cancelling...' : 'Yes, cancel booking'}
+            onConfirm={handleCancelBooking}
+            isLoading={isCancelling}
+          />
         </Container>
       </CustomerLayout>
     </CustomerRoute>

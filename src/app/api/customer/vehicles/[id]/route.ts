@@ -59,8 +59,12 @@ export async function PUT(
     if (updateData.model) updateObject.model = updateData.model.trim()
     if (updateData.year) updateObject.year = parseInt(updateData.year)
     if (updateData.color) updateObject.color = updateData.color.trim()
-    if (updateData.license_plate !== undefined) updateObject.license_plate = updateData.license_plate?.trim() || null
-    if (updateData.registration !== undefined) updateObject.registration = updateData.registration?.trim() || null
+    // Normalize plate fields and keep both columns in sync
+    if (updateData.license_plate !== undefined || updateData.registration !== undefined) {
+      const normalizedPlate: string | null = (updateData.registration?.trim() || updateData.license_plate?.trim() || null)
+      updateObject.license_plate = normalizedPlate
+      updateObject.registration = normalizedPlate
+    }
 
     // Update the vehicle
     const { data: updatedVehicle, error: updateError } = await supabase
@@ -132,8 +136,8 @@ export async function PUT(
       model: updatedVehicle.model,
       year: updatedVehicle.year,
       color: updatedVehicle.color,
-      license_plate: updatedVehicle.license_plate || updatedVehicle.registration,
-      registration: updatedVehicle.registration || updatedVehicle.license_plate,
+      license_plate: updatedVehicle.license_plate,
+      registration: updatedVehicle.registration,
       is_primary: updatedVehicle.is_primary,
       is_default: updatedVehicle.is_default,
       // Add computed size information

@@ -11,6 +11,7 @@ import {
   UsersIcon,
   CheckCircleIcon
 } from 'lucide-react'
+import { isNewUIEnabled } from '@/lib/config/feature-flags'
 
 interface TimeSlotData {
   id: string
@@ -130,7 +131,7 @@ export function DayCard({ day, isToday, onAddSlot, onSlotUpdate }: DayCardProps)
 
   return (
     <>
-      <div className="p-6 min-h-[500px]">
+      <div className="p-6 min-h-[500px]" data-ui={isNewUIEnabled() ? 'new' : 'old'}>
         {/* Day Header */}
         <div className={`text-center mb-6 pb-6 border-b border-[var(--border-secondary)] ${
           isToday ? 'border-[var(--primary)]' : ''

@@ -5,9 +5,8 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/primitives/Button'
 import { AdminLayout } from '@/components/layouts/AdminLayout'
 import { AdminRoute } from '@/components/ProtectedRoute'
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb'
 import { 
-  ArrowLeftIcon,
-  SaveIcon,
   PackageIcon,
   DollarSignIcon,
   ClockIcon,
@@ -81,10 +80,7 @@ function DeleteConfirmationModal({ isOpen, onClose, onConfirm, serviceName, isDe
                 Deleting...
               </>
             ) : (
-              <>
-                <TrashIcon className="w-4 h-4 mr-2" />
-                Delete Service
-              </>
+              <>Delete Service</>
             )}
           </Button>
         </div>
@@ -314,7 +310,6 @@ function EditServicePage({ params }: { params: Promise<{ id: string }> }) {
                 onClick={() => router.push('/admin/services')}
                 variant="outline"
               >
-                <ArrowLeftIcon className="w-4 h-4 mr-2" />
                 Back to Services
               </Button>
             </div>
@@ -327,6 +322,24 @@ function EditServicePage({ params }: { params: Promise<{ id: string }> }) {
   return (
     <AdminLayout>
       <div className="max-w-4xl mx-auto">
+        {/* Breadcrumb */}
+        <div className="mb-4">
+          <Breadcrumb>
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbLink href="/admin">Admin</BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbLink href="/admin/services">Services</BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbPage>Edit Service</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+        </div>
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
@@ -344,14 +357,12 @@ function EditServicePage({ params }: { params: Promise<{ id: string }> }) {
               variant="outline"
               className="text-[var(--error)] border-[var(--error)] hover:bg-[var(--error-bg)]"
             >
-              <TrashIcon className="w-4 h-4 mr-2" />
               Delete
             </Button>
             <Button
               onClick={() => router.push('/admin/services')}
               variant="outline"
             >
-              <ArrowLeftIcon className="w-4 h-4 mr-2" />
               Back to Services
             </Button>
           </div>
@@ -542,53 +553,44 @@ function EditServicePage({ params }: { params: Promise<{ id: string }> }) {
                 </h3>
                 
                 <div className="space-y-4">
-                  <div className={`p-4 rounded-lg border-2 transition-colors ${
+                  <div className={`p-4 rounded-lg border transition-colors ${
                     formData.is_active 
-                      ? 'bg-[var(--success-bg)] border-[var(--success)]' 
-                      : 'bg-[var(--warning-bg)] border-[var(--warning)]'
+                      ? 'bg-[var(--surface-primary)] border-[var(--border-secondary)]' 
+                      : 'bg-[var(--surface-primary)] border-[var(--border-secondary)] opacity-80'
                   }`}>
-                    <div className="flex items-center gap-2 mb-2">
-                      <PackageIcon className="w-4 h-4" />
-                      <span className="font-medium">
+                    <div className="mb-2">
+                      <span className="font-medium text-[var(--text-primary)]">
                         {formData.name || 'Service Name'}
                       </span>
                     </div>
-                    
                     <p className="text-sm text-[var(--text-secondary)] mb-3">
                       {formData.short_description || 'Brief description will appear here'}
                     </p>
-                    
-                    <div className="flex items-center justify-between text-sm">
-                      <div className="flex items-center gap-1">
-                        <DollarSignIcon className="w-4 h-4" />
-                        <div className="text-xs">
-                          {Object.keys(formData.pricing).length > 0 ? (
-                            <div className="space-y-1">
-                              {vehicleSizes.map(size => (
-                                <div key={size.id} className="flex justify-between">
-                                  <span className="text-[var(--text-muted)]">{size.name}:</span>
-                                  <span className="font-semibold">
-                                    £{(formData.pricing[size.id] || 0).toFixed(2)}
-                                  </span>
-                                </div>
-                              ))}
-                            </div>
-                          ) : (
-                            <span className="text-[var(--text-muted)] text-xs">No pricing set</span>
-                          )}
-                        </div>
+                    <div className="flex items-start justify-between text-sm gap-4">
+                      <div className="text-xs flex-1">
+                        {Object.keys(formData.pricing).length > 0 ? (
+                          <div className="space-y-1">
+                            {vehicleSizes.slice(0,3).map(size => (
+                              <div key={size.id} className="flex justify-between">
+                                <span className="text-[var(--text-muted)]">{size.name}:</span>
+                                <span className="font-semibold">£{(formData.pricing[size.id] || 0).toFixed(2)}</span>
+                              </div>
+                            ))}
+                            {vehicleSizes.length > 3 && (
+                              <div className="text-[var(--text-muted)]">+{vehicleSizes.length - 3} more sizes</div>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-[var(--text-muted)]">No pricing set</span>
+                        )}
                       </div>
-                      <div className="flex items-center gap-1">
-                        <ClockIcon className="w-4 h-4" />
-                        <span>{formatDuration(formData.estimated_duration)}</span>
-                      </div>
+                      <div className="whitespace-nowrap text-[var(--text-primary)]">{formatDuration(formData.estimated_duration)}</div>
                     </div>
                   </div>
-
                   <div className="text-xs text-[var(--text-muted)] space-y-1">
-                    <p>• {Object.keys(formData.pricing).length > 0 ? 'Individual pricing set per vehicle size' : 'No pricing configured yet'}</p>
-                    <p>• Duration is estimated</p>
-                    <p>• {formData.is_active ? 'Available for booking' : 'Hidden from customers'}</p>
+                    <p>{Object.keys(formData.pricing).length > 0 ? 'Individual pricing per vehicle size' : 'No pricing configured yet'}</p>
+                    <p>Duration is estimated</p>
+                    <p>{formData.is_active ? 'Available for booking' : 'Hidden from customers'}</p>
                   </div>
                 </div>
               </div>
@@ -624,10 +626,7 @@ function EditServicePage({ params }: { params: Promise<{ id: string }> }) {
                     Updating...
                   </>
                 ) : (
-                  <>
-                    <SaveIcon className="w-4 h-4" />
-                    Update Service
-                  </>
+                  <>Update Service</>
                 )}
               </Button>
             </div>

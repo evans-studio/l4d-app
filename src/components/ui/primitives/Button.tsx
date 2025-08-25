@@ -2,21 +2,23 @@ import React from 'react'
 import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '@/lib/utils'
 import { Loader2 } from 'lucide-react'
+import { isNewUIEnabled } from '@/lib/config/feature-flags'
+import { Button as ShadButton } from '@/components/ui/button'
 
 const buttonVariants = cva(
   // Base styles - Mobile-first with touch targets and purple focus ring
-  'inline-flex items-center justify-center font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-primary disabled:opacity-50 disabled:pointer-events-none disabled:cursor-not-allowed relative overflow-hidden',
+  'inline-flex items-center justify-center font-medium transition-all duration-200 focus-visible:outline-none focus-visible:[box-shadow:var(--focus-ring)] disabled:opacity-50 disabled:pointer-events-none disabled:cursor-not-allowed relative overflow-hidden',
   {
     variants: {
       variant: {
         // Strong purple primary buttons - Love4Detailing brand identity
-        primary: 'bg-brand-600 text-white hover:bg-brand-700 active:bg-brand-800 shadow-purple hover:shadow-purple-lg hover:animate-purple-glow border border-brand-500/20',
+        primary: 'bg-brand-600 text-white hover:bg-brand-700 active:bg-brand-800 shadow-[var(--elevation-1)] hover:shadow-[var(--elevation-2)] border border-brand-500/20',
         
         // Secondary with purple accents
-        secondary: 'bg-surface-tertiary text-text-primary border border-border-secondary hover:bg-surface-hover hover:border-border-purple active:bg-surface-active shadow-sm hover:shadow-purple',
+        secondary: 'bg-surface-tertiary text-text-primary border border-border-secondary hover:bg-surface-hover active:bg-surface-active shadow-[var(--elevation-1)] hover:shadow-[var(--elevation-2)]',
         
         // Outline with purple hover
-        outline: 'border border-border-secondary text-text-primary hover:bg-brand-600/10 hover:border-brand-500 hover:text-brand-300 active:bg-brand-600/20 backdrop-blur-sm',
+        outline: 'border border-border-secondary text-text-primary hover:bg-brand-600/10 hover:border-brand-500 hover:text-brand-300 active:bg-brand-600/20 backdrop-blur-sm shadow-[var(--elevation-1)]',
         
         // Ghost with purple hover background
         ghost: 'text-text-primary hover:bg-brand-600/10 hover:text-brand-300 active:bg-brand-600/20',
@@ -102,6 +104,68 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     
     const hideInnerIcons = size !== 'icon'
 
+    if (isNewUIEnabled()) {
+      const mapVariant = (v: ButtonProps['variant']): 'default' | 'secondary' | 'outline' | 'ghost' | 'destructive' | 'link' | undefined => {
+        switch (v) {
+          case 'primary': return 'default'
+          case 'secondary': return 'secondary'
+          case 'outline': return 'outline'
+          case 'ghost': return 'ghost'
+          case 'destructive': return 'destructive'
+          case 'link': return 'link'
+          default: return 'default'
+        }
+      }
+      const mapSize = (s: ButtonProps['size']): 'sm' | 'default' | 'lg' | 'icon' | undefined => {
+        switch (s) {
+          case 'xs':
+          case 'sm': return 'sm'
+          case 'md': return 'default'
+          case 'lg':
+          case 'xl': return 'lg'
+          case 'icon': return 'icon'
+          default: return 'default'
+        }
+      }
+
+      return (
+        <ShadButton
+          ref={ref}
+          variant={mapVariant(variant)}
+          size={mapSize(size)}
+          disabled={isDisabled}
+          className={cn(fullWidth && 'w-full', className)}
+          data-ui="new"
+          {...props}
+        >
+          {loading && (
+            <Loader2 
+              className={cn(
+                'animate-spin mr-2',
+                size === 'xs' ? 'h-3 w-3' :
+                size === 'sm' ? 'h-3.5 w-3.5' :
+                size === 'md' ? 'h-4 w-4' :
+                size === 'lg' ? 'h-4 w-4' :
+                size === 'xl' ? 'h-5 w-5' :
+                'h-4 w-4'
+              )}
+              aria-hidden="true"
+            />
+          )}
+          {size !== 'icon' && (
+            <span className={cn('inline-block whitespace-nowrap', loading && 'opacity-70')}>
+              {loading && loadingText ? loadingText : children}
+            </span>
+          )}
+          {size === 'icon' && !loading && (
+            <span className="flex items-center justify-center h-4 w-4" aria-hidden="true">
+              {children}
+            </span>
+          )}
+        </ShadButton>
+      )
+    }
+
     return (
       <button
         className={cn(
@@ -117,6 +181,9 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         ref={ref}
         disabled={isDisabled || undefined}
         aria-busy={loading}
+        data-ui={isNewUIEnabled() ? 'new' : 'old'}
+        data-variant={variant}
+        data-size={size}
         {...props}
       >
         {/* Loading Spinner */}

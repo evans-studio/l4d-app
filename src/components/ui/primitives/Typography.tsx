@@ -1,6 +1,7 @@
 import React from 'react'
 import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '@/lib/utils'
+import { isNewUIEnabled } from '@/lib/config/feature-flags'
 
 // Heading Component
 const headingVariants = cva(
@@ -60,6 +61,8 @@ const Heading = React.forwardRef<HTMLHeadingElement, HeadingProps>(
     return (
       <Component
         className={cn(headingVariants({ size, weight, color, align, className }))}
+        data-ui={isNewUIEnabled() ? 'new' : 'old'}
+        data-typo="heading"
         ref={ref}
         {...props}
       >
@@ -158,6 +161,8 @@ const Text = React.forwardRef<TextElement, TextProps>(
         truncateClasses,
         className
       ),
+      'data-ui': isNewUIEnabled() ? 'new' : 'old',
+      'data-typo': 'text',
       ref,
       ...props
     }
@@ -226,6 +231,8 @@ const Label = React.forwardRef<HTMLLabelElement, LabelProps>(
       <label
         ref={ref}
         className={cn(labelVariants({ size, required, className }))}
+        data-ui={isNewUIEnabled() ? 'new' : 'old'}
+        data-typo="label"
         {...props}
       >
         <span className="flex items-center gap-1">
@@ -300,6 +307,8 @@ const Link = React.forwardRef<HTMLAnchorElement, LinkProps>(
     return (
       <a
         className={cn(linkVariants({ variant, size, underline, className }))}
+        data-ui={isNewUIEnabled() ? 'new' : 'old'}
+        data-typo="link"
         ref={ref}
         {...(external && {
           target: '_blank',
@@ -359,6 +368,8 @@ const Code = React.forwardRef<CodeElement, CodeProps>(
   ({ className, variant, size, as = 'code', children, ...props }, ref) => {
     const elementProps = {
       className: cn(codeVariants({ variant, size, className })),
+      'data-ui': isNewUIEnabled() ? 'new' : 'old',
+      'data-typo': 'code',
       ref,
       ...props
     }

@@ -1,8 +1,8 @@
 'use client'
 
 import React, { useState } from 'react'
-import { CheckCircle, XCircle } from 'lucide-react'
-import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from '@/components/ui/composites/Modal'
+import { CheckCircle } from 'lucide-react'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { BaseOverlayProps } from '@/lib/overlay/types'
 import { Button } from '@/components/ui/primitives/Button'
 
@@ -43,10 +43,11 @@ export const ConfirmBookingModal: React.FC<BaseOverlayProps> = ({
   }
 
   return (
-    <Modal open={isOpen} onClose={onClose}>
-      <ModalContent size="md" position="center" mobile="fullscreen" onClose={onClose}>
-        <ModalHeader title="Confirm Booking" />
-        <ModalBody>
+    <Dialog open={isOpen} onOpenChange={(o) => { if (!o) onClose() }}>
+      <DialogContent className="sm:max-w-[520px]">
+        <DialogHeader>
+          <DialogTitle>Confirm Booking</DialogTitle>
+        </DialogHeader>
           <div className="space-y-4">
             <div className="flex items-start gap-3">
               <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
@@ -74,13 +75,11 @@ export const ConfirmBookingModal: React.FC<BaseOverlayProps> = ({
                 {error}
               </div>
             )}
-          </div>
-        </ModalBody>
-        <ModalFooter className="sticky bottom-0 bg-surface-primary">
+            <div className="flex gap-3 pt-4 border-t border-border-secondary">
           <Button
             onClick={onClose}
             variant="outline"
-            className="flex-1"
+              className="flex-1"
             disabled={isSubmitting}
           >
             Cancel
@@ -93,8 +92,9 @@ export const ConfirmBookingModal: React.FC<BaseOverlayProps> = ({
           >
             {isSubmitting ? 'Confirming...' : 'Confirm Booking'}
           </Button>
-        </ModalFooter>
-      </ModalContent>
-    </Modal>
+            </div>
+          </div>
+      </DialogContent>
+    </Dialog>
   )
 }

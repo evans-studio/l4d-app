@@ -194,13 +194,7 @@ export default function AddressesPage() {
               Manage your service addresses with automatic distance calculation and travel surcharge information
             </p>
           </div>
-          <Button
-            onClick={handleAddAddress}
-            leftIcon={<Plus className="w-5 h-5" />}
-            className="sm:w-auto w-full"
-          >
-            Add Address
-          </Button>
+          <Button onClick={handleAddAddress} className="sm:w-auto w-full">Add Address</Button>
         </div>
 
         {/* Error Message */}
@@ -234,9 +228,7 @@ export default function AddressesPage() {
               <p className="text-text-secondary mb-6">
                 Add your first service address to get started with faster bookings and automatic travel surcharge calculation
               </p>
-              <Button onClick={handleAddAddress} leftIcon={<Plus className="w-5 h-5" />}>
-                Add Your First Address
-              </Button>
+              <Button onClick={handleAddAddress}>Add Your First Address</Button>
             </CardContent>
           </Card>
         ) : (

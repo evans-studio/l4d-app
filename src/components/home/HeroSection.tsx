@@ -9,6 +9,7 @@ import { Heading, Text } from '@/components/ui/primitives/Typography'
 import { ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { m, useScroll, useTransform } from 'framer-motion'
+import { isNewUIEnabled } from '@/lib/config/feature-flags'
 
 // Generate subtle sparkle particles for the hero only
 const generateSparkles = (count: number) => {
@@ -46,7 +47,7 @@ export function HeroSection() {
   }
 
   return (
-    <section className="relative min-h-screen flex flex-col overflow-hidden pb-12 sm:pb-16 lg:pb-20">
+    <section className="relative min-h-screen flex flex-col overflow-hidden pb-12 sm:pb-16 lg:pb-20" data-ui={isNewUIEnabled() ? 'new' : 'old'}>
       {/* Hero-only sparkles layer */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden" aria-hidden>
         {sparkles.map((sparkle) => (

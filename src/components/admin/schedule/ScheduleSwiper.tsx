@@ -13,6 +13,7 @@ import {
   CalendarIcon
 } from 'lucide-react'
 import { safeConsole } from '@/lib/utils/logger'
+import { isNewUIEnabled } from '@/lib/config/feature-flags'
 
 interface TimeSlot {
   id: string
@@ -59,9 +60,10 @@ interface ScheduleSwiperProps {
   timeSlots: TimeSlot[]
   onSlotsChange: () => void
   isLoading: boolean
+  jumpToDate?: string
 }
 
-export function ScheduleSwiper({ timeSlots, onSlotsChange, isLoading }: ScheduleSwiperProps) {
+export function ScheduleSwiper({ timeSlots, onSlotsChange, isLoading, jumpToDate }: ScheduleSwiperProps) {
   // Feature-flag to safely enable view state preservation
   const IMPROVED_SLOT_STATE_ENABLED = typeof process !== 'undefined' &&
     (process.env.NEXT_PUBLIC_IMPROVED_SLOT_STATE_ENABLED === 'true' || true)
@@ -188,6 +190,14 @@ export function ScheduleSwiper({ timeSlots, onSlotsChange, isLoading }: Schedule
     }
   }, [timeSlots])
 
+  // Respond to external jump requests (admin picker)
+  useEffect(() => {
+    if (jumpToDate) {
+      setViewToDate(jumpToDate)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [jumpToDate])
+
   // Touch handlers for swipe navigation
   const onTouchStart = (e: React.TouchEvent) => {
     setTouchEnd(null)
@@ -288,7 +298,7 @@ export function ScheduleSwiper({ timeSlots, onSlotsChange, isLoading }: Schedule
   }
 
   return (
-    <div className="max-w-md mx-auto bg-[var(--surface-secondary)] rounded-xl border border-[var(--border-secondary)] overflow-hidden">
+    <div className="max-w-md mx-auto bg-[var(--surface-secondary)] rounded-xl border border-[var(--border-secondary)] overflow-hidden" data-ui={isNewUIEnabled() ? 'new' : 'old'}>
       {/* Header */}
       <div className="bg-[var(--surface-primary)] border-b border-[var(--border-secondary)] p-4">
         <div className="flex items-center justify-between mb-3">

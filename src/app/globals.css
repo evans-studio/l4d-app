@@ -1,4 +1,5 @@
 @import '../styles/brand-colors.css';
+@import '../styles/tokens.css';
 
 @tailwind base;
 @tailwind components;
@@ -13,6 +14,69 @@
     background-color: #000000;
     color: #ffffff;
     min-height: 100vh;
+  }
+  /* Map shadcn theme tokens to Love 4 Detailing brand (dark-first) */
+  :root {
+    /* Dark surfaces */
+    --background: 0 0% 4%; /* #0a0a0a */
+    --foreground: 0 0% 100%;
+    --card: 0 0% 10%; /* #1a1a1a */
+    --card-foreground: 0 0% 100%;
+    --popover: 0 0% 10%;
+    --popover-foreground: 0 0% 100%;
+
+    /* Brand */
+    --primary: 266 100% 64%; /* #9747FF */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 0 0% 14%; /* #242424/#252525 */
+    --secondary-foreground: 0 0% 100%;
+    --muted: 0 0% 18%; /* #2f2f2f */
+    --muted-foreground: 0 0% 70%; /* muted text */
+    --accent: 266 100% 64%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Controls */
+    --border: 0 0% 15%; /* subtle borders */
+    --input: 0 0% 15%;
+    --ring: 266 90% 60%; /* focus ring brand */
+
+    /* Charts (brand-forward palette) */
+    --chart-1: 266 100% 64%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 43 90% 55%;
+    --chart-4: 0 84% 60%;
+    --chart-5: 220 70% 50%;
+
+    --radius: 0.5rem;
+  }
+  .dark {
+    /* Keep same values for explicit dark mode */
+    --background: 0 0% 4%;
+    --foreground: 0 0% 100%;
+    --card: 0 0% 10%;
+    --card-foreground: 0 0% 100%;
+    --popover: 0 0% 10%;
+    --popover-foreground: 0 0% 100%;
+    --primary: 266 100% 64%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 0 0% 14%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 0 0% 18%;
+    --muted-foreground: 0 0% 70%;
+    --accent: 266 100% 64%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 15%;
+    --input: 0 0% 15%;
+    --ring: 266 90% 60%;
+    --chart-1: 266 100% 64%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 43 90% 55%;
+    --chart-4: 0 84% 60%;
+    --chart-5: 220 70% 50%;
   }
 }
 
@@ -189,4 +253,21 @@
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
   }
+}
+
+
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Ensure react-day-picker highlights the selected day clearly */
+.rdp-day[aria-selected="true"] .rdp-day_button {
+  background-color: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
 }
