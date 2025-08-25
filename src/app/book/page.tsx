@@ -266,20 +266,18 @@ function BookingPageContent(): React.JSX.Element {
       <div className="px-4 py-3">
         <div className="mx-auto max-w-4xl">
           <Stepper value={currentStep} onValueChange={() => {}}>
-            {stepLabels.map(({ step }) => (
+            {stepLabels.map(({ step, label }) => (
               <StepperItem key={step} step={step} className="flex-1">
                 <StepperTrigger asChild>
-                  <StepperIndicator />
+                  <div className="flex flex-col items-center">
+                    <StepperIndicator />
+                    <span className={`mt-1 text-xs ${step === currentStep ? 'text-text-primary font-medium' : 'text-text-secondary'}`}>{label}</span>
+                  </div>
                 </StepperTrigger>
                 {step < stepLabels.length && <StepperSeparator />}
               </StepperItem>
             ))}
           </Stepper>
-          <div className="mt-2 grid grid-cols-6 gap-2 text-center text-xs text-text-secondary">
-            {stepLabels.map(({ step, label }) => (
-              <div key={step} className={`${step === currentStep ? 'text-text-primary font-medium' : ''}`}>{label}</div>
-            ))}
-          </div>
         </div>
       </div>
 
