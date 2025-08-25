@@ -104,6 +104,14 @@ export const RescheduleActionModal: React.FC<RescheduleActionModalProps> = ({
           })
           const fbJson = await fallback.json()
           if (fbJson?.success) {
+            // Best-effort: mark the request as approved for record-keeping
+            try {
+              await fetch(`/api/admin/reschedule-requests/${rescheduleRequest.id}/respond`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'approve', adminResponse: '', adminNotes: '' })
+              })
+            } catch (_) {}
             if (onConfirm) await onConfirm(fbJson.data)
             onClose()
             return
