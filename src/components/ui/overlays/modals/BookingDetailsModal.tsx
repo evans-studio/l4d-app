@@ -181,9 +181,28 @@ export const BookingDetailsModal: React.FC<BaseOverlayProps> = ({
 
   const submitCancellation = async () => {
     if (!cancelReason.trim()) return
-    await updateStatus('cancelled', { reason: cancelReason })
-    setShowCancelPrompt(false)
-    setCancelReason('')
+    try {
+      setActionLoading('cancelled')
+      const response = await fetch(`/api/admin/bookings/${booking!.id}/cancel`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: cancelReason })
+      })
+      const result = await response.json()
+      if (response.ok && result?.success) {
+        setError('')
+        setShowCancelPrompt(false)
+        setCancelReason('')
+        // Refresh booking view state
+        await loadBookingDetails()
+        return
+      }
+      setError(result?.error?.message || 'Failed to cancel booking')
+    } catch (_) {
+      setError('Network error occurred')
+    } finally {
+      setActionLoading(null)
+    }
   }
 
   useEffect(() => {
@@ -599,7 +618,7 @@ export const BookingDetailsModal: React.FC<BaseOverlayProps> = ({
         </DialogHeader>
         <div className="py-2">
           <p className="text-sm text-text-secondary mb-4">Choose a new slot for this booking. Customer will be notified.</p>
-          <AdminReschedulePanel bookingId={booking.id} onDone={() => setShowReschedule(false)} />
+          <AdminReschedulePanel bookingId={booking.id} currentDate={booking.scheduled_date} currentTime={(booking.start_time || booking.scheduled_start_time) as string} onDone={() => setShowReschedule(false)} />
         </div>
       </DialogContent>
     </Dialog>

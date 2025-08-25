@@ -22,7 +22,7 @@ interface AvailableSlotsData {
   availableSlots: Record<string, TimeSlot[]>
 }
 
-export const AdminReschedulePanel: React.FC<{ bookingId: string, onDone?: () => void }> = ({ bookingId, onDone }) => {
+export const AdminReschedulePanel: React.FC<{ bookingId: string, currentDate?: string, currentTime?: string, onDone?: () => void }> = ({ bookingId, currentDate, currentTime, onDone }) => {
   const [data, setData] = useState<AvailableSlotsData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -34,12 +34,42 @@ export const AdminReschedulePanel: React.FC<{ bookingId: string, onDone?: () => 
       try {
         setLoading(true)
         setError('')
-        const res = await fetch(`/api/bookings/${bookingId}/available-slots`, { cache: 'no-store' })
+        // Load next 30 days of admin time slots and transform to expected shape
+        const start = new Date()
+        const end = new Date()
+        end.setDate(start.getDate() + 30)
+        const startStr = start.toISOString().split('T')[0]!
+        const endStr = end.toISOString().split('T')[0]!
+        const res = await fetch(`/api/admin/time-slots?start=${startStr}&end=${endStr}`, { cache: 'no-store' })
         const json = await res.json()
-        if (json.success) {
-          setData(json.data)
+        if (json?.success && Array.isArray(json.data)) {
+          const slotsByDate: Record<string, TimeSlot[]> = {}
+          json.data.forEach((slot: any) => {
+            if (slot.is_available) {
+              const date = slot.slot_date
+              if (!slotsByDate[date]) slotsByDate[date] = []
+              slotsByDate[date].push({
+                id: slot.id,
+                date: slot.slot_date,
+                start_time: slot.start_time,
+                end_time: '',
+                duration_minutes: 0,
+                is_available: true,
+              })
+            }
+          })
+          setData({
+            booking: {
+              id: bookingId,
+              currentDate: currentDate || startStr,
+              currentTime: currentTime || '09:00',
+              serviceName: '',
+              serviceDuration: 0,
+            },
+            availableSlots: slotsByDate,
+          })
         } else {
-          setError(json.error?.message || 'Failed to load available slots')
+          setError(json?.error?.message || 'Failed to load available slots')
         }
       } catch (e) {
         setError('Network error occurred')
@@ -48,7 +78,7 @@ export const AdminReschedulePanel: React.FC<{ bookingId: string, onDone?: () => 
       }
     }
     load()
-  }, [bookingId])
+  }, [bookingId, currentDate, currentTime])
 
   const handleReschedule = async () => {
     if (!selected) return
