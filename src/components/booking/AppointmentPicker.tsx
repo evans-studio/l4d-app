@@ -133,8 +133,8 @@ export function AppointmentPicker({ initialDate, onSelect, adminMode = false, se
                 selected: (day: Date) => format(day, 'yyyy-MM-dd') === selectedDateIso
               }}
               modifiersClassNames={{
-                hasSlots: 'after:absolute after:bottom-1 after:h-1.5 after:w-1.5 after:bg-[var(--success)] after:rounded-full after:content-[\'\']',
-                fullyBooked: 'after:absolute after:bottom-1 after:h-1.5 after:w-1.5 after:bg-[var(--error)] after:rounded-full after:content-[\'\']',
+                hasSlots: '[&_.rdp-day_button]:after:pointer-events-none [&_.rdp-day_button]:after:absolute [&_.rdp-day_button]:after:bottom-1 [&_.rdp-day_button]:after:start-1/2 [&_.rdp-day_button]:after:z-10 [&_.rdp-day_button]:after:size-[3px] [&_.rdp-day_button]:after:-translate-x-1/2 [&_.rdp-day_button]:after:rounded-full [&_.rdp-day_button]:after:bg-[var(--success)]',
+                fullyBooked: '[&_.rdp-day_button]:after:pointer-events-none [&_.rdp-day_button]:after:absolute [&_.rdp-day_button]:after:bottom-1 [&_.rdp-day_button]:after:start-1/2 [&_.rdp-day_button]:after:z-10 [&_.rdp-day_button]:after:size-[3px] [&_.rdp-day_button]:after:-translate-x-1/2 [&_.rdp-day_button]:after:rounded-full [&_.rdp-day_button]:after:bg-[var(--error)]',
                 selected: 'bg-[var(--primary)] text-white'
               }}
               classNames={{
