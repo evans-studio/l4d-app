@@ -22,7 +22,7 @@ export const Dialog: React.FC<DialogProps> = ({ open, onOpenChange, children, cl
   return (
     <div className={cn('fixed inset-0 z-[60] flex items-center justify-center p-4', className)} data-ui={isNewUIEnabled() ? 'new' : 'old'}>
       <button className="absolute inset-0 bg-black/50" aria-label="Close overlay" onClick={() => onOpenChange?.(false)} />
-      <div role="dialog" aria-modal="true" className="relative w-full max-w-lg rounded-lg border border-border-secondary bg-surface-primary shadow-xl">
+      <div role="dialog" aria-modal="true" className="relative w-full max-w-lg max-h-[calc(100vh-2rem)] overflow-y-auto rounded-lg border border-border-secondary bg-surface-primary shadow-xl">
         {children}
       </div>
     </div>

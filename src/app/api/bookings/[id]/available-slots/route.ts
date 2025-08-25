@@ -64,7 +64,7 @@ export async function GET(
     minDate.setHours(minDate.getHours() + 24) // 24 hour minimum notice
 
     const maxDate = new Date()
-    maxDate.setDate(maxDate.getDate() + 90) // 90 days maximum advance
+    maxDate.setDate(maxDate.getDate() + 180) // 180 days maximum advance
 
     // Get current time for filtering today's slots
     const now = new Date()
@@ -127,7 +127,7 @@ export async function GET(
       availableSlots: slotsByDate,
       restrictions: {
         minimumNoticeHours: 24,
-        maximumAdvanceDays: 90
+        maximumAdvanceDays: 180
       }
     })
 
