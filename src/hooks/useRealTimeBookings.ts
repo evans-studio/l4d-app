@@ -83,6 +83,7 @@ export function useRealTimeBookings({
    * Fetch bookings data from API
    */
   const fetchBookings = useCallback(async (showLoading = true) => {
+    let lastUrl = ''
     try {
       if (showLoading) {
         setIsLoading(true)
@@ -101,8 +102,17 @@ export function useRealTimeBookings({
       const queryString = params.toString()
       const urlBase = `/api/admin/bookings/all${queryString ? `?${queryString}` : ''}`
       const url = `${urlBase}${urlBase.includes('?') ? '&' : '?'}_ts=${Date.now()}`
+      lastUrl = url
       
-      const response = await fetch(url, { cache: 'no-store' })
+      // Add a safety timeout so the UI doesn't hang on slow networks
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 12000)
+      let response: Response
+      try {
+        response = await fetch(url, { cache: 'no-store', signal: controller.signal })
+      } finally {
+        clearTimeout(timeoutId)
+      }
       
       if (!response.ok) {
         throw new Error(`Failed to fetch bookings: ${response.status}`)
@@ -120,6 +130,23 @@ export function useRealTimeBookings({
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch bookings'
       setError(errorMessage)
       console.error('Bookings fetch error:', err)
+
+      // Soft retry once shortly after a network failure
+      if (errorMessage.includes('Failed to fetch') || errorMessage.includes('The user aborted a request')) {
+        try {
+          const retryUrl = `${lastUrl || '/api/admin/bookings/all'}&_retry=1`
+          const retry = await fetch(retryUrl, { cache: 'no-store' })
+          if (retry.ok) {
+            const { data: bookingsData, success } = await retry.json()
+            if (success) {
+              setBookings(bookingsData || [])
+              setLastUpdated(new Date())
+              setError(null)
+              return
+            }
+          }
+        } catch (_) {}
+      }
     } finally {
       setIsLoading(false)
     }
