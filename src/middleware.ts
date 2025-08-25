@@ -98,6 +98,12 @@ export async function middleware(request: NextRequest) {
       const isVerified = user && user.email_confirmed_at
 
       if (isVerified) {
+        // If a redirect param is present, honor it to preserve the exact page
+        const redirectTarget = request.nextUrl.searchParams.get('redirect')
+        if (redirectTarget && redirectTarget.startsWith('/')) {
+          return NextResponse.redirect(new URL(redirectTarget, request.url))
+        }
+
         // Determine role to choose destination
         const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
         const supabaseService = createServerClient(
