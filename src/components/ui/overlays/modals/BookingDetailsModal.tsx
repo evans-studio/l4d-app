@@ -180,13 +180,13 @@ export const BookingDetailsModal: React.FC<BaseOverlayProps> = ({
   // Mark-as-paid is disabled in this dialog; only available from booking card
 
   const submitCancellation = async () => {
-    if (!cancelReason.trim()) return
+    const finalReason = (cancelReason || '').trim() || 'Cancelled by admin'
     try {
       setActionLoading('cancelled')
       const response = await fetch(`/api/admin/bookings/${booking!.id}/cancel`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reason: cancelReason })
+        body: JSON.stringify({ reason: finalReason })
       })
       const result = await response.json()
       if (response.ok && result?.success) {
