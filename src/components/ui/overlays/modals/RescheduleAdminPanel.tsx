@@ -34,13 +34,13 @@ export const AdminReschedulePanel: React.FC<{ bookingId: string, currentDate?: s
       try {
         setLoading(true)
         setError('')
-        // Load next 30 days of admin time slots and transform to expected shape
+        // Load next 180 days of admin time slots and transform to expected shape
         const start = new Date()
         const end = new Date()
-        end.setDate(start.getDate() + 30)
+        end.setDate(start.getDate() + 180)
         const startStr = start.toISOString().split('T')[0]!
         const endStr = end.toISOString().split('T')[0]!
-        const res = await fetch(`/api/admin/time-slots?start=${startStr}&end=${endStr}`, { cache: 'no-store' })
+        const res = await fetch(`/api/admin/time-slots?start=${startStr}&end=${endStr}&_ts=${Date.now()}`, { cache: 'no-store' })
         const json = await res.json()
         if (json?.success && Array.isArray(json.data)) {
           const slotsByDate: Record<string, TimeSlot[]> = {}
