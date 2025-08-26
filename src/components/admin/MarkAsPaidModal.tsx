@@ -105,16 +105,11 @@ export function MarkAsPaidModal({
     <Modal open={open} onClose={handleClose} className="z-[60]">
       <ModalContent size="lg" position="center" mobile="fullscreen" onClose={handleClose}>
         <ModalHeader>
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
-              <CreditCard className="w-6 h-6 text-green-600" />
-            </div>
-            <div>
-              <h2 className="text-xl font-semibold text-text-primary">Mark Booking as Paid</h2>
-              <p className="text-text-secondary text-sm">
-                {booking.booking_reference} • {booking.customer_name} • £{booking.total_price}
-              </p>
-            </div>
+          <div>
+            <h2 className="text-xl font-semibold text-text-primary">Mark Booking as Paid</h2>
+            <p className="text-text-secondary text-sm">
+              {booking.booking_reference} • {booking.customer_name} • £{booking.total_price}
+            </p>
           </div>
         </ModalHeader>
 
@@ -132,14 +127,12 @@ export function MarkAsPaidModal({
               <label className="block text-sm font-medium text-text-primary mb-3">
                 Payment Method
               </label>
-              <div className="p-4 border-2 border-brand-500 bg-brand-50 rounded-lg">
+              <div className="p-4 border border-border-secondary bg-surface-secondary rounded-lg">
                 <div className="flex items-start gap-3">
-                  <Smartphone className="w-5 h-5 mt-0.5 text-brand-600" />
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm text-brand-700">PayPal</p>
-                    <p className="text-xs mt-1 text-brand-600">PayPal.me payment received</p>
+                    <p className="font-medium text-sm text-text-primary">PayPal</p>
+                    <p className="text-xs mt-1 text-text-secondary">PayPal.me payment received</p>
                   </div>
-                  <CheckCircle className="w-5 h-5 text-brand-600 flex-shrink-0" />
                 </div>
               </div>
             </div>
@@ -206,7 +199,6 @@ export function MarkAsPaidModal({
           <Button
             onClick={handleSubmit}
             disabled={submitLoading || isLoading}
-            className="bg-green-600 hover:bg-green-700 text-white"
           >
             {submitLoading || isLoading ? (
               <>
@@ -214,19 +206,15 @@ export function MarkAsPaidModal({
                 Processing...
               </>
             ) : (
-              <>
-                <Smartphone className="w-4 h-4 mr-2" />
-                Mark as Paid via PayPal
-              </>
+              <>Mark as Paid</>
             )}
           </Button>
         </ModalFooter>
 
         
         {/* Payment Method Summary */}
-        <div className="mt-4 p-3 bg-surface-tertiary rounded-lg">
+        <div className="mt-4 p-3 bg-surface-secondary rounded-lg border border-border-secondary">
           <div className="flex items-center gap-2 text-sm">
-            <Smartphone className="w-4 h-4 text-text-secondary" />
             <span className="text-text-secondary">
               This will confirm the booking and mark PayPal payment as received
               {sendConfirmationEmail && ', then send confirmation email to customer'}
