@@ -63,8 +63,8 @@ export async function POST(
       .update({
         status: 'cancelled',
         cancelled_at: new Date().toISOString(),
+        cancelled_by: authResult.user!.id,
         cancellation_reason: reason,
-        refund_amount: refundAmount || null,
         admin_notes: cancellationNotes,
         time_slot_id: null, // Unlink from time slot
         updated_at: new Date().toISOString()

@@ -5,11 +5,9 @@ import { useDraggable } from "@dnd-kit/core"
 import { CSS } from "@dnd-kit/utilities"
 import { differenceInDays } from "date-fns"
 
-import {
-  CalendarEvent,
-  EventItem,
-  useCalendarDnd,
-} from "@/components/event-calendar/event-calendar"
+import type { CalendarEvent } from '@/components/event-calendar/types'
+import { EventItem } from '@/components/event-calendar/event-item'
+import { useCalendarDnd } from '@/components/event-calendar/calendar-dnd-context'
 
 interface DraggableEventProps {
   event: CalendarEvent
