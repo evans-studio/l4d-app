@@ -24,6 +24,7 @@ import {
 import { addMinutes, differenceInMinutes } from "date-fns"
 
 import { EventItem } from '@/components/event-calendar/event-item'
+import { logger } from '@/lib/utils/logger'
 import type { CalendarEvent } from '@/components/event-calendar/types'
 
 // Define the context type
@@ -122,7 +123,7 @@ export function CalendarDndProvider({
 
     // Add safety check for data.current
     if (!active.data.current) {
-      console.error("Missing data in drag start event", event)
+      logger.error("Missing data in drag start event", event)
       return
     }
 
@@ -310,7 +311,7 @@ export function CalendarDndProvider({
         })
       }
     } catch (error) {
-      console.error("Error in drag end handler:", error)
+      logger.error("Error in drag end handler:", error)
     } finally {
       // Always reset state
       setActiveEvent(null)

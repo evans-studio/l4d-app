@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server'
 import { ApiResponseHandler } from '@/lib/api/response'
+import { logger } from '@/lib/utils/logger'
 
 export async function GET(request: NextRequest) {
   try {
@@ -14,7 +15,7 @@ export async function GET(request: NextRequest) {
     return ApiResponseHandler.success(vehicleSizes)
 
   } catch (error) {
-    console.error('Vehicle sizes fetch error:', error)
+    logger.error('Vehicle sizes fetch error:', error)
     return ApiResponseHandler.serverError(`Failed to fetch vehicle sizes: ${error instanceof Error ? error.message : 'Unknown error'}`)
   }
 }

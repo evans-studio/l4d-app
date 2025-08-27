@@ -3,6 +3,36 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { logger } from '@/lib/utils/logger'
 
+// Types for cookie options
+interface CookieOptions {
+  name: string
+  value: string
+  domain?: string
+  expires?: Date
+  httpOnly?: boolean
+  maxAge?: number
+  path?: string
+  secure?: boolean
+  sameSite?: 'strict' | 'lax' | 'none'
+}
+
+type CookieSetOptions = Partial<Omit<CookieOptions, 'name' | 'value'>>
+
+// Types for rate limiting store
+interface RateLimitEntry {
+  count: number
+  reset: number
+}
+
+interface RateLimitStore {
+  get(key: string): RateLimitEntry | undefined
+  set(key: string, value: RateLimitEntry): void
+}
+
+declare global {
+  var __rateLimitStore: RateLimitStore | undefined
+}
+
 export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname
   const response = NextResponse.next()
@@ -13,15 +43,25 @@ export async function middleware(request: NextRequest) {
     'X-Frame-Options': 'DENY',
     'X-Content-Type-Options': 'nosniff',
     'Referrer-Policy': 'strict-origin-when-cross-origin',
-    // Allow required domains; adjust if additional CDNs/providers used
+    // Strict Content Security Policy for production security
     'Content-Security-Policy': [
       "default-src 'self'",
       "img-src 'self' data: blob: https:",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https:",
-      "style-src 'self' 'unsafe-inline' https:",
-      "connect-src 'self' https: http:",
+      "script-src 'self' https:",
+      "style-src 'self' https:",
+      // Allow HTTPS and WSS for Supabase/Next real-time and APIs
+      "connect-src 'self' https: wss:",
       "font-src 'self' data: https:",
+      // Restrict framing and forms
       "frame-ancestors 'none'",
+      "object-src 'none'",
+      "base-uri 'self'",
+      // Disallow embedding by default; allow PayPal if needed later
+      "frame-src 'none'",
+      // Restrict form submissions to self and PayPal
+      "form-action 'self' https://www.paypal.com https://www.sandbox.paypal.com",
+      // Upgrade insecure requests in prod environments
+      'upgrade-insecure-requests'
     ].join('; '),
     // A conservative baseline; enable specific features as needed
     'Permissions-Policy': [
@@ -82,16 +122,14 @@ export async function middleware(request: NextRequest) {
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
         {
           cookies: {
-            get(name: string) {
-              return request.cookies.get(name)?.value
-            },
-            set(name: string, value: string, options: any) {
+            getAll: () => request.cookies.getAll(),
+            set: (name: string, value: string, options?: CookieSetOptions) => {
               response.cookies.set(name, value, options)
             },
-            remove(name: string, options: any) {
-              response.cookies.set(name, '', { ...options, maxAge: 0 })
+            remove: (name: string, options?: CookieSetOptions) => {
+              response.cookies.set(name, '', { ...(options || {}), maxAge: 0 })
             },
-          },
+          } as unknown as Parameters<typeof createServerClient>[2]['cookies'],
         }
       )
 
@@ -117,7 +155,7 @@ export async function middleware(request: NextRequest) {
           process.env.NEXT_PUBLIC_SUPABASE_URL!,
           serviceKey!,
           {
-            cookies: { get: () => null, set: () => {}, remove: () => {} },
+            cookies: { get: () => null, set: () => {}, remove: () => {} } as { get(): null; set(): void; remove(): void },
             auth: { autoRefreshToken: false, persistSession: false }
           }
         )
@@ -154,16 +192,14 @@ export async function middleware(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get(name: string) {
-          return request.cookies.get(name)?.value
-        },
-        set(name: string, value: string, options: any) {
+        getAll: () => request.cookies.getAll(),
+        set: (name: string, value: string, options?: CookieSetOptions) => {
           response.cookies.set(name, value, options)
         },
-        remove(name: string, options: any) {
-          response.cookies.set(name, '', { ...options, maxAge: 0 })
+        remove: (name: string, options?: CookieSetOptions) => {
+          response.cookies.set(name, '', { ...(options || {}), maxAge: 0 })
         },
-      },
+      } as unknown as Parameters<typeof createServerClient>[2]['cookies'],
     }
   )
 
@@ -187,7 +223,7 @@ export async function middleware(request: NextRequest) {
         get: () => null,  // No cookies for service client
         set: () => {},    // No cookie setting
         remove: () => {}  // No cookie removal
-      },
+      } as { get(): null; set(): void; remove(): void },
       auth: {
         autoRefreshToken: false,
         persistSession: false
@@ -205,9 +241,8 @@ export async function middleware(request: NextRequest) {
       const windowMs = 5 * 60 * 1000 // 5 minutes
       const maxRequests = 200
       // Use global store to persist within a single server process
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const store: any = (globalThis as any).__rateLimitStore || ((globalThis as any).__rateLimitStore = new Map<string, { count: number, reset: number }>())
-      const entry = store.get(key) as { count: number, reset: number } | undefined
+      const store: RateLimitStore = globalThis.__rateLimitStore || (globalThis.__rateLimitStore = new Map<string, RateLimitEntry>() as RateLimitStore)
+      const entry = store.get(key)
       if (!entry || now > entry.reset) {
         store.set(key, { count: 1, reset: now + windowMs })
       } else {
@@ -295,17 +330,53 @@ export async function middleware(request: NextRequest) {
     isAdminPath: path.startsWith('/admin/')
   })
 
-  // Role-based access control - defer admin checks to CSR guard to prevent SSR flicker
+  // Role-based access control - enforce admin access at middleware level for security
   if (path.startsWith('/admin/')) {
-    // Let the client-side AdminRoute gate access to avoid server-side redirects on refresh
-    logger.debug('Middleware: Deferring admin role enforcement to CSR guard', { userRole })
+    if (userRole !== 'admin' && userRole !== 'super_admin') {
+      logger.security('Unauthorized admin access attempt', { 
+        userId: user.id,
+        email: user.email,
+        userRole,
+        path,
+        ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'
+      })
+      
+      // Redirect to appropriate dashboard with error message
+      const redirectUrl = new URL('/dashboard', request.url)
+      redirectUrl.searchParams.set('error', 'admin-access-denied')
+      return NextResponse.redirect(redirectUrl)
+    }
     
-    // if (userRole !== 'admin' && userRole !== 'super_admin') {
-    //   logger.debug('Middleware: Redirecting to dashboard - role not allowed', { userRole })
-    //   return NextResponse.redirect(new URL('/dashboard', request.url))
-    // }
-    
-    logger.debug('Middleware: Admin access granted (bypassed)', { userRole })
+    logger.security('Admin access granted', { 
+      userId: user.id,
+      email: user.email,
+      userRole,
+      path 
+    })
+  }
+
+  // Also enforce admin access for admin API routes
+  if (path.startsWith('/api/admin/')) {
+    if (userRole !== 'admin' && userRole !== 'super_admin') {
+      logger.security('Unauthorized admin API access attempt', { 
+        userId: user.id,
+        email: user.email,
+        userRole,
+        path,
+        ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'
+      })
+      
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: { 
+            message: 'Admin access required', 
+            code: 'ADMIN_ACCESS_DENIED' 
+          } 
+        },
+        { status: 403 }
+      )
+    }
   }
 
   // Do not auto-redirect admins off customer pages on refresh; allow CSR to handle

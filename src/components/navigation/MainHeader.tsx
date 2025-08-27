@@ -7,6 +7,7 @@ import { ResponsiveLogo } from '@/components/ui/primitives/Logo'
 import { MenuIcon, XIcon, PhoneIcon, MailIcon, User, Settings, LogOut, Home } from 'lucide-react'
 import Link from 'next/link'
 import { isNewUIEnabled } from '@/lib/config/feature-flags'
+import { logger } from '@/lib/utils/logger'
 
 export function MainHeader() {
   const router = useRouter()
@@ -38,7 +39,7 @@ export function MainHeader() {
           setProfile(null)
         }
       } catch (error) {
-        console.error('Auth check failed:', error)
+        logger.error('Auth check failed:', error)
         setIsAuthenticated(false)
         setProfile(null)
       } finally {

@@ -35,7 +35,7 @@ export function TimeSlotSelection() {
     return startOfMonth(addDays(today, 1))
   })
 
-  const [timeSlots, setTimeSlots] = useState<any[]>([])
+  const [timeSlots, setTimeSlots] = useState<Array<{ id: string; start_time: string; is_available: boolean }>>([])
   const [slotsLoading, setSlotsLoading] = useState(false)
   const [slotsError, setSlotsError] = useState<string | null>(null)
 

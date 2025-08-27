@@ -16,6 +16,7 @@ import { UserDetails } from '@/components/booking/steps/UserDetails';
 import { PricingConfirmation } from '@/components/booking/steps/PricingConfirmation';
 import { Card, CardContent, CardHeader } from '@/components/ui/composites/Card';
 import { ArrowLeft, Phone, User, LogIn, Mail, Shield, CheckCircle } from 'lucide-react';
+import { logger } from '@/lib/utils/logger'
 
 function BookingPageContent(): React.JSX.Element {
   const router = useRouter();
@@ -69,7 +70,7 @@ function BookingPageContent(): React.JSX.Element {
     if (!isExplicitRebooking && hasExistingData && !serviceId) {
       if (process.env.NODE_ENV !== 'production') {
         // eslint-disable-next-line no-console
-        console.log('🔄 Detected fresh booking attempt with stale data - resetting flow');
+        logger.debug('🔄 Detected fresh booking attempt with stale data - resetting flow');
       }
       resetFlow();
     }
@@ -123,7 +124,7 @@ function BookingPageContent(): React.JSX.Element {
           setProfile(null);
         }
       } catch (error) {
-        console.error('Auth check failed:', error);
+        logger.error('Auth check failed:', error);
         setIsAuthenticated(false);
         setProfile(null);
       } finally {
@@ -170,7 +171,7 @@ function BookingPageContent(): React.JSX.Element {
             }
           }
         } catch (error) {
-          console.error('❌ Failed to pre-populate service:', error);
+          logger.error('❌ Failed to pre-populate service:', error);
         }
       };
       

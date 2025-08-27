@@ -6,7 +6,8 @@ import { AdminLayout } from '@/components/layouts/AdminLayout'
 import { AdminRoute } from '@/components/ProtectedRoute'
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb'
 import { Button } from '@/components/ui/primitives/Button'
-import { 
+import { logger } from '@/lib/utils/logger'
+import {
   DollarSignIcon,
   TrendingUpIcon,
   TrendingDownIcon,
@@ -118,7 +119,7 @@ function ServicePricingPage() {
         }
       }
     } catch (error) {
-      console.error('Failed to load pricing data:', error)
+      logger.error('Failed to load pricing data:', error instanceof Error ? error : undefined)
     } finally {
       setIsLoading(false)
     }
@@ -163,7 +164,7 @@ function ServicePricingPage() {
         }
       }
     } catch (error) {
-      console.error('Failed to save pricing matrix:', error)
+      logger.error('Failed to save pricing matrix:', error instanceof Error ? error : undefined)
     } finally {
       setIsSaving(false)
     }

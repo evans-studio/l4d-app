@@ -145,7 +145,8 @@ async function getPostcodeCoordinates(postcode: string): Promise<PostcodeCoordin
     
     return null
   } catch (error) {
-    console.error('Error geocoding postcode:', error)
+    const { logger } = await import('@/lib/utils/logger')
+    logger.warn('Error geocoding postcode', error instanceof Error ? error : undefined)
     return null
   }
 }
@@ -179,7 +180,8 @@ export async function calculatePostcodeDistance(postcode: string): Promise<Dista
       surchargeAmount
     }
   } catch (error) {
-    console.error('Error calculating postcode distance:', error)
+    const { logger } = await import('@/lib/utils/logger')
+    logger.error('Error calculating postcode distance', error instanceof Error ? error : undefined)
     
     // Fallback - assume outside free radius
     return {

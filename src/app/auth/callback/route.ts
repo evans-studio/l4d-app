@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/middleware'
+import { logger } from '@/lib/utils/logger'
+import { env } from '@/lib/config/environment'
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
@@ -10,7 +12,7 @@ export async function GET(request: NextRequest) {
 
   // Handle OAuth errors
   if (error) {
-    console.error('Auth callback error:', error, errorDescription)
+    logger.error('Auth callback error', new Error(error), errorDescription ? { description: errorDescription } : undefined)
     return NextResponse.redirect(
       new URL(`/auth/login?error=${encodeURIComponent(errorDescription || error)}`, request.url)
     )
@@ -18,7 +20,7 @@ export async function GET(request: NextRequest) {
 
   // Handle missing code parameter
   if (!code) {
-    console.error('Auth callback missing code parameter')
+    logger.error('Auth callback missing code parameter')
     return NextResponse.redirect(
       new URL('/auth/login?error=missing_code', request.url)
     )
@@ -32,27 +34,22 @@ export async function GET(request: NextRequest) {
     const { data: authData, error: authError } = await supabase.auth.exchangeCodeForSession(code)
     
     if (authError) {
-      console.error('Auth callback exchange error:', authError)
+      logger.error('Auth callback exchange error', authError)
       return NextResponse.redirect(
         new URL(`/auth/login?error=${encodeURIComponent(authError.message)}`, request.url)
       )
     }
 
     if (!authData?.user) {
-      console.error('Auth callback: No user returned after exchange')
+      logger.error('Auth callback: No user returned after exchange')
       return NextResponse.redirect(
         new URL('/auth/login?error=no_user', request.url)
       )
     }
 
-    // Determine role based on email address (for both existing and new profiles)
-    const adminEmails = [
-      'zell@love4detailing.com',
-      'paul@evans-studio.co.uk'
-    ]
-    
-    const userRole = adminEmails.includes(authData.user.email!)
-      ? (authData.user.email === 'paul@evans-studio.co.uk' ? 'super_admin' : 'admin')
+    // Determine role based on configured admin emails
+    const userRole = env.auth.adminEmails.includes((authData.user.email || '').toLowerCase())
+      ? (authData.user.email?.toLowerCase() === 'paul@evans-studio.co.uk' ? 'super_admin' : 'admin')
       : 'customer'
 
     // Check if user has a profile, create one if needed
@@ -65,7 +62,7 @@ export async function GET(request: NextRequest) {
     if (profileError && profileError.code === 'PGRST116') {
       // Profile doesn't exist - this shouldn't happen if the trigger is working
       // But let's try to create one as fallback
-      console.log('Profile not found, creating manually for user:', authData.user.email)
+      logger.debug('Profile not found, creating manually for user', { email: authData.user.email })
       
       const { error: createProfileError } = await supabase
         .from('user_profiles')
@@ -79,31 +76,31 @@ export async function GET(request: NextRequest) {
         })
 
       if (createProfileError) {
-        console.error('Failed to create user profile manually:', createProfileError)
+        logger.error('Failed to create user profile manually', createProfileError)
         
         // If it's a duplicate key error, the trigger probably worked
         if (createProfileError.code === '23505') {
-          console.log('Profile already exists (created by trigger), continuing...')
+          logger.debug('Profile already exists (created by trigger), continuing...')
         } else {
-          console.error('Profile creation failed with error:', createProfileError)
+          logger.error('Profile creation failed with error', createProfileError)
           // Continue anyway - user can still access basic features
         }
       }
     } else if (profileError) {
-      console.error('Error checking user profile:', profileError)
+      logger.error('Error checking user profile', profileError)
       // Continue anyway - user can still access the app
     }
 
     // If we have an existing profile but wrong role, update it for admin users
     if (profile && ['admin', 'super_admin'].includes(userRole) && profile.role !== userRole) {
-      console.log(`Updating role for ${authData.user.email} from ${profile.role} to ${userRole}`)
+      logger.debug(`Updating role for ${authData.user.email} from ${profile.role} to ${userRole}`)
       await supabase
         .from('user_profiles')
         .update({ role: userRole })
         .eq('id', authData.user.id)
     }
 
-    console.log(`Auth callback successful for user ${authData.user.email}`)
+    logger.debug(`Auth callback successful for user ${authData.user.email}`)
     
     // If no specific redirect was requested, redirect admin users to admin dashboard
     if (next === '/dashboard') {
@@ -125,7 +122,7 @@ export async function GET(request: NextRequest) {
     return finalResponse
 
   } catch (error) {
-    console.error('Auth callback unexpected error:', error)
+    logger.error('Auth callback unexpected error:', error)
     return NextResponse.redirect(
       new URL('/auth/login?error=callback_failed', request.url)
     )

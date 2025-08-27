@@ -13,6 +13,7 @@ import {
   Gauge
 } from 'lucide-react'
 import { detectVehicleSizeSync, getSizeInfo } from '@/lib/utils/vehicle-size'
+import { logger } from '@/lib/utils/logger'
 
 interface VehicleCardProps {
   vehicle: {
@@ -38,7 +39,9 @@ interface VehicleCardProps {
   }
   variant?: 'compact' | 'detailed'
   showActions?: boolean
-  onEdit?: (vehicle: any) => void
+  onEdit?: {
+    bivarianceHack(vehicle: VehicleCardProps['vehicle']): void
+  }['bivarianceHack']
   onDelete?: (vehicleId: string) => void
   onSetDefault?: (vehicleId: string) => void
 }
@@ -92,7 +95,7 @@ export function VehicleCard({
     try {
       await onDelete(vehicle.id)
     } catch (error) {
-      console.error('Delete failed:', error)
+      logger.error('Delete failed:', error)
     } finally {
       setIsDeleting(false)
     }
@@ -104,7 +107,7 @@ export function VehicleCard({
     try {
       await onSetDefault(vehicle.id)
     } catch (error) {
-      console.error('Set default failed:', error)
+      logger.error('Set default failed:', error)
     } finally {
       setIsSettingDefault(false)
     }

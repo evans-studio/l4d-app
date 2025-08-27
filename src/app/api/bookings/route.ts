@@ -1,11 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClientFromRequest } from '@/lib/supabase/server'
 import { ApiResponse } from '@/types/booking'
-
-const ADMIN_EMAILS = [
-  'zell@love4detailing.com',
-  'paul@evans-studio.co.uk'
-]
+import { logger } from '@/lib/utils/logger'
+import { env } from '@/lib/config/environment'
 
 export async function GET(request: NextRequest): Promise<NextResponse<ApiResponse>> {
   try {
@@ -51,8 +48,8 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
       }
 
       profile = userProfile
-      // Determine if user is admin
-      isAdmin = profile.role === 'admin' || ADMIN_EMAILS.includes(profile.email.toLowerCase())
+      // Determine if user is admin via role or configured admin emails
+      isAdmin = profile.role === 'admin' || env.auth.adminEmails.includes(profile.email.toLowerCase())
     }
 
     // Build query
@@ -129,7 +126,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
     const { data: bookings, error: bookingsError } = await query
 
     if (bookingsError) {
-      console.error('Error fetching bookings:', bookingsError)
+      logger.error('Error fetching bookings:', bookingsError)
       return NextResponse.json({
         success: false,
         error: { message: 'Failed to fetch bookings', code: 'DATABASE_ERROR' }
@@ -137,26 +134,46 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
     }
 
     // Transform the data for frontend consumption
-    const transformedBookings = bookings?.map((booking: any) => {
-      const firstService = booking.booking_services?.[0]
-      const vehicleRel = booking.customer_vehicles?.[0]
-      const vehicleSnap = booking.vehicle_details
-      const addressRel = booking.customer_addresses?.[0]
-      const addressSnap = booking.service_address
+    type BookingRowLite = {
+      id: string
+      booking_reference: string
+      customer_id: string
+      scheduled_date: string
+      scheduled_start_time: string
+      scheduled_end_time: string
+      status: string
+      total_price: number
+      special_instructions?: string
+      pricing_breakdown?: unknown
+      payment_status: string
+      payment_deadline?: string
+      created_at: string
+      booking_services?: Array<{ service_details?: { name?: string; short_description?: string; category?: string } }>
+      customer_vehicles?: Array<{ make?: string; model?: string; year?: number; color?: string }>
+      vehicle_details?: { make?: string; model?: string; year?: number; color?: string }
+      customer_addresses?: Array<{ name?: string; address_line_1?: string; address_line_2?: string; city?: string; county?: string; postal_code?: string; country?: string }>
+      service_address?: { address_line_1?: string; address_line_2?: string; city?: string; county?: string; postal_code?: string; country?: string }
+    }
+    const transformedBookings = bookings?.map((booking: BookingRowLite) => {
+      const firstService = booking?.booking_services?.[0]
+      const vehicleRel = booking?.customer_vehicles?.[0]
+      const vehicleSnap = booking?.vehicle_details
+      const addressRel = booking?.customer_addresses?.[0]
+      const addressSnap = booking?.service_address
       return {
-        id: booking.id,
-        booking_reference: booking.booking_reference,
-        customer_id: booking.customer_id,
-        scheduled_date: booking.scheduled_date,
-        scheduled_start_time: booking.scheduled_start_time,
-        scheduled_end_time: booking.scheduled_end_time,
-        status: booking.status,
-        total_price: booking.total_price,
-        pricing_breakdown: booking.pricing_breakdown,
-        special_instructions: booking.special_instructions,
-        payment_status: booking.payment_status,
-        payment_deadline: booking.payment_deadline,
-        created_at: booking.created_at,
+        id: booking?.id,
+        booking_reference: booking?.booking_reference,
+        customer_id: booking?.customer_id,
+        scheduled_date: booking?.scheduled_date,
+        scheduled_start_time: booking?.scheduled_start_time,
+        scheduled_end_time: booking?.scheduled_end_time,
+        status: booking?.status,
+        total_price: booking?.total_price,
+        pricing_breakdown: booking?.pricing_breakdown,
+        special_instructions: booking?.special_instructions,
+        payment_status: booking?.payment_status,
+        payment_deadline: booking?.payment_deadline,
+        created_at: booking?.created_at,
         service: firstService ? {
           name: firstService.service_details?.name || 'Vehicle Detailing Service',
           short_description: firstService.service_details?.short_description || '',
@@ -219,7 +236,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
     })
 
   } catch (error) {
-    console.error('Admin bookings API error:', error)
+    logger.error('Admin bookings API error', error instanceof Error ? error : undefined)
     return NextResponse.json({
       success: false,
       error: { message: 'Internal server error', code: 'SERVER_ERROR' }

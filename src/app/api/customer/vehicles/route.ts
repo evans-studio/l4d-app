@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClientFromRequest } from '@/lib/supabase/server'
 import { getVehicleSize, getSizeInfo } from '@/lib/utils/vehicle-size'
+import { logger } from '@/lib/utils/logger'
 
 export async function GET(request: NextRequest) {
   try {
@@ -52,7 +53,7 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: false })
 
     if (vehiclesError) {
-      console.error('Vehicles fetch error:', vehiclesError)
+      logger.error('Vehicles fetch error:', vehiclesError)
       return NextResponse.json({
         success: false,
         error: { message: 'Failed to fetch vehicles', code: 'DATABASE_ERROR' }
@@ -133,7 +134,7 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Customer vehicles API error:', error)
+    logger.error('Customer vehicles API error', error instanceof Error ? error : undefined)
     return NextResponse.json({
       success: false,
       error: { message: 'Internal server error', code: 'SERVER_ERROR' }
@@ -172,7 +173,7 @@ export async function POST(request: NextRequest) {
     const vehicleData = await request.json()
     
     // Debug logging to understand what data is being sent
-    console.log('🔍 [Backend] Received vehicle data:', {
+    logger.debug('🔍 [Backend] Received vehicle data:', {
       make: vehicleData.make,
       model: vehicleData.model,
       license_plate: vehicleData.license_plate,
@@ -194,14 +195,14 @@ export async function POST(request: NextRequest) {
       if (!vehicleData.model) missingFields.push('model') 
       if (!normalizedPlate) missingFields.push('registration/license_plate')
       
-      console.error('❌ [Backend] Validation failed - missing fields:', missingFields)
+      logger.error('❌ [Backend] Validation failed - missing fields', undefined, { missingFields })
       return NextResponse.json({
         success: false,
         error: { message: `Missing required fields: ${missingFields.join(', ')}`, code: 'VALIDATION_ERROR' }
       }, { status: 400 })
     }
     
-    console.log('✅ [Backend] Validation passed')
+    logger.debug('✅ [Backend] Validation passed')
 
     // Check if this is the user's first vehicle (make it default)
     const { data: existingVehicles, error: countError } = await supabase
@@ -210,7 +211,7 @@ export async function POST(request: NextRequest) {
       .eq('user_id', profile.id)
 
     if (countError) {
-      console.error('Count vehicles error:', countError)
+      logger.error('Count vehicles error:', countError)
       return NextResponse.json({
         success: false,
         error: { message: 'Failed to check existing vehicles', code: 'DATABASE_ERROR' }
@@ -249,14 +250,14 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (insertError) {
-      console.error('❌ [Backend] Vehicle insert error:', insertError)
+      logger.error('❌ [Backend] Vehicle insert error:', insertError)
       return NextResponse.json({
         success: false,
         error: { message: 'Failed to create vehicle', code: 'DATABASE_ERROR' }
       }, { status: 500 })
     }
     
-    console.log('✅ [Backend] Vehicle created successfully:', newVehicle.id)
+    logger.debug('✅ [Backend] Vehicle created successfully:', newVehicle.id)
 
     // If setting as default, unset other defaults
     if (vehicleData.set_as_default === true && !isFirstVehicle) {
@@ -298,7 +299,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Create vehicle API error:', error)
+    logger.error('Create vehicle API error', error instanceof Error ? error : undefined)
     return NextResponse.json({
       success: false,
       error: { message: 'Internal server error', code: 'SERVER_ERROR' }

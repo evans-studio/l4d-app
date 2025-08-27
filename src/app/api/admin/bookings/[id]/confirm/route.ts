@@ -3,6 +3,8 @@ import { supabaseAdmin } from '@/lib/supabase/direct'
 import { ApiResponseHandler } from '@/lib/api/response'
 import { EmailService } from '@/lib/services/email'
 import { authenticateAdmin } from '@/lib/api/auth-handler'
+import { logger } from '@/lib/utils/logger'
+import { Booking } from '@/lib/utils/booking-types'
 
 export async function POST(
   request: NextRequest,
@@ -56,7 +58,7 @@ export async function POST(
       .eq('id', id)
 
     if (updateError) {
-      console.error('Error confirming booking:', updateError)
+      logger.error('Error confirming booking:', updateError)
       return ApiResponseHandler.serverError('Failed to confirm booking')
     }
 
@@ -73,7 +75,7 @@ export async function POST(
       })
 
     if (historyError) {
-      console.error('Error adding to booking history:', historyError)
+      logger.error('Error adding to booking history:', historyError)
       // Don't fail the request for history error, just log it
     }
 
@@ -93,13 +95,13 @@ export async function POST(
         const emailResult = await emailService.sendBookingStatusUpdate(
           customer.email,
           customerName,
-          { ...booking, status: 'confirmed' } as any,
+          { ...booking, status: 'confirmed' } as Booking,
           'pending',
           'Admin confirmation'
         )
         
         if (!emailResult.success) {
-          console.error('Failed to send confirmation email:', emailResult.error)
+          logger.error('Failed to send confirmation email:', emailResult.error ? new Error(emailResult.error) : undefined)
           // Don't fail the request if email fails
         }
       }
@@ -113,7 +115,7 @@ export async function POST(
     })
 
   } catch (error) {
-    console.error('Confirm booking error:', error)
+    logger.error('Confirm booking error:', error instanceof Error ? error : undefined)
     return ApiResponseHandler.serverError('Failed to confirm booking')
   }
 }

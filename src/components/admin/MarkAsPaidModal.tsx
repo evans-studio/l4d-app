@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/primitives/Button'
 import { Input } from '@/components/ui/primitives/Input'
 import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from '@/components/ui/composites/Modal'
 import { CreditCard, Banknote, Smartphone, Building2, Loader2, CheckCircle } from 'lucide-react'
+import { logger } from '@/lib/utils/logger'
 
 interface MarkAsPaidModalProps {
   booking: {
@@ -69,7 +70,7 @@ export function MarkAsPaidModal({
         throw new Error(data.error?.message || 'Failed to mark booking as paid')
       }
 
-      console.log('✅ Booking marked as paid successfully:', data)
+      logger.debug('✅ Booking marked as paid successfully:', data)
       
       // Reset form
       setPaymentReference(booking.booking_reference)
@@ -85,7 +86,7 @@ export function MarkAsPaidModal({
       onClose()
 
     } catch (error) {
-      console.error('❌ Error marking booking as paid:', error)
+      logger.error('❌ Error marking booking as paid:', error)
       setSubmitError(error instanceof Error ? error.message : 'Failed to mark booking as paid')
     } finally {
       setSubmitLoading(false)

@@ -8,6 +8,7 @@ import { Container } from '@/components/layout/templates/PageLayout'
 import { Mail, CheckCircle, AlertCircle, RefreshCw } from 'lucide-react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase/client'
+import { logger } from '@/lib/utils/logger'
 
 function VerifyEmailPageContent() {
   const [isLoading, setIsLoading] = useState(true)
@@ -31,7 +32,7 @@ function VerifyEmailPageContent() {
           const { data: { session }, error: sessionError } = await supabase.auth.getSession()
           
           if (sessionError) {
-            console.error('Session error:', sessionError)
+            logger.error('Session error:', sessionError)
             setError('Verification failed. Please try again.')
           } else if (session?.user) {
             setIsVerified(true)
@@ -45,7 +46,7 @@ function VerifyEmailPageContent() {
             setError('Invalid or expired verification link.')
           }
         } catch (error) {
-          console.error('Verification error:', error)
+          logger.error('Verification error:', error)
           setError('Something went wrong during verification.')
         }
       } else {
@@ -87,7 +88,7 @@ function VerifyEmailPageContent() {
         setError(data.error?.message || 'Failed to send verification email')
       }
     } catch (error) {
-      console.error('Resend verification error:', error)
+      logger.error('Resend verification error:', error)
       setError('Something went wrong. Please try again.')
     } finally {
       setIsResending(false)

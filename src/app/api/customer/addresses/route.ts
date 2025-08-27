@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClientFromRequest } from '@/lib/supabase/server'
 import { createClient } from '@supabase/supabase-js'
+import { logger } from '@/lib/utils/logger'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -66,7 +67,7 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: false })
 
     if (addressesError) {
-      console.error('Addresses fetch error:', addressesError)
+      logger.error('Addresses fetch error:', addressesError)
       return NextResponse.json({
         success: false,
         error: { message: 'Failed to fetch addresses', code: 'DATABASE_ERROR' }
@@ -133,7 +134,7 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Customer addresses API error:', error)
+    logger.error('Customer addresses API error', error instanceof Error ? error : undefined)
     return NextResponse.json({
       success: false,
       error: { message: 'Internal server error', code: 'SERVER_ERROR' }
@@ -199,7 +200,7 @@ export async function POST(request: NextRequest) {
           }
         }
       } catch (distanceError) {
-        console.error('Distance calculation failed:', distanceError)
+        logger.error('Distance calculation failed', distanceError instanceof Error ? distanceError : undefined)
         // Continue without distance - it's not critical for address creation
       }
     }
@@ -211,7 +212,7 @@ export async function POST(request: NextRequest) {
       .eq('user_id', profile.id)
 
     if (countError) {
-      console.error('Count addresses error:', countError)
+      logger.error('Count addresses error:', countError)
       return NextResponse.json({
         success: false,
         error: { message: 'Failed to check existing addresses', code: 'DATABASE_ERROR' }
@@ -248,7 +249,7 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (insertError) {
-      console.error('Address insert error:', insertError)
+      logger.error('Address insert error:', insertError)
       return NextResponse.json({
         success: false,
         error: { message: 'Failed to create address', code: 'DATABASE_ERROR' }
@@ -286,7 +287,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Create address API error:', error)
+    logger.error('Create address API error', error instanceof Error ? error : undefined)
     return NextResponse.json({
       success: false,
       error: { message: 'Internal server error', code: 'SERVER_ERROR' }

@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import { createClientFromRequest } from '@/lib/supabase/server'
 import { ApiResponseHandler } from '@/lib/api/response'
+import { logger } from '@/lib/utils/logger'
 
 export async function POST(request: NextRequest) {
   try {
@@ -23,7 +24,7 @@ export async function POST(request: NextRequest) {
     })
     
   } catch (error) {
-    console.error('Session refresh error:', error)
+    logger.error('Session refresh error', error instanceof Error ? error : undefined)
     return ApiResponseHandler.serverError('Failed to refresh session')
   }
 }

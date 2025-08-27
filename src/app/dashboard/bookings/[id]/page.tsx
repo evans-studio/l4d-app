@@ -9,7 +9,8 @@ import { CustomerLayout } from '@/components/layout/templates/CustomerLayout'
 import { Container } from '@/components/layout/templates/PageLayout'
 import { CustomerRoute } from '@/components/ProtectedRoute'
 import { ConfirmDialog } from '@/components/ui/overlays/modals/ConfirmDialog'
-import { 
+import { logger } from '@/lib/utils/logger'
+import {
   ArrowLeft,
   Calendar,
   Clock,
@@ -165,7 +166,7 @@ export default function BookingDetailsPage({ params }: { params: Promise<{ id: s
           if (data.success) {
             setBooking(data.data)
           } else {
-            console.error('Failed to fetch booking:', data.error)
+            logger.error('Failed to fetch booking:', data.error)
             router.push('/dashboard')
           }
         } else if (response.status === 404) {
@@ -173,7 +174,7 @@ export default function BookingDetailsPage({ params }: { params: Promise<{ id: s
         }
 
       } catch (error) {
-        console.error('Failed to fetch booking details:', error)
+        logger.error('Failed to fetch booking details:', error)
         router.push('/dashboard')
       } finally {
         setIsLoading(false)
@@ -244,7 +245,7 @@ export default function BookingDetailsPage({ params }: { params: Promise<{ id: s
         }
       }
     } catch (error) {
-      console.error('Failed to cancel booking:', error)
+      logger.error('Failed to cancel booking:', error)
     } finally {
       setIsCancelling(false)
     }

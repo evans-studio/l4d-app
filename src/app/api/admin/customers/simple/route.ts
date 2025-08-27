@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { logger } from '@/lib/utils/logger'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -9,7 +10,7 @@ const supabaseService = createClient(supabaseUrl, supabaseServiceKey)
 
 export async function GET(request: NextRequest) {
   try {
-    console.log('Simple customers API: Fetching customer profiles...')
+    logger.debug('Simple customers API: Fetching customer profiles...')
 
     // Get all customer profiles - simple and direct
     const { data: customerProfiles, error: profilesError } = await supabaseService
@@ -29,13 +30,13 @@ export async function GET(request: NextRequest) {
       .eq('is_active', true)
       .order('created_at', { ascending: false })
 
-    console.log('Simple customers API result:', { 
+    logger.debug('Simple customers API result:', { 
       count: customerProfiles?.length || 0, 
       error: profilesError 
     })
 
     if (profilesError) {
-      console.error('Error fetching customer profiles:', profilesError)
+      logger.error('Error fetching customer profiles:', profilesError)
       return NextResponse.json({
         success: false,
         error: { message: 'Failed to fetch customers', code: profilesError.code }
@@ -49,7 +50,7 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Simple customers API exception:', error)
+    logger.error('Simple customers API exception:', error instanceof Error ? error : undefined)
     return NextResponse.json({
       success: false,
       error: { message: 'Internal server error' }

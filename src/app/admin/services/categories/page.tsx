@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/primitives/Button'
 import { AdminLayout } from '@/components/layouts/AdminLayout'
 import { AdminRoute } from '@/components/ProtectedRoute'
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb'
-import { 
+import { logger } from '@/lib/utils/logger'
+import {
   TrashIcon,
   TagIcon,
   AlertCircleIcon,
@@ -294,7 +295,7 @@ function ServiceCategoriesPage() {
         setError('Failed to load categories')
       }
     } catch (error) {
-      console.error('Failed to fetch categories:', error)
+      logger.error('Failed to fetch categories:', error instanceof Error ? error : undefined)
       setError('Failed to load categories')
     } finally {
       setIsLoading(false)
@@ -341,7 +342,7 @@ function ServiceCategoriesPage() {
         setError(data.error?.message || 'Failed to save category')
       }
     } catch (error) {
-      console.error('Failed to save category:', error)
+      logger.error('Failed to save category:', error instanceof Error ? error : undefined)
       setError('Failed to save category')
     } finally {
       setIsModalLoading(false)
@@ -373,7 +374,7 @@ function ServiceCategoriesPage() {
         setShowDeleteModal(false)
       }
     } catch (error) {
-      console.error('Failed to delete category:', error)
+      logger.error('Failed to delete category:', error instanceof Error ? error : undefined)
       setError('Failed to delete category')
       setShowDeleteModal(false)
     } finally {
@@ -393,7 +394,7 @@ function ServiceCategoriesPage() {
         fetchCategories()
       }
     } catch (error) {
-      console.error('Failed to toggle category status:', error)
+      logger.error('Failed to toggle category status:', error instanceof Error ? error : undefined)
     }
   }
 

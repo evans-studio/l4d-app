@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server'
 import vehicleData from '@/data/vehicle-size-data.json'
+import { logger } from '@/lib/utils/logger'
 
 export async function GET() {
   try {
-    console.log('🚗 Vehicle data API called, loading vehicle size data...')
-    console.log(`📊 Vehicle data contains ${vehicleData.vehicles?.length || 0} makes`)
+    logger.debug('🚗 Vehicle data API called, loading vehicle size data...')
+    logger.debug(`📊 Vehicle data contains ${vehicleData.vehicles?.length || 0} makes`)
     
     // Return the vehicle data with proper API response format
     return NextResponse.json({
@@ -17,7 +18,7 @@ export async function GET() {
       }
     })
   } catch (error) {
-    console.error('❌ Error loading vehicle data:', error)
+    logger.error('❌ Error loading vehicle data:', error)
     
     return NextResponse.json(
       {

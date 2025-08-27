@@ -13,11 +13,12 @@ export function FadeIn({ children, delayMs = 0, as = 'div', className, ...rest }
   const ref = React.useRef<HTMLElement | null>(null)
 
   // Framer Motion path (preferred)
-  const MotionTag = (m as any)[as] || (m as any).div
+  const motionDict = m as unknown as Record<string, React.ComponentType<any>>
+  const MotionTag = motionDict[as] || motionDict.div
   if (MotionTag) {
     return (
       <MotionTag
-        ref={ref as any}
+        ref={ref as unknown as React.Ref<HTMLElement>}
         className={className}
         initial={false}
         whileInView={{ opacity: 1, y: 0 }}
@@ -30,12 +31,8 @@ export function FadeIn({ children, delayMs = 0, as = 'div', className, ...rest }
     )
   }
 
-  const Component = as as any
-  return (
-    <Component ref={ref as any} className={className} {...rest}>
-      {children}
-    </Component>
-  )
+  const Component = as as keyof React.JSX.IntrinsicElements
+  return React.createElement(Component as React.ElementType, { ref: ref as unknown as React.Ref<HTMLElement>, className, ...rest }, children)
 }
 
 

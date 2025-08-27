@@ -1,3 +1,4 @@
+import { logger } from '@/lib/utils/logger'
 /**
  * Google Analytics 4 Integration for Love4Detailing
  * 
@@ -20,7 +21,7 @@ export const GA4_CONFIG = {
 // GA4 Event Types
 export interface GA4Event {
   event_name: string
-  event_parameters?: Record<string, any>
+  event_parameters?: Record<string, unknown>
 }
 
 // Booking-specific event interfaces
@@ -63,7 +64,7 @@ export class GoogleAnalytics {
   private async initializeGA4() {
     if (this.isInitialized || !GA4_CONFIG.measurementId || GA4_CONFIG.measurementId === 'G-PLACEHOLDER') {
       if (this.debugMode) {
-        console.log('📊 GA4: Skipping initialization (no measurement ID or already initialized)')
+        logger.debug('📊 GA4: Skipping initialization (no measurement ID or already initialized)')
       }
       return
     }
@@ -83,11 +84,11 @@ export class GoogleAnalytics {
         this.isInitialized = true
         
         if (this.debugMode) {
-          console.log('📊 GA4: Initialized successfully', GA4_CONFIG.measurementId)
+          logger.debug('📊 GA4: Initialized successfully', { measurementId: GA4_CONFIG.measurementId })
         }
       }
     } catch (error) {
-      console.error('📊 GA4: Initialization failed:', error)
+      logger.error('📊 GA4: Initialization failed:', error instanceof Error ? error : undefined)
     }
   }
 
@@ -138,7 +139,7 @@ export class GoogleAnalytics {
     }
 
     if (this.debugMode) {
-      console.log(`📊 GA4: Consent ${hasConsent ? 'granted' : 'denied'}`)
+      logger.debug(`📊 GA4: Consent ${hasConsent ? 'granted' : 'denied'}`)
     }
   }
 
@@ -157,14 +158,14 @@ export class GoogleAnalytics {
     window.gtag('event', 'page_view', pageData)
 
     if (this.debugMode) {
-      console.log('📊 GA4: Page View', pageData)
+      logger.debug('📊 GA4: Page View', pageData)
     }
   }
 
   /**
    * Track custom event
    */
-  public trackEvent(eventName: string, parameters: Record<string, any> = {}) {
+  public trackEvent(eventName: string, parameters: Record<string, unknown> = {}) {
     if (!this.canTrack()) return
 
     // Sanitize parameters (remove sensitive data)
@@ -173,7 +174,7 @@ export class GoogleAnalytics {
     window.gtag('event', eventName, sanitizedParams)
 
     if (this.debugMode) {
-      console.log(`📊 GA4: Event - ${eventName}`, sanitizedParams)
+      logger.debug(`📊 GA4: Event - ${eventName}`, sanitizedParams)
     }
   }
 
@@ -260,7 +261,7 @@ export class GoogleAnalytics {
     })
 
     if (this.debugMode) {
-      console.log('📊 GA4: Purchase', { bookingId, totalValue, items })
+      logger.debug('📊 GA4: Purchase', { bookingId, totalValue, items })
     }
   }
 
@@ -274,7 +275,7 @@ export class GoogleAnalytics {
   /**
    * Sanitize parameters to remove sensitive data
    */
-  private sanitizeParameters(params: Record<string, any>): Record<string, any> {
+  private sanitizeParameters(params: Record<string, unknown>): Record<string, unknown> {
     const sanitized = { ...params }
     
     // Remove or hash sensitive fields
@@ -375,7 +376,7 @@ export const bookingAnalytics = analytics ? new BookingFlowAnalytics(analytics) 
 // Extend Window interface for gtag
 declare global {
   interface Window {
-    gtag: (...args: any[]) => void
-    dataLayer: any[]
+    gtag: (...args: unknown[]) => void
+    dataLayer: unknown[]
   }
 }

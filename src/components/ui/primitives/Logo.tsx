@@ -4,6 +4,7 @@ import React from 'react';
 import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
+import { logger } from '@/lib/utils/logger'
 
 const logoVariants = cva(
   'select-none transition-all duration-200',
@@ -344,7 +345,7 @@ export const LogoDemo: React.FC = () => {
             
             <div className="p-4 bg-surface-card rounded-lg border border-border-secondary">
               <p className="text-sm text-text-muted mb-3">Interactive Logo (hover me)</p>
-              <InteractiveLogo size="lg" onClick={() => console.log('Logo clicked!')} />
+              <InteractiveLogo size="lg" onClick={() => logger.debug('Logo clicked!')} />
             </div>
           </div>
         </div>

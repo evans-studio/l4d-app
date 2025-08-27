@@ -9,6 +9,7 @@ export const ServiceEditModal: React.FC<BaseOverlayProps> = ({
   onClose,
   data
 }) => {
+  const dataObj: Record<string, unknown> = data && typeof data === 'object' ? (data as Record<string, unknown>) : {}
   return (
     <BaseModal
       isOpen={isOpen}
@@ -18,7 +19,9 @@ export const ServiceEditModal: React.FC<BaseOverlayProps> = ({
     >
       <div className="py-8 text-center text-text-secondary">
         <p>Service edit modal - coming soon</p>
-        <p className="text-sm mt-2">Service ID: {data?.serviceId}</p>
+        {Boolean(dataObj.serviceId) && (
+          <p className="text-sm mt-2">Service ID: {String(dataObj.serviceId)}</p>
+        )}
       </div>
     </BaseModal>
   )

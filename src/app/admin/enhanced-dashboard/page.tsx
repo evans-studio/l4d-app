@@ -14,7 +14,8 @@ import {
   PerformanceTrends
 } from '@/components/admin/widgets'
 import { EventCalendar, type CalendarEvent } from '@/components/event-calendar'
-import { 
+import { logger } from '@/lib/utils/logger'
+import {
   CalendarIcon, 
   DollarSignIcon, 
   UsersIcon, 
@@ -159,7 +160,7 @@ function EnhancedAdminDashboard() {
       })
 
     } catch (error) {
-      console.error('Dashboard data error:', error)
+      logger.error('Dashboard data error', error instanceof Error ? error : undefined)
       setError('Failed to load dashboard data')
     } finally {
       setIsLoading(false)

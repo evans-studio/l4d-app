@@ -15,12 +15,14 @@ export const ConfirmBookingModal: React.FC<BaseOverlayProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
 
+  const dataObj: Record<string, unknown> = data && typeof data === 'object' ? (data as Record<string, unknown>) : {}
+
   const handleConfirm = async () => {
     try {
       setIsSubmitting(true)
       setError('')
 
-      const response = await fetch(`/api/admin/bookings/${data?.bookingId}/confirm`, {
+      const response = await fetch(`/api/admin/bookings/${String(dataObj.bookingId || '')}/confirm`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       })
@@ -62,9 +64,9 @@ export const ConfirmBookingModal: React.FC<BaseOverlayProps> = ({
                   The booking will appear in your schedule and the customer will receive 
                   confirmation details.
                 </p>
-                {data?.bookingReference && (
+                {Boolean(dataObj.bookingReference) && (
                   <p className="text-xs text-text-muted mt-2">
-                    Booking: {data.bookingReference}
+                    Booking: {String(dataObj.bookingReference)}
                   </p>
                 )}
               </div>

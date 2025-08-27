@@ -1,3 +1,4 @@
+import { logger } from '@/lib/utils/logger'
 /**
  * Unified vehicle size detection utility
  * Uses the same logic as the booking flow for consistency
@@ -46,7 +47,7 @@ async function loadVehicleData(): Promise<VehicleDataResponse> {
       vehicleDataCache = data
       return data
     } catch (error) {
-      console.error('❌ Error loading vehicle data:', error)
+      logger.error('❌ Error loading vehicle data:', error)
       // Return empty structure on error
       return { vehicles: [] }
     }
@@ -60,40 +61,40 @@ async function loadVehicleData(): Promise<VehicleDataResponse> {
  */
 export async function getVehicleSize(make: string, model: string): Promise<'S' | 'M' | 'L' | 'XL'> {
   try {
-    console.log(`🔍 Getting vehicle size for: ${make} ${model}`)
+    logger.debug(`🔍 Getting vehicle size for: ${make} ${model}`)
     
     if (!make || !model) {
-      console.log('❌ Missing make or model for size detection')
+      logger.debug('❌ Missing make or model for size detection')
       return 'M' // Default fallback
     }
 
     const vehicleData = await loadVehicleData()
     
     if (!vehicleData?.vehicles) {
-      console.log('❌ No vehicle data available for size detection')
+      logger.debug('❌ No vehicle data available for size detection')
       return 'M' // Default fallback
     }
     
     const vehicleMake = vehicleData.vehicles.find(v => v.make === make)
-    console.log(`🔍 Found vehicle make: ${vehicleMake ? 'yes' : 'no'}`)
+    logger.debug(`🔍 Found vehicle make: ${vehicleMake ? 'yes' : 'no'}`)
     
     if (vehicleMake?.models) {
       const vehicleModel = vehicleMake.models.find(m => m.model === model)
-      console.log(`🔍 Found vehicle model: ${vehicleModel ? 'yes' : 'no'}`)
+      logger.debug(`🔍 Found vehicle model: ${vehicleModel ? 'yes' : 'no'}`)
       
       if (vehicleModel?.size) {
         const size = vehicleModel.size as 'S' | 'M' | 'L' | 'XL'
-        console.log(`✅ Detected vehicle size: ${size} for ${make} ${model}`)
+        logger.debug(`✅ Detected vehicle size: ${size} for ${make} ${model}`)
         return size
       } else {
-        console.log(`❌ No size found for model: ${model}`)
+        logger.debug(`❌ No size found for model: ${model}`)
       }
     }
   } catch (error) {
-    console.error('❌ Error getting vehicle size:', error)
+    logger.error('❌ Error getting vehicle size:', error)
   }
   
-  console.log(`🔧 Using default size 'M' for ${make} ${model}`)
+  logger.debug(`🔧 Using default size 'M' for ${make} ${model}`)
   return 'M' // Default fallback
 }
 

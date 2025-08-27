@@ -14,6 +14,7 @@ import {
   LogOutIcon
 } from 'lucide-react'
 import { isNewUIEnabled } from '@/lib/config/feature-flags'
+import { logger } from '@/lib/utils/logger'
 
 interface DashboardHeaderProps {
   onMenuClick: () => void
@@ -30,7 +31,7 @@ export function DashboardHeader({ onMenuClick, userType }: DashboardHeaderProps)
       await logout()
       // Router push handled by logout method
     } catch (error) {
-      console.error('Logout failed:', error)
+      logger.error('Logout failed:', error)
     }
   }
 

@@ -5,6 +5,7 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 import { X, Check, AlertCircle, Clock, Star } from 'lucide-react';
 import { isNewUIEnabled } from '@/lib/config/feature-flags';
+import { logger } from '@/lib/utils/logger'
 
 const badgeVariants = cva(
   'inline-flex items-center font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
@@ -448,13 +449,13 @@ export const BadgeDemo: React.FC = () => {
         <div className="space-y-3">
           <h4 className="text-md font-medium text-gray-200">Removable Badges</h4>
           <BadgeGroup>
-            <Badge variant="primary" removable onRemove={() => console.log('Remove tag')}>
+            <Badge variant="primary" removable onRemove={() => logger.debug('Remove tag')}>
               Frontend
             </Badge>
-            <Badge variant="success" removable onRemove={() => console.log('Remove tag')}>
+            <Badge variant="success" removable onRemove={() => logger.debug('Remove tag')}>
               Approved
             </Badge>
-            <Badge variant="warning" removable onRemove={() => console.log('Remove tag')}>
+            <Badge variant="warning" removable onRemove={() => logger.debug('Remove tag')}>
               In Review
             </Badge>
           </BadgeGroup>

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClientFromRequest } from '@/lib/supabase/server'
 import { ApiResponse } from '@/types/booking'
+import { logger } from '@/lib/utils/logger'
 
 export async function GET(
   request: NextRequest,
@@ -101,7 +102,7 @@ export async function GET(
           error: { message: 'Booking not found', code: 'NOT_FOUND' }
         }, { status: 404 })
       }
-      console.error('Error fetching booking:', bookingError)
+      logger.error('Error fetching booking:', bookingError)
       return NextResponse.json({
         success: false,
         error: { message: 'Failed to fetch booking', code: 'DATABASE_ERROR' }
@@ -116,7 +117,7 @@ export async function GET(
       .single()
 
     if (customerError) {
-      console.error('Error fetching customer profile:', customerError)
+      logger.error('Error fetching customer profile:', customerError)
     }
 
     // Transform the data for frontend consumption (format expected by rebooking)
@@ -183,10 +184,10 @@ export async function GET(
       confirmed_at: booking.confirmed_at,
       
       // Detailed service breakdown from booking_services
-      booking_services: booking.booking_services?.map((service: any) => ({
-        service_details: service.service_details,
-        price: service.price,
-        estimated_duration: service.estimated_duration
+      booking_services: booking.booking_services?.map((service: { service_details?: { name?: string }; price?: number; estimated_duration?: number }) => ({
+        service_details: service?.service_details,
+        price: service?.price,
+        estimated_duration: service?.estimated_duration
       })) || []
     }
 
@@ -196,7 +197,7 @@ export async function GET(
     })
 
   } catch (error) {
-    console.error('Customer booking details API error:', error)
+    logger.error('Customer booking details API error', error instanceof Error ? error : undefined)
     return NextResponse.json({
       success: false,
       error: { message: 'Internal server error', code: 'SERVER_ERROR' }

@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase/direct'
 import { ApiResponseHandler } from '@/lib/api/response'
 import { authenticateAdmin } from '@/lib/api/auth-handler'
+import { logger } from '@/lib/utils/logger'
 
 export async function GET(request: NextRequest) {
   try {
@@ -35,7 +36,7 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: false })
 
     if (requestsError) {
-      console.error('Error fetching reschedule requests:', requestsError)
+      logger.error('Error fetching reschedule requests:', requestsError)
       return ApiResponseHandler.serverError('Failed to fetch reschedule requests')
     }
 
@@ -102,7 +103,7 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Get reschedule requests error:', error) 
+    logger.error('Get reschedule requests error:', error instanceof Error ? error : undefined) 
     return ApiResponseHandler.serverError('Failed to fetch reschedule requests')
   }
 }

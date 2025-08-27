@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/primitives/Input'
 import { Select } from '@/components/ui/primitives/Select'
 import vehicleData from '@/data/vehicle-size-data.json'
 import { formatLicensePlateInput, getRandomLicensePlateExample } from '@/lib/utils/license-plate'
+import { logger } from '@/lib/utils/logger'
 
 interface Vehicle {
   id: string
@@ -77,21 +78,21 @@ const [formData, setFormData] = useState({
 
   // Get size for selected make/model (auto-detection with duplicate handling)
   const getVehicleSize = (make: string, model: string): string => {
-    console.log('🔍 [Edit] Auto-detecting size for:', { make, model })
+    logger.debug('🔍 [Edit] Auto-detecting size for:', { make, model })
     const vehicleMake = vehicleData.vehicles.find(v => v.make === make)
     if (vehicleMake) {
       // Find the first matching model (handles duplicates by taking first occurrence)
       const vehicleModel = vehicleMake.models.find(m => m.model === model)
       if (vehicleModel) {
-        console.log('✅ [Edit] Size detected:', vehicleModel.size)
+        logger.debug('✅ [Edit] Size detected', { size: vehicleModel.size })
         return vehicleModel.size
       } else {
-        console.warn('⚠️ [Edit] Model not found in data:', model)
+        logger.warn('⚠️ [Edit] Model not found in data', { model })
       }
     } else {
-      console.warn('⚠️ [Edit] Make not found in data:', make)
+      logger.warn('⚠️ [Edit] Make not found in data', { make })
     }
-    console.warn('❌ [Edit] Size detection failed for:', { make, model })
+    logger.warn('❌ [Edit] Size detection failed for', { make, model })
     return ''
   }
 
@@ -145,10 +146,10 @@ const [formData, setFormData] = useState({
       if (result.success) {
         setVehicleSizes(result.data || [])
       } else {
-        console.error('Failed to load vehicle sizes:', result.error)
+        logger.error('Failed to load vehicle sizes', result.error instanceof Error ? result.error : undefined)
       }
     } catch (error) {
-      console.error('Failed to load vehicle sizes:', error)
+      logger.error('Failed to load vehicle sizes', error instanceof Error ? error : undefined)
     } finally {
       setIsLoading(false)
     }
@@ -156,7 +157,7 @@ const [formData, setFormData] = useState({
 
 
 
-  const handleFormChange = (field: string, value: any) => {
+  const handleFormChange = (field: string, value: unknown) => {
     setFormData(prev => {
       const newForm = { ...prev, [field]: value }
       
@@ -398,5 +399,6 @@ const [formData, setFormData] = useState({
 
 export const VehicleCreateModal: React.FC<BaseOverlayProps> = (props) => {
   // Reuse the VehicleEditModal without a vehicleId to create a new vehicle
-  return <VehicleEditModal {...props} data={{ ...props.data, vehicleId: undefined }} />
+  const base = props.data && typeof props.data === 'object' ? (props.data as Record<string, unknown>) : {}
+  return <VehicleEditModal {...props} data={{ ...base, vehicleId: undefined }} />
 }

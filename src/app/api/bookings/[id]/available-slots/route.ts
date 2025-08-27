@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import { createClientFromRequest } from '@/lib/supabase/server'
 import { ApiResponseHandler } from '@/lib/api/response'
+import { logger } from '@/lib/utils/logger'
 
 // Helper function to calculate end time
 function calculateEndTime(startTime: string, durationMinutes: number): string {
@@ -91,15 +92,15 @@ export async function GET(
     const { data: availableSlots, error: slotsError } = await query
 
     if (slotsError) {
-      console.error('Error fetching available slots:', slotsError)
+      logger.error('Error fetching available slots', slotsError instanceof Error ? slotsError : undefined)
       return ApiResponseHandler.serverError('Failed to fetch available slots')
     }
 
     // Group slots by date for better UI presentation
-    const slotsByDate: Record<string, any[]> = {}
+    const slotsByDate: Record<string, Array<{ id: string; date: string; start_time: string; end_time: string; duration_minutes: number; is_available: boolean }>> = {}
     
     if (availableSlots) {
-      availableSlots.forEach(slot => {
+      availableSlots.forEach((slot: { id: string; slot_date: string; start_time: string; is_available: boolean }) => {
         const date = slot.slot_date
         if (!slotsByDate[date]) {
           slotsByDate[date] = []
@@ -132,7 +133,7 @@ export async function GET(
     })
 
   } catch (error) {
-    console.error('Available slots error:', error)
+    logger.error('Available slots error', error instanceof Error ? error : undefined)
     return ApiResponseHandler.serverError('Failed to fetch available slots')
   }
 }

@@ -8,7 +8,8 @@ import { Button } from '@/components/ui/primitives/Button'
 import { EventCalendar, type CalendarEvent } from '@/components/event-calendar'
 import { QuickViewDialog } from '@/components/ui/overlays/modals/QuickViewDialog'
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb'
-import { 
+import { logger } from '@/lib/utils/logger'
+import {
   CalendarIcon,
   ClockIcon,
   ToggleLeftIcon,
@@ -104,13 +105,13 @@ function ScheduleCalendarContent() {
           })
           setEvents(mapped)
         } else {
-          console.error('API returned error:', data.error)
+          logger.error('API returned error:', data.error)
         }
       } else {
-        console.error('HTTP error:', response.status, response.statusText)
+        logger.error('HTTP error:', new Error(`${response.status} ${response.statusText}`))
       }
     } catch (error) {
-      console.error('Error loading time slots:', error)
+      logger.error('Error loading time slots:', error instanceof Error ? error : undefined)
     } finally {
       setIsLoading(false)
     }

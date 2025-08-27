@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import { createClientFromRequest } from '@/lib/supabase/server'
 import { ApiResponseHandler } from '@/lib/api/response'
+import { logger } from '@/lib/utils/logger'
 
 export async function GET(request: NextRequest) {
   try {
@@ -57,7 +58,7 @@ export async function GET(request: NextRequest) {
       .lte('created_at', `${endDate}T23:59:59.999Z`)
 
     if (createdError) {
-      console.error('Error fetching created bookings:', createdError)
+      logger.error('Error fetching created bookings:', createdError)
       return ApiResponseHandler.serverError('Failed to fetch analytics data')
     }
 
@@ -69,7 +70,7 @@ export async function GET(request: NextRequest) {
       .lte('created_at', `${prevEndDate}T23:59:59.999Z`)
 
     if (previousError) {
-      console.error('Error fetching previous bookings:', previousError)
+      logger.error('Error fetching previous bookings:', previousError)
     }
 
     // Calculate revenue metrics
@@ -128,7 +129,10 @@ export async function GET(request: NextRequest) {
     // Analyze services popularity
     const serviceStats = new Map<string, { bookings: number; revenue: number }>()
     
-    createdBookings?.forEach((booking: any) => {
+    createdBookings?.forEach((booking: { 
+      booking_services?: Array<{ service_details?: { name?: string } }> 
+      total_price?: number 
+    }) => {
       booking.booking_services?.forEach((bs: { service_details?: { name?: string } }) => {
         const serviceName = bs.service_details?.name || 'Unknown Service'
         const current = serviceStats.get(serviceName) || { bookings: 0, revenue: 0 }
@@ -149,8 +153,11 @@ export async function GET(request: NextRequest) {
     // Analyze top locations
     const locationStats = new Map<string, { bookings: number; revenue: number }>()
     
-    createdBookings?.forEach((booking: any) => {
-      const city = (booking.service_address as any)?.city || 'Unknown'
+    createdBookings?.forEach((booking: { 
+      service_address?: { city?: string }
+      total_price?: number 
+    }) => {
+      const city = booking.service_address?.city || 'Unknown'
       const current = locationStats.get(city) || { bookings: 0, revenue: 0 }
       locationStats.set(city, {
         bookings: current.bookings + 1,
@@ -211,7 +218,7 @@ export async function GET(request: NextRequest) {
       .lte('created_at', endDate + 'T23:59:59.999Z')
 
     if (customersError) {
-      console.error('Error fetching customers:', customersError)
+      logger.error('Error fetching customers:', customersError)
     }
 
     // Calculate customer metrics
@@ -282,7 +289,7 @@ export async function GET(request: NextRequest) {
     return ApiResponseHandler.success(analyticsData)
 
   } catch (error) {
-    console.error('Analytics error:', error)
+    logger.error('Analytics error:', error instanceof Error ? error : undefined)
     return ApiResponseHandler.serverError('Failed to fetch analytics data')
   }
 }

@@ -9,13 +9,19 @@ export const CustomerDetailsModal: React.FC<BaseOverlayProps> = ({
   onClose,
   data
 }) => {
-  const customerId: string | undefined = data?.customerId
+  const dataObj: Record<string, unknown> = data && typeof data === 'object' ? (data as Record<string, unknown>) : {}
+  const customerId: string | undefined = typeof dataObj.customerId === 'string' ? dataObj.customerId : undefined
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string>('')
-  const [customer, setCustomer] = useState<any>(null)
-  const [bookings, setBookings] = useState<any[]>([])
-  const [vehicles, setVehicles] = useState<any[]>([])
-  const [addresses, setAddresses] = useState<any[]>([])
+  type CustomerLite = { first_name?: string; last_name?: string; email?: string; phone?: string }
+  type BookingLite = { id: string; booking_reference: string; status: string }
+  type VehicleLite = { id: string; make?: string; model?: string; year?: number; license_plate?: string; color?: string }
+  type AddressLite = { id: string; address_line_1: string; city: string; postal_code?: string }
+
+  const [customer, setCustomer] = useState<CustomerLite | null>(null)
+  const [bookings, setBookings] = useState<BookingLite[]>([])
+  const [vehicles, setVehicles] = useState<VehicleLite[]>([])
+  const [addresses, setAddresses] = useState<AddressLite[]>([])
 
   useEffect(() => {
     const load = async () => {

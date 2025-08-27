@@ -4,6 +4,7 @@
  */
 
 import { format, parseISO } from 'date-fns'
+import { logger } from '@/lib/utils/logger'
 
 /**
  * Safely format a date string to avoid timezone issues
@@ -27,7 +28,7 @@ export function formatDate(dateString: string | null | undefined): string {
     
     return format(date, 'EEEE, MMMM d, yyyy')
   } catch (error) {
-    console.warn('Date formatting error:', error, 'for date:', dateString)
+    logger.warn('Date formatting error', { error: error instanceof Error ? { name: error.name, message: error.message } : undefined, dateString })
     return 'Invalid date'
   }
 }
@@ -61,7 +62,7 @@ export function formatTime(timeString: string | null | undefined): string {
     
     return 'Invalid time'
   } catch (error) {
-    console.warn('Time formatting error:', error, 'for time:', timeString)
+    logger.warn('Time formatting error', { error: error instanceof Error ? { name: error.name, message: error.message } : undefined, timeString })
     return 'Invalid time'
   }
 }
@@ -98,7 +99,7 @@ export function formatDateForEmail(dateString: string | null | undefined): strin
       day: 'numeric'
     })
   } catch (error) {
-    console.warn('Email date formatting error:', error, 'for date:', dateString)
+    logger.warn('Email date formatting error', { error: error instanceof Error ? { name: error.name, message: error.message } : undefined, dateString })
     return 'Invalid date'
   }
 }
@@ -125,7 +126,7 @@ export function formatTimeForEmail(timeString: string | null | undefined): strin
     
     return 'Invalid time'
   } catch (error) {
-    console.warn('Email time formatting error:', error, 'for time:', timeString)
+    logger.warn('Email time formatting error', { error: error instanceof Error ? { name: error.name, message: error.message } : undefined, timeString })
     return 'Invalid time'
   }
 }
@@ -134,15 +135,10 @@ export function formatTimeForEmail(timeString: string | null | undefined): strin
  * Get a time slot's start_time from the database row
  * Handles both string and object formats
  */
-export function getSlotStartTime(slot: any): string {
+export function getSlotStartTime(slot: { start_time?: string; startTime?: string } | null | undefined): string {
   if (!slot) return ''
-  
-  // If slot has start_time property (from database)
   if (slot.start_time) return slot.start_time
-  
-  // If slot has startTime property (from form data)
   if (slot.startTime) return slot.startTime
-  
   return ''
 }
 
@@ -163,7 +159,7 @@ export function calculateEndTime(startTime: string, durationMinutes: number): st
     
     return `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')}`
   } catch (error) {
-    console.warn('End time calculation error:', error)
+    logger.warn('End time calculation error', { error: error instanceof Error ? { name: error.name, message: error.message } : undefined })
     return startTime
   }
 }

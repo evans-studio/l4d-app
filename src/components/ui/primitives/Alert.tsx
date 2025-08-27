@@ -3,7 +3,8 @@
 import React, { forwardRef } from 'react'
 import { cva, type VariantProps } from 'class-variance-authority'
 import { isNewUIEnabled } from '@/lib/config/feature-flags'
-import { 
+import { logger } from '@/lib/utils/logger'
+import {
   CheckCircle, 
   AlertTriangle, 
   Info, 
@@ -280,7 +281,7 @@ export const AlertDemo = () => {
             title="Booking Failed"
             description="Unable to process your booking. Please check your details and try again."
             dismissible
-            onDismiss={() => console.log('Alert dismissed')}
+            onDismiss={() => logger.debug('Alert dismissed')}
           />
         </div>
       </div>

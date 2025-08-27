@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { ApiResponseHandler } from '@/lib/api/response'
 import { Resend } from 'resend'
 import { z } from 'zod'
+import { logger } from '@/lib/utils/logger'
 
 // Force Node.js runtime for email service compatibility
 export const runtime = 'nodejs'
@@ -23,18 +24,16 @@ export async function POST(request: NextRequest) {
 
     // Validate Resend API key
     if (!process.env.RESEND_API_KEY) {
-      console.error('RESEND_API_KEY environment variable is not set')
+      logger.error('RESEND_API_KEY environment variable is not set')
       return ApiResponseHandler.serverError('Email service not configured')
     }
 
     if (process.env.NODE_ENV !== 'production') {
-      console.log('RESEND_API_KEY exists:', process.env.RESEND_API_KEY ? 'YES' : 'NO')
-      console.log('RESEND_API_KEY length:', process.env.RESEND_API_KEY?.length || 0)
-      console.log('=== SENDING EMAIL VIA RESEND ===')
-      console.log('To:', to)
-      console.log('Subject:', subject)
-      console.log('From: Love 4 Detailing <zell@love4detailing.com>')
-      console.log('===============================')
+      logger.debug('RESEND_API_KEY exists', { exists: !!process.env.RESEND_API_KEY })
+      logger.debug('RESEND_API_KEY length', { length: process.env.RESEND_API_KEY?.length || 0 })
+      logger.debug('=== SENDING EMAIL VIA RESEND ===')
+      logger.debug('Email metadata', { to, subject, from: `Love 4 Detailing <${process.env.NEXT_PUBLIC_FROM_EMAIL || 'zell@love4detailing.com'}>` })
+      logger.debug('===============================')
     }
 
     try {
@@ -48,14 +47,13 @@ export async function POST(request: NextRequest) {
       })
 
       if (error) {
-        console.error('Resend API error:', error)
+        logger.error('Resend API error', error instanceof Error ? error : undefined)
         return ApiResponseHandler.serverError(`Email send failed: ${error.message}`)
       }
 
       if (process.env.NODE_ENV !== 'production') {
-        console.log('✅ Email sent successfully via Resend')
-        console.log('Email ID:', data?.id)
-        console.log('Full Resend Response:', data)
+        logger.debug('✅ Email sent successfully via Resend')
+        logger.debug('Email result', { id: data?.id, response: data })
       }
 
       return ApiResponseHandler.success({
@@ -66,12 +64,12 @@ export async function POST(request: NextRequest) {
       })
 
     } catch (resendError) {
-      console.error('Resend send error:', resendError)
+      logger.error('Resend send error', resendError instanceof Error ? resendError : undefined)
       return ApiResponseHandler.serverError('Failed to send email via Resend')
     }
 
   } catch (error) {
-    console.error('Email send error:', error)
+    logger.error('Email send error', error instanceof Error ? error : undefined)
     
     if (error instanceof z.ZodError) {
       const firstError = error.issues[0]

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/server'
 import { ApiResponseHandler } from '@/lib/api/response'
+import { logger } from '@/lib/utils/logger'
 
 export async function POST(request: NextRequest) {
   try {
@@ -21,12 +22,12 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (findError || !booking) {
-      console.error('Booking not found:', findError)
+      logger.error('Booking not found:', findError)
       return ApiResponseHandler.error('Booking not found', 'BOOKING_NOT_FOUND')
     }
 
     // Update payment status and booking status if payment was successful
-    const updates: any = {
+    const updates: Record<string, unknown> = {
       payment_status: paymentStatus
     }
 
@@ -41,7 +42,7 @@ export async function POST(request: NextRequest) {
       .eq('id', booking.id)
 
     if (updateError) {
-      console.error('Failed to update booking:', updateError)
+      logger.error('Failed to update booking', updateError instanceof Error ? updateError : undefined)
       return ApiResponseHandler.serverError('Failed to update booking status')
     }
 
@@ -55,7 +56,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Payment completion error:', error)
+    logger.error('Payment completion error', error instanceof Error ? error : undefined)
     return ApiResponseHandler.serverError('Failed to process payment completion')
   }
 }

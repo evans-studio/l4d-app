@@ -197,7 +197,7 @@ export function RecentActivityWidget({ recentBookings }: RecentActivityWidgetPro
                   <p className="font-bold text-brand-600 text-xl whitespace-nowrap mb-1">
                     £{booking.total_price || 0}
                   </p>
-                  <Badge variant={config.badgeColor as any} size="sm">
+                  <Badge variant={config.badgeColor as 'default' | 'primary' | 'secondary' | 'success' | 'warning' | 'error' | 'info' | 'outline' | 'ghost'} size="sm">
                     {config.label}
                   </Badge>
                 </div>

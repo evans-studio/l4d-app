@@ -6,6 +6,7 @@
  */
 
 import { analytics } from './google-analytics'
+import { logger } from '@/lib/utils/logger'
 
 // Consent storage key
 const CONSENT_STORAGE_KEY = 'love4detailing_analytics_consent'
@@ -60,7 +61,7 @@ export class ConsentManager {
         }
       }
     } catch (error) {
-      console.warn('Failed to load consent preferences:', error)
+      logger.warn('Failed to load consent preferences', error instanceof Error ? error : undefined)
     }
 
     // Use default if no valid consent found
@@ -78,7 +79,7 @@ export class ConsentManager {
     try {
       localStorage.setItem(CONSENT_STORAGE_KEY, JSON.stringify(this.consent))
     } catch (error) {
-      console.warn('Failed to save consent preferences:', error)
+      logger.warn('Failed to save consent preferences', error instanceof Error ? error : undefined)
     }
   }
 
@@ -97,7 +98,7 @@ export class ConsentManager {
     this.notifyListeners()
 
     if (process.env.NODE_ENV === 'development') {
-      console.log('🍪 Consent applied:', this.consent)
+      logger.debug('🍪 Consent applied:', this.consent)
     }
   }
 
@@ -214,7 +215,7 @@ export class ConsentManager {
       try {
         listener(this.consent!)
       } catch (error) {
-        console.error('Consent listener error:', error)
+        logger.error('Consent listener error:', error instanceof Error ? error : undefined)
       }
     })
   }

@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase/direct'
 import { ApiResponseHandler } from '@/lib/api/response'
 import { EmailService } from '@/lib/services/email'
+import { logger } from '@/lib/utils/logger'
 
 export async function POST(
   request: NextRequest,
@@ -83,7 +84,7 @@ export async function POST(
           .limit(1)
           .maybeSingle()
         if (fallbackReq) {
-          rescheduleRequest = fallbackReq as any
+          rescheduleRequest = fallbackReq as typeof rescheduleRequest
         }
       }
       if (!rescheduleRequest) {
@@ -95,8 +96,15 @@ export async function POST(
       return ApiResponseHandler.badRequest('Can only respond to pending reschedule requests')
     }
 
-    const booking = rescheduleRequest.bookings as any
-    const customer = booking?.user_profiles
+    const booking = (rescheduleRequest.bookings as Array<{
+      id: string
+      user_profiles?: { email?: string; first_name?: string; last_name?: string } | null
+      scheduled_date: string
+      scheduled_start_time: string
+      status: import('@/lib/utils/booking-types').BookingStatus
+      time_slot_id?: string | null
+    }> | null | undefined)?.[0]
+    const customer = booking?.user_profiles || null
 
     let newStatus = action === 'approve' ? 'approved' : action === 'reject' ? 'rejected' : 'pending'
     let responseMessage = adminResponse
@@ -119,7 +127,7 @@ export async function POST(
       .eq('status', 'pending')
 
     if (updateError) {
-      console.error('Error updating reschedule request:', updateError)
+      logger.error('Error updating reschedule request:', updateError)
       return ApiResponseHandler.serverError('Failed to update reschedule request')
     }
 
@@ -161,7 +169,7 @@ export async function POST(
         .eq('id', booking.id)
 
       if (bookingUpdateError) {
-        console.error('Error updating booking:', bookingUpdateError)
+        logger.error('Error updating booking:', bookingUpdateError)
         return ApiResponseHandler.serverError('Failed to update booking')
       }
 
@@ -172,7 +180,7 @@ export async function POST(
         .eq('id', newSlot.id)
 
       if (reserveNewSlotError) {
-        console.error('Error reserving new time slot:', reserveNewSlotError)
+        logger.error('Error reserving new time slot:', reserveNewSlotError)
         // Roll back booking link to avoid dangling reference
         await supabase
           .from('bookings')
@@ -197,7 +205,7 @@ export async function POST(
           .eq('id', booking.time_slot_id)
 
         if (slotError) {
-          console.error('Error freeing old time slot:', slotError)
+          logger.error('Error freeing old time slot:', slotError)
           // Don't fail the request, but log the error
         }
       }
@@ -223,7 +231,7 @@ export async function POST(
         })
 
       if (historyError) {
-        console.error('Error adding to booking history:', historyError)
+        logger.error('Error adding to booking history:', historyError)
         // Don't fail the request for history error, just log it
       }
     }
@@ -234,9 +242,13 @@ export async function POST(
       const customerName = `${customer.first_name} ${customer.last_name}`
       
       const emailResult = await emailService.sendRescheduleRequestResponse(
-        customer.email,
+        String(customer.email || ''),
         customerName,
-        booking!,
+        ({ 
+          ...booking,
+          time_slot_id: booking?.time_slot_id ?? undefined,
+          customer_id: (booking as { customer_id?: string | null })?.customer_id ?? undefined
+        } as unknown) as Partial<import('@/lib/utils/booking-types').Booking>,
         rescheduleRequest,
         action,
         responseMessage,
@@ -245,7 +257,7 @@ export async function POST(
       )
       
       if (!emailResult.success) {
-        console.error('Failed to send reschedule response email:', emailResult.error)
+        logger.error('Failed to send reschedule response email:', emailResult.error ? new Error(emailResult.error) : undefined)
         // Don't fail the request if email fails
       }
     }
@@ -260,7 +272,7 @@ export async function POST(
     })
 
   } catch (error) {
-    console.error('Respond to reschedule request error:', error)
+    logger.error('Respond to reschedule request error:', error instanceof Error ? error : undefined)
     return ApiResponseHandler.serverError('Failed to respond to reschedule request')
   }
 }

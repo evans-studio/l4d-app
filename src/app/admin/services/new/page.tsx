@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/primitives/Button'
 import { AdminLayout } from '@/components/layouts/AdminLayout'
 import { AdminRoute } from '@/components/ProtectedRoute'
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb'
-import { 
+import { logger } from '@/lib/utils/logger'
+import {
   PackageIcon,
   DollarSignIcon,
   ClockIcon,
@@ -73,7 +74,7 @@ function NewServicePage() {
           setVehicleSizes(vehicleSizesData.data || [])
         }
       } catch (error) {
-        console.error('Failed to fetch data:', error)
+        logger.error('Failed to fetch data:', error instanceof Error ? error : undefined)
       } finally {
         setIsLoading(false)
       }
@@ -122,7 +123,7 @@ function NewServicePage() {
         displayOrder: formData.display_order
       }
 
-      console.log('Creating service with payload:', servicePayload)
+      logger.debug('Creating service with payload:', servicePayload)
 
       const serviceResponse = await fetch('/api/services', {
         method: 'POST',
@@ -131,10 +132,10 @@ function NewServicePage() {
       })
 
       const serviceData = await serviceResponse.json()
-      console.log('Service creation response:', serviceData)
+      logger.debug('Service creation response:', serviceData)
       
       if (!serviceData.success) {
-        console.error('Service creation failed with response:', serviceData)
+        logger.error('Service creation failed with response:', serviceData)
         setErrors({ 
           submit: serviceData.error?.message || 
                   `Failed to create service (${serviceResponse.status}: ${serviceResponse.statusText})` 
@@ -157,13 +158,13 @@ function NewServicePage() {
 
         const pricingData = await pricingResponse.json()
         if (!pricingData.success) {
-          console.warn('Service created but pricing failed to save:', pricingData.error?.message)
+          logger.warn('Service created but pricing failed to save:', pricingData.error?.message)
         }
       }
       
       router.push('/admin/services')
     } catch (error) {
-      console.error('Failed to create service:', error)
+      logger.error('Failed to create service:', error instanceof Error ? error : undefined)
       setErrors({ submit: 'Failed to create service. Please try again.' })
     } finally {
       setIsSaving(false)

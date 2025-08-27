@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase/direct'
 import { ApiResponseHandler } from '@/lib/api/response'
 import { EmailService } from '@/lib/services/email'
+import { logger } from '@/lib/utils/logger'
 
 /**
  * Automated cron job to check for payment deadlines and mark overdue bookings as payment_failed
@@ -9,7 +10,7 @@ import { EmailService } from '@/lib/services/email'
  */
 export async function GET(request: NextRequest) {
   try {
-    console.log('🔄 Running payment deadline check...')
+    logger.debug('🔄 Running payment deadline check...')
     
     // Get all pending bookings with passed payment deadlines
     const now = new Date().toISOString()
@@ -51,12 +52,12 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: true })
 
     if (fetchError) {
-      console.error('❌ Error fetching overdue bookings:', fetchError)
+      logger.error('❌ Error fetching overdue bookings:', fetchError)
       return ApiResponseHandler.serverError('Failed to fetch overdue bookings')
     }
 
     if (!overdueBookings || overdueBookings.length === 0) {
-      console.log('✅ No overdue bookings found')
+      logger.debug('✅ No overdue bookings found')
       return ApiResponseHandler.success({
         message: 'No overdue bookings found',
         processedCount: 0,
@@ -64,7 +65,7 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    console.log(`⏰ Found ${overdueBookings.length} overdue booking(s), processing...`)
+    logger.debug(`⏰ Found ${overdueBookings.length} overdue booking(s), processing...`)
 
     const emailService = new EmailService()
     const processedBookings = []
@@ -73,7 +74,7 @@ export async function GET(request: NextRequest) {
     // Process each overdue booking
     for (const booking of overdueBookings) {
       try {
-        console.log(`📋 Processing overdue booking: ${booking.booking_reference}`)
+        logger.debug(`📋 Processing overdue booking: ${booking.booking_reference}`)
         
         // Update booking status to payment_failed
         const { data: updatedBooking, error: updateError } = await supabaseAdmin
@@ -89,7 +90,7 @@ export async function GET(request: NextRequest) {
           .single()
 
         if (updateError) {
-          console.error(`❌ Failed to update booking ${booking.booking_reference}:`, updateError)
+          logger.error(`❌ Failed to update booking ${booking.booking_reference}:`, updateError)
           failedBookings.push({
             bookingId: booking.id,
             reference: booking.booking_reference,
@@ -119,27 +120,27 @@ export async function GET(request: NextRequest) {
           await emailService.sendPaymentFailedNotification(
             userProfile?.email || '',
             customerName,
-            {
+            ({
               ...booking,
               status: 'payment_failed',
               payment_status: 'failed'
-            } as any
+            } as Partial<typeof booking>)
           )
 
           // Send admin notification about automatic status change
           await emailService.sendAdminPaymentFailedNotification(
-            {
+            ({
               ...booking,
               status: 'payment_failed',
               payment_status: 'failed'
-            } as any,
+            } as Partial<typeof booking>),
             userProfile?.email || '',
             customerName
           )
 
-          console.log(`✅ Processed booking ${booking.booking_reference} - marked as payment failed and notifications sent`)
+          logger.debug(`✅ Processed booking ${booking.booking_reference} - marked as payment failed and notifications sent`)
         } catch (emailError) {
-          console.error(`⚠️  Updated booking ${booking.booking_reference} but failed to send notifications:`, emailError)
+          logger.error(`⚠️  Updated booking ${booking.booking_reference} but failed to send notifications`, emailError instanceof Error ? emailError : undefined)
         }
 
         processedBookings.push({
@@ -151,7 +152,7 @@ export async function GET(request: NextRequest) {
         })
 
       } catch (error) {
-        console.error(`❌ Error processing booking ${booking.booking_reference}:`, error)
+        logger.error(`❌ Error processing booking ${booking.booking_reference}`, error instanceof Error ? error : undefined)
         failedBookings.push({
           bookingId: booking.id,
           reference: booking.booking_reference,
@@ -160,7 +161,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    console.log(`✅ Payment deadline check completed: ${processedBookings.length} processed, ${failedBookings.length} failed`)
+    logger.debug(`✅ Payment deadline check completed: ${processedBookings.length} processed, ${failedBookings.length} failed`)
 
     return ApiResponseHandler.success({
       message: `Payment deadline check completed`,
@@ -172,7 +173,7 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('❌ Payment deadline check failed:', error)
+    logger.error('❌ Payment deadline check failed', error instanceof Error ? error : undefined)
     return ApiResponseHandler.serverError('Payment deadline check failed')
   }
 }
@@ -192,7 +193,7 @@ export async function POST(request: NextRequest) {
     // For manual trigger, we'll run the same logic as GET
     return await GET(request)
   } catch (error) {
-    console.error('❌ Manual payment deadline check failed:', error)
+    logger.error('❌ Manual payment deadline check failed', error instanceof Error ? error : undefined)
     return ApiResponseHandler.serverError('Manual payment deadline check failed')
   }
 }

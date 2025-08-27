@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { createClientFromRequest } from '@/lib/supabase/server'
 import { ApiResponseHandler } from '@/lib/api/response'
 import { z } from 'zod'
+import { logger } from '@/lib/utils/logger'
 
 const passwordUpdateSchema = z.object({
   currentPassword: z.string().min(1, 'Current password is required'),
@@ -61,7 +62,7 @@ export async function PUT(request: NextRequest) {
     })
 
     if (updateError) {
-      console.error('Admin password update error:', updateError)
+      logger.error('Admin password update error:', updateError)
       return ApiResponseHandler.serverError('Failed to update password')
     }
 
@@ -76,7 +77,7 @@ export async function PUT(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Admin password update error:', error)
+    logger.error('Admin password update error:', error instanceof Error ? error : undefined)
     
     if (error instanceof z.ZodError) {
       const firstError = error.issues[0]

@@ -12,6 +12,7 @@ import {
   TagIcon
 } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/composites/Tabs'
+import { logger } from '@/lib/utils/logger'
 
 interface Service {
   id: string
@@ -97,7 +98,7 @@ function AdminServicesPage() {
           setPricing(pricingData.data || {})
         }
       } catch (error) {
-        console.error('Failed to fetch services data:', error)
+        logger.error('Failed to fetch services data:', error instanceof Error ? error : undefined)
       } finally {
         setIsLoading(false)
       }
@@ -124,7 +125,7 @@ function AdminServicesPage() {
         ))
       }
     } catch (error) {
-      console.error('Failed to update service status:', error)
+      logger.error('Failed to update service status:', error instanceof Error ? error : undefined)
     }
   }
 

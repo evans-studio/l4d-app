@@ -244,7 +244,7 @@ export interface BookingHistory {
   id: string
   booking_id: string // FK to bookings.id
   action: string
-  details: Record<string, any> // JSONB field
+  details: Record<string, unknown> // JSONB field
   created_by: string // FK to user_profiles.id
   created_at: string
 }

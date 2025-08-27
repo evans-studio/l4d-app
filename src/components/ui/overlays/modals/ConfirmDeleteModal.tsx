@@ -5,6 +5,7 @@ import { AlertTriangle } from 'lucide-react'
 import { Dialog, DialogHeader, DialogTitle, DialogBody, DialogFooter } from '@/components/ui/overlays/Dialog'
 import { BaseOverlayProps } from '@/lib/overlay/types'
 import { Button } from '@/components/ui/primitives/Button'
+import { logger } from '@/lib/utils/logger'
 
 interface ConfirmDeleteModalProps extends BaseOverlayProps {
   data: {
@@ -34,7 +35,7 @@ export const ConfirmDeleteModal: React.FC<ConfirmDeleteModalProps> = ({
         await onConfirm()
         onClose()
       } catch (error) {
-        console.error('Delete error:', error)
+        logger.error('Delete error:', error)
       } finally {
         setIsDeleting(false)
       }

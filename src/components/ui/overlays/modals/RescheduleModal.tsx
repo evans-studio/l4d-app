@@ -5,6 +5,7 @@ import { Calendar, Clock, ChevronRight, AlertCircle } from 'lucide-react'
 import { Dialog, DialogHeader, DialogTitle, DialogBody } from '@/components/ui/overlays/Dialog'
 import { BaseOverlayProps } from '@/lib/overlay/types'
 import { Button } from '@/components/ui/primitives/Button'
+import { logger } from '@/lib/utils/logger'
 
 interface TimeSlot {
   id: string
@@ -93,9 +94,9 @@ export const RescheduleModal: React.FC<RescheduleModalProps> = ({
     // Debug logging (dev only)
     if (process.env.NODE_ENV !== 'production') {
       // eslint-disable-next-line no-console
-      console.log('Selected slot:', selectedSlot)
+      logger.debug('Selected slot', { selectedSlot })
       // eslint-disable-next-line no-console
-      console.log('Reason:', reason)
+      logger.debug('Reason', { reason })
     }
     
     const requestData = {
@@ -106,7 +107,7 @@ export const RescheduleModal: React.FC<RescheduleModalProps> = ({
     
     if (process.env.NODE_ENV !== 'production') {
       // eslint-disable-next-line no-console
-      console.log('Request data being sent:', requestData)
+      logger.debug('Request data being sent', { requestData })
     }
 
     try {

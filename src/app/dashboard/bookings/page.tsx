@@ -11,7 +11,8 @@ import { paypalService } from '@/lib/services/paypal'
 import { CustomerLayout } from '@/components/layout/templates/CustomerLayout'
 import { Container } from '@/components/layout/templates/PageLayout'
 import { CustomerRoute } from '@/components/ProtectedRoute'
-import { 
+import { logger } from '@/lib/utils/logger'
+import {
   Calendar, 
   Clock, 
   MapPin, 
@@ -114,7 +115,7 @@ export default function MyBookingsPage() {
       // Redirect to booking page with pre-populated data
       router.push('/book')
     } catch (error) {
-      console.error('Rebooking initialization failed:', error)
+      logger.error('Rebooking initialization failed:', error)
       // Could show an error toast here
       setRebookingBookingId(null)
     }
@@ -280,7 +281,7 @@ export default function MyBookingsPage() {
                 const data: BookingData = {
                   id: booking.id,
                   bookingReference: booking.booking_reference,
-                  status: (booking.status as any),
+                  status: (booking.status as 'pending' | 'confirmed' | 'rescheduled' | 'in_progress' | 'completed' | 'cancelled' | 'no_show' | 'draft'),
                   scheduledDate: booking.scheduled_date,
                   scheduledStartTime: booking.scheduled_start_time,
                   totalPrice: booking.total_price,

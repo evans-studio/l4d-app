@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase/direct'
 import { createClientFromRequest } from '@/lib/supabase/server'
 import { ApiResponseHandler } from '@/lib/api/response'
+import { logger } from '@/lib/utils/logger'
 
 /**
  * Admin-only endpoint to align existing bookings with new payment status flow
@@ -32,7 +33,7 @@ export async function POST(request: NextRequest) {
       return ApiResponseHandler.forbidden('Admin access required')
     }
 
-    console.log('🔄 Starting booking status alignment migration...')
+    logger.debug('🔄 Starting booking status alignment migration...')
 
     // Step 1: Find bookings that need status alignment
     const { data: bookingsToAlign, error: fetchError } = await supabaseAdmin
@@ -51,12 +52,12 @@ export async function POST(request: NextRequest) {
       .eq('payment_status', 'pending')
 
     if (fetchError) {
-      console.error('❌ Error fetching bookings to align:', fetchError)
+      logger.error('❌ Error fetching bookings to align:', fetchError)
       return ApiResponseHandler.serverError('Failed to fetch bookings for alignment')
     }
 
     if (!bookingsToAlign || bookingsToAlign.length === 0) {
-      console.log('✅ No bookings need status alignment')
+      logger.debug('✅ No bookings need status alignment')
       return ApiResponseHandler.success({
         message: 'No bookings required alignment',
         alignedCount: 0,
@@ -64,7 +65,7 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    console.log(`📋 Found ${bookingsToAlign.length} bookings that need status alignment`)
+    logger.debug(`📋 Found ${bookingsToAlign.length} bookings that need status alignment`)
 
     const alignedBookings = []
     const failedBookings = []
@@ -72,7 +73,7 @@ export async function POST(request: NextRequest) {
     // Step 2: Process each booking that needs alignment
     for (const booking of bookingsToAlign) {
       try {
-        console.log(`📝 Processing booking: ${booking.booking_reference}`)
+        logger.debug(`📝 Processing booking: ${booking.booking_reference}`)
 
         // Calculate payment deadline if not set (48 hours from creation)
         let paymentDeadline = booking.payment_deadline
@@ -95,7 +96,7 @@ export async function POST(request: NextRequest) {
           .single()
 
         if (updateError) {
-          console.error(`❌ Failed to update booking ${booking.booking_reference}:`, updateError)
+          logger.error(`❌ Failed to update booking ${booking.booking_reference}:`, updateError)
           failedBookings.push({
             bookingId: booking.id,
             reference: booking.booking_reference,
@@ -116,7 +117,7 @@ export async function POST(request: NextRequest) {
             created_at: new Date().toISOString()
           })
 
-        console.log(`✅ Successfully aligned booking: ${booking.booking_reference}`)
+        logger.debug(`✅ Successfully aligned booking: ${booking.booking_reference}`)
         alignedBookings.push({
           bookingId: booking.id,
           reference: booking.booking_reference,
@@ -126,7 +127,7 @@ export async function POST(request: NextRequest) {
         })
 
       } catch (error) {
-        console.error(`❌ Error processing booking ${booking.booking_reference}:`, error)
+        logger.error(`❌ Error processing booking ${booking.booking_reference}:`, error instanceof Error ? error : undefined)
         failedBookings.push({
           bookingId: booking.id,
           reference: booking.booking_reference,
@@ -135,7 +136,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    console.log(`✅ Booking status alignment completed: ${alignedBookings.length} aligned, ${failedBookings.length} failed`)
+    logger.debug(`✅ Booking status alignment completed: ${alignedBookings.length} aligned, ${failedBookings.length} failed`)
 
     return ApiResponseHandler.success({
       message: `Booking status alignment completed`,
@@ -147,7 +148,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('❌ Booking status alignment migration failed:', error)
+    logger.error('❌ Booking status alignment migration failed:', error instanceof Error ? error : undefined)
     return ApiResponseHandler.serverError('Booking status alignment migration failed')
   }
 }
@@ -200,7 +201,7 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: false })
 
     if (fetchError) {
-      console.error('Error fetching bookings preview:', fetchError)
+      logger.error('Error fetching bookings preview:', fetchError)
       return ApiResponseHandler.serverError('Failed to fetch bookings preview')
     }
 
@@ -211,7 +212,7 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Booking alignment preview failed:', error)
+    logger.error('Booking alignment preview failed:', error instanceof Error ? error : undefined)
     return ApiResponseHandler.serverError('Failed to generate alignment preview')
   }
 }

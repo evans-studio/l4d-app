@@ -15,6 +15,7 @@ import { RecentActivityWidget } from '@/components/customer/widgets/RecentActivi
 import { Card, CardContent, CardHeader } from '@/components/ui/composites/Card'
 import { ArrowRight, Calendar, Car, MapPin, Star, AlertCircle, RefreshCw } from 'lucide-react'
 import Image from 'next/image'
+import { logger } from '@/lib/utils/logger'
 
 interface DashboardBooking {
   id: string
@@ -29,7 +30,7 @@ interface DashboardBooking {
     category?: string
   } | null
   booking_services: Array<{
-    service_details: any
+    service_details: { name?: string; description?: string } | null
     price: number
     estimated_duration: number
   }>
@@ -111,7 +112,7 @@ export default function DashboardPage() {
         // Handle authentication for all requests
         if (!bookingsResponse.ok || !vehiclesResponse.ok || !addressesResponse.ok) {
           if (bookingsResponse.status === 401 || vehiclesResponse.status === 401 || addressesResponse.status === 401) {
-            console.warn('User not authenticated, redirecting to login')
+            logger.warn('User not authenticated, redirecting to login')
             router.push('/auth/login')
             return
           }
@@ -130,12 +131,12 @@ export default function DashboardPage() {
           setBookings(bookingsArray)
 
           // Calculate customer stats
-          const totalSpent = bookingsArray.reduce((sum: number, booking: any) => sum + (booking.total_price || 0), 0)
+          const totalSpent = bookingsArray.reduce((sum: number, booking: { total_price?: number }) => sum + (booking?.total_price || 0), 0)
           
           // Find favorite service
           const serviceCount: Record<string, number> = {}
-          bookingsArray.forEach((booking: any) => {
-            if (booking.service?.name) {
+          bookingsArray.forEach((booking: { service?: { name?: string } }) => {
+            if (booking?.service?.name) {
               serviceCount[booking.service.name] = (serviceCount[booking.service.name] || 0) + 1
             }
           })
@@ -154,7 +155,7 @@ export default function DashboardPage() {
             } : undefined
           })
         } else {
-          console.warn('Bookings API returned error:', bookingsData.error)
+          logger.warn('Bookings API returned error:', bookingsData.error)
           // Don't treat this as an error if it's just auth - redirect to login
           if (bookingsData.error?.code === 'UNAUTHORIZED') {
             // User is not authenticated, redirect to login
@@ -170,7 +171,7 @@ export default function DashboardPage() {
           const vehiclesArray = vehiclesData.data || []
           setVehicleCount(vehiclesArray.length)
         } else {
-          console.warn('Vehicles API returned error:', vehiclesData.error)
+          logger.warn('Vehicles API returned error:', vehiclesData.error)
           setVehicleCount(0)
         }
 
@@ -179,12 +180,12 @@ export default function DashboardPage() {
           const addressesArray = addressesData.data || []
           setAddressCount(addressesArray.length)
         } else {
-          console.warn('Addresses API returned error:', addressesData.error)
+          logger.warn('Addresses API returned error:', addressesData.error)
           setAddressCount(0)
         }
 
       } catch (error) {
-        console.error('Dashboard data error:', error)
+        logger.error('Dashboard data error:', error)
         setError('Unable to load dashboard data. Please try refreshing the page.')
         setBookings([])
         setCustomerStats(null)

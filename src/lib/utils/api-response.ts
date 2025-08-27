@@ -12,13 +12,13 @@ import { logger } from './logger'
 /**
  * Standard API response format
  */
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = Record<string, unknown> | Array<Record<string, unknown>> | null> {
   success: boolean
   data?: T
   error?: {
     message: string
     code?: string
-    details?: any // Only in development
+    details?: unknown // Only in development
   }
   metadata?: {
     timestamp?: string
@@ -84,7 +84,7 @@ const DEVELOPMENT_FIELDS = [
 /**
  * Recursively sanitize an object by removing sensitive fields
  */
-function sanitizeObject(obj: any): any {
+function sanitizeObject(obj: unknown): unknown {
   if (obj === null || obj === undefined) {
     return obj
   }
@@ -94,7 +94,7 @@ function sanitizeObject(obj: any): any {
   }
 
   if (typeof obj === 'object') {
-    const sanitized: any = {}
+    const sanitized: Record<string, unknown> = {}
     
     for (const [key, value] of Object.entries(obj)) {
       const keyLower = key.toLowerCase()
@@ -122,11 +122,11 @@ function sanitizeObject(obj: any): any {
 /**
  * Create a standardized success response
  */
-export function createSuccessResponse<T>(
+export function createSuccessResponse<T = Record<string, unknown> | Array<Record<string, unknown>> | null>(
   data?: T,
   metadata?: ApiResponse['metadata']
 ): ApiResponse<T> {
-  const sanitizedData = sanitizeObject(data)
+  const sanitizedData = sanitizeObject(data) as T
   
   return {
     success: true,
@@ -144,7 +144,7 @@ export function createSuccessResponse<T>(
 export function createErrorResponse(
   message: string,
   code?: keyof typeof ErrorCodes,
-  details?: any,
+  details?: unknown,
   status: number = 400
 ): ApiResponse {
   // Sanitize error details
@@ -163,7 +163,7 @@ export function createErrorResponse(
     error: {
       message,
       code,
-      ...(sanitizedDetails && { details: sanitizedDetails })
+      ...(sanitizedDetails ? { details: sanitizedDetails as Record<string, unknown> } : {})
     },
     metadata: {
       timestamp: new Date().toISOString()
@@ -174,11 +174,11 @@ export function createErrorResponse(
 /**
  * Create a NextResponse with standardized format and security headers
  */
-export function createApiResponse<T>(
+export function createApiResponse<T = Record<string, unknown> | Array<Record<string, unknown>> | null>(
   response: ApiResponse<T>,
   status: number = 200
 ): NextResponse {
-  const sanitizedResponse = sanitizeObject(response)
+  const sanitizedResponse = sanitizeObject(response) as ApiResponse
   
   const nextResponse = NextResponse.json(sanitizedResponse, { status })
   
@@ -213,12 +213,10 @@ export function apiSuccess<T>(
 /**
  * Wrapper for API error responses
  */
-export function apiError(
-  message: string,
+export function apiError(message: string,
   status: number = 400,
   code?: keyof typeof ErrorCodes,
-  details?: any
-): NextResponse {
+  details?: Error | unknown): NextResponse {
   const response = createErrorResponse(message, code, details, status)
   return createApiResponse(response, status)
 }
@@ -236,7 +234,7 @@ export const ApiErrors = {
   notFound: (message = 'Resource not found') => 
     apiError(message, 404, 'NOT_FOUND'),
   
-  validation: (message = 'Validation failed', details?: any) => 
+  validation: (message = 'Validation failed', details?: unknown) => 
     apiError(message, 400, 'VALIDATION_ERROR', details),
   
   conflict: (message = 'Resource conflict') => 
@@ -282,15 +280,15 @@ export function createPaginationMetadata(
 /**
  * Validate and sanitize API request body
  */
-export function sanitizeRequestBody<T>(body: any): T {
+export function sanitizeRequestBody<T>(body: unknown): T {
   // Remove potential XSS and injection attempts
-  const sanitized = sanitizeObject(body)
+  const sanitized = sanitizeObject(body) as T
   
   // Log potential security issues
   if (JSON.stringify(body) !== JSON.stringify(sanitized)) {
     logger.security('Request body sanitization applied', {
-      originalKeys: Object.keys(body || {}),
-      sanitizedKeys: Object.keys(sanitized || {})
+      originalKeys: Object.keys((body as Record<string, unknown>) || {}),
+      sanitizedKeys: Object.keys((sanitized as unknown as Record<string, unknown>) || {})
     })
   }
   

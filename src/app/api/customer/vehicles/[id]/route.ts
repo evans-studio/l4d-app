@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClientFromRequest } from '@/lib/supabase/server'
 import { getVehicleSize, getSizeInfo } from '@/lib/utils/vehicle-size'
+import { logger } from '@/lib/utils/logger'
 
 export async function PUT(
   request: NextRequest,
@@ -53,7 +54,7 @@ export async function PUT(
     }
 
     // Prepare update object
-    const updateObject: any = {}
+    const updateObject: Record<string, unknown> = {}
     
     if (updateData.make) updateObject.make = updateData.make.trim()
     if (updateData.model) updateObject.model = updateData.model.trim()
@@ -86,7 +87,7 @@ export async function PUT(
       .single()
 
     if (updateError) {
-      console.error('Vehicle update error:', updateError)
+      logger.error('Vehicle update error', updateError instanceof Error ? updateError : undefined)
       return NextResponse.json({
         success: false,
         error: { message: 'Failed to update vehicle', code: 'DATABASE_ERROR' }
@@ -103,7 +104,7 @@ export async function PUT(
         .neq('id', vehicleId)
 
       if (unsetError) {
-        console.error('Failed to unset other default vehicles:', unsetError)
+        logger.error('Failed to unset other default vehicles', unsetError instanceof Error ? unsetError : undefined)
         // Continue anyway, this is not critical
       }
 
@@ -115,7 +116,7 @@ export async function PUT(
         .eq('user_id', profile.id)
 
       if (setDefaultError) {
-        console.error('Failed to set vehicle as default:', setDefaultError)
+        logger.error('Failed to set vehicle as default', setDefaultError instanceof Error ? setDefaultError : undefined)
         return NextResponse.json({
           success: false,
           error: { message: 'Failed to set vehicle as default', code: 'DATABASE_ERROR' }
@@ -123,7 +124,7 @@ export async function PUT(
       }
 
       // Update the response data to reflect the change
-      updatedVehicle.is_default = true
+      ;(updatedVehicle as { is_default: boolean }).is_default = true
     }
 
     // Transform the response with computed size information
@@ -155,7 +156,7 @@ export async function PUT(
     })
 
   } catch (error) {
-    console.error('Update vehicle API error:', error)
+    logger.error('Update vehicle API error', error instanceof Error ? error : undefined)
     return NextResponse.json({
       success: false,
       error: { message: 'Internal server error', code: 'SERVER_ERROR' }
@@ -219,7 +220,7 @@ export async function DELETE(
       .eq('user_id', profile.id)
 
     if (allVehiclesError) {
-      console.error('Error checking vehicle count:', allVehiclesError)
+      logger.error('Error checking vehicle count:', allVehiclesError)
       return NextResponse.json({
         success: false,
         error: { message: 'Failed to check vehicle count', code: 'DATABASE_ERROR' }
@@ -248,7 +249,7 @@ export async function DELETE(
       .limit(1)
 
     if (bookingsError) {
-      console.error('Bookings check error:', bookingsError)
+      logger.error('Bookings check error:', bookingsError)
       return NextResponse.json({
         success: false,
         error: { message: 'Failed to check vehicle usage', code: 'DATABASE_ERROR' }
@@ -274,7 +275,7 @@ export async function DELETE(
       .eq('user_id', profile.id)
 
     if (deleteError) {
-      console.error('Vehicle delete error:', deleteError)
+      logger.error('Vehicle delete error:', deleteError)
       return NextResponse.json({
         success: false,
         error: { message: 'Failed to delete vehicle', code: 'DATABASE_ERROR' }
@@ -287,7 +288,7 @@ export async function DELETE(
     })
 
   } catch (error) {
-    console.error('Delete vehicle API error:', error)
+    logger.error('Delete vehicle API error', error instanceof Error ? error : undefined)
     return NextResponse.json({
       success: false,
       error: { message: 'Internal server error', code: 'SERVER_ERROR' }

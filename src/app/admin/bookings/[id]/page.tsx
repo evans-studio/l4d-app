@@ -13,7 +13,8 @@ import { ConfirmDialog } from '@/components/ui/overlays/modals/ConfirmDialog'
 import { AdminLayout } from '@/components/layouts/AdminLayout'
 import { AdminRoute } from '@/components/ProtectedRoute'
 // BookingStatus imported but not used - removed
-import { 
+import { logger } from '@/lib/utils/logger'
+import {
   CalendarIcon, 
   ClockIcon,
   CheckIcon,
@@ -151,18 +152,17 @@ function AdminBookingDetailsPage() {
           setBooking(data.data)
           setAdminNotes(data.data.admin_notes || '')
         } else {
-          console.error('Failed to fetch booking:', data.error)
-          console.error('Booking ID:', bookingId)
-          console.error('Response status:', response.status)
+          logger.error('Failed to fetch booking', undefined, { apiError: data.error })
+          logger.error('Booking fetch meta', undefined, { bookingId })
+          logger.error('Booking fetch meta', undefined, { status: response.status })
         }
       } catch (error) {
-        console.error('Failed to fetch booking:', error)
-        console.error('Booking ID:', bookingId)
+        logger.error('Failed to fetch booking', error instanceof Error ? error : undefined, { bookingId })
         
         // Check if it's a 404 error (booking not found)
         if (error instanceof Error && error.message.includes('404')) {
           // The booking doesn't exist - redirect back to bookings list
-          console.warn('Booking not found, redirecting to bookings list')
+          logger.warn('Booking not found, redirecting to bookings list')
           router.push('/admin/bookings?error=booking-not-found')
           return
         }
@@ -192,7 +192,7 @@ function AdminBookingDetailsPage() {
         setBooking(prev => prev ? { ...prev, status: newStatus as "pending" | "confirmed" | "in_progress" | "completed" | "cancelled" } : null)
       }
     } catch (error) {
-      console.error('Failed to update booking status:', error)
+      logger.error('Failed to update booking status', error instanceof Error ? error : undefined, { bookingId: booking.id, newStatus })
     } finally {
       setIsUpdating(false)
     }
@@ -213,7 +213,7 @@ function AdminBookingDetailsPage() {
         setBooking(prev => prev ? { ...prev, admin_notes: adminNotes } : null)
       }
     } catch (error) {
-      console.error('Failed to update admin notes:', error)
+      logger.error('Failed to update admin notes', error instanceof Error ? error : undefined, { bookingId: booking.id })
     }
   }
 
@@ -260,11 +260,11 @@ function AdminBookingDetailsPage() {
             return
           }
         }
-        console.error('Failed to approve reschedule:', data.error)
+        logger.error('Failed to approve reschedule', undefined, { apiError: data.error })
         alert('Failed to approve reschedule request: ' + (data.error?.message || 'Unknown error'))
       }
     } catch (error) {
-      console.error('Failed to approve reschedule:', error)
+      logger.error('Failed to approve reschedule', error instanceof Error ? error : undefined, { bookingId: booking.id })
       alert('Failed to approve reschedule request')
     } finally {
       setIsUpdating(false)
@@ -285,11 +285,11 @@ function AdminBookingDetailsPage() {
       if (data.success) {
         window.location.reload()
       } else {
-        console.error('Failed to decline reschedule:', data.error)
+        logger.error('Failed to decline reschedule', undefined, { apiError: data.error })
         alert('Failed to decline reschedule request: ' + (data.error?.message || 'Unknown error'))
       }
     } catch (error) {
-      console.error('Failed to decline reschedule:', error)
+      logger.error('Failed to decline reschedule', error instanceof Error ? error : undefined, { bookingId: booking.id })
       alert('Failed to decline reschedule request')
     } finally {
       setIsUpdating(false)

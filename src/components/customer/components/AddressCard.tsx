@@ -4,7 +4,8 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/primitives/Button'
 import { Badge } from '@/components/ui/primitives/Badge'
 import { Card, CardContent } from '@/components/ui/composites/Card'
-import { 
+import { logger } from '@/lib/utils/logger'
+import {
   MapPin, 
   Edit,
   Trash2,
@@ -31,7 +32,9 @@ interface AddressCardProps {
   }
   variant?: 'compact' | 'detailed'
   showActions?: boolean
-  onEdit?: (address: any) => void
+  onEdit?: {
+    bivarianceHack(address: AddressCardProps['address']): void
+  }['bivarianceHack']
   onDelete?: (addressId: string) => void
   onSetDefault?: (addressId: string) => void
 }
@@ -87,7 +90,7 @@ export function AddressCard({
     try {
       await onDelete(address.id)
     } catch (error) {
-      console.error('Delete failed:', error)
+      logger.error('Delete failed:', error)
     } finally {
       setIsDeleting(false)
     }
@@ -99,7 +102,7 @@ export function AddressCard({
     try {
       await onSetDefault(address.id)
     } catch (error) {
-      console.error('Set default failed:', error)
+      logger.error('Set default failed:', error)
     } finally {
       setIsSettingDefault(false)
     }

@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { createClientFromRequest } from '@/lib/supabase/server'
 import { ApiResponseHandler } from '@/lib/api/response'
 import { z } from 'zod'
+import { logger } from '@/lib/utils/logger'
 
 const deletionRequestSchema = z.object({
   confirmationText: z.string().min(1, 'Confirmation text is required'),
@@ -60,7 +61,7 @@ export async function POST(request: NextRequest) {
       })
 
     if (requestError) {
-      console.error('Account deletion request error:', requestError)
+      logger.error('Account deletion request error', requestError instanceof Error ? requestError : undefined)
       return ApiResponseHandler.serverError('Failed to process deletion request')
     }
 
@@ -79,7 +80,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Account deletion error:', error)
+    logger.error('Account deletion error', error instanceof Error ? error : undefined)
     
     if (error instanceof z.ZodError) {
       const firstError = error.issues[0]

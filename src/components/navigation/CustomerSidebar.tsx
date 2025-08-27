@@ -15,6 +15,7 @@ import {
 import Image from 'next/image'
 import Link from 'next/link'
 import { isNewUIEnabled } from '@/lib/config/feature-flags'
+import { logger } from '@/lib/utils/logger'
 
 interface CustomerSidebarProps {
   isOpen: boolean
@@ -70,7 +71,7 @@ export function CustomerSidebar({ isOpen, onClose }: CustomerSidebarProps) {
       await fetch('/api/auth/logout', { method: 'POST' })
       router.push('/')
     } catch (error) {
-      console.error('Logout failed:', error)
+      logger.error('Logout failed:', error)
     }
   }
 

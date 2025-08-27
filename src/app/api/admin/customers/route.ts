@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import { createClientFromRequest } from '@/lib/supabase/server'
 import { ApiResponseHandler } from '@/lib/api/response'
+import { logger } from '@/lib/utils/logger'
 
 export async function GET(request: NextRequest) {
   try {
@@ -40,7 +41,7 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: false })
 
     if (profilesError) {
-      console.error('Error fetching customer profiles:', profilesError)
+      logger.error('Error fetching customer profiles:', profilesError)
       return ApiResponseHandler.serverError('Failed to fetch customers')
     }
 
@@ -68,7 +69,7 @@ export async function GET(request: NextRequest) {
       .neq('status', 'cancelled')
 
     if (statsError) {
-      console.error('Error fetching booking stats:', statsError)
+      logger.error('Error fetching booking stats:', statsError)
     }
 
     // Get addresses for each customer
@@ -78,7 +79,7 @@ export async function GET(request: NextRequest) {
       .in('user_id', customerIds)
 
     if (addressError) {
-      console.error('Error fetching addresses:', addressError)
+      logger.error('Error fetching addresses:', addressError)
     }
 
     // Get vehicles for each customer
@@ -88,7 +89,7 @@ export async function GET(request: NextRequest) {
       .in('user_id', customerIds)
 
     if (vehicleError) {
-      console.error('Error fetching vehicles:', vehicleError)
+      logger.error('Error fetching vehicles:', vehicleError)
     }
 
     // Process and combine all data
@@ -162,7 +163,7 @@ export async function GET(request: NextRequest) {
     return ApiResponseHandler.success(customers)
 
   } catch (error) {
-    console.error('Admin customers error:', error)
+    logger.error('Admin customers error:', error instanceof Error ? error : undefined)
     return ApiResponseHandler.serverError('Failed to fetch customers')
   }
 }

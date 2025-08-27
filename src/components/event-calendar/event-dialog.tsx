@@ -34,6 +34,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import { logger } from '@/lib/utils/logger'
 
 interface EventDialogProps {
   event: CalendarEvent | null
@@ -66,7 +67,7 @@ export function EventDialog({
 
   // Debug log to check what event is being passed
   useEffect(() => {
-    console.log("EventDialog received event:", event)
+    logger.debug("EventDialog received event", { hasEvent: !!event, id: event?.id })
   }, [event])
 
   useEffect(() => {

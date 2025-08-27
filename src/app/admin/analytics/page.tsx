@@ -5,7 +5,8 @@ import { AdminLayout } from '@/components/layouts/AdminLayout'
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb'
 import { AdminRoute } from '@/components/ProtectedRoute'
 import { Button } from '@/components/ui/primitives/Button'
-import { 
+import { logger } from '@/lib/utils/logger'
+import {
   TrendingUpIcon,
   TrendingDownIcon,
   DollarSignIcon,
@@ -126,7 +127,7 @@ function AdminAnalyticsPage() {
         setAnalyticsData(data.data)
       }
     } catch (error) {
-      console.error('Failed to load analytics data:', error)
+      logger.error('Failed to load analytics data:', error instanceof Error ? error : undefined)
     } finally {
       setIsLoading(false)
     }
@@ -152,7 +153,7 @@ function AdminAnalyticsPage() {
         document.body.removeChild(a)
       }
     } catch (error) {
-      console.error('Export failed:', error)
+      logger.error('Export failed:', error instanceof Error ? error : undefined)
     }
   }
 

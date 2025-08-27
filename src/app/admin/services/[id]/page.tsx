@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/primitives/Button'
 import { AdminLayout } from '@/components/layouts/AdminLayout'
 import { AdminRoute } from '@/components/ProtectedRoute'
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb'
-import { 
+import { logger } from '@/lib/utils/logger'
+import {
   PackageIcon,
   DollarSignIcon,
   ClockIcon,
@@ -160,7 +161,7 @@ function EditServicePage({ params }: { params: Promise<{ id: string }> }) {
           setVehicleSizes(vehicleSizesData.data || [])
         }
       } catch (error) {
-        console.error('Failed to fetch data:', error)
+        logger.error('Failed to fetch data:', error instanceof Error ? error : undefined)
         setErrors({ load: 'Failed to load service data' })
       } finally {
         setIsLoading(false)
@@ -237,7 +238,7 @@ function EditServicePage({ params }: { params: Promise<{ id: string }> }) {
 
       router.push('/admin/services')
     } catch (error) {
-      console.error('Failed to update service:', error)
+      logger.error('Failed to update service:', error instanceof Error ? error : undefined)
       setErrors({ submit: 'Failed to update service. Please try again.' })
     } finally {
       setIsSaving(false)
@@ -260,7 +261,7 @@ function EditServicePage({ params }: { params: Promise<{ id: string }> }) {
         setShowDeleteModal(false)
       }
     } catch (error) {
-      console.error('Failed to delete service:', error)
+      logger.error('Failed to delete service:', error instanceof Error ? error : undefined)
       setErrors({ delete: 'Failed to delete service. Please try again.' })
       setShowDeleteModal(false)
     } finally {

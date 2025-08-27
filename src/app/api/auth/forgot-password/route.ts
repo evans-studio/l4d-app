@@ -6,6 +6,7 @@ import { ForgotPasswordRequestSchema } from '@/schemas/auth.schema'
 import { Resend } from 'resend'
 import { randomBytes, createHash } from 'crypto'
 import { z } from 'zod'
+import { logger } from '@/lib/utils/logger'
 
 // Force Node.js runtime for email service compatibility
 export const runtime = 'nodejs'
@@ -27,7 +28,7 @@ export async function POST(request: NextRequest) {
     const { email } = validation.data
 
     if (process.env.NODE_ENV !== 'production') {
-      console.log('Password reset request for:', email.toLowerCase())
+      logger.debug('Password reset request for', { email: email.toLowerCase() })
     }
     
     // Check if user exists (for logging purposes, but don't reveal to client)
@@ -39,13 +40,13 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (process.env.NODE_ENV !== 'production') {
-      console.log('User lookup result:', { existingUser: !!existingUser, userError: !!userError })
+      logger.debug('User lookup result:', { existingUser: !!existingUser, userError: !!userError })
     }
 
     // If user doesn't exist, still return success for security (don't reveal whether email exists)
     if (userError && userError.code === 'PGRST116') {
       if (process.env.NODE_ENV !== 'production') {
-        console.log('User not found but returning success for security')
+        logger.debug('User not found but returning success for security')
       }
       return ApiResponseHandler.success({
         message: 'If an account with this email exists, you will receive a password reset link.'
@@ -57,12 +58,12 @@ export async function POST(request: NextRequest) {
       // First try our custom Resend approach
       try {
         if (process.env.NODE_ENV !== 'production') {
-          console.log('Attempting custom email with Resend...')
+          logger.debug('Attempting custom email with Resend...')
         }
         
         // Check if we have required environment variables
         if (!process.env.RESEND_API_KEY) {
-          console.error('RESEND_API_KEY not configured, falling back to Supabase')
+          logger.error('RESEND_API_KEY not configured, falling back to Supabase')
           throw new Error('Resend not configured')
         }
 
@@ -73,7 +74,7 @@ export async function POST(request: NextRequest) {
           .limit(1)
 
         if (tableCheckError) {
-          console.error('password_reset_tokens table not found, falling back to Supabase:', tableCheckError)
+          logger.error('password_reset_tokens table not found, falling back to Supabase', tableCheckError instanceof Error ? tableCheckError : undefined, { tableCheckError })
           throw new Error('Database table not ready')
         }
 
@@ -98,7 +99,7 @@ export async function POST(request: NextRequest) {
           })
 
         if (tokenError) {
-          console.error('Error storing reset token:', tokenError)
+          logger.error('Error storing reset token', tokenError instanceof Error ? tokenError : undefined, { tokenError })
           throw new Error('Failed to store reset token')
         }
 
@@ -154,23 +155,19 @@ export async function POST(request: NextRequest) {
         })
 
         if (emailError) {
-          console.error('❌ Resend email API error:', emailError)
-          console.error('Error details:', JSON.stringify(emailError, null, 2))
+          logger.error('❌ Resend email API error', emailError instanceof Error ? emailError : undefined, { emailError })
           throw new Error(`Resend API error: ${emailError.message || 'Unknown error'}`)
         }
 
         if (process.env.NODE_ENV !== 'production') {
-          console.log('✅ Password reset email sent successfully via Resend')
-          console.log('Email ID:', data?.id)
-          console.log('Recipient:', email)
-          console.log('Sender:', process.env.NEXT_PUBLIC_FROM_EMAIL || 'zell@love4detailing.com')
-          console.log('Full Resend response:', JSON.stringify(data, null, 2))
+          logger.debug('✅ Password reset email sent successfully via Resend')
+          logger.debug('Email metadata', { id: data?.id, recipient: email, sender: process.env.NEXT_PUBLIC_FROM_EMAIL || 'zell@love4detailing.com', response: data })
         }
         
       } catch (customEmailError) {
-        console.error('Custom email system failed:', customEmailError)
+        logger.error('Custom email system failed', customEmailError instanceof Error ? customEmailError : undefined)
         if (process.env.NODE_ENV !== 'production') {
-          console.log('Falling back to Supabase built-in password reset...')
+          logger.debug('Falling back to Supabase built-in password reset...')
         }
         
         // Fallback to Supabase's built-in password reset
@@ -180,7 +177,7 @@ export async function POST(request: NextRequest) {
           })
 
           if (supabaseResetError) {
-            console.error('Supabase reset also failed:', supabaseResetError)
+            logger.error('Supabase reset also failed', supabaseResetError instanceof Error ? supabaseResetError : undefined)
             return ApiResponseHandler.error(
               'Failed to send reset email', 
               'EMAIL_SEND_FAILED',
@@ -189,11 +186,11 @@ export async function POST(request: NextRequest) {
           }
 
           if (process.env.NODE_ENV !== 'production') {
-            console.log('Password reset email sent via Supabase fallback to:', email)
+            logger.debug('Password reset email sent via Supabase fallback', { recipient: email })
           }
           
         } catch (fallbackError) {
-          console.error('Both email systems failed:', fallbackError)
+          logger.error('Both email systems failed', fallbackError instanceof Error ? fallbackError : undefined)
           return ApiResponseHandler.error(
             'Failed to send reset email', 
             'EMAIL_SEND_FAILED',
@@ -208,7 +205,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Password reset error:', error)
+    logger.error('Password reset error', error instanceof Error ? error : undefined)
     
     if (error instanceof z.ZodError) {
       return ApiResponseHandler.validationError('Invalid email address')

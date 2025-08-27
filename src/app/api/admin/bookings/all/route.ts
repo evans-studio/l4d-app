@@ -3,6 +3,7 @@ import { supabaseAdmin } from '@/lib/supabase/direct'
 import { ApiResponseHandler } from '@/lib/api/response'
 import { authenticateAdmin } from '@/lib/api/auth-handler'
 import { paypalService } from '@/lib/services/paypal'
+import { logger } from '@/lib/utils/logger'
 
 export async function GET(request: NextRequest) {
   try {
@@ -43,7 +44,7 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: false })
 
     if (bookingsError) {
-      console.error('All bookings error:', bookingsError)
+      logger.error('All bookings error:', bookingsError)
       return ApiResponseHandler.serverError(`Failed to fetch bookings: ${bookingsError.message}`)
     }
 
@@ -53,7 +54,7 @@ export async function GET(request: NextRequest) {
 
     // Get unique customer IDs and fetch user profiles separately
     const customerIds = [...new Set(bookings.map(b => b.customer_id).filter(Boolean))] as string[]
-    let customerProfiles: any[] = []
+    let customerProfiles: Array<{ id: string, first_name: string, last_name: string, email: string, phone: string }> = []
     
     if (customerIds.length > 0) {
       const { data: profiles, error: profilesError } = await supabase
@@ -62,14 +63,14 @@ export async function GET(request: NextRequest) {
         .in('id', customerIds)
       
       if (profilesError) {
-        console.error('Error fetching customer profiles:', profilesError)
+        logger.error('Error fetching customer profiles:', profilesError)
       } else {
         customerProfiles = profiles || []
       }
     }
 
     // Reconciliation: find any approved reschedule requests for these bookings
-    const bookingIds = bookings.map((b: any) => b.id)
+    const bookingIds = bookings.map((b: { id: string }) => b.id)
     let approvedReschedules: Record<string, { requested_date: string, requested_time: string, responded_at: string }> = {}
     if (bookingIds.length > 0) {
       const { data: resReqs } = await supabase
@@ -92,7 +93,24 @@ export async function GET(request: NextRequest) {
     }
 
     // Transform the data for the frontend using embedded JSON and separate profile data
-    const allBookings = bookings.map((booking: any) => {
+    type VehicleDetails = { make?: string; model?: string; year?: number | null; color?: string }
+    type ServiceAddress = { address_line_1?: string; city?: string; postal_code?: string }
+    const allBookings = bookings.map((booking: { 
+      id: string, 
+      customer_id: string, 
+      booking_reference: string,
+      scheduled_date: string,
+      scheduled_start_time: string,
+      status: string,
+      payment_status?: string,
+      total_price: number,
+      special_instructions?: string,
+      created_at: string,
+      payment_deadline?: string | null,
+      booking_services?: Array<{ service_details?: { name?: string }, price?: number }>,
+      vehicle_details?: VehicleDetails, 
+      service_address?: ServiceAddress
+    }) => {
       // Get customer info from separate profile data
       const customer = customerProfiles.find(p => p.id === booking.customer_id) || { first_name: '', last_name: '', email: '', phone: '' }
       const customerName = [customer.first_name, customer.last_name]
@@ -106,7 +124,10 @@ export async function GET(request: NextRequest) {
       const address = booking.service_address || { address_line_1: '', city: 'Unknown', postal_code: '' }
       
       // Get services from booking_services using service_details JSON
-      const services = booking.booking_services?.map((bs: any) => ({
+      const services = booking.booking_services?.map((bs: { 
+        service_details?: { name?: string }, 
+        price?: number 
+      }) => ({
         name: bs.service_details?.name || 'Vehicle Detailing Service',
         base_price: bs.price || 0
       })) || [{
@@ -166,7 +187,7 @@ export async function GET(request: NextRequest) {
     return ApiResponseHandler.success(allBookings)
 
   } catch (error) {
-    console.error('All bookings error:', error)
+    logger.error('All bookings error:', error instanceof Error ? error : undefined)
     return ApiResponseHandler.serverError('Failed to fetch bookings')
   }
 }

@@ -2,6 +2,8 @@ import { NextRequest } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase/direct'
 import { ApiResponseHandler } from '@/lib/api/response'
 import { EmailService } from '@/lib/services/email'
+import { logger } from '@/lib/utils/logger'
+import type { Booking } from '@/lib/utils/booking-types'
 
 export async function POST(
   request: NextRequest,
@@ -60,7 +62,7 @@ export async function POST(
       .eq('id', reschedule_request_id)
 
     if (updateRequestError) {
-      console.error('Error updating reschedule request:', updateRequestError)
+      logger.error('Error updating reschedule request:', updateRequestError)
       return ApiResponseHandler.serverError('Failed to decline reschedule request')
     }
 
@@ -85,7 +87,7 @@ export async function POST(
       })
 
     if (historyError) {
-      console.error('Error adding to booking history:', historyError)
+      logger.error('Error adding to booking history:', historyError)
     }
 
     // Send decline notification email to customer
@@ -103,14 +105,14 @@ export async function POST(
       const emailResult = await emailService.sendRescheduleRequestResponse(
         customer.email,
         customerName,
-        booking as any,
-        rescheduleRequest as any,
+        booking as Booking,
+        rescheduleRequest as { id: string; requested_date?: string; requested_time?: string; responded_at?: string; status?: string; reason?: string | null },
         'reject',
         decline_reason
       )
       
       if (!emailResult.success) {
-        console.error('Failed to send decline notification email:', emailResult.error)
+        logger.error('Failed to send decline notification email:', emailResult.error ? new Error(emailResult.error) : undefined)
       }
     }
 
@@ -122,7 +124,7 @@ export async function POST(
     })
 
   } catch (error) {
-    console.error('Decline reschedule request error:', error)
+    logger.error('Decline reschedule request error:', error instanceof Error ? error : undefined)
     return ApiResponseHandler.serverError('Failed to decline reschedule request')
   }
 }

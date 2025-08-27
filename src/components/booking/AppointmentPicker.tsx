@@ -53,8 +53,8 @@ export function AppointmentPicker({ initialDate, onSelect, adminMode = false, se
   const datesWithAvailable = useMemo(() => {
     const s = new Set<string>()
     availabilityDates.forEach(d => {
-      const slots = availabilityMap.get(d) || []
-      if (slots.some((sl: any) => sl.is_available)) {
+      const slots = availabilityMap.get(d) || [] as Array<{ is_available?: boolean }>
+      if (slots.some((sl) => !!sl?.is_available)) {
         s.add(d)
       }
     })
@@ -64,8 +64,8 @@ export function AppointmentPicker({ initialDate, onSelect, adminMode = false, se
   const datesFullyBooked = useMemo(() => {
     const s = new Set<string>()
     availabilityDates.forEach(d => {
-      const slots = availabilityMap.get(d) || []
-      if (slots.length > 0 && slots.every((sl: any) => !sl.is_available)) {
+      const slots = availabilityMap.get(d) || [] as Array<{ is_available?: boolean }>
+      if (slots.length > 0 && slots.every((sl) => !sl?.is_available)) {
         s.add(d)
       }
     })

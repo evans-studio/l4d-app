@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase/direct'
 import { ApiResponseHandler } from '@/lib/api/response'
 import { authenticateAdmin } from '@/lib/api/auth-handler'
+import { logger } from '@/lib/utils/logger'
 
 interface BusinessSettings {
   businessName: string
@@ -37,7 +38,7 @@ export async function GET(request: NextRequest) {
       .single()
 
     if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
-      console.error('Settings fetch error:', error)
+      logger.error('Settings fetch error:', error)
       return ApiResponseHandler.serverError('Failed to fetch settings')
     }
 
@@ -58,7 +59,7 @@ export async function GET(request: NextRequest) {
     return ApiResponseHandler.success(settings)
 
   } catch (error) {
-    console.error('Settings GET error:', error)
+    logger.error('Settings GET error:', error instanceof Error ? error : undefined)
     return ApiResponseHandler.serverError('Failed to fetch settings')
   }
 }
@@ -120,14 +121,14 @@ export async function PUT(request: NextRequest) {
     }
 
     if (result.error) {
-      console.error('Settings save error:', result.error)
+      logger.error('Settings save error:', result.error)
       return ApiResponseHandler.serverError('Failed to save settings')
     }
 
     return ApiResponseHandler.success(settings, 'Settings saved successfully')
 
   } catch (error) {
-    console.error('Settings PUT error:', error)
+    logger.error('Settings PUT error:', error instanceof Error ? error : undefined)
     return ApiResponseHandler.serverError('Failed to save settings')
   }
 }

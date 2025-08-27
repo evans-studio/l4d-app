@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Checkbox } from '@/components/ui/checkbox'
+import { logger } from '@/lib/utils/logger'
 
 interface Customer {
   id: string
@@ -95,10 +96,10 @@ function AdminCustomersPage() {
         if (customersData.success) {
           setCustomers(customersData.data)
         } else {
-          console.error('API returned success: false', customersData.error)
+          logger.error('API returned success: false', customersData.error)
         }
       } else {
-        console.error('Customers API request failed:', customersResponse.status)
+        logger.error('Customers API request failed', undefined, { status: customersResponse.status })
       }
 
       // Handle stats data
@@ -108,13 +109,13 @@ function AdminCustomersPage() {
         if (statsData.success) {
           setStats(statsData.data)
         } else {
-          console.error('Stats API returned success: false', statsData.error)
+          logger.error('Stats API returned success: false', statsData.error)
         }
       } else {
-        console.error('Stats API request failed:', statsResponse.status)
+        logger.error('Stats API request failed', undefined, { status: statsResponse.status })
       }
     } catch (error) {
-      console.error('Failed to load customer data:', error)
+      logger.error('Failed to load customer data', error instanceof Error ? error : undefined)
     } finally {
       setIsLoading(false)
     }
@@ -179,7 +180,7 @@ function AdminCustomersPage() {
         document.body.removeChild(a)
       }
     } catch (error) {
-      console.error('Export failed:', error)
+      logger.error('Export failed', error instanceof Error ? error : undefined)
     }
   }
 

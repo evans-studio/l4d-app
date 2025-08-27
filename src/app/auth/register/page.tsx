@@ -8,6 +8,7 @@ import { AuthLogo } from '@/components/ui/primitives/Logo'
 import { Container } from '@/components/layout/templates/PageLayout'
 import { Mail, Lock, User, Phone, AlertCircle, CheckCircle } from 'lucide-react'
 import Link from 'next/link'
+import { logger } from '@/lib/utils/logger'
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -48,7 +49,7 @@ export default function RegisterPage() {
       }
 
     } catch (error) {
-      console.error('Registration error:', error)
+      logger.error('Registration error:', error)
       setError('Network error. Please try again.')
     } finally {
       setIsLoading(false)

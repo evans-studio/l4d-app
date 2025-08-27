@@ -1,3 +1,4 @@
+import { logger } from '@/lib/utils/logger'
 /**
  * Environment Configuration & Validation for Love4Detailing
  * 
@@ -20,6 +21,7 @@ interface EnvironmentConfig {
     accessTokenSecret: string
     refreshTokenSecret: string
     cookieDomain?: string
+    adminEmails: string[]
   }
   business: {
     name: string
@@ -154,6 +156,16 @@ function getOptionalEnvVar(key: string, defaultValue?: string): string | undefin
   return process.env[key] || defaultValue
 }
 
+function parseAdminEmails(emailsString: string): string[] {
+  return emailsString
+    .split(',')
+    .map(email => email.trim().toLowerCase())
+    .filter(email => {
+      // Basic email validation
+      return email.includes('@') && email.includes('.')
+    })
+}
+
 /**
  * Validate environment and create configuration
  */
@@ -204,6 +216,7 @@ function createEnvironmentConfig(): EnvironmentConfig {
       accessTokenSecret: getRequiredEnvVar('ACCESS_TOKEN_SECRET', isProduction && !skipValidation),
       refreshTokenSecret: getRequiredEnvVar('REFRESH_TOKEN_SECRET', isProduction && !skipValidation),
       cookieDomain: getOptionalEnvVar('COOKIE_DOMAIN'),
+      adminEmails: parseAdminEmails(getOptionalEnvVar('ADMIN_EMAILS', 'zell@love4detailing.com,paul@evans-studio.co.uk')!),
     },
     business: {
       name: getOptionalEnvVar('NEXT_PUBLIC_COMPANY_NAME', 'Love 4 Detailing')!,
@@ -232,6 +245,8 @@ function createEnvironmentConfig(): EnvironmentConfig {
  * Validated environment configuration
  */
 export const env: EnvironmentConfig = createEnvironmentConfig()
+// Backwards-compatible alias for modules importing { environment }
+export const environment = env
 
 // Helper environment checks
 export const isDevelopment = env.app.env === 'development'
@@ -289,10 +304,10 @@ if (typeof window === 'undefined' && process.env.NODE_ENV !== 'test') {
   try {
     // Environment validation happens during config creation above
     if (process.env.NODE_ENV !== 'production') {
-      console.log('✅ Environment validation successful')
+      logger.debug('✅ Environment validation successful')
     }
   } catch (error) {
-    console.error('❌ Environment validation failed:', error)
+    logger.error('❌ Environment validation failed:', error)
     if (process.env.NODE_ENV === 'production') {
       // Don't use process.exit in edge runtime - just throw the error
       throw new Error(`Environment validation failed: ${error}`)

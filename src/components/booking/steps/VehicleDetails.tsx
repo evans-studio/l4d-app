@@ -9,6 +9,7 @@ import { Select } from '@/components/ui/primitives/Select'
 import { ChevronLeftIcon, ChevronRightIcon, PlusIcon, CarIcon, CheckIcon, Clock, AlertCircle, Loader2 } from 'lucide-react'
 import { getVehicleSizeDescription, PRICING_CONFIG } from '@/lib/pricing/calculator'
 import { safeConsole } from '@/lib/utils/logger'
+import { logger } from '@/lib/utils/logger'
 
 // Vehicle data interfaces
 interface VehicleModel {
@@ -162,7 +163,7 @@ export function VehicleDetails() {
     }
   }, [formData.vehicle])
 
-  const handleFormChange = (field: string, value: any) => {
+  const handleFormChange = (field: keyof typeof vehicleForm, value: string | number) => {
     setVehicleForm(prev => {
       const newForm = { ...prev, [field]: value }
       
@@ -177,8 +178,8 @@ export function VehicleDetails() {
       if (field === 'model') {
         newForm.year = new Date().getFullYear()
         // Auto-detect size based on make/model selection
-        if (newForm.make && value) {
-          newForm.size = getVehicleSize(newForm.make, value)
+        if (newForm.make && typeof value === 'string') {
+          newForm.size = getVehicleSize(newForm.make, value as string)
         }
       }
       
@@ -241,7 +242,7 @@ export function VehicleDetails() {
   }
 
   // Helper function to get size display info from database with safety checks
-  const getSizeInfo = (sizeName: string) => {
+  const getSizeInfo = (sizeName: string): { label: string; description?: string; multiplier: string; examples?: unknown[] } => {
     try {
       // Try to get from database first
       if (vehicleSizes?.length > 0) {
@@ -251,7 +252,6 @@ export function VehicleDetails() {
         
         if (vehicleSize) {
           return {
-            id: vehicleSize.id,
             label: vehicleSize.name || sizeName,
             description: vehicleSize.description || 'Vehicle size',
             multiplier: vehicleSize.price_multiplier ? `${vehicleSize.price_multiplier}x` : '',
@@ -261,14 +261,15 @@ export function VehicleDetails() {
       }
       
       // Fallback to static size map with safety checks
-      const sizeMap: Record<string, any> = {
+      const sizeMap: Record<'S' | 'M' | 'L' | 'XL', { label: string; description: string; multiplier: string; examples: unknown[] }> = {
         S: { label: 'Small', description: getVehicleSizeDescription('S'), multiplier: '', examples: [] },
         M: { label: 'Medium', description: getVehicleSizeDescription('M'), multiplier: '', examples: [] },
         L: { label: 'Large', description: getVehicleSizeDescription('L'), multiplier: '', examples: [] },
         XL: { label: 'Extra Large', description: getVehicleSizeDescription('XL'), multiplier: '', examples: [] }
       }
       
-      return sizeMap[sizeName] || sizeMap.M
+      const key = (['S','M','L','XL'].includes(sizeName) ? sizeName : 'M') as 'S' | 'M' | 'L' | 'XL'
+      return sizeMap[key]
     } catch (error) {
       safeConsole.error('Error getting size info', error as Error)
       // Return safe fallback
@@ -348,7 +349,7 @@ export function VehicleDetails() {
                       throw new Error(data.error?.message || 'Failed to load vehicle data')
                     }
                   } catch (error) {
-                    console.error('Error loading vehicle data:', error)
+                    logger.error('Error loading vehicle data:', error)
                     setVehicleDataError(error instanceof Error ? error.message : 'Failed to load vehicle data')
                   } finally {
                     setVehicleDataLoading(false)
@@ -390,7 +391,7 @@ export function VehicleDetails() {
           
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {userVehicles.map((vehicle) => {
-              let sizeInfo
+              let sizeInfo: { label: string; multiplier: string }
               try {
                 const sizeName = vehicle.vehicle_size?.price_multiplier 
                   ? getSizeNameFromMultiplier(vehicle.vehicle_size.price_multiplier)
@@ -457,7 +458,7 @@ export function VehicleDetails() {
                       <div className="flex items-center gap-3">
                         <span className="text-sm font-medium text-text-secondary uppercase tracking-wide min-w-[100px]">Size:</span>
                         <span className="text-base text-text-primary">{sizeInfo.label}</span>
-                        <span className="text-sm text-text-muted">({sizeInfo.multiplier} pricing)</span>
+                        <span className="text-sm text-text-muted">{sizeInfo.multiplier} pricing</span>
                       </div>
                       
                       {vehicle.notes && (
@@ -613,7 +614,7 @@ export function VehicleDetails() {
               <div className="bg-surface-secondary rounded-lg p-4 border border-border-secondary">
                 <div>
                   <h4 className="font-medium text-text-primary">
-                    {getSizeInfo(vehicleForm.size).label}
+                    {(() => { const s = getSizeInfo(vehicleForm.size) as { label: string }; return s.label })()}
                   </h4>
                 </div>
                 

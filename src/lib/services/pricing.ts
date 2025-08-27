@@ -1,4 +1,5 @@
 import { BaseService, ServiceResponse } from './base'
+import { logger } from '@/lib/utils/logger'
 
 export interface PricingCalculationRequest {
   serviceId: string
@@ -63,7 +64,7 @@ export class PricingService extends BaseService {
         .single()
 
       if (pricingError) {
-        console.error('Service pricing not found:', pricingError)
+        logger.error('Service pricing not found:', pricingError)
         return { data: null, error: new Error('Service pricing not configured') }
       }
 
@@ -273,7 +274,7 @@ export class PricingService extends BaseService {
         .single()
 
       if (pricingError) {
-        console.error('Service pricing not found:', pricingError)
+        logger.error('Service pricing not found:', pricingError)
         return { data: null, error: new Error('Service pricing not configured') }
       }
 

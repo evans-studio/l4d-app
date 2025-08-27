@@ -32,6 +32,7 @@ import { WeekView } from '@/components/event-calendar/week-view'
 import type { CalendarEvent, CalendarView } from '@/components/event-calendar/types'
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
+import { logger } from '@/lib/utils/logger'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -138,13 +139,13 @@ export function EventCalendar({
     const handled = onEventClick?.(event)
     if (handled) return
     if (readonly) return
-    console.log("Event selected:", event) // Debug log
+    logger.debug("Event selected:", event) // Debug log
     setSelectedEvent(event)
     setIsEventDialogOpen(true)
   }
 
   const handleEventCreate = (startTime: Date) => {
-    console.log("Creating new event at:", startTime) // Debug log
+    logger.debug("Creating new event at:", startTime) // Debug log
 
     // Snap to 15-minute intervals
     const minutes = startTime.getMinutes()

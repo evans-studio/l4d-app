@@ -6,6 +6,7 @@ import { ApiResponseHandler } from '@/lib/api/response'
 import { ApiValidation } from '@/lib/api/validation'
 import { z } from 'zod'
 import { BOOKING_BUFFER_MINUTES, isTimeSlotPast, getPastSlotFilter } from '@/lib/utils/time-validation'
+import { logger } from '@/lib/utils/logger'
 
 const availabilityQuerySchema = z.object({
   date_from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format'),
@@ -67,7 +68,7 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Get availability error:', error)
+    logger.error('Get availability error:', error)
     return ApiResponseHandler.serverError('Failed to fetch availability')
   }
 }
@@ -123,7 +124,7 @@ async function handleSingleDateRequest(request: NextRequest, date: string) {
     const { data: timeSlots, error } = await query
 
     if (error) {
-      console.error('Error fetching time slots:', error)
+      logger.error('Error fetching time slots:', error)
       return ApiResponseHandler.serverError('Failed to fetch availability')
     }
 
@@ -155,7 +156,7 @@ async function handleSingleDateRequest(request: NextRequest, date: string) {
     return ApiResponseHandler.success(transformedSlots, `Found ${transformedSlots.length} time slots for ${date}`)
 
   } catch (error) {
-    console.error('Single date availability error:', error)
+    logger.error('Single date availability error:', error)
     return ApiResponseHandler.serverError('Failed to fetch availability')
   }
 }

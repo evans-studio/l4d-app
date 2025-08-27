@@ -69,7 +69,7 @@ export function BookingFlowIndicator({ variant = 'default' }: BookingFlowIndicat
   const handleStepClick = (stepNumber: number) => {
     // Only allow navigation to previous/completed steps
     if (stepNumber < currentStep) {
-      setStep(stepNumber as any);
+      setStep(stepNumber as 1 | 2 | 3 | 4 | 5 | 6);
     }
   };
 

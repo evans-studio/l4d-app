@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { ApiAuth } from '@/lib/api/auth'
 import { ApiResponseHandler } from '@/lib/api/response'
 import { z } from 'zod'
+import { logger } from '@/lib/utils/logger'
 
 const previewSchema = z.object({
   start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -61,7 +62,7 @@ export async function POST(request: NextRequest) {
       return ApiResponseHandler.badRequest('Invalid request data', error.issues)
     }
     
-    console.error('Schedule preview error:', error)
+    logger.error('Schedule preview error:', error instanceof Error ? error : undefined)
     return ApiResponseHandler.serverError('Failed to generate preview')
   }
 }

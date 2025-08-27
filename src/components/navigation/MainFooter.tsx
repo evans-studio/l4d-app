@@ -52,10 +52,10 @@ export function MainFooter() {
             <div className="flex items-center gap-3 text-sm">
               <MailIcon className="w-4 h-4 text-brand-400" />
               <a 
-                href="mailto:zell@love4detailing.com"
+                href={`mailto:${process.env.NEXT_PUBLIC_COMPANY_EMAIL || 'zell@love4detailing.com'}`}
                 className="text-text-secondary hover:text-brand-400 transition-colors"
               >
-                zell@love4detailing.com
+                {process.env.NEXT_PUBLIC_COMPANY_EMAIL || 'zell@love4detailing.com'}
               </a>
             </div>
             

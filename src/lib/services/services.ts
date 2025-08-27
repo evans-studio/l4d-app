@@ -1,5 +1,6 @@
 import { BaseService, ServiceResponse } from './base'
 import { Service, VehicleSize } from '@/lib/utils/database'
+import { logger } from '@/lib/utils/logger'
 
 // Define ServiceCategory locally since it's no longer in database.ts
 interface ServiceCategory {
@@ -63,7 +64,7 @@ export class ServicesService extends BaseService {
         .select('service_id, small, medium, large, extra_large')
 
       if (pricingError) {
-        console.error('Service pricing error:', pricingError)
+        logger.error('Service pricing error:', pricingError)
         return { data: null, error: pricingError }
       }
 
@@ -84,7 +85,7 @@ export class ServicesService extends BaseService {
           const servicePricing = pricingLookup[service.id]
           
           if (!servicePricing) {
-            console.warn(`No pricing found for service: ${service.id}`)
+            logger.warn(`No pricing found for service: ${service.id}`)
             return {
               ...service,
               priceRange: { min: 0, max: 0 },
@@ -110,7 +111,7 @@ export class ServicesService extends BaseService {
             },
           }
         } catch (error) {
-          console.error('Error processing service:', service.id, error)
+          logger.error('Error processing service:', error instanceof Error ? error : undefined, { serviceId: service.id })
           throw error
         }
       })
@@ -141,7 +142,7 @@ export class ServicesService extends BaseService {
         .single()
 
       if (pricingError) {
-        console.warn('Service pricing data missing for service:', id, pricingError)
+        logger.warn('Service pricing data missing for service', { id, error: pricingError })
         // Continue without pricing data - use base price as fallback
       }
 
@@ -192,7 +193,7 @@ export class ServicesService extends BaseService {
   async createService(serviceData: Partial<Service>): Promise<ServiceResponse<Service>> {
     return this.executeQuery(async () => {
       const supabase = this.supabase
-      console.log('ServicesService: Creating service with data:', serviceData)
+      logger.debug('ServicesService: Creating service with data:', serviceData)
       
       const result = await supabase
         .from('services')
@@ -200,10 +201,10 @@ export class ServicesService extends BaseService {
         .select()
         .single()
       
-      console.log('ServicesService: Database insert result:', result)
+      logger.debug('ServicesService: Database insert result:', result)
       
       if (result.error) {
-        console.error('ServicesService: Database error details:', {
+        logger.error('ServicesService: Database error details:', {
           message: result.error.message,
           code: result.error.code,
           details: result.error.details,

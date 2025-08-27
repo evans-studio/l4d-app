@@ -18,6 +18,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { isNewUIEnabled } from '@/lib/config/feature-flags'
+import { logger } from '@/lib/utils/logger'
 
 // Mock postcode validation - in real app this would call an API
 const validatePostcode = (postcode: string): Promise<{
@@ -136,7 +137,7 @@ export function ServiceAreaCheck() {
       setResult(validationResult)
       setShowResult(true)
     } catch (error) {
-      console.error('Postcode validation error:', error)
+      logger.error('Postcode validation error:', error)
       setResult({ valid: false, covered: false })
       setShowResult(true)
     } finally {

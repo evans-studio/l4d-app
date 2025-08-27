@@ -46,18 +46,20 @@ export const CancelModal: React.FC<CancelModalProps> = ({
   const [error, setError] = useState('')
   const [acknowledgeNoRefund, setAcknowledgeNoRefund] = useState(false)
 
+  const dataObj: { bookingId?: string } = data && typeof data === 'object' ? (data as { bookingId?: string }) : {}
+
   useEffect(() => {
-    if (isOpen && data?.bookingId) {
+    if (isOpen && dataObj.bookingId) {
       loadBookingDetails()
     }
-  }, [isOpen, data?.bookingId])
+  }, [isOpen, dataObj.bookingId])
 
   const loadBookingDetails = async () => {
     try {
       setIsLoading(true)
       setError('')
       
-      const response = await fetch(`/api/customer/bookings/${data.bookingId}`)
+      const response = await fetch(`/api/customer/bookings/${String(dataObj.bookingId || '')}`)
       const result = await response.json()
 
       if (result.success) {
@@ -112,7 +114,7 @@ export const CancelModal: React.FC<CancelModalProps> = ({
       setIsSubmitting(true)
       setError('')
 
-      const response = await fetch(`/api/customer/bookings/${data.bookingId}/cancel`, {
+      const response = await fetch(`/api/customer/bookings/${String(dataObj.bookingId || '')}/cancel`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -213,7 +215,7 @@ export const CancelModal: React.FC<CancelModalProps> = ({
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-text-secondary">Service:</span>
-                <span className="font-medium">{(booking as any).service?.name || (booking as any).services?.name || 'Service'}</span>
+                <span className="font-medium">{booking.service?.name || (Array.isArray((booking as unknown as { services?: Array<{ name?: string }> }).services) ? ((booking as unknown as { services?: Array<{ name?: string }> }).services?.[0]?.name) : undefined) || 'Service'}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-text-secondary">Date:</span>

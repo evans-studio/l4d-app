@@ -6,7 +6,8 @@ import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbP
 import { AdminRoute } from '@/components/ProtectedRoute'
 import { Card, CardHeader, CardContent } from '@/components/ui/composites/Card'
 import { Button } from '@/components/ui/primitives/Button'
-import { 
+import { logger } from '@/lib/utils/logger'
+import {
   EyeIcon,
   EyeOffIcon,
   LoaderIcon
@@ -61,7 +62,7 @@ function SettingsPage() {
         setSettings({ ...settings, ...data.data })
       }
     } catch (error) {
-      console.error('Settings load error:', error)
+      logger.error('Settings load error:', error instanceof Error ? error : undefined)
       setError('Failed to load settings')
     } finally {
       setIsLoading(false)
@@ -93,7 +94,7 @@ function SettingsPage() {
         setError(data.error?.message || 'Failed to save settings')
       }
     } catch (error) {
-      console.error('Settings save error:', error)
+      logger.error('Settings save error:', error instanceof Error ? error : undefined)
       setError('Failed to save settings')
     } finally {
       setIsSaving(false)

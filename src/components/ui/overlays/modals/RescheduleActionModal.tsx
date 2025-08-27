@@ -9,7 +9,11 @@ import { Button } from '@/components/ui/primitives/Button'
 interface RescheduleActionModalProps extends BaseOverlayProps {
   data?: {
     bookingId: string
-    booking: any
+    booking: {
+      booking_reference?: string
+      scheduled_date?: string
+      start_time?: string
+    }
     rescheduleRequest: {
       id: string
       requested_date: string
@@ -33,8 +37,9 @@ export const RescheduleActionModal: React.FC<RescheduleActionModalProps> = ({
   const [declineNotes, setDeclineNotes] = useState('')
 
   const isApprove = overlayType === 'reschedule-approve'
-  const booking = data?.booking
-  const rescheduleRequest = data?.rescheduleRequest
+  const dataObj: Record<string, unknown> = data && typeof data === 'object' ? (data as Record<string, unknown>) : {}
+  const booking = (dataObj.booking as RescheduleActionModalProps['data'] extends infer D ? D extends { booking: any } ? D['booking'] : undefined : undefined) as { booking_reference?: string; scheduled_date?: string; start_time?: string } | undefined
+  const rescheduleRequest = (dataObj.rescheduleRequest as { id: string; requested_date: string; requested_time: string; reason: string; created_at: string } | undefined)
 
   const formatTime = (time: string) => {
     if (!time) return ''
@@ -56,7 +61,8 @@ export const RescheduleActionModal: React.FC<RescheduleActionModalProps> = ({
   }
 
   const handleAction = async () => {
-    if (!data?.bookingId || !rescheduleRequest?.id) return
+    const bookingId = dataObj.bookingId as string | undefined
+    if (!bookingId || !rescheduleRequest?.id) return
 
     try {
       setIsSubmitting(true)
@@ -93,7 +99,7 @@ export const RescheduleActionModal: React.FC<RescheduleActionModalProps> = ({
       } else {
         // Fallback: if request not found (stale), try booking endpoint directly with the requested date/time
         if (isApprove && result?.error?.code === 'NOT_FOUND') {
-          const fallback = await fetch(`/api/admin/bookings/${data.bookingId}/reschedule`, {
+          const fallback = await fetch(`/api/admin/bookings/${bookingId}/reschedule`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -172,13 +178,13 @@ export const RescheduleActionModal: React.FC<RescheduleActionModalProps> = ({
               <div className="flex items-center gap-2 text-sm">
                 <CalendarIcon className="w-4 h-4 text-text-secondary" />
                 <span className="text-text-primary">
-                  {formatDate(booking.scheduled_date)}
+                  {formatDate(String(booking.scheduled_date || ''))}
                 </span>
               </div>
               <div className="flex items-center gap-2 text-sm">
                 <ClockIcon className="w-4 h-4 text-text-secondary" />
                 <span className="text-text-primary">
-                  {formatTime(booking.start_time)}
+                  {formatTime(String(booking.start_time || ''))}
                 </span>
               </div>
             </div>

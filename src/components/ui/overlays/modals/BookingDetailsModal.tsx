@@ -112,7 +112,9 @@ export const BookingDetailsModal: React.FC<BaseOverlayProps> = ({
   onClose,
   data
 }) => {
-  const [booking, setBooking] = useState<BookingDetails | null>(data?.booking || null)
+  const dataObj: Record<string, unknown> = data && typeof data === 'object' ? (data as Record<string, unknown>) : {}
+  const initialBooking = (dataObj.booking as Partial<BookingDetails> | undefined) || null
+  const [booking, setBooking] = useState<BookingDetails | null>(initialBooking as BookingDetails | null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
   const [actionLoading, setActionLoading] = useState<string | null>(null)
@@ -154,7 +156,7 @@ export const BookingDetailsModal: React.FC<BaseOverlayProps> = ({
   }
 
   // Admin action helpers (status transitions)
-  const updateStatus = async (newStatus: string, body: Record<string, any> = {}) => {
+  const updateStatus = async (newStatus: string, body: Record<string, unknown> = {}) => {
     if (!booking?.id) return
     setActionLoading(newStatus)
     try {
@@ -206,26 +208,27 @@ export const BookingDetailsModal: React.FC<BaseOverlayProps> = ({
   }
 
   useEffect(() => {
-    if (!isOpen || !data?.bookingId) {
+    const bookingId = dataObj.bookingId as string | undefined
+    if (!isOpen || !bookingId) {
       setIsLoading(false)
       return
     }
-    const minimal = data?.booking as any | undefined
-    const needsHydration = !minimal || !minimal.address || !minimal.address.address_line_1 || !minimal.customer_phone
+    const minimal = dataObj.booking as Partial<BookingDetails> | undefined
+    const needsHydration = !minimal || !minimal.address || !minimal.address?.address_line_1 || !minimal.customer_phone
     if (needsHydration) {
       loadBookingDetails()
     } else {
       setBooking(minimal as BookingDetails)
       setIsLoading(false)
     }
-  }, [isOpen, data?.bookingId])
+  }, [isOpen, dataObj.bookingId])
 
   const loadBookingDetails = async () => {
     try {
       setIsLoading(true)
       setError('')
       
-      const response = await fetch(`/api/bookings/${data.bookingId}`)
+      const response = await fetch(`/api/bookings/${String(dataObj.bookingId || '')}`)
       const result = await response.json()
 
       if (result.success) {
@@ -310,7 +313,7 @@ export const BookingDetailsModal: React.FC<BaseOverlayProps> = ({
           <div className="text-center py-12">
             <XCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
             <p className="text-red-600 mb-4">{error || 'Booking not found'}</p>
-            {data?.bookingId && (
+            {Boolean(dataObj.bookingId) && (
               <Button onClick={loadBookingDetails} variant="outline">
                 Try Again
               </Button>

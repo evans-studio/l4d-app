@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { ApiResponseHandler } from '@/lib/api/response'
+import { logger } from '@/lib/utils/logger'
 
 export async function GET(request: NextRequest) {
   try {
@@ -39,7 +40,7 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: false })
 
     if (profilesError) {
-      console.error('Error fetching customer profiles:', profilesError)
+      logger.error('Error fetching customer profiles:', profilesError)
       return ApiResponseHandler.serverError('Failed to fetch customers')
     }
 
@@ -65,7 +66,7 @@ export async function GET(request: NextRequest) {
       .neq('status', 'cancelled')
 
     if (statsError) {
-      console.error('Error fetching booking stats:', statsError)
+      logger.error('Error fetching booking stats:', statsError)
     }
 
     // Process data and create CSV
@@ -126,7 +127,7 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Customer export error:', error)
+    logger.error('Customer export error:', error instanceof Error ? error : undefined)
     return ApiResponseHandler.serverError('Failed to export customers')
   }
 }

@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import { createClientFromRequest } from '@/lib/supabase/server'
 import { ApiResponseHandler } from '@/lib/api/response'
+import { logger } from '@/lib/utils/logger'
 
 export async function GET(request: NextRequest) {
   try {
@@ -31,7 +32,7 @@ export async function GET(request: NextRequest) {
       .eq('role', 'customer')
 
     if (totalError) {
-      console.error('Error counting total customers:', totalError)
+      logger.error('Error counting total customers:', totalError)
     }
 
     // Get customers who have made bookings in the last 90 days (active)
@@ -45,7 +46,7 @@ export async function GET(request: NextRequest) {
       .neq('status', 'cancelled')
 
     if (activeError) {
-      console.error('Error fetching active customers:', activeError)
+      logger.error('Error fetching active customers:', activeError)
     }
 
     const activeCustomers = new Set(activeCustomerIds?.map(b => b.customer_id) || []).size
@@ -62,7 +63,7 @@ export async function GET(request: NextRequest) {
       .gte('created_at', startOfMonth.toISOString())
 
     if (newError) {
-      console.error('Error counting new customers:', newError)
+      logger.error('Error counting new customers:', newError)
     }
 
     // Get VIP customers (those who have spent £500 or more)
@@ -72,7 +73,7 @@ export async function GET(request: NextRequest) {
       .neq('status', 'cancelled')
 
     if (spendingError) {
-      console.error('Error fetching customer spending:', spendingError)
+      logger.error('Error fetching customer spending:', spendingError)
     }
 
     // Calculate VIP customers and average customer value
@@ -115,7 +116,7 @@ export async function GET(request: NextRequest) {
     return ApiResponseHandler.success(stats)
 
   } catch (error) {
-    console.error('Customer stats error:', error)
+    logger.error('Customer stats error:', error instanceof Error ? error : undefined)
     return ApiResponseHandler.serverError('Failed to fetch customer statistics')
   }
 }

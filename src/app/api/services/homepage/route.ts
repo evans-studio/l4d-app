@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase/direct'
 import { ApiResponseHandler } from '@/lib/api/response'
+import { logger } from '@/lib/utils/logger'
 
 export async function GET(request: NextRequest) {
   try {
@@ -18,7 +19,7 @@ export async function GET(request: NextRequest) {
       .order('display_order', { ascending: true })
 
     if (error) {
-      console.error('Services fetch error:', error)
+      logger.error('Services fetch error:', error)
       return ApiResponseHandler.error('Failed to fetch services', 'FETCH_ERROR')
     }
 
@@ -109,7 +110,7 @@ export async function GET(request: NextRequest) {
     return ApiResponseHandler.success(transformedServices)
 
   } catch (error) {
-    console.error('Homepage services API error:', error)
+    logger.error('Homepage services API error:', error)
     return ApiResponseHandler.error(
       'Internal server error', 
       'SERVER_ERROR',

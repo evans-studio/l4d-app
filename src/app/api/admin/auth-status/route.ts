@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import { createClientFromRequest } from '@/lib/supabase/server'
 import { ApiResponseHandler } from '@/lib/api/response'
+import { logger } from '@/lib/utils/logger'
 
 export async function GET(request: NextRequest) {
   try {
@@ -39,7 +40,7 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Auth status error:', error)
+    logger.error('Auth status error:', error instanceof Error ? error : undefined)
     return ApiResponseHandler.serverError('Failed to check auth status')
   }
 }

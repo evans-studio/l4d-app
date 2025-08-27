@@ -3,6 +3,7 @@ import { PricingService } from '@/lib/services/pricing'
 import { ApiResponseHandler } from '@/lib/api/response'
 import { ApiValidation } from '@/lib/api/validation'
 import { z } from 'zod'
+import { logger } from '@/lib/utils/logger'
 
 const distanceCalculationSchema = z.object({
   postcode: z.string().min(1, 'Postcode is required'),
@@ -29,7 +30,7 @@ export async function POST(request: NextRequest) {
     return ApiResponseHandler.success(result.data)
 
   } catch (error) {
-    console.error('Distance calculation error:', error)
+    logger.error('Distance calculation error', error instanceof Error ? error : undefined)
     return ApiResponseHandler.serverError('Failed to calculate distance')
   }
 }

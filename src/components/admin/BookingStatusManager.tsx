@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import { Button } from '@/components/ui/primitives/Button'
-import { 
+import { logger } from '@/lib/utils/logger'
+import {
   CheckCircleIcon, 
   XIcon, 
   ClockIcon, 
@@ -118,7 +119,7 @@ export function BookingStatusManager({
         setShowNotes(false)
       }
     } catch (error) {
-      console.error('Failed to update status:', error)
+      logger.error('Failed to update status:', error)
     } finally {
       setIsUpdating(false)
     }

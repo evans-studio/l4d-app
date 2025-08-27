@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { ApiResponseHandler } from '@/lib/api/response'
 import { CancellationService } from '@/lib/services/cancellation'
 import { createClientFromRequest } from '@/lib/supabase/server'
+import { logger } from '@/lib/utils/logger'
 
 export async function GET(
   request: NextRequest,
@@ -48,7 +49,7 @@ export async function GET(
     return ApiResponseHandler.success(policyResult.data)
 
   } catch (error) {
-    console.error('Check cancellation policy error:', error)
+    logger.error('Check cancellation policy error', error instanceof Error ? error : undefined)
     return ApiResponseHandler.serverError('Failed to check cancellation policy')
   }
 }

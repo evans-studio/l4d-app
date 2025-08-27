@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { createClientFromRequest } from '@/lib/supabase/server'
 import { ApiResponseHandler } from '@/lib/api/response'
 import { EmailService } from '@/lib/services/email'
+import { logger } from '@/lib/utils/logger'
 
 export async function POST(
   request: NextRequest,
@@ -12,11 +13,11 @@ export async function POST(
     const { requestedDate, requestedTime, reason, customerNotes } = body
     const { id } = await params
     
-    console.log('Reschedule request body:', body)
-    console.log('Parsed values:', { requestedDate, requestedTime, reason })
+    logger.debug('Reschedule request body:', body)
+    logger.debug('Parsed values:', { requestedDate, requestedTime, reason })
     
     if (!requestedDate || !requestedTime || requestedDate.trim() === '' || requestedTime.trim() === '') {
-      console.log('Validation failed - missing or empty date/time:', { requestedDate, requestedTime })
+      logger.debug('Validation failed - missing or empty date/time:', { requestedDate, requestedTime })
       return ApiResponseHandler.badRequest(`Requested date and time are required. Received: date="${requestedDate}", time="${requestedTime}"`)
     }
 
@@ -77,7 +78,7 @@ export async function POST(
       .single()
 
     if (requestError || !rescheduleRequest) {
-      console.error('Error creating reschedule request:', requestError)
+      logger.error('Error creating reschedule request:', requestError)
       return ApiResponseHandler.serverError('Failed to create reschedule request')
     }
 
@@ -103,7 +104,7 @@ export async function POST(
       )
       
       if (!adminNotification.success) {
-        console.error('Failed to send admin reschedule notification:', adminNotification.error)
+        logger.error('Failed to send admin reschedule notification', undefined, { error: adminNotification.error })
         // Don't fail the request if email fails
       }
     }
@@ -118,7 +119,7 @@ export async function POST(
     })
 
   } catch (error) {
-    console.error('Reschedule request error:', error)
+    logger.error('Reschedule request error', error instanceof Error ? error : undefined)
     return ApiResponseHandler.serverError('Failed to submit reschedule request')
   }
 }

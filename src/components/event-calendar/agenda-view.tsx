@@ -8,6 +8,7 @@ import { AgendaDaysToShow } from '@/components/event-calendar/constants'
 import type { CalendarEvent } from '@/components/event-calendar/types'
 import { getAgendaEventsForDay } from '@/components/event-calendar/utils'
 import { EventItem } from '@/components/event-calendar/event-item'
+import { logger } from '@/lib/utils/logger'
 
 interface AgendaViewProps {
   currentDate: Date
@@ -22,7 +23,7 @@ export function AgendaView({
 }: AgendaViewProps) {
   // Show events for the next days based on constant
   const days = useMemo(() => {
-    console.log("Agenda view updating with date:", currentDate.toISOString())
+    logger.debug("Agenda view updating with date", { iso: currentDate.toISOString() })
     return Array.from({ length: AgendaDaysToShow }, (_, i) =>
       addDays(new Date(currentDate), i)
     )
@@ -30,7 +31,7 @@ export function AgendaView({
 
   const handleEventClick = (event: CalendarEvent, e: React.MouseEvent) => {
     e.stopPropagation()
-    console.log("Agenda view event clicked:", event)
+    logger.debug("Agenda view event clicked", { event })
     onEventSelect(event)
   }
 

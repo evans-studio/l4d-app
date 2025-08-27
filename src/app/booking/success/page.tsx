@@ -28,7 +28,11 @@ interface BookingDetails {
   scheduled_end_time: string
   status: string
   total_price: number
-  pricing_breakdown: any
+  pricing_breakdown: {
+    basePrice?: number
+    totalPrice?: number
+    distanceSurcharge?: number
+  }
   payment_status?: string
   service: {
     name: string
@@ -313,19 +317,19 @@ function BookingSuccessContent() {
                       <Car className="w-4 h-4 text-text-tertiary" />
                       <span className="text-text-secondary text-sm">
                         {(() => {
-                          const veh: any = booking.vehicle || (booking as any).vehicle_details
+                          const veh = ((booking as unknown as { vehicle?: { color?: string; year?: number; make?: string; model?: string; vehicle_size?: { name?: string } }; vehicle_details?: { color?: string; year?: number; make?: string; model?: string } }).vehicle) || (booking as unknown as { vehicle_details?: { color?: string; year?: number; make?: string; model?: string } }).vehicle_details
                           if (!veh) return 'Vehicle details not provided'
-                          const color = veh.color || ''
-                          const year = veh.year || ''
-                          const make = veh.make || ''
-                          const model = veh.model || ''
+                          const color = veh?.color || ''
+                          const year = veh?.year || ''
+                          const make = veh?.make || ''
+                          const model = veh?.model || ''
                           return `${color ? color + ' ' : ''}${year ? year + ' ' : ''}${make} ${model}`.trim()
                         })()}
                       </span>
                     </div>
-                    {booking.vehicle && (booking as any).vehicle?.vehicle_size?.name && (
+                    {booking.vehicle && (booking as unknown as { vehicle?: { vehicle_size?: { name?: string } } }).vehicle?.vehicle_size?.name && (
                       <p className="text-text-tertiary text-xs">
-                        {(booking as any).vehicle.vehicle_size.name} vehicle
+                        {((booking as unknown as { vehicle?: { vehicle_size?: { name?: string } } }).vehicle?.vehicle_size?.name) as string} vehicle
                       </p>
                     )}
                   </div>
@@ -366,7 +370,7 @@ function BookingSuccessContent() {
                   <MapPin className="w-5 h-5 text-brand-600 mt-0.5" />
                   <div>
                     {(() => {
-                      const addr = booking.address || (booking as any).service_address
+                      const addr = booking.address || (booking as unknown as { service_address?: { address_line_1?: string; address_line_2?: string; city?: string; postal_code?: string } }).service_address
                       if (!addr) return <p className="text-text-secondary text-sm">Address not provided</p>
                       return (
                         <>

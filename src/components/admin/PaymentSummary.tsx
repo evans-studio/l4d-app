@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { CreditCard, AlertTriangle, Send, ChevronDown, ChevronUp, Clock } from 'lucide-react'
 import { Button } from '@/components/ui/primitives/Button'
 import { Card, CardContent } from '@/components/ui/composites/Card'
+import { logger } from '@/lib/utils/logger'
 import { type AdminBooking } from '@/hooks/useRealTimeBookings'
 
 interface PaymentSummaryProps {
@@ -94,7 +95,7 @@ export function PaymentSummary({ bookings, onRefreshBookings }: PaymentSummaryPr
         })
       }
     } catch (error) {
-      console.error('Error sending payment reminders:', error)
+      logger.error('Error sending payment reminders:', error)
       setReminderResult({
         success: false,
         sent: 0,

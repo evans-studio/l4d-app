@@ -3,6 +3,8 @@ import { persist, createJSONStorage } from 'zustand/middleware'
 import { User } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase/client'
 import { UserProfile, parseUserProfile } from '@/schemas/auth.schema'
+import { logger } from '@/lib/utils/logger'
+import { env } from '@/lib/config/environment'
 
 // Custom storage that only works on client side
 const clientOnlyStorage = {
@@ -60,7 +62,7 @@ interface AuthState {
   checkAuthState: () => Promise<void>
 }
 
-const ADMIN_EMAILS = ['zell@love4detailing.com', 'paul@evans-studio.co.uk']
+// Note: admin emails configured via env.auth.adminEmails; constant removed
 
 export const useAuthStore = create<AuthState>()(
   persist(
@@ -81,7 +83,7 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading })
       },
       setError: (error) => {
-        console.log('🚨 Auth error state changed:', error)
+        logger.debug('🚨 Auth error state changed', { error })
         set({ error })
       },
       
@@ -102,7 +104,7 @@ export const useAuthStore = create<AuthState>()(
           const result = await response.json()
           
           if (!result.success) {
-            console.error('🔴 Profile fetch API error:', result.error)
+            logger.error('🔴 Profile fetch API error:', result.error)
             
             if (result.error.code === 'PROFILE_NOT_FOUND') {
               
@@ -118,7 +120,7 @@ export const useAuthStore = create<AuthState>()(
           set({ profile: result.data, error: null })
           return result.data
         } catch (error) {
-          console.error('🔴 Profile fetch exception:', error)
+          logger.error('🔴 Profile fetch exception:', error instanceof Error ? error : undefined)
           set({ error: 'Network error while fetching profile' })
           return null
         }
@@ -137,7 +139,7 @@ export const useAuthStore = create<AuthState>()(
           const result = await response.json()
           
           if (!result.success) {
-            console.error('Profile creation API error:', result.error)
+            logger.error('Profile creation API error:', result.error)
             set({ error: result.error.message })
             return null
           }
@@ -146,7 +148,7 @@ export const useAuthStore = create<AuthState>()(
           set({ profile: result.data })
           return result.data
         } catch (error) {
-          console.error('Profile creation exception:', error)
+          logger.error('Profile creation exception:', error instanceof Error ? error : undefined)
           set({ error: 'Network error while creating profile' })
           return null
         }
@@ -162,7 +164,7 @@ export const useAuthStore = create<AuthState>()(
       // Auth operations
       login: async (email: string, password: string) => {
         try {
-          console.log('🔵 Starting login process for:', email)
+          logger.debug('🔵 Starting login process for', { email })
           set({ isLoading: true, error: null })
           
           // Add timeout to prevent hanging
@@ -175,10 +177,10 @@ export const useAuthStore = create<AuthState>()(
             setTimeout(() => reject(new Error('Login timeout')), 30000)
           )
           
-          const { data, error } = await Promise.race([loginPromise, timeoutPromise]) as any
+          const { data, error } = await Promise.race([loginPromise, timeoutPromise]) as { data: { user?: import('@supabase/supabase-js').User | null } ; error?: { message: string } }
 
           if (error) {
-          console.error('🔴 Auth login error:', error)
+          logger.error('🔴 Auth login error:', error instanceof Error ? error : undefined)
             set({ isLoading: false, error: error.message })
             return { success: false, error: error.message }
           }
@@ -194,7 +196,7 @@ export const useAuthStore = create<AuthState>()(
               let profile = await Promise.race([
                 get().fetchProfile(data.user.id),
                 new Promise((_, reject) => setTimeout(() => reject(new Error('Profile fetch timeout')), 10000))
-              ]) as any
+              ]) as unknown
               
               if (!profile) {
                 
@@ -207,13 +209,13 @@ export const useAuthStore = create<AuthState>()(
                     data.user.user_metadata?.phone
                   ),
                   new Promise((_, reject) => setTimeout(() => reject(new Error('Profile creation timeout')), 10000))
-                ]) as any
+                ]) as unknown
               }
               
               
               
             } catch (profileError) {
-              console.error('🔴 Profile operation failed:', profileError)
+              logger.error('🔴 Profile operation failed:', profileError instanceof Error ? profileError : undefined)
               // Continue with login even if profile operations fail
               // The middleware and auth compatibility layer will handle this
             }
@@ -222,11 +224,11 @@ export const useAuthStore = create<AuthState>()(
             return { success: true }
           }
 
-          console.error('🔴 Login failed - no user data')
+          logger.error('🔴 Login failed - no user data')
           set({ isLoading: false, error: 'Login failed' })
           return { success: false, error: 'Login failed' }
         } catch (error) {
-           console.error('🔴 Login exception:', error)
+           logger.error('🔴 Login exception:', error instanceof Error ? error : undefined)
           set({ isLoading: false, error: error instanceof Error && error.message === 'Login timeout' 
             ? 'Login is taking too long. Please try again.' 
             : 'Network error. Please try again.' })
@@ -256,13 +258,13 @@ export const useAuthStore = create<AuthState>()(
           
 
           if (authError) {
-            console.error('🔴 Registration auth error:', authError)
+            logger.error('🔴 Registration auth error:', authError)
             set({ isLoading: false, error: authError.message })
             return { success: false, error: authError.message }
           }
 
           if (!authData.user) {
-            console.error('🔴 Registration failed - no user data')
+            logger.error('🔴 Registration failed - no user data')
             set({ isLoading: false, error: 'Registration failed' })
             return { success: false, error: 'Registration failed. Please try again.' }
           }
@@ -291,7 +293,7 @@ export const useAuthStore = create<AuthState>()(
             error: 'Registration successful! Please check your email to verify your account.'
           }
         } catch (error) {
-            console.error('🔴 Registration exception:', error)
+            logger.error('🔴 Registration exception:', error instanceof Error ? error : undefined)
           set({ isLoading: false, error: 'Network error' })
           return { success: false, error: 'Network error. Please try again.' }
         }
@@ -309,7 +311,7 @@ export const useAuthStore = create<AuthState>()(
           
           return { success: true }
         } catch (error) {
-          console.error('Logout error:', error)
+          logger.error('Logout error:', error instanceof Error ? error : undefined)
           set({ error: 'Failed to logout' })
           return { success: false, error: 'Failed to logout' }
         }
@@ -343,7 +345,7 @@ export const useAuthStore = create<AuthState>()(
               
               
             } catch (profileError) {
-              console.error('❌ Profile operations failed during init:', profileError)
+              logger.error('❌ Profile operations failed during init:', profileError instanceof Error ? profileError : undefined)
               // Keep user authenticated even if profile operations fail
             }
           } else {
@@ -354,7 +356,7 @@ export const useAuthStore = create<AuthState>()(
           
           set({ isLoading: false })
         } catch (error) {
-          console.error('❌ Auth initialization error:', error)
+          logger.error('❌ Auth initialization error:', error instanceof Error ? error : undefined)
           set({ isLoading: false, error: 'Failed to initialize authentication' })
         }
       },
@@ -373,7 +375,7 @@ export const useAuthStore = create<AuthState>()(
             set({ user: null, profile: null })
           }
         } catch (error) {
-          console.error('❌ Auth state check failed:', error)
+          logger.error('❌ Auth state check failed:', error instanceof Error ? error : undefined)
           set({ user: null, profile: null })
         }
       }

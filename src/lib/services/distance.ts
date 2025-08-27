@@ -52,7 +52,8 @@ export async function calculateDistance(
     
     return result
   } catch (error) {
-    console.error('Distance calculation error:', error)
+    const { logger } = await import('@/lib/utils/logger')
+    logger.error('Distance calculation error', error instanceof Error ? error : undefined)
     return {
       distance: 0,
       duration: 0,
@@ -121,7 +122,8 @@ async function calculateWithGoogle(
       provider: 'google'
     }
   } catch (error) {
-    console.warn('Google Maps distance calculation failed:', error)
+    const { logger } = await import('@/lib/utils/logger')
+    logger.warn('Google Maps distance calculation failed', error instanceof Error ? error : undefined)
     return {
       distance: 0,
       duration: 0,
@@ -194,7 +196,8 @@ async function calculateWithMapbox(
       provider: 'mapbox'
     }
   } catch (error) {
-    console.warn('Mapbox distance calculation failed:', error)
+    const { logger } = await import('@/lib/utils/logger')
+    logger.warn('Mapbox distance calculation failed', error instanceof Error ? error : undefined)
     return {
       distance: 0,
       duration: 0,
@@ -234,7 +237,8 @@ async function geocodeWithMapbox(postcode: string, apiKey: string): Promise<Coor
     const [lng, lat] = data.features[0].geometry.coordinates
     return { lat, lng }
   } catch (error) {
-    console.warn('Mapbox geocoding failed:', error)
+    const { logger } = await import('@/lib/utils/logger')
+    logger.warn('Mapbox geocoding failed', error instanceof Error ? error : undefined)
     return null
   }
 }
@@ -266,7 +270,8 @@ async function calculateWithHaversine(
       provider: 'haversine'
     }
   } catch (error) {
-    console.warn('Haversine calculation failed:', error)
+    const { logger } = await import('@/lib/utils/logger')
+    logger.warn('Haversine calculation failed', error instanceof Error ? error : undefined)
     return {
       distance: 0,
       duration: 0,
@@ -310,7 +315,8 @@ async function geocodePostcodeUK(postcode: string): Promise<Coordinates | null> 
     }
     throw new Error('Postcode and outcode lookup failed')
   } catch (error) {
-    console.warn('UK postcode geocoding failed:', error)
+    const { logger } = await import('@/lib/utils/logger')
+    logger.warn('UK postcode geocoding failed', error instanceof Error ? error : undefined)
     return null
   }
 }

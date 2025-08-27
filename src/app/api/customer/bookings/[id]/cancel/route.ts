@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { ApiResponseHandler } from '@/lib/api/response'
 import { CancellationService } from '@/lib/services/cancellation'
 import { createClientFromRequest } from '@/lib/supabase/server'
+import { logger } from '@/lib/utils/logger'
 
 export async function POST(
   request: NextRequest,
@@ -54,7 +55,7 @@ export async function POST(
     })
 
   } catch (error) {
-    console.error('Cancel booking API error:', error)
+    logger.error('Cancel booking API error', error instanceof Error ? error : undefined)
     return ApiResponseHandler.serverError('Failed to cancel booking')
   }
 }

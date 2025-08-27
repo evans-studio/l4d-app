@@ -25,6 +25,7 @@ import { ConfirmBookingModal, DeclineBookingModal, RescheduleBookingModal, Cance
 import { useOverlay } from '@/lib/overlay/context'
 import { MarkAsPaidModal } from '@/components/admin/MarkAsPaidModal'
 import { PaymentSummary } from '@/components/admin/PaymentSummary'
+import { logger } from '@/lib/utils/logger'
 import { BookingCard as UnifiedBookingCard, type BookingData } from '@/components/ui/patterns/BookingCard'
 
 // Use the booking type from the hook
@@ -209,10 +210,10 @@ function AdminBookingsContent() {
         await refreshBookings()
         setConfirmModal({ isOpen: false, booking: null })
       } else {
-        console.error('Failed to confirm booking')
+        logger.error('Failed to confirm booking')
       }
     } catch (error) {
-      console.error('Error confirming booking:', error)
+      logger.error('Error confirming booking', error instanceof Error ? error : undefined)
     } finally {
       setActionLoading(false)
     }
@@ -236,10 +237,10 @@ function AdminBookingsContent() {
         await refreshBookings()
         setDeclineModal({ isOpen: false, booking: null })
       } else {
-        console.error('Failed to decline booking:', data.error)
+        logger.error('Failed to decline booking', undefined, { apiError: data.error })
       }
     } catch (error) {
-      console.error('Error declining booking:', error)
+      logger.error('Error declining booking', error instanceof Error ? error : undefined)
     } finally {
       setActionLoading(false)
     }
@@ -257,11 +258,11 @@ function AdminBookingsContent() {
         await refreshBookings()
         setRescheduleModal({ isOpen: false, booking: null })
       } else {
-        console.error('Failed to reschedule booking')
+        logger.error('Failed to reschedule booking')
         alert('Failed to reschedule booking. Please try again.')
       }
     } catch (error) {
-      console.error('Error rescheduling booking:', error)
+      logger.error('Error rescheduling booking', error instanceof Error ? error : undefined)
     } finally {
       setActionLoading(false)
     }
@@ -279,10 +280,10 @@ function AdminBookingsContent() {
         await refreshBookings()
         setCancelModal({ isOpen: false, booking: null })
       } else {
-        console.error('Failed to cancel booking')
+        logger.error('Failed to cancel booking')
       }
     } catch (error) {
-      console.error('Error cancelling booking:', error)
+      logger.error('Error cancelling booking', error instanceof Error ? error : undefined)
     } finally {
       setActionLoading(false)
     }
@@ -328,7 +329,7 @@ function AdminBookingsContent() {
         }
         // Success feedback could be added here
       } catch (error) {
-        console.error('Error updating booking status:', error)
+        logger.error('Error updating booking status', error instanceof Error ? error : undefined)
         // Error feedback could be added here
       } finally {
         setStatusUpdateLoading(null)

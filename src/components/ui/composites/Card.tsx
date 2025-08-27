@@ -1,6 +1,7 @@
 import React from 'react'
 import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '@/lib/utils'
+import { logger } from '@/lib/utils/logger'
 
 const cardVariants = cva(
   'rounded-lg border bg-surface-card text-text-primary shadow-[var(--elevation-1)] transition-all duration-200',
@@ -493,7 +494,7 @@ export const CardDemo: React.FC = () => {
               </CardContent>
             </Card>
 
-            <Card variant="interactive" clickable onClick={() => console.log('Card clicked')}>
+            <Card variant="interactive" clickable onClick={() => logger.debug('Card clicked')}>
               <CardHeader>
                 <h3 className="text-lg font-semibold">Interactive Card</h3>
                 <p className="text-text-secondary">Strong purple feedback</p>

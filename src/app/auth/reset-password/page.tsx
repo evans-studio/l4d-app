@@ -8,6 +8,7 @@ import { Container } from '@/components/layout/templates/PageLayout'
 import { Lock, Eye, EyeOff, CheckCircle, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase/client'
+import { logger } from '@/lib/utils/logger'
 
 function ResetPasswordPageContent() {
   const [password, setPassword] = useState('')
@@ -46,7 +47,7 @@ function ResetPasswordPageContent() {
           history.replaceState(null, '', window.location.pathname + window.location.search)
         } catch (e) {
           // eslint-disable-next-line no-console
-          console.error('Supabase exchangeCodeForSession failed:', e)
+          logger.error('Supabase exchangeCodeForSession failed:', e)
         }
       })()
     }
@@ -112,7 +113,7 @@ function ResetPasswordPageContent() {
         if (data.success) {
           if (process.env.NODE_ENV !== 'production') {
             // eslint-disable-next-line no-console
-            console.log('Password updated successfully via custom system')
+            logger.debug('Password updated successfully via custom system')
           }
           setIsSuccess(true)
           
@@ -136,7 +137,7 @@ function ResetPasswordPageContent() {
         })
 
         if (updateError) {
-          console.error('Supabase password update error:', updateError)
+          logger.error('Supabase password update error:', updateError)
           
           if (updateError.message.includes('Invalid token')) {
             setError('Your reset link has expired. Please request a new password reset.')
@@ -146,7 +147,7 @@ function ResetPasswordPageContent() {
         } else {
           if (process.env.NODE_ENV !== 'production') {
             // eslint-disable-next-line no-console
-            console.log('Password updated successfully via Supabase')
+            logger.debug('Password updated successfully via Supabase')
           }
           setIsSuccess(true)
           
@@ -157,7 +158,7 @@ function ResetPasswordPageContent() {
         }
       }
     } catch (error) {
-      console.error('Reset password error:', error)
+      logger.error('Reset password error:', error)
       setError('Something went wrong. Please try again.')
     } finally {
       setIsLoading(false)

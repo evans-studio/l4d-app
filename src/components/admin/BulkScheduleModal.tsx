@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import { Button } from '@/components/ui/primitives/Button'
-import { 
+import { logger } from '@/lib/utils/logger'
+import {
   CalendarIcon, 
   ClockIcon, 
   XIcon, 
@@ -146,7 +147,7 @@ export function BulkScheduleModal({ isOpen, onClose, onSuccess }: BulkScheduleMo
         }
       }
     } catch (error) {
-      console.error('Preview generation failed:', error)
+      logger.error('Preview generation failed:', error)
     }
   }
 

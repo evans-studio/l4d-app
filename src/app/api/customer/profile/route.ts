@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { ApiResponseHandler } from '@/lib/api/response'
 import { createClientFromRequest } from '@/lib/supabase/server'
 import { z } from 'zod'
+import { logger } from '@/lib/utils/logger'
 
 const profileUpdateSchema = z.object({
   firstName: z.string().min(1, 'First name is required').max(100),
@@ -58,7 +59,7 @@ export async function PUT(request: NextRequest) {
       .single()
 
     if (updateError) {
-      console.error('Profile update error:', updateError)
+      logger.error('Profile update error', updateError instanceof Error ? updateError : undefined)
       return ApiResponseHandler.serverError('Failed to update profile')
     }
 
@@ -80,7 +81,7 @@ export async function PUT(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Profile update error:', error)
+    logger.error('Profile update error', error instanceof Error ? error : undefined)
     
     if (error instanceof z.ZodError) {
       const firstError = error.issues[0]
@@ -125,7 +126,7 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Profile fetch error:', error)
+    logger.error('Profile fetch error', error instanceof Error ? error : undefined)
     return ApiResponseHandler.serverError('Failed to fetch profile')
   }
 }

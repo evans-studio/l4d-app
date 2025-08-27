@@ -3,7 +3,8 @@
 import { useRouter } from 'next/navigation'
 import { useOverlay } from '@/lib/overlay/context'
 import { Button } from '@/components/ui/primitives/Button'
-import { 
+import { logger } from '@/lib/utils/logger'
+import {
   CheckCircleIcon,
   XCircleIcon,
   ClockIcon,
@@ -182,7 +183,7 @@ export function BookingCard({
         await navigator.clipboard.writeText(booking.payment_link)
         // Could add toast notification here
       } catch (error) {
-        console.error('Failed to copy payment link:', error)
+        logger.error('Failed to copy payment link:', error)
       }
     }
   }

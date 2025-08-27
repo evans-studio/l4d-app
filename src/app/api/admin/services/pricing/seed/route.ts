@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/server'
 import { ApiResponseHandler } from '@/lib/api/response'
+import { logger } from '@/lib/utils/logger'
 
 /**
  * Seed missing service pricing data
@@ -17,7 +18,7 @@ export async function POST(request: NextRequest) {
       .eq('is_active', true)
     
     if (servicesError) {
-      console.error('Error fetching services:', servicesError)
+      logger.error('Error fetching services:', servicesError)
       return ApiResponseHandler.serverError('Failed to fetch services')
     }
     
@@ -31,7 +32,7 @@ export async function POST(request: NextRequest) {
       .select('service_id')
     
     if (pricingError) {
-      console.error('Error fetching existing pricing:', pricingError)
+      logger.error('Error fetching existing pricing:', pricingError)
       return ApiResponseHandler.serverError('Failed to fetch existing pricing')
     }
     
@@ -70,11 +71,11 @@ export async function POST(request: NextRequest) {
       .select('service_id')
     
     if (insertError) {
-      console.error('Error inserting pricing data:', insertError)
+      logger.error('Error inserting pricing data:', insertError)
       return ApiResponseHandler.serverError(`Failed to insert pricing data: ${insertError.message}`)
     }
     
-    console.log(`Successfully created pricing for ${insertedPricing?.length || 0} services`)
+    logger.debug(`Successfully created pricing for ${insertedPricing?.length || 0} services`)
     
     return ApiResponseHandler.success({
       message: `Successfully created pricing data for ${insertedPricing?.length || 0} services`,
@@ -83,7 +84,7 @@ export async function POST(request: NextRequest) {
     })
     
   } catch (error) {
-    console.error('Pricing seed error:', error)
+    logger.error('Pricing seed error:', error instanceof Error ? error : undefined)
     return ApiResponseHandler.serverError('Failed to seed pricing data')
   }
 }

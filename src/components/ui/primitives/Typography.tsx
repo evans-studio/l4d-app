@@ -155,7 +155,7 @@ const Text = React.forwardRef<TextElement, TextProps>(
   }, ref) => {
     const truncateClasses = truncate ? 'truncate' : lineClamp ? `line-clamp-${lineClamp}` : ''
     
-    const elementProps = {
+    const elementPropsBase = {
       className: cn(
         textVariants({ size, weight, color, align, leading }),
         truncateClasses,
@@ -163,25 +163,26 @@ const Text = React.forwardRef<TextElement, TextProps>(
       ),
       'data-ui': isNewUIEnabled() ? 'new' : 'old',
       'data-typo': 'text',
-      ref,
       ...props
     }
     
+    // Create element-specific props with correct ref typing at the call sites below
+    
     switch (as) {
       case 'span':
-        return <span {...elementProps}>{children}</span>
+        return <span ref={ref as React.Ref<HTMLSpanElement>} {...elementPropsBase}>{children}</span>
       case 'div':
-        return <div {...(elementProps as any)}>{children}</div>
+        return <div ref={ref as React.Ref<HTMLDivElement>} {...(elementPropsBase as React.HTMLAttributes<HTMLDivElement>)}>{children}</div>
       case 'label':
-        return <label {...(elementProps as any)}>{children}</label>
+        return <label ref={ref as React.Ref<HTMLLabelElement>} {...(elementPropsBase as React.LabelHTMLAttributes<HTMLLabelElement>)}>{children}</label>
       case 'small':
-        return <small {...elementProps}>{children}</small>
+        return <small ref={ref as React.Ref<HTMLElement>} {...elementPropsBase}>{children}</small>
       case 'strong':
-        return <strong {...elementProps}>{children}</strong>
+        return <strong ref={ref as React.Ref<HTMLElement>} {...elementPropsBase}>{children}</strong>
       case 'em':
-        return <em {...elementProps}>{children}</em>
+        return <em ref={ref as React.Ref<HTMLElement>} {...elementPropsBase}>{children}</em>
       default:
-        return <p {...(elementProps as any)}>{children}</p>
+        return <p ref={ref as React.Ref<HTMLParagraphElement>} {...(elementPropsBase as React.HTMLAttributes<HTMLParagraphElement>)}>{children}</p>
     }
   }
 )
@@ -375,7 +376,7 @@ const Code = React.forwardRef<CodeElement, CodeProps>(
     }
     
     if (as === 'pre') {
-      return <pre {...(elementProps as any)}>{children}</pre>
+      return <pre {...(elementProps as React.HTMLAttributes<HTMLPreElement>)}>{children}</pre>
     }
     
     return <code {...elementProps}>{children}</code>

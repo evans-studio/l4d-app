@@ -44,8 +44,9 @@ export const AdminReschedulePanel: React.FC<{ bookingId: string, currentDate?: s
         const json = await res.json()
         if (json?.success && Array.isArray(json.data)) {
           const slotsByDate: Record<string, TimeSlot[]> = {}
-          json.data.forEach((slot: any) => {
-            if (slot.is_available) {
+          type ApiSlot = { id: string; slot_date: string; start_time: string; is_available: boolean }
+          ;(json.data as ApiSlot[]).forEach((slot) => {
+            if (slot && slot.is_available) {
               const date = slot.slot_date
               if (!slotsByDate[date]) slotsByDate[date] = []
               slotsByDate[date].push({

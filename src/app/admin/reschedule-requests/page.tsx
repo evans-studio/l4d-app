@@ -20,6 +20,7 @@ import { Badge } from '@/components/ui/badge'
 import { AdminLayout } from '@/components/layouts/AdminLayout'
 import { AdminRoute } from '@/components/ProtectedRoute'
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb'
+import { logger } from '@/lib/utils/logger'
 
 interface RescheduleRequest {
   id: string
@@ -81,7 +82,7 @@ function AdminRescheduleRequestsPage() {
         setError(data.error?.message || 'Failed to fetch reschedule requests')
       }
     } catch (error) {
-      console.error('Error fetching reschedule requests:', error)
+      logger.error('Error fetching reschedule requests:', error instanceof Error ? error : undefined)
       setError('Failed to load reschedule requests')
     } finally {
       setIsLoading(false)
@@ -127,11 +128,11 @@ function AdminRescheduleRequestsPage() {
             return
           }
         }
-        console.error('Failed to approve reschedule:', data.error)
+        logger.error('Failed to approve reschedule:', data.error)
         alert('Failed to approve reschedule request: ' + (data.error?.message || 'Unknown error'))
       }
     } catch (error) {
-      console.error('Failed to approve reschedule:', error)
+      logger.error('Failed to approve reschedule:', error instanceof Error ? error : undefined)
       alert('Failed to approve reschedule request')
     } finally {
       setActionLoading(null)
@@ -158,11 +159,11 @@ function AdminRescheduleRequestsPage() {
       if (data.success) {
         await fetchRescheduleRequests()
       } else {
-        console.error('Failed to decline reschedule:', data.error)
+        logger.error('Failed to decline reschedule:', data.error)
         alert('Failed to decline reschedule request: ' + (data.error?.message || 'Unknown error'))
       }
     } catch (error) {
-      console.error('Failed to decline reschedule:', error)
+      logger.error('Failed to decline reschedule:', error instanceof Error ? error : undefined)
       alert('Failed to decline reschedule request')
     } finally {
       setActionLoading(null)

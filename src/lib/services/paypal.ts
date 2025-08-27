@@ -1,3 +1,4 @@
+import { logger } from '@/lib/utils/logger'
 /**
  * PayPal.me Integration Service
  * Handles PayPal payment link generation for bookings
@@ -24,7 +25,7 @@ export class PayPalService {
     this.config = { ...defaultConfig, ...config }
     
     if (!this.config.paypalMeUsername) {
-      console.warn('⚠️ PayPalService: PAYPAL_ME_USERNAME not configured')
+      logger.warn('⚠️ PayPalService: PAYPAL_ME_USERNAME not configured')
     }
   }
 

@@ -4,6 +4,7 @@ import { ApiResponseHandler } from '@/lib/api/response'
 import { ApiValidation } from '@/lib/api/validation'
 import { authenticateAdmin } from '@/lib/api/auth-handler'
 import { z } from 'zod'
+import { logger } from '@/lib/utils/logger'
 
 const createCategorySchema = z.object({
   name: z.string().min(1, 'Name is required').max(100, 'Name must be less than 100 characters'),
@@ -34,7 +35,7 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Get service categories error:', error)
+    logger.error('Get service categories error:', error)
     return ApiResponseHandler.serverError('Failed to fetch service categories')
   }
 }
@@ -77,7 +78,7 @@ export async function POST(request: NextRequest) {
     }, { status: 201 })
 
   } catch (error) {
-    console.error('Create service category error:', error)
+    logger.error('Create service category error:', error)
     return ApiResponseHandler.serverError('Failed to create service category')
   }
 }

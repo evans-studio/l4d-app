@@ -12,6 +12,7 @@ import {
   CheckCircleIcon
 } from 'lucide-react'
 import { isNewUIEnabled } from '@/lib/config/feature-flags'
+import { logger } from '@/lib/utils/logger'
 
 interface TimeSlotData {
   id: string
@@ -82,7 +83,7 @@ export function DayCard({ day, isToday, onAddSlot, onSlotUpdate }: DayCardProps)
         onSlotUpdate()
       }
     } catch (error) {
-      console.error('Error updating slot:', error)
+      logger.error('Error updating slot:', error)
     }
   }
 
@@ -99,7 +100,7 @@ export function DayCard({ day, isToday, onAddSlot, onSlotUpdate }: DayCardProps)
         alert(err?.error?.message || 'Failed to delete time slot')
       }
     } catch (error) {
-      console.error('Error deleting slot:', error)
+      logger.error('Error deleting slot:', error)
       alert('Failed to delete time slot')
     }
   }

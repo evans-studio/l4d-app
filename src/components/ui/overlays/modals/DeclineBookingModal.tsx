@@ -16,6 +16,8 @@ export const DeclineBookingModal: React.FC<BaseOverlayProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
 
+  const dataObj: Record<string, unknown> = data && typeof data === 'object' ? (data as Record<string, unknown>) : {}
+
   const handleDecline = async () => {
     if (!reason.trim()) {
       setError('Please provide a reason for declining this booking')
@@ -26,7 +28,7 @@ export const DeclineBookingModal: React.FC<BaseOverlayProps> = ({
       setIsSubmitting(true)
       setError('')
 
-      const response = await fetch(`/api/admin/bookings/${data?.bookingId}/decline`, {
+      const response = await fetch(`/api/admin/bookings/${String(dataObj.bookingId || '')}/decline`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -71,9 +73,9 @@ export const DeclineBookingModal: React.FC<BaseOverlayProps> = ({
                   Please provide a reason so the customer understands why their 
                   booking cannot be accommodated.
                 </p>
-                {data?.bookingReference && (
+                {Boolean(dataObj.bookingReference) && (
                   <p className="text-xs text-text-muted mt-2">
-                    Booking: {data.bookingReference}
+                    Booking: {String(dataObj.bookingReference)}
                   </p>
                 )}
               </div>

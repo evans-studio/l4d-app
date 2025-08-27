@@ -7,7 +7,8 @@ import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbP
 import { AdminRoute } from '@/components/ProtectedRoute'
 import { Card, CardHeader, CardContent } from '@/components/ui/composites/Card'
 import { Button } from '@/components/ui/primitives/Button'
-import { 
+import { logger } from '@/lib/utils/logger'
+import {
   TrendingUpIcon, 
   DollarSignIcon, 
   UsersIcon,
@@ -71,7 +72,7 @@ function ReportsPage() {
         setError(data.error?.message || 'Failed to load report data')
       }
     } catch (error) {
-      console.error('Report data error:', error)
+      logger.error('Report data error:', error instanceof Error ? error : undefined)
       setError('Failed to load report data')
     } finally {
       setIsLoading(false)
@@ -97,7 +98,7 @@ function ReportsPage() {
         setError(data.error?.message || 'Failed to export report')
       }
     } catch (error) {
-      console.error('Export error:', error)
+      logger.error('Export error:', error instanceof Error ? error : undefined)
       setError('Failed to export report')
     }
   }

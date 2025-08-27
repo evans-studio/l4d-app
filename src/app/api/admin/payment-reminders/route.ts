@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { ApiResponseHandler } from '@/lib/api/response'
 import { authenticateAdmin } from '@/lib/api/auth-handler'
 import { paymentReminderService } from '@/lib/services/payment-reminders'
+import { logger } from '@/lib/utils/logger'
 
 export async function POST(request: NextRequest) {
   try {
@@ -28,7 +29,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Payment reminders API error:', error)
+    logger.error('Payment reminders API error:', error instanceof Error ? error : undefined)
     return ApiResponseHandler.serverError('Failed to process payment reminders')
   }
 }
@@ -54,7 +55,7 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Get overdue payments API error:', error)
+    logger.error('Get overdue payments API error:', error instanceof Error ? error : undefined)
     return ApiResponseHandler.serverError('Failed to get overdue payments')
   }
 }

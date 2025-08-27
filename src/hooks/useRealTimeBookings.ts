@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { logger } from '@/lib/utils/logger'
 
 interface BookingUpdate {
   type: 'booking_created' | 'booking_updated' | 'booking_cancelled' | 'booking_confirmed' | 'booking_declined' | 'booking_rescheduled' | 'booking_completed'
@@ -129,7 +130,7 @@ export function useRealTimeBookings({
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch bookings'
       setError(errorMessage)
-      console.error('Bookings fetch error:', err)
+      logger.error('Bookings fetch error:', err)
 
       // Soft retry once shortly after a network failure
       if (errorMessage.includes('Failed to fetch') || errorMessage.includes('The user aborted a request')) {

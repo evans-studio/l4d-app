@@ -7,6 +7,7 @@ import { AuthLogo } from '@/components/ui/primitives/Logo'
 import { Container } from '@/components/layout/templates/PageLayout'
 import { Lock, Eye, EyeOff, CheckCircle, AlertCircle, Car } from 'lucide-react'
 import Link from 'next/link'
+import { logger } from '@/lib/utils/logger'
 
 function SetupPasswordPageContent() {
   const [password, setPassword] = useState('')
@@ -106,7 +107,7 @@ function SetupPasswordPageContent() {
         throw new Error(data.error?.message || 'Password setup failed')
       }
     } catch (err) {
-      console.error('Password setup error:', err)
+      logger.error('Password setup error:', err)
       setError(err instanceof Error ? err.message : 'An unexpected error occurred')
     } finally {
       setIsLoading(false)

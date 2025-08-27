@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { logger } from '@/lib/utils/logger'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -13,7 +14,7 @@ export async function GET(
 ) {
   try {
     const { id: customerId } = await params
-    console.log('Customer detail API: Fetching data for customer:', customerId)
+    logger.debug('Customer detail API: Fetching data for customer:', { customerId })
 
     // Get customer profile
     const { data: customer, error: customerError } = await supabaseService
@@ -34,7 +35,7 @@ export async function GET(
       .single()
 
     if (customerError || !customer) {
-      console.error('Customer not found:', customerError)
+      logger.error('Customer not found:', customerError)
       return NextResponse.json({
         success: false,
         error: { message: 'Customer not found', code: 'CUSTOMER_NOT_FOUND' }
@@ -139,7 +140,7 @@ export async function GET(
       })()
     }))
 
-    console.log('Customer detail API results:', {
+    logger.debug('Customer detail API results:', {
       customer: !!customer,
       bookings: bookings?.length || 0,
       vehicles: vehicles?.length || 0,
@@ -160,7 +161,7 @@ export async function GET(
     })
 
   } catch (error) {
-    console.error('Customer detail API exception:', error)
+    logger.error('Customer detail API exception:', error instanceof Error ? error : undefined)
     return NextResponse.json({
       success: false,
       error: { message: 'Internal server error' }

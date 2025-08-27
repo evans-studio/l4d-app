@@ -1,10 +1,11 @@
 import { NextRequest } from 'next/server'
 import { createClientFromRequest } from '@/lib/supabase/server'
 import { ApiResponseHandler } from '@/lib/api/response'
+import { logger } from '@/lib/utils/logger'
 
-function toCSV(rows: any[]): string {
+function toCSV(rows: Record<string, any>[]): string {
   if (!rows.length) return ''
-  const headers = Object.keys(rows[0])
+  const headers = Object.keys(rows[0] || {})
   const lines = [headers.join(',')]
   for (const row of rows) {
     const values = headers.map(h => {
@@ -66,7 +67,7 @@ export async function GET(request: NextRequest) {
 
     if (format === 'csv') {
       const csv = toCSV(flatRows)
-      const body = new Blob([csv], { type: 'text/csv' }) as any
+      const body = new Blob([csv], { type: 'text/csv' })
       return new Response(body, {
         status: 200,
         headers: {
@@ -78,7 +79,7 @@ export async function GET(request: NextRequest) {
 
     return ApiResponseHandler.success({ downloadUrl: `data:application/json,${encodeURIComponent(JSON.stringify(flatRows))}` })
   } catch (error) {
-    console.error('Reports export error:', error)
+    logger.error('Reports export error:', error instanceof Error ? error : undefined)
     return ApiResponseHandler.serverError('Failed to export report')
   }
 }

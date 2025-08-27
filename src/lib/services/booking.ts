@@ -12,6 +12,7 @@ import {
   BookingCalendarDay
 } from '@/lib/utils/booking-types'
 import { AdminBooking } from '@/hooks/useRealTimeBookings'
+import { logger } from '@/lib/utils/logger'
 
 export interface BookingFilters {
   status?: BookingStatus[]
@@ -641,6 +642,10 @@ export class BookingService extends BaseService {
       }
 
       // Transform booking data to AdminBooking structure
+      type BookingServiceRowLite = {
+        service_details?: { name?: string }
+        price?: number
+      }
       const adminBooking = {
         ...booking,
         customer_name: customerProfile 
@@ -650,9 +655,9 @@ export class BookingService extends BaseService {
         customer_phone: customerProfile?.phone || '',
         vehicle: booking.vehicle_details || { make: 'Unknown', model: 'Vehicle', year: null, color: '' },
         address: booking.service_address || { address_line_1: '', city: 'Unknown', postal_code: '' },
-        services: booking.booking_services?.map((bs: any) => ({
-          name: bs.service_details?.name || 'Vehicle Detailing Service',
-          base_price: bs.price || 0
+        services: booking.booking_services?.map((bs: BookingServiceRowLite) => ({
+          name: bs?.service_details?.name || 'Vehicle Detailing Service',
+          base_price: bs?.price || 0
         })) || [{
           name: 'Vehicle Detailing Service',
           base_price: booking.total_price || 0
@@ -691,7 +696,7 @@ export class BookingService extends BaseService {
   
           }
         } catch (emailError) {
-          console.error('Failed to send status update email:', emailError)
+          logger.error('Failed to send status update email:', emailError)
           // Don't fail the status update for email errors
         }
       }

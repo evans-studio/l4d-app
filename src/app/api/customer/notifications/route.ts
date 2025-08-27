@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { createClientFromRequest } from '@/lib/supabase/server'
 import { ApiResponseHandler } from '@/lib/api/response'
 import { z } from 'zod'
+import { logger } from '@/lib/utils/logger'
 
 const notificationSettingsSchema = z.object({
   bookingConfirmations: z.boolean(),
@@ -49,7 +50,7 @@ export async function PUT(request: NextRequest) {
         .eq('user_id', session.user.id)
 
       if (updateError) {
-        console.error('Notification settings update error:', updateError)
+        logger.error('Notification settings update error', updateError instanceof Error ? updateError : undefined)
         return ApiResponseHandler.serverError('Failed to update notification settings')
       }
     } else {
@@ -62,7 +63,7 @@ export async function PUT(request: NextRequest) {
         })
 
       if (insertError) {
-        console.error('Notification settings create error:', insertError)
+        logger.error('Notification settings create error', insertError instanceof Error ? insertError : undefined)
         return ApiResponseHandler.serverError('Failed to save notification settings')
       }
     }
@@ -78,7 +79,7 @@ export async function PUT(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Notification settings error:', error)
+    logger.error('Notification settings error', error instanceof Error ? error : undefined)
     
     if (error instanceof z.ZodError) {
       const firstError = error.issues[0]
@@ -127,7 +128,7 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Notification settings fetch error:', error)
+    logger.error('Notification settings fetch error', error instanceof Error ? error : undefined)
     return ApiResponseHandler.serverError('Failed to fetch notification settings')
   }
 }

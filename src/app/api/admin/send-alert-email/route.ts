@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { Resend } from 'resend'
 import { env } from '@/lib/config/environment'
+import { logger } from '@/lib/utils/logger'
 import type { Alert } from '@/lib/monitoring/alert-manager'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
@@ -48,7 +49,7 @@ export async function POST(request: NextRequest) {
     })
 
     if (emailResult.error) {
-      console.error('Failed to send alert email:', emailResult.error)
+      logger.error('Failed to send alert email:', emailResult.error)
       return NextResponse.json(
         { success: false, error: { message: 'Failed to send email', details: emailResult.error } },
         { status: 500 }
@@ -64,7 +65,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Alert email API error:', error)
+    logger.error('Alert email API error:', error instanceof Error ? error : undefined)
     return NextResponse.json(
       { success: false, error: { message: 'Internal server error' } },
       { status: 500 }

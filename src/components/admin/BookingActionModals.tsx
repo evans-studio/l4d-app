@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/primitives/Button'
 import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from '@/components/ui/composites/Modal'
 import { Checkbox } from '@/components/ui/primitives/Checkbox'
 import { Textarea, Input } from '@/components/ui/primitives/Input'
+import { logger } from '@/lib/utils/logger'
 
 interface Booking {
   id: string
@@ -54,7 +55,8 @@ export function ConfirmBookingModal({
 }: ConfirmModalProps) {
   const [sendEmail, setSendEmail] = useState(true)
 
-  const formatTime = (time: string) => {
+  const formatTime = (time?: string) => {
+    if (!time || typeof time !== 'string') return ''
     const [hours, minutes] = time.split(':')
     const hour = parseInt(hours || '0')
     const ampm = hour >= 12 ? 'PM' : 'AM'
@@ -62,7 +64,8 @@ export function ConfirmBookingModal({
     return `${displayHour}:${minutes || '00'} ${ampm}`
   }
 
-  const formatDate = (dateStr: string) => {
+  const formatDate = (dateStr?: string) => {
+    if (!dateStr) return ''
     const date = new Date(dateStr)
     const today = new Date()
     const tomorrow = new Date(today)
@@ -95,7 +98,7 @@ export function ConfirmBookingModal({
         <div className="bg-surface-secondary border border-border-secondary rounded-lg p-4 space-y-3">
           <div className="flex justify-between items-start">
             <span className="text-sm text-text-secondary">Booking:</span>
-            <span className="font-medium text-text-primary">#{booking.booking_reference}</span>
+            <span className="font-medium text-text-primary">#{booking.booking_reference || booking.id}</span>
           </div>
           
           <div className="flex justify-between items-start">
@@ -105,13 +108,15 @@ export function ConfirmBookingModal({
           
           <div className="flex justify-between items-start">
             <span className="text-sm text-text-secondary">Service:</span>
-            <span className="font-medium text-text-primary">{booking.services[0]?.name}</span>
+            <span className="font-medium text-text-primary">{booking.services?.[0]?.name || ''}</span>
           </div>
           
           <div className="flex justify-between items-start">
             <span className="text-sm text-text-secondary">Vehicle:</span>
             <span className="font-medium text-text-primary">
-              {booking.vehicle.make} {booking.vehicle.model}
+              {booking.vehicle?.make && booking.vehicle?.model
+                ? `${booking.vehicle.make} ${booking.vehicle.model}`
+                : ''}
             </span>
           </div>
           
@@ -375,7 +380,7 @@ export function RescheduleBookingModal({
         setAvailableSlots([])
       }
     } catch (error) {
-      console.error('Error fetching slots:', error)
+      logger.error('Error fetching slots:', error)
       setAvailableSlots([])
     } finally {
       setSlotsLoading(false)
@@ -444,7 +449,7 @@ export function RescheduleBookingModal({
                     <div>
                       <span className="text-text-secondary">Date & Time:</span>
                       <p className="font-medium text-text-primary">
-                        {formatDate(booking.scheduled_date)} at {formatTime(booking.start_time)}
+                        {formatDate(booking.scheduled_date || (booking as unknown as { date?: string }).date || '')} at {formatTime(booking.start_time || (booking as unknown as { startTime?: string }).startTime || '')}
                       </p>
                     </div>
                     <div>
@@ -453,11 +458,11 @@ export function RescheduleBookingModal({
                     </div>
                     <div>
                       <span className="text-text-secondary">Reference:</span>
-                      <p className="font-medium text-text-primary">#{booking.booking_reference}</p>
+                      <p className="font-medium text-text-primary">#{booking.booking_reference || booking.id}</p>
                     </div>
                     <div>
                       <span className="text-text-secondary">Service:</span>
-                      <p className="font-medium text-text-primary">{booking.services[0]?.name}</p>
+                      <p className="font-medium text-text-primary">{booking.services?.[0]?.name || ''}</p>
                     </div>
                   </div>
                 </div>
@@ -688,8 +693,12 @@ export function CancelBookingModal({
               <h4 className="font-medium text-text-primary">Booking Summary</h4>
               <div className="text-sm text-text-secondary">
                 <p><span className="font-medium">Customer:</span> {booking.customer_name}</p>
-                <p><span className="font-medium">Service:</span> {booking.services[0]?.name}</p>
-                <p><span className="font-medium">Vehicle:</span> {booking.vehicle.make} {booking.vehicle.model}</p>
+                <p><span className="font-medium">Service:</span> {booking.services?.[0]?.name || ''}</p>
+                <p><span className="font-medium">Vehicle:</span> {
+                  booking.vehicle?.make && booking.vehicle?.model
+                    ? `${booking.vehicle.make} ${booking.vehicle.model}`
+                    : ''
+                }</p>
               </div>
             </div>
 
@@ -794,5 +803,136 @@ export function CancelBookingModal({
         </ModalFooter>
       </ModalContent>
     </Modal>
+  )
+}
+
+interface CompleteModalProps {
+  booking: Booking
+  open: boolean
+  onClose: () => void
+  onComplete: (notes: string) => Promise<void>
+  isLoading?: boolean
+}
+
+export function CompleteBookingModal({
+  booking,
+  open,
+  onClose,
+  onComplete,
+  isLoading = false
+}: CompleteModalProps) {
+  const [notes, setNotes] = useState('')
+
+  const handleComplete = async () => {
+    await onComplete(notes || '')
+  }
+
+  return (
+    <Modal open={open} onClose={onClose}>
+      <ModalContent size="md" onClose={onClose} className="max-h-[90vh] overflow-y-auto">
+        <ModalHeader title="Complete Booking" />
+        <ModalBody>
+          <div className="space-y-6">
+            <div className="bg-surface-secondary rounded-lg p-4 space-y-2">
+              <h4 className="font-medium text-text-primary">Completion Details</h4>
+              <div className="text-sm text-text-secondary">
+                <p><span className="font-medium">Customer:</span> {booking.customer_name}</p>
+                <p><span className="font-medium">Service:</span> {booking.services?.[0]?.name || ''}</p>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-text-primary" htmlFor="completion-notes">
+                Completion Notes
+              </label>
+              <Textarea
+                id="completion-notes"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Add any notes about the completed service..."
+                rows={3}
+                className="resize-none"
+              />
+            </div>
+          </div>
+        </ModalBody>
+        <ModalFooter>
+          <Button onClick={onClose} variant="outline" disabled={isLoading}>
+            Cancel
+          </Button>
+          <Button onClick={handleComplete} disabled={isLoading}>
+            {isLoading ? (
+              <div className="flex items-center gap-2">
+                <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
+                Completing...
+              </div>
+            ) : (
+              'Complete Booking'
+            )}
+          </Button>
+        </ModalFooter>
+      </ModalContent>
+    </Modal>
+  )
+}
+
+// Aggregator component expected by tests
+export interface BookingActionModalsProps {
+  booking: Booking
+  isConfirmOpen?: boolean
+  isCancelOpen?: boolean
+  isRescheduleOpen?: boolean
+  isCompleteOpen?: boolean
+  onClose: () => void
+  onConfirm: (bookingId: string) => void | Promise<void>
+  onCancel: (bookingId: string, reason: string) => void | Promise<void>
+  onReschedule: (bookingId: string, payload: { date: string; time: string }) => void | Promise<void>
+  onComplete: (bookingId: string, notes: string) => void | Promise<void>
+}
+
+export function BookingActionModals({
+  booking,
+  isConfirmOpen = false,
+  isCancelOpen = false,
+  isRescheduleOpen = false,
+  isCompleteOpen = false,
+  onClose,
+  onConfirm,
+  onCancel,
+  onReschedule,
+  onComplete,
+}: BookingActionModalsProps) {
+  return (
+    <>
+      <ConfirmBookingModal
+        booking={booking}
+        open={isConfirmOpen}
+        onClose={onClose}
+        onConfirm={async () => { await onConfirm(booking.id) }}
+      />
+
+      <CancelBookingModal
+        booking={booking}
+        open={isCancelOpen}
+        onClose={onClose}
+        onCancel={async (reason: string) => { await onCancel(booking.id, reason) }}
+      />
+
+      <RescheduleBookingModal
+        booking={booking}
+        open={isRescheduleOpen}
+        onClose={onClose}
+        onReschedule={async (newDate: string, newTime: string) => {
+          await onReschedule(booking.id, { date: newDate, time: newTime })
+        }}
+      />
+
+      <CompleteBookingModal
+        booking={booking}
+        open={isCompleteOpen}
+        onClose={onClose}
+        onComplete={async (notes: string) => { await onComplete(booking.id, notes) }}
+      />
+    </>
   )
 }

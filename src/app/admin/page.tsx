@@ -10,7 +10,8 @@ import { useOverlay } from '@/lib/overlay/context'
 import { AdminRoute } from '@/components/ProtectedRoute'
 import { BookingCard as UnifiedBookingCard, type BookingData } from '@/components/ui/patterns/BookingCard'
 import { DashboardLogo } from '@/components/ui/primitives/Logo'
-import { 
+import { logger } from '@/lib/utils/logger'
+import {
   CalendarIcon, 
   UsersIcon, 
   DollarSignIcon, 
@@ -26,6 +27,16 @@ import {
   BarChart3Icon
 } from 'lucide-react'
 
+interface DashboardMiniBooking {
+  scheduled_start_time?: string
+  customer_name?: string
+}
+
+interface CustomerActivityItem {
+  customer_name?: string
+  services?: Array<{ name?: string }>
+}
+
 interface AdminStats {
   today: {
     booked: number
@@ -33,13 +44,13 @@ interface AdminStats {
     inProgress: number
     remaining: number
     revenue: number
-    bookings: any[]
+    bookings: DashboardMiniBooking[]
   }
   customerActivity: {
     thisWeek: number
     newCustomers: number
     returningCustomers: number
-    latestActivity: any[]
+    latestActivity: CustomerActivityItem[]
   }
   revenue: {
     today: number
@@ -56,22 +67,22 @@ interface AdminStats {
     remaining: number
     fullyBooked: boolean
     utilizationPercent: number
-    bookings: any[]
+    bookings: DashboardMiniBooking[]
   }
   thisWeek: {
     booked: number
     capacity: number
     utilizationPercent: number
     revenue: number
-    bookings: any[]
+    bookings: DashboardMiniBooking[]
   }
   requiresAction: {
     total: number
     pending: number
     rescheduleRequests: number
     toConfirm: number
-    bookings: any[]
-    reschedules: any[]
+    bookings: unknown[]
+    reschedules: unknown[]
   }
   // Legacy fields for backward compatibility
   pendingBookings?: number
@@ -93,6 +104,7 @@ interface RecentBooking {
     make: string
     model: string
     year?: number
+    color?: string
   }
   address: {
     address_line_1: string
@@ -498,7 +510,7 @@ function AdminDashboard() {
           setStats(statsData.data)
           
         } else {
-          console.error('Stats API returned error:', statsData.error)
+          logger.error('Stats API returned error:', statsData.error)
         }
       } else {
         throw new Error(`Stats request failed with status: ${statsResponse.status}`)
@@ -535,16 +547,16 @@ function AdminDashboard() {
           setRecentBookings(bookingsData.data.bookings || [])
           
         } else {
-          console.error('Bookings API returned error:', bookingsData.error)
+          logger.error('Bookings API returned error:', bookingsData.error)
         }
       } else {
         const errorText = await bookingsResponse.text()
-        console.error('Bookings request failed:', errorText)
+        logger.error('Bookings request failed', undefined, { errorText })
         throw new Error(`Bookings request failed with status: ${bookingsResponse.status}`)
       }
 
     } catch (error) {
-      console.error('Dashboard data error:', error)
+      logger.error('Dashboard data error', error instanceof Error ? error : undefined)
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
       setError(`Failed to load dashboard data: ${errorMessage}`)
     } finally {
@@ -565,7 +577,7 @@ function AdminDashboard() {
         loadDashboardData()
       }
     } catch (error) {
-      console.error('Status update error:', error)
+      logger.error('Status update error', error instanceof Error ? error : undefined)
     }
   }
 
@@ -581,10 +593,10 @@ function AdminDashboard() {
         // Reload the data to reflect changes
         loadDashboardData()
       } else {
-        console.error('Failed to mark booking as paid')
+        logger.error('Failed to mark booking as paid')
       }
     } catch (error) {
-      console.error('Error marking booking as paid:', error)
+      logger.error('Error marking booking as paid:', error instanceof Error ? error : undefined)
     }
   }
 
@@ -873,8 +885,17 @@ function AdminDashboard() {
                       email: booking.customer_email,
                       phone: undefined,
                     },
-                    vehicle: booking.vehicle ? { make: booking.vehicle.make, model: booking.vehicle.model, year: booking.vehicle.year } as any : undefined,
-                    address: booking.address ? { addressLine1: booking.address.address_line_1, city: booking.address.city, postalCode: booking.address.postal_code } as any : undefined,
+                    vehicle: booking.vehicle ? { 
+                      make: booking.vehicle.make, 
+                      model: booking.vehicle.model, 
+                      year: booking.vehicle.year,
+                      color: booking.vehicle.color
+                    } : undefined,
+                    address: booking.address ? { 
+                      addressLine1: booking.address.address_line_1, 
+                      city: booking.address.city, 
+                      postalCode: booking.address.postal_code 
+                    } : undefined,
                     specialInstructions: undefined,
                     priority: 'normal',
                   }

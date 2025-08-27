@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { logger } from '@/lib/utils/logger'
 
 export interface CustomerBooking {
   id: string
@@ -112,7 +113,7 @@ export function useCustomerRealTimeBookings({
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch bookings'
       setError(errorMessage)
-      console.error('Customer bookings fetch error:', err)
+      logger.error('Customer bookings fetch error:', err)
     } finally {
       setIsLoading(false)
     }

@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/primitives/Button'
 import { AdminLayout } from '@/components/layouts/AdminLayout'
 import { AdminRoute } from '@/components/ProtectedRoute'
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb'
-import { 
+import { logger } from '@/lib/utils/logger'
+import {
   PlusIcon,
   TrashIcon,
   CarIcon,
@@ -409,7 +410,7 @@ function VehicleSizesPage() {
         setError('Failed to load vehicle sizes')
       }
     } catch (error) {
-      console.error('Failed to fetch vehicle sizes:', error)
+      logger.error('Failed to fetch vehicle sizes:', error instanceof Error ? error : undefined)
       setError('Failed to load vehicle sizes')
     } finally {
       setIsLoading(false)
@@ -458,7 +459,7 @@ function VehicleSizesPage() {
         setError(data.error?.message || 'Failed to save vehicle size')
       }
     } catch (error) {
-      console.error('Failed to save vehicle size:', error)
+      logger.error('Failed to save vehicle size:', error instanceof Error ? error : undefined)
       setError('Failed to save vehicle size')
     } finally {
       setIsModalLoading(false)
@@ -490,7 +491,7 @@ function VehicleSizesPage() {
         setShowDeleteModal(false)
       }
     } catch (error) {
-      console.error('Failed to delete vehicle size:', error)
+      logger.error('Failed to delete vehicle size:', error instanceof Error ? error : undefined)
       setError('Failed to delete vehicle size')
       setShowDeleteModal(false)
     } finally {
@@ -510,7 +511,7 @@ function VehicleSizesPage() {
         fetchVehicleSizes()
       }
     } catch (error) {
-      console.error('Failed to toggle vehicle size status:', error)
+      logger.error('Failed to toggle vehicle size status:', error instanceof Error ? error : undefined)
     }
   }
 
