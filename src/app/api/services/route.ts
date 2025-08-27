@@ -62,52 +62,47 @@ export async function GET(request: NextRequest) {
 
     // Vehicle sizes table no longer exists - using service_pricing directly
 
-    // Calculate price ranges from service_pricing table
-    const servicesWithPricing = await Promise.all(
-      services.map(async (service) => {
-        // Get pricing for this service (single row with all vehicle size columns)
-        const { data: pricingData, error: pricingError } = await supabase
-          .from('service_pricing')
-          .select('small, medium, large, extra_large')
-          .eq('service_id', service.id)
-          .single()
+    // Calculate price ranges with a bulk query instead of N+1
+    const serviceIds = services.map(s => s.id)
+    let pricingByServiceId: Record<string, { small: number | null; medium: number | null; large: number | null; extra_large: number | null }> = {}
+    if (serviceIds.length > 0) {
+      const { data: pricingRows, error: pricingBulkError } = await supabase
+        .from('service_pricing')
+        .select('service_id, small, medium, large, extra_large')
+        .in('service_id', serviceIds)
 
-        if (pricingError || !pricingData) {
-          // No pricing data available
-          return {
-            ...service,
-            priceRange: null,
+      if (pricingBulkError) {
+        logger.warn('Service pricing bulk query failed, proceeding without pricing')
+      } else if (pricingRows) {
+        pricingByServiceId = pricingRows.reduce((acc, row) => {
+          acc[row.service_id as string] = {
+            small: row.small as number | null,
+            medium: row.medium as number | null,
+            large: row.large as number | null,
+            extra_large: row.extra_large as number | null,
           }
-        }
+          return acc
+        }, {} as Record<string, { small: number | null; medium: number | null; large: number | null; extra_large: number | null }>)
+      }
+    }
 
-        // Extract prices from the columns, filtering out only null/undefined values (allow 0)
-        const prices = [
-          pricingData.small,
-          pricingData.medium, 
-          pricingData.large,
-          pricingData.extra_large
-        ].filter(price => price !== null && price !== undefined)
-
-        if (prices.length === 0) {
-          return {
-            ...service,
-            priceRange: null,
-          }
-        }
-
-        // Calculate min and max prices
-        const minPrice = Math.min(...prices)
-        const maxPrice = Math.max(...prices)
-
-        return {
-          ...service,
-          priceRange: {
-            min: minPrice,
-            max: maxPrice,
-          },
-        }
-      })
-    )
+    const servicesWithPricing = services.map((service) => {
+      const pricing = pricingByServiceId[service.id]
+      if (!pricing) {
+        return { ...service, priceRange: null }
+      }
+      const prices = [pricing.small, pricing.medium, pricing.large, pricing.extra_large]
+        .filter((p): p is number => p !== null && p !== undefined)
+      if (prices.length === 0) {
+        return { ...service, priceRange: null }
+      }
+      const minPrice = Math.min(...prices)
+      const maxPrice = Math.max(...prices)
+      return {
+        ...service,
+        priceRange: { min: minPrice, max: maxPrice },
+      }
+    })
 
     // Return all services, but mark those without pricing
     return ApiResponseHandler.success(servicesWithPricing, {

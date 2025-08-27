@@ -28,7 +28,6 @@ export function ServiceSelection(): React.JSX.Element {
   const [selectedService, setSelectedService] = useState<string | null>(
     formData.service?.serviceId || null
   )
-  const [servicesWithPricing, setServicesWithPricing] = useState<Array<{ id: string; name: string; priceRange?: { min?: number; max?: number }; duration_minutes?: number; estimated_duration?: number }>>([])
   const [localLoading, setLocalLoading] = useState(true)
 
   // Set hydration flag after component mounts
@@ -36,33 +35,22 @@ export function ServiceSelection(): React.JSX.Element {
     setIsHydrated(true)
   }, [])
 
-  // Load services on component mount
+  // Load services on component mount (single source of truth via store)
   useEffect(() => {
+    let isMounted = true
     const loadData = async () => {
       try {
         setLocalLoading(true)
-        
-        // Load services with pricing information
-        const servicesResponse = await fetch('/api/services')
-        if (servicesResponse.ok) {
-          const servicesData = await servicesResponse.json()
-          if (servicesData.success) {
-            setServicesWithPricing(servicesData.data || [])
-          }
-        }
-        
-        // Also load available services for the store
+        // Use the store loader only to avoid duplicate fetches
         await loadAvailableServices()
       } catch (error) {
         safeConsole.error('Error loading services', error as Error)
       } finally {
-        setLocalLoading(false)
+        if (isMounted) setLocalLoading(false)
       }
     }
-
-    if (isCurrentStep) {
-      loadData()
-    }
+    if (isCurrentStep) loadData()
+    return () => { isMounted = false }
   }, [isCurrentStep, loadAvailableServices])
 
   const handleServiceSelection = (serviceId: string): void => {
@@ -105,8 +93,8 @@ export function ServiceSelection(): React.JSX.Element {
     return <Sparkles className="w-8 h-8" />;
   };
 
-  // Use servicesWithPricing if available, otherwise availableServices - no filtering needed
-  const servicesToDisplay = servicesWithPricing.length > 0 ? servicesWithPricing : availableServices
+  // Display services from store
+  const servicesToDisplay = availableServices
   
     
   // Don't render if not current step
@@ -175,12 +163,7 @@ export function ServiceSelection(): React.JSX.Element {
                   } ${isPremium && hasValidPricing ? 'border-brand-500/50 bg-gradient-to-br from-brand-600/5 to-brand-800/10' : ''}`}
                   onClick={() => hasValidPricing && handleServiceSelection(svc.id)}
                 >
-                  {isPremium && (
-                    <div className="absolute -top-2 sm:-top-3 left-1/2 -translate-x-1/2 bg-brand-600 text-white px-3 sm:px-4 py-1 rounded-full text-xs sm:text-sm font-bold shadow-lg">
-                      <span className="sm:hidden">POPULAR</span>
-                      <span className="hidden sm:inline">MOST POPULAR</span>
-                    </div>
-                  )}
+                  {/* Popular badge removed per request */}
                   
                   {/* Selection Indicator - Mobile Optimized */}
                   <div className={`
@@ -332,4 +315,5 @@ export function ServiceSelection(): React.JSX.Element {
       </div>
     </div>
   );
+}
 }

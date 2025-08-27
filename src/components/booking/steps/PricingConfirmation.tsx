@@ -107,19 +107,18 @@ export function PricingConfirmation() {
     try {
       const result = await submitBooking()
       
-      const bookingData = {
-        success: true,
-        confirmationNumber: result.confirmationNumber,
-        bookingId: result.bookingId,
-        isNewUser: !isAuthenticated // Track if this was a new user
-      }
-      setBookingResult(bookingData)
-      
       if (!isAuthenticated) {
         // For new users, show verification message instead of redirecting
+        const bookingData = {
+          success: true,
+          confirmationNumber: result.confirmationNumber,
+          bookingId: result.bookingId,
+          isNewUser: true,
+        }
+        setBookingResult(bookingData)
       } else {
-        // Redirect existing users to booking success page
-        router.push(`/booking/success?ref=${result.confirmationNumber}`)
+        // For existing users, skip inline success and go straight to success page
+        router.replace(`/booking/success?ref=${result.confirmationNumber}`)
       }
     } catch (error) {
       safeConsole.error('Booking submission failed', error as Error)
