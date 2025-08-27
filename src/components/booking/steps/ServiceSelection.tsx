@@ -316,4 +316,3 @@ export function ServiceSelection(): React.JSX.Element {
     </div>
   );
 }
-}
