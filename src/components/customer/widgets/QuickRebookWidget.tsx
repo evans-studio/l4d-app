@@ -18,6 +18,7 @@ interface QuickRebookWidgetProps {
     id: string
     booking_reference: string
     scheduled_date: string
+    status?: 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'rescheduled' | 'declined'
     service: {
       name: string
       short_description?: string

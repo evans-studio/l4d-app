@@ -23,7 +23,7 @@ interface NextBookingWidgetProps {
     booking_reference: string
     scheduled_date: string
     scheduled_start_time: string
-    status: 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled'
+    status: 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'rescheduled' | 'declined'
     service: {
       name: string
       short_description?: string

@@ -165,7 +165,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
         estimated_duration: service?.estimated_duration
       })),
       
-      // Vehicle information (no longer includes size details from deleted table)
+      // Vehicle information (prefer normalized relation; fallback to embedded snapshot)
       vehicle: (booking?.customer_vehicles && booking.customer_vehicles[0]) ? {
         make: booking.customer_vehicles[0]?.make,
         model: booking.customer_vehicles[0]?.model,
@@ -173,7 +173,14 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
         color: booking.customer_vehicles[0]?.color,
         license_plate: booking.customer_vehicles[0]?.license_plate || booking.customer_vehicles[0]?.registration,
         registration: booking.customer_vehicles[0]?.registration || booking.customer_vehicles[0]?.license_plate
-      } : null,
+      } : ((booking as unknown as { vehicle_details?: { make?: string; model?: string; year?: number; color?: string; registration?: string; license_plate?: string } }).vehicle_details ? {
+        make: (booking as unknown as { vehicle_details?: { make?: string } }).vehicle_details?.make,
+        model: (booking as unknown as { vehicle_details?: { model?: string } }).vehicle_details?.model,
+        year: (booking as unknown as { vehicle_details?: { year?: number } }).vehicle_details?.year,
+        color: (booking as unknown as { vehicle_details?: { color?: string } }).vehicle_details?.color,
+        license_plate: (booking as unknown as { vehicle_details?: { license_plate?: string; registration?: string } }).vehicle_details?.license_plate || (booking as unknown as { vehicle_details?: { registration?: string } }).vehicle_details?.registration,
+        registration: (booking as unknown as { vehicle_details?: { registration?: string; license_plate?: string } }).vehicle_details?.registration || (booking as unknown as { vehicle_details?: { license_plate?: string } }).vehicle_details?.license_plate
+      } : null),
       
       // Address information with distance
       address: (booking?.customer_addresses && booking.customer_addresses[0]) ? {

@@ -22,7 +22,7 @@ interface DashboardBooking {
   booking_reference: string
   scheduled_date: string
   scheduled_start_time: string
-  status: 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled'
+  status: 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'rescheduled' | 'declined'
   total_price: number
   service: {
     name: string
@@ -197,9 +197,14 @@ export default function DashboardPage() {
     fetchDashboardData()
   }, [user, authLoading, profile])
 
-  // Find next upcoming booking
+  // Find next upcoming booking (include rescheduled; exclude past/completed/cancelled)
+  const today = new Date().toISOString().split('T')[0] || ''
   const nextBooking = bookings
-    .filter(booking => ['pending', 'confirmed', 'in_progress'].includes(booking.status))
+    .filter(booking => 
+      booking.scheduled_date >= today &&
+      booking.status !== 'completed' &&
+      booking.status !== 'cancelled'
+    )
     .sort((a, b) => new Date(`${a.scheduled_date}T${a.scheduled_start_time}`).getTime() - new Date(`${b.scheduled_date}T${b.scheduled_start_time}`).getTime())
     [0]
 
