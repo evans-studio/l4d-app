@@ -54,7 +54,7 @@ export function ServiceSelection(): React.JSX.Element {
   }, [isCurrentStep, loadAvailableServices])
 
   const handleServiceSelection = (serviceId: string): void => {
-    const service = servicesWithPricing.find(s => s.id === serviceId) || availableServices.find(s => s.id === serviceId)
+    const service = availableServices.find(s => s.id === serviceId)
     if (!service) return
     
     if (selectedService === serviceId) {
