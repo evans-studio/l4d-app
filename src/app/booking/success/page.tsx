@@ -426,7 +426,7 @@ function BookingSuccessContent() {
               <CardContent className="space-y-3">
                 {booking.payment_status !== 'paid' && paymentLink && (
                   <a href={paymentLink} target="_blank" rel="noopener noreferrer">
-                    <Button className="w-full justify-center">
+                    <Button className="w-full justify-start">
                       Pay Now via PayPal
                     </Button>
                   </a>
