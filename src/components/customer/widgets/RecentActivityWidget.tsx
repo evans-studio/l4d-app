@@ -22,7 +22,7 @@ interface RecentActivityWidgetProps {
     id: string
     booking_reference: string
     scheduled_date: string
-    status: 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled'
+    status: 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'rescheduled' | 'declined' | 'no_show'
     service: {
       name: string
       short_description?: string
@@ -45,6 +45,13 @@ const statusConfig = {
     bgColor: 'bg-warning-600/10',
     iconColor: 'text-warning-600',
     badgeColor: 'warning'
+  },
+  declined: {
+    label: 'Declined',
+    icon: X,
+    bgColor: 'bg-error-600/10',
+    iconColor: 'text-error-600',
+    badgeColor: 'error'
   },
   confirmed: {
     label: 'Confirmed',
