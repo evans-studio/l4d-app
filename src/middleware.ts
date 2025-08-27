@@ -38,6 +38,7 @@ export async function middleware(request: NextRequest) {
   const response = NextResponse.next()
 
   // Security Headers applied to every response
+  const isDev = process.env.NODE_ENV !== 'production'
   const securityHeaders: Record<string, string> = {
     'Strict-Transport-Security': 'max-age=63072000; includeSubDomains; preload',
     'X-Frame-Options': 'DENY',
@@ -47,17 +48,24 @@ export async function middleware(request: NextRequest) {
     'Content-Security-Policy': [
       "default-src 'self'",
       "img-src 'self' data: blob: https:",
-      "script-src 'self' https:",
-      "style-src 'self' https:",
-      // Allow HTTPS and WSS for Supabase/Next real-time and APIs
-      "connect-src 'self' https: wss:",
+      // Allow essential Next.js inline and blob scripts used for hydration/runtime
+      // In development, Next uses eval and ws for HMR; enable narrowly there
+      isDev
+        ? "script-src 'self' 'unsafe-inline' 'unsafe-eval' https: blob:"
+        : "script-src 'self' 'unsafe-inline' https: blob:",
+      // Allow inline styles required by Next.js and UI libraries
+      "style-src 'self' 'unsafe-inline' https:",
+      // Allow HTTPS/WSS for prod and WS for dev (Next HMR)
+      isDev
+        ? "connect-src 'self' https: ws: wss:"
+        : "connect-src 'self' https: wss:",
       "font-src 'self' data: https:",
       // Restrict framing and forms
       "frame-ancestors 'none'",
       "object-src 'none'",
       "base-uri 'self'",
-      // Disallow embedding by default; allow PayPal if needed later
-      "frame-src 'none'",
+      // Allow PayPal frames explicitly when used
+      "frame-src https://www.paypal.com https://www.sandbox.paypal.com",
       // Restrict form submissions to self and PayPal
       "form-action 'self' https://www.paypal.com https://www.sandbox.paypal.com",
       // Upgrade insecure requests in prod environments

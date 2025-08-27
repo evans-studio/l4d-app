@@ -1,0 +1,60 @@
+name: CI - Jest (PRs and ui-refresh)
+
+on:
+  push:
+    branches:
+      - ui-refresh
+      - main
+  pull_request:
+    branches:
+      - '**'
+
+jobs:
+  test:
+    name: Build and run Jest tests
+    runs-on: ubuntu-latest
+
+    env:
+      # Minimal env to satisfy build-time checks; values are non-secret placeholders
+      NODE_ENV: test
+      NEXT_PUBLIC_NEW_UI: '1'
+      NEXT_PUBLIC_SUPABASE_URL: 'https://example.supabase.co'
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.mock'
+      SUPABASE_SERVICE_ROLE_KEY: 'service-role-mock'
+      RESEND_API_KEY: 're_mock_key'
+      NEXT_PUBLIC_FROM_EMAIL: 'noreply@example.com'
+      NEXT_PUBLIC_COMPANY_EMAIL: 'hello@example.com'
+      EMAIL_REPLY_TO: 'noreply@example.com'
+      ADMIN_EMAIL: 'admin@example.com'
+      ADMIN_EMAILS: 'admin@example.com'
+      PAYPAL_ME_USERNAME: 'mock'
+      PAYPAL_BUSINESS_EMAIL: 'merchant@example.com'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Run Jest tests (unit + integration only)
+        run: npm test --silent
+
+      # Optional: upload coverage to artifacts
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-lcov
+          path: coverage/lcov.info
+
+

@@ -1,3 +1,19 @@
+## Testing in CI and locally
+
+- Run unit/integration tests with Jest:
+
+```bash
+npm test
+```
+
+- Run Playwright E2E tests separately (not in Jest):
+
+```bash
+npx playwright test
+```
+
+- On CI/Vercel, only Jest runs. Playwright should be run in GitHub Actions or another E2E pipeline separately.
+
 # Love4Detailing - Production Ready Mobile Car Detailing Platform
 
 A professional, full-stack mobile car detailing booking platform built with Next.js 14, TypeScript, and Supabase. Features real-time booking management, customer dashboard, admin portal, and comprehensive business analytics.

@@ -26,6 +26,7 @@ const customJestConfig = {
   },
   
   // Test file patterns
+  roots: ['<rootDir>/src'],
   testMatch: [
     '**/?(*.)+(test|spec).(js|jsx|ts|tsx)'
   ],
@@ -72,6 +73,8 @@ const customJestConfig = {
     '<rootDir>/node_modules/',
     '<rootDir>/.next/',
     '<rootDir>/dist/',
+    '<rootDir>/e2e/',
+    '^e2e/',
     '<rootDir>/src/__tests__/e2e/',
     '<rootDir>/src/__tests__/helpers/',
     '<rootDir>/src/__tests__/components/',
