@@ -54,6 +54,9 @@ jobs:
           echo "SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" >> .env.local
           echo "ACCESS_TOKEN_SECRET=${{ secrets.ACCESS_TOKEN_SECRET }}" >> .env.local
           echo "REFRESH_TOKEN_SECRET=${{ secrets.REFRESH_TOKEN_SECRET }}" >> .env.local
+          # Ensure placeholders exist if secrets are missing
+          if ! grep -q '^ACCESS_TOKEN_SECRET=' .env.local; then echo 'ACCESS_TOKEN_SECRET=dummy_access_token_secret_at_least_32_chars____' >> .env.local; fi
+          if ! grep -q '^REFRESH_TOKEN_SECRET=' .env.local; then echo 'REFRESH_TOKEN_SECRET=dummy_refresh_token_secret_at_least_32_chars__' >> .env.local; fi
           echo "RESEND_API_KEY=${{ secrets.RESEND_API_KEY }}" >> .env.local
           echo "NEXT_PUBLIC_FROM_EMAIL=${{ secrets.NEXT_PUBLIC_FROM_EMAIL }}" >> .env.local
           echo "ADMIN_EMAIL=${{ secrets.ADMIN_EMAIL }}" >> .env.local
@@ -178,6 +181,9 @@ jobs:
           echo "SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" >> .env.local
           echo "ACCESS_TOKEN_SECRET=${{ secrets.ACCESS_TOKEN_SECRET }}" >> .env.local
           echo "REFRESH_TOKEN_SECRET=${{ secrets.REFRESH_TOKEN_SECRET }}" >> .env.local
+          # Ensure placeholders exist if secrets are missing
+          if ! grep -q '^ACCESS_TOKEN_SECRET=' .env.local; then echo 'ACCESS_TOKEN_SECRET=dummy_access_token_secret_at_least_32_chars____' >> .env.local; fi
+          if ! grep -q '^REFRESH_TOKEN_SECRET=' .env.local; then echo 'REFRESH_TOKEN_SECRET=dummy_refresh_token_secret_at_least_32_chars__' >> .env.local; fi
           echo "RESEND_API_KEY=${{ secrets.RESEND_API_KEY }}" >> .env.local
           echo "NEXT_PUBLIC_FROM_EMAIL=${{ secrets.NEXT_PUBLIC_FROM_EMAIL }}" >> .env.local
           echo "ADMIN_EMAIL=${{ secrets.ADMIN_EMAIL }}" >> .env.local

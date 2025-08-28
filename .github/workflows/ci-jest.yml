@@ -22,6 +22,8 @@ jobs:
       NEXT_PUBLIC_APP_URL: 'https://example.com'
       NEXT_PUBLIC_SUPABASE_URL: 'https://example.supabase.co'
       NEXT_PUBLIC_SUPABASE_ANON_KEY: 'test_anon_key'
+      ACCESS_TOKEN_SECRET: 'dummy_access_token_secret_at_least_32_chars____'
+      REFRESH_TOKEN_SECRET: 'dummy_refresh_token_secret_at_least_32_chars__'
       SUPABASE_SERVICE_ROLE_KEY: 'service-role-mock'
       RESEND_API_KEY: 're_mock_key'
       NEXT_PUBLIC_FROM_EMAIL: 'noreply@example.com'
