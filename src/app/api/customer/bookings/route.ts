@@ -43,6 +43,8 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
         status,
         total_price,
         pricing_breakdown,
+        vehicle_details,
+        service_address,
         special_instructions,
         created_at,
         customer_vehicles!vehicle_id (
@@ -182,7 +184,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
         registration: (booking as unknown as { vehicle_details?: { registration?: string; license_plate?: string } }).vehicle_details?.registration || (booking as unknown as { vehicle_details?: { license_plate?: string } }).vehicle_details?.license_plate
       } : null),
       
-      // Address information with distance
+      // Address information with distance (prefer relation; fallback to embedded snapshot)
       address: (booking?.customer_addresses && booking.customer_addresses[0]) ? {
         address_line_1: booking.customer_addresses[0]?.address_line_1,
         address_line_2: booking.customer_addresses[0]?.address_line_2 ?? null,
@@ -191,7 +193,14 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
         postal_code: booking.customer_addresses[0]?.postal_code,
         country: booking.customer_addresses[0]?.country,
         distance_from_business: booking.customer_addresses[0]?.distance_from_business ?? null
-      } : null
+      } : ((booking as unknown as { service_address?: { address_line_1?: string; address_line_2?: string | null; city?: string; county?: string | null; postal_code?: string; country?: string } }).service_address ? {
+        address_line_1: (booking as unknown as { service_address?: { address_line_1?: string } }).service_address?.address_line_1 || '',
+        address_line_2: (booking as unknown as { service_address?: { address_line_2?: string | null } }).service_address?.address_line_2 ?? null,
+        city: (booking as unknown as { service_address?: { city?: string } }).service_address?.city || '',
+        county: (booking as unknown as { service_address?: { county?: string | null } }).service_address?.county ?? null,
+        postal_code: (booking as unknown as { service_address?: { postal_code?: string } }).service_address?.postal_code || '',
+        country: (booking as unknown as { service_address?: { country?: string } }).service_address?.country || ''
+      } : null)
     })) || []
 
     return NextResponse.json({
