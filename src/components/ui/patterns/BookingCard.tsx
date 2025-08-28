@@ -155,6 +155,7 @@ export interface BookingCardProps
   layout?: 'compact' | 'detailed' | 'summary'
   showActions?: boolean
   onView?: (booking: BookingData) => void
+  onQuickView?: (booking: BookingData) => void
   onEdit?: (booking: BookingData) => void
   onCancel?: (booking: BookingData) => void
   onConfirm?: (booking: BookingData) => void
@@ -172,6 +173,7 @@ const BookingCard = React.forwardRef<HTMLDivElement, BookingCardProps>(
     layout = 'detailed',
     showActions = true,
     onView,
+    onQuickView,
     onEdit,
     onCancel,
     onConfirm,
@@ -281,7 +283,11 @@ const BookingCard = React.forwardRef<HTMLDivElement, BookingCardProps>(
                     size="sm"
                     onClick={(e) => {
                       e.stopPropagation()
-                      onView(booking)
+                      if (onQuickView) {
+                        onQuickView(booking)
+                      } else {
+                        onView(booking)
+                      }
                     }}
                     aria-label="View booking"
                     disabled={loading}

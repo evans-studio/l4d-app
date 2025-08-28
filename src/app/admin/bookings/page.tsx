@@ -553,7 +553,8 @@ function AdminBookingsContent() {
                       booking={cardData}
                       layout="detailed"
                       interactive
-                      onView={() => openOverlay({ type: 'booking-view', data: { bookingId: booking.id, booking } })}
+                      onView={() => router.push(`/admin/bookings/${booking.id}`)}
+                      onQuickView={() => openOverlay({ type: 'booking-view', data: { bookingId: booking.id, booking } })}
                       onConfirm={() => handleMarkAsPaidClick(booking)}
                       onCancel={() => setCancelModal({ isOpen: true, booking })}
                     />
