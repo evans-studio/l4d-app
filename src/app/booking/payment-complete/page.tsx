@@ -5,7 +5,8 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Card, CardHeader, CardContent } from '@/components/ui/composites/Card'
 import { Button } from '@/components/ui/primitives/Button'
-import { 
+import { logger } from '@/lib/utils/logger'
+import {
   CheckCircle, 
   AlertCircle,
   Calendar, 
@@ -52,7 +53,7 @@ function PaymentCompleteContent({}: PaymentCompleteContentProps) {
           setError(data.error?.message || 'Failed to update booking status')
         }
       } catch (err) {
-        console.error('Payment status update error:', err)
+        logger.error('Payment status update error:', err)
         setError('Failed to update payment status')
       } finally {
         setIsUpdating(false)

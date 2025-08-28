@@ -13,12 +13,13 @@ import { Button } from '@/components/ui/primitives/Button'
 import { Card, CardContent, CardHeader } from '@/components/ui/composites/Card'
 import { Heading, Text } from '@/components/ui/primitives/Typography'
 import { AlertTriangle, RefreshCw, Home, MessageCircle } from 'lucide-react'
+import { logger } from '@/lib/utils/logger'
 
 interface Props {
   children: ReactNode
   fallback?: ReactNode
   level?: 'page' | 'component' | 'widget'
-  context?: Record<string, any>
+  context?: Record<string, unknown>
 }
 
 interface State {
@@ -72,10 +73,12 @@ export class ErrorBoundary extends Component<Props, State> {
 
     // Log to console in development
     if (process.env.NODE_ENV === 'development') {
+      // eslint-disable-next-line no-console
       console.group('🚨 ErrorBoundary caught an error')
-      console.error('Error:', error)
-      console.error('Error Info:', errorInfo)
-      console.error('Context:', errorContext)
+      logger.error('Error:', error)
+      logger.error('Error Info:', errorInfo)
+      logger.error('Context:', errorContext)
+      // eslint-disable-next-line no-console
       console.groupEnd()
     }
   }
@@ -109,7 +112,8 @@ Please let me know if you need any additional information.
 Best regards`
     )
     
-    window.open(`mailto:zell@love4detailing.com?subject=${subject}&body=${body}`)
+    const to = process.env.NEXT_PUBLIC_COMPANY_EMAIL || 'zell@love4detailing.com'
+    window.open(`mailto:${to}?subject=${subject}&body=${body}`)
   }
 
   render() {
@@ -307,12 +311,12 @@ export function withErrorBoundary<P extends object>(
 
 // Hook for manual error reporting
 export function useErrorReporting() {
-  const reportComponentError = (error: Error, context?: Record<string, any>) => {
+  const reportComponentError = (error: Error, context?: Record<string, unknown>) => {
     // reportError(error, {
     //   source: 'useErrorReporting',
     //   ...context
     // })
-    console.error('Component Error:', error, context)
+    logger.error('Component Error:', error, context)
   }
 
   return { reportComponentError }

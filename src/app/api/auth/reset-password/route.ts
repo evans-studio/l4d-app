@@ -4,6 +4,7 @@ import { ApiResponseHandler } from '@/lib/api/response'
 import { ResetPasswordRequestSchema } from '@/schemas/auth.schema'
 import { createHash } from 'crypto'
 import { z } from 'zod'
+import { logger } from '@/lib/utils/logger'
 
 // Force Node.js runtime
 export const runtime = 'nodejs'
@@ -21,7 +22,7 @@ export async function POST(request: NextRequest) {
     
     const { token, password } = validation.data
 
-    console.log('Password reset attempt with token')
+    logger.debug('Password reset attempt with token')
 
     // Hash the provided token to compare with stored hash
     const hashedToken = createHash('sha256').update(token).digest('hex')
@@ -34,7 +35,7 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (tokenError || !resetTokenData) {
-      console.error('Token not found:', tokenError)
+      logger.error('Token not found', tokenError instanceof Error ? tokenError : undefined)
       return ApiResponseHandler.error(
         'Invalid or expired reset token',
         'INVALID_TOKEN',
@@ -47,7 +48,7 @@ export async function POST(request: NextRequest) {
     const expiresAt = new Date(resetTokenData.expires_at)
     
     if (now > expiresAt) {
-      console.log('Token expired at:', expiresAt)
+      logger.debug('Token expired at:', expiresAt)
       
       // Clean up expired token
       await supabaseAdmin
@@ -62,7 +63,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log('Token verified for user:', resetTokenData.user_id)
+    logger.debug('Token verified for user:', resetTokenData.user_id)
 
     // Get user details
     const { data: user, error: userError } = await supabaseAdmin
@@ -72,7 +73,7 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (userError || !user) {
-      console.error('User not found:', userError)
+      logger.error('User not found', userError instanceof Error ? userError : undefined)
       return ApiResponseHandler.error(
         'User not found',
         'USER_NOT_FOUND',
@@ -88,7 +89,7 @@ export async function POST(request: NextRequest) {
       )
 
       if (updateError) {
-        console.error('Password update error:', updateError)
+        logger.error('Password update error', updateError instanceof Error ? updateError : undefined)
         return ApiResponseHandler.error(
           'Failed to update password',
           'PASSWORD_UPDATE_FAILED',
@@ -96,7 +97,7 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      console.log('Password updated successfully for user:', resetTokenData.user_id)
+      logger.debug('Password updated successfully for user:', resetTokenData.user_id)
 
       // Delete the used reset token
       await supabaseAdmin
@@ -115,7 +116,7 @@ export async function POST(request: NextRequest) {
       })
 
     } catch (updateError) {
-      console.error('Password update failed:', updateError)
+      logger.error('Password update failed', updateError instanceof Error ? updateError : undefined)
       return ApiResponseHandler.error(
         'Failed to update password',
         'PASSWORD_UPDATE_FAILED',
@@ -124,7 +125,7 @@ export async function POST(request: NextRequest) {
     }
 
   } catch (error) {
-    console.error('Password reset error:', error)
+    logger.error('Password reset error', error instanceof Error ? error : undefined)
     
     if (error instanceof z.ZodError) {
       const firstError = error.issues[0]

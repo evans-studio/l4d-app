@@ -13,6 +13,8 @@ import {
   SettingsIcon,
   LogOutIcon
 } from 'lucide-react'
+import { isNewUIEnabled } from '@/lib/config/feature-flags'
+import { logger } from '@/lib/utils/logger'
 
 interface DashboardHeaderProps {
   onMenuClick: () => void
@@ -29,12 +31,12 @@ export function DashboardHeader({ onMenuClick, userType }: DashboardHeaderProps)
       await logout()
       // Router push handled by logout method
     } catch (error) {
-      console.error('Logout failed:', error)
+      logger.error('Logout failed:', error)
     }
   }
 
   return (
-    <header className="bg-[var(--bg-secondary)] border-b border-[var(--border-primary)] px-6 py-4">
+    <header className="sticky top-0 z-[var(--z-header)] bg-[var(--bg-secondary)]/90 backdrop-blur supports-[backdrop-filter]:bg-[color:var(--bg-secondary)/0.85] border-b border-[var(--border-primary)] px-6 py-3" data-ui={isNewUIEnabled() ? 'new' : 'old'}>
       <div className="flex items-center justify-between">
         {/* Left Side */}
         <div className="flex items-center gap-4">

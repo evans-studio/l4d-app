@@ -145,16 +145,37 @@ class Logger {
   /**
    * Error logs - always shown
    */
-  error(message: string, error?: Error, context?: LogContext): void {
+  error(message: string, errorOrContext?: unknown, maybeContext?: LogContext): void {
+    let err: Error | undefined
+    let context: LogContext | undefined
+
+    if (errorOrContext instanceof Error) {
+      err = errorOrContext
+      context = maybeContext
+    } else if (maybeContext instanceof Error) {
+      err = maybeContext
+      context = typeof errorOrContext === 'object' && errorOrContext !== null
+        ? (errorOrContext as LogContext)
+        : errorOrContext !== undefined
+          ? { data: errorOrContext }
+          : undefined
+    } else {
+      context = typeof errorOrContext === 'object' && errorOrContext !== null
+        ? (errorOrContext as LogContext)
+        : errorOrContext !== undefined
+          ? { data: errorOrContext }
+          : undefined
+    }
+
     const errorContext = {
       ...context,
-      error: error ? {
-        name: error.name,
-        message: error.message,
-        stack: isDevelopment ? error.stack : undefined
+      error: err ? {
+        name: err.name,
+        message: err.message,
+        stack: isDevelopment ? err.stack : undefined
       } : undefined
     }
-    
+
     const formattedMessage = formatLogMessage('error', message, errorContext)
     console.error(formattedMessage)
   }

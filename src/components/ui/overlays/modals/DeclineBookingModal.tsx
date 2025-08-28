@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import { XCircle } from 'lucide-react'
-import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from '@/components/ui/composites/Modal'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { BaseOverlayProps } from '@/lib/overlay/types'
 import { Button } from '@/components/ui/primitives/Button'
 
@@ -16,6 +16,8 @@ export const DeclineBookingModal: React.FC<BaseOverlayProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
 
+  const dataObj: Record<string, unknown> = data && typeof data === 'object' ? (data as Record<string, unknown>) : {}
+
   const handleDecline = async () => {
     if (!reason.trim()) {
       setError('Please provide a reason for declining this booking')
@@ -26,7 +28,7 @@ export const DeclineBookingModal: React.FC<BaseOverlayProps> = ({
       setIsSubmitting(true)
       setError('')
 
-      const response = await fetch(`/api/admin/bookings/${data?.bookingId}/decline`, {
+      const response = await fetch(`/api/admin/bookings/${String(dataObj.bookingId || '')}/decline`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -52,10 +54,11 @@ export const DeclineBookingModal: React.FC<BaseOverlayProps> = ({
   }
 
   return (
-    <Modal open={isOpen} onClose={onClose}>
-      <ModalContent size="md" position="center" mobile="fullscreen" onClose={onClose}>
-        <ModalHeader title="Decline Booking" />
-        <ModalBody>
+    <Dialog open={isOpen} onOpenChange={(o) => { if (!o) onClose() }}>
+      <DialogContent className="sm:max-w-[520px]">
+        <DialogHeader>
+          <DialogTitle>Decline Booking</DialogTitle>
+        </DialogHeader>
           <div className="space-y-4">
             <div className="flex items-start gap-3">
               <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
@@ -70,9 +73,9 @@ export const DeclineBookingModal: React.FC<BaseOverlayProps> = ({
                   Please provide a reason so the customer understands why their 
                   booking cannot be accommodated.
                 </p>
-                {data?.bookingReference && (
+                {Boolean(dataObj.bookingReference) && (
                   <p className="text-xs text-text-muted mt-2">
-                    Booking: {data.bookingReference}
+                    Booking: {String(dataObj.bookingReference)}
                   </p>
                 )}
               </div>
@@ -97,9 +100,7 @@ export const DeclineBookingModal: React.FC<BaseOverlayProps> = ({
                 {error}
               </div>
             )}
-          </div>
-        </ModalBody>
-        <ModalFooter className="sticky bottom-0 bg-surface-primary">
+            <div className="flex gap-3 pt-4 border-t border-border-secondary">
           <Button
             onClick={onClose}
             variant="outline"
@@ -116,8 +117,9 @@ export const DeclineBookingModal: React.FC<BaseOverlayProps> = ({
           >
             {isSubmitting ? 'Declining...' : 'Decline Booking'}
           </Button>
-        </ModalFooter>
-      </ModalContent>
-    </Modal>
+            </div>
+          </div>
+      </DialogContent>
+    </Dialog>
   )
 }

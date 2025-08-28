@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { ApiResponseHandler } from '@/lib/api/response'
 import { z } from 'zod'
+import { logger } from '@/lib/utils/logger'
 
 const createProfileSchema = z.object({
   user_id: z.string().uuid('Invalid user ID'),
@@ -46,7 +47,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (checkError && checkError.code !== 'PGRST116') {
-      console.error('Error checking existing profile:', checkError)
+      logger.error('Error checking existing profile:', checkError)
       return ApiResponseHandler.serverError('Failed to check existing profile')
     }
 
@@ -67,7 +68,7 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (createError) {
-      console.error('Error creating profile:', createError)
+      logger.error('Error creating profile:', createError)
       return ApiResponseHandler.error(
         'Failed to create user profile',
         'CREATE_PROFILE_FAILED',
@@ -75,7 +76,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log(`Profile created successfully for user ${email}`)
+    logger.debug(`Profile created successfully for user ${email}`)
     
     return NextResponse.json({
       success: true,
@@ -86,7 +87,7 @@ export async function POST(request: NextRequest) {
     }, { status: 201 })
 
   } catch (error) {
-    console.error('Create profile error:', error)
+    logger.error('Create profile error', error instanceof Error ? error : undefined)
     return ApiResponseHandler.serverError('Failed to create profile')
   }
 }

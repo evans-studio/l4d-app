@@ -28,7 +28,6 @@ export function ServiceSelection(): React.JSX.Element {
   const [selectedService, setSelectedService] = useState<string | null>(
     formData.service?.serviceId || null
   )
-  const [servicesWithPricing, setServicesWithPricing] = useState<any[]>([])
   const [localLoading, setLocalLoading] = useState(true)
 
   // Set hydration flag after component mounts
@@ -36,51 +35,42 @@ export function ServiceSelection(): React.JSX.Element {
     setIsHydrated(true)
   }, [])
 
-  // Load services on component mount
+  // Load services on component mount (single source of truth via store)
   useEffect(() => {
+    let isMounted = true
     const loadData = async () => {
       try {
         setLocalLoading(true)
-        
-        // Load services with pricing information
-        const servicesResponse = await fetch('/api/services')
-        if (servicesResponse.ok) {
-          const servicesData = await servicesResponse.json()
-          if (servicesData.success) {
-            setServicesWithPricing(servicesData.data || [])
-          }
-        }
-        
-        // Also load available services for the store
+        // Use the store loader only to avoid duplicate fetches
         await loadAvailableServices()
       } catch (error) {
         safeConsole.error('Error loading services', error as Error)
       } finally {
-        setLocalLoading(false)
+        if (isMounted) setLocalLoading(false)
       }
     }
-
-    if (isCurrentStep) {
-      loadData()
-    }
+    if (isCurrentStep) loadData()
+    return () => { isMounted = false }
   }, [isCurrentStep, loadAvailableServices])
 
   const handleServiceSelection = (serviceId: string): void => {
-    const service = servicesWithPricing.find(s => s.id === serviceId) || availableServices.find(s => s.id === serviceId)
+    const service = availableServices.find(s => s.id === serviceId)
     if (!service) return
     
     if (selectedService === serviceId) {
       // Deselect current service
       setSelectedService(null)
-      setServiceSelection(null as any)
+      // Clear service selection by setting empty selection
+      setServiceSelection({ serviceId: '', name: '', basePrice: 0, duration: 0 })
     } else {
       // Select new service
       setSelectedService(serviceId)
+      const svc = service as unknown as { id: string; name: string; priceRange?: { min?: number }; duration_minutes?: number; estimated_duration?: number }
       setServiceSelection({
-        serviceId: service.id,
-        name: service.name,
-        basePrice: service.priceRange?.min || 0,
-        duration: service.duration_minutes || service.estimated_duration || 0
+        serviceId: svc.id,
+        name: svc.name,
+        basePrice: svc.priceRange?.min || 0,
+        duration: svc.duration_minutes || svc.estimated_duration || 0
       })
     }
   }
@@ -103,8 +93,8 @@ export function ServiceSelection(): React.JSX.Element {
     return <Sparkles className="w-8 h-8" />;
   };
 
-  // Use servicesWithPricing if available, otherwise availableServices - no filtering needed
-  const servicesToDisplay = servicesWithPricing.length > 0 ? servicesWithPricing : availableServices
+  // Display services from store
+  const servicesToDisplay = availableServices
   
     
   // Don't render if not current step
@@ -150,14 +140,15 @@ export function ServiceSelection(): React.JSX.Element {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {servicesToDisplay.map((service) => {
+              const svc = service as unknown as { id: string; name: string; short_description?: string; priceRange?: { min?: number | null; max?: number | null }; duration_minutes?: number; estimated_duration?: number }
               const isSelected = selectedService === service.id;
-              const serviceName = service.name.toLowerCase();
+              const serviceName = svc.name.toLowerCase();
               const isPremium = serviceName.includes('full') || serviceName.includes('complete') || serviceName.includes('premium');
-              const hasValidPricing = service.priceRange && service.priceRange.min !== null && service.priceRange.min !== undefined && service.priceRange.max !== null && service.priceRange.max !== undefined;
+              const hasValidPricing = !!(svc.priceRange && svc.priceRange.min !== null && svc.priceRange.min !== undefined && svc.priceRange.max !== null && svc.priceRange.max !== undefined);
               
               return (
                 <Card
-                  key={service.id}
+                  key={svc.id}
                   variant={isSelected ? 'interactive' : 'default'}
                   className={`transition-all duration-300 relative touch-manipulation ${
                     !hasValidPricing 
@@ -170,14 +161,9 @@ export function ServiceSelection(): React.JSX.Element {
                         ? 'hover:border-brand-400 hover:shadow-purple'
                         : ''
                   } ${isPremium && hasValidPricing ? 'border-brand-500/50 bg-gradient-to-br from-brand-600/5 to-brand-800/10' : ''}`}
-                  onClick={() => hasValidPricing && handleServiceSelection(service.id)}
+                  onClick={() => hasValidPricing && handleServiceSelection(svc.id)}
                 >
-                  {isPremium && (
-                    <div className="absolute -top-2 sm:-top-3 left-1/2 -translate-x-1/2 bg-brand-600 text-white px-3 sm:px-4 py-1 rounded-full text-xs sm:text-sm font-bold shadow-lg">
-                      <span className="sm:hidden">POPULAR</span>
-                      <span className="hidden sm:inline">MOST POPULAR</span>
-                    </div>
-                  )}
+                  {/* Popular badge removed per request */}
                   
                   {/* Selection Indicator - Mobile Optimized */}
                   <div className={`
@@ -198,32 +184,32 @@ export function ServiceSelection(): React.JSX.Element {
                         : 'bg-brand-600/10 text-brand-400'
                     }`}>
                       <div className="scale-75 sm:scale-100">
-                        {getServiceIcon(service.name)}
+                        {getServiceIcon(svc.name)}
                       </div>
                     </div>
                     
                     {/* Service Name - Mobile Responsive */}
-                    <h3 className="text-lg sm:text-xl font-bold text-brand-300 mb-2">{service.name}</h3>
+                    <h3 className="text-lg sm:text-xl font-bold text-brand-300 mb-2">{svc.name}</h3>
                     <p className="text-text-secondary text-sm sm:text-base line-clamp-2">
-                      {service.short_description || 'Professional detailing service'}
+                      {svc.short_description || 'Professional detailing service'}
                     </p>
                   </CardHeader>
 
                   <CardContent className="p-4 sm:p-6 pt-0">
                     <div className="text-center space-y-2">
                       {/* Dynamic Price Display */}
-                      {service.priceRange && service.priceRange.min !== null && service.priceRange.min !== undefined && service.priceRange.max !== null && service.priceRange.max !== undefined ? (
-                        service.priceRange.min !== service.priceRange.max ? (
+                      {svc.priceRange && svc.priceRange.min !== null && svc.priceRange.min !== undefined && svc.priceRange.max !== null && svc.priceRange.max !== undefined ? (
+                        svc.priceRange.min !== svc.priceRange.max ? (
                           <div className="space-y-1">
                             <div className="text-lg sm:text-xl font-bold text-brand-400">
-                              From £{service.priceRange.min} - £{service.priceRange.max}
+                              From £{svc.priceRange.min} - £{svc.priceRange.max}
                             </div>
                             <div className="text-xs text-text-muted">Based on vehicle size</div>
                           </div>
                         ) : (
                           <div className="space-y-1">
                             <div className="text-xl sm:text-2xl font-bold text-brand-400">
-                              £{service.priceRange.min}
+                              £{svc.priceRange.min}
                             </div>
                             <div className="text-xs text-text-muted">Fixed price</div>
                           </div>
@@ -244,7 +230,7 @@ export function ServiceSelection(): React.JSX.Element {
                       {/* Duration Display */}
                       <div className="flex items-center justify-center gap-1 text-xs sm:text-sm text-text-muted">
                         <Clock className="w-3 h-3" />
-                        <span>~{Math.round((service.duration_minutes || service.estimated_duration || 0) / 60)} hours</span>
+                        <span>~{Math.round(((svc.duration_minutes || svc.estimated_duration || 0) / 60))} hours</span>
                       </div>
                     </div>
                   </CardContent>

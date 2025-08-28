@@ -52,45 +52,86 @@ export async function GET(request: NextRequest) {
   if (!json?.success) {
     return new NextResponse('Analytics unavailable', { status: 500 })
   }
-  const data = json.data as any
+  const data = json.data as {
+    revenue?: {
+      total?: number
+      this_month?: number
+      last_month?: number
+      growth_percentage?: number
+      daily_average?: number
+    }
+    bookings?: {
+      total?: number
+      completion_rate?: number
+      cancellation_rate?: number
+      average_value?: number
+      status_breakdown?: {
+        pending?: number
+        confirmed?: number
+        completed?: number
+        cancelled?: number
+      }
+    }
+    customers?: {
+      total?: number
+      returning_rate?: number
+      new_this_month?: number
+      repeat_customer_rate?: number
+      average_lifetime_value?: number
+    }
+    services?: {
+      most_popular?: Array<{
+        name?: string
+        bookings?: number
+        revenue?: number
+      }>
+    }
+    locations?: {
+      top_areas?: Array<{
+        city?: string
+        bookings?: number
+        revenue?: number
+      }>
+    }
+  } | undefined
 
   // Build a simple, useful CSV
   const lines: string[] = []
   lines.push('Section,Metric,Value')
   // Revenue
-  lines.push(toCsvRow(['Revenue', 'Total', data.revenue?.total ?? 0]))
-  lines.push(toCsvRow(['Revenue', 'This Period', data.revenue?.this_month ?? 0]))
-  lines.push(toCsvRow(['Revenue', 'Previous Period', data.revenue?.last_month ?? 0]))
-  lines.push(toCsvRow(['Revenue', 'Growth %', data.revenue?.growth_percentage?.toFixed?.(2) ?? 0]))
-  lines.push(toCsvRow(['Revenue', 'Daily Average', data.revenue?.daily_average ?? 0]))
+  lines.push(toCsvRow(['Revenue', 'Total', data?.revenue?.total ?? 0]))
+  lines.push(toCsvRow(['Revenue', 'This Period', data?.revenue?.this_month ?? 0]))
+  lines.push(toCsvRow(['Revenue', 'Previous Period', data?.revenue?.last_month ?? 0]))
+  lines.push(toCsvRow(['Revenue', 'Growth %', data?.revenue?.growth_percentage?.toFixed?.(2) ?? 0]))
+  lines.push(toCsvRow(['Revenue', 'Daily Average', data?.revenue?.daily_average ?? 0]))
 
   // Bookings
-  lines.push(toCsvRow(['Bookings', 'Total', data.bookings?.total ?? 0]))
-  lines.push(toCsvRow(['Bookings', 'Completion Rate %', data.bookings?.completion_rate?.toFixed?.(2) ?? 0]))
-  lines.push(toCsvRow(['Bookings', 'Cancellation Rate %', data.bookings?.cancellation_rate?.toFixed?.(2) ?? 0]))
-  lines.push(toCsvRow(['Bookings', 'Average Value', data.bookings?.average_value ?? 0]))
-  lines.push(toCsvRow(['Bookings', 'Pending', data.bookings?.status_breakdown?.pending ?? 0]))
-  lines.push(toCsvRow(['Bookings', 'Confirmed', data.bookings?.status_breakdown?.confirmed ?? 0]))
-  lines.push(toCsvRow(['Bookings', 'Completed', data.bookings?.status_breakdown?.completed ?? 0]))
-  lines.push(toCsvRow(['Bookings', 'Cancelled', data.bookings?.status_breakdown?.cancelled ?? 0]))
+  lines.push(toCsvRow(['Bookings', 'Total', data?.bookings?.total ?? 0]))
+  lines.push(toCsvRow(['Bookings', 'Completion Rate %', data?.bookings?.completion_rate?.toFixed?.(2) ?? 0]))
+  lines.push(toCsvRow(['Bookings', 'Cancellation Rate %', data?.bookings?.cancellation_rate?.toFixed?.(2) ?? 0]))
+  lines.push(toCsvRow(['Bookings', 'Average Value', data?.bookings?.average_value ?? 0]))
+  lines.push(toCsvRow(['Bookings', 'Pending', data?.bookings?.status_breakdown?.pending ?? 0]))
+  lines.push(toCsvRow(['Bookings', 'Confirmed', data?.bookings?.status_breakdown?.confirmed ?? 0]))
+  lines.push(toCsvRow(['Bookings', 'Completed', data?.bookings?.status_breakdown?.completed ?? 0]))
+  lines.push(toCsvRow(['Bookings', 'Cancelled', data?.bookings?.status_breakdown?.cancelled ?? 0]))
 
   // Customers
-  lines.push(toCsvRow(['Customers', 'New (period)', data.customers?.new_this_month ?? 0]))
-  lines.push(toCsvRow(['Customers', 'Repeat Customer Rate %', data.customers?.repeat_customer_rate?.toFixed?.(2) ?? 0]))
-  lines.push(toCsvRow(['Customers', 'Average Lifetime Value', data.customers?.average_lifetime_value ?? 0]))
+  lines.push(toCsvRow(['Customers', 'New (period)', data?.customers?.new_this_month ?? 0]))
+  lines.push(toCsvRow(['Customers', 'Repeat Customer Rate %', data?.customers?.repeat_customer_rate?.toFixed?.(2) ?? 0]))
+  lines.push(toCsvRow(['Customers', 'Average Lifetime Value', data?.customers?.average_lifetime_value ?? 0]))
 
   // Top services
-  if (Array.isArray(data.services?.most_popular)) {
+  if (Array.isArray(data?.services?.most_popular)) {
     lines.push('Section,Service,Bookings,Revenue')
-    for (const s of data.services.most_popular) {
+    for (const s of data.services!.most_popular!) {
       lines.push(toCsvRow(['Top Services', s.name ?? 'Unknown', s.bookings ?? 0, s.revenue ?? 0]))
     }
   }
 
   // Top areas
-  if (Array.isArray(data.locations?.top_areas)) {
+  if (Array.isArray(data?.locations?.top_areas)) {
     lines.push('Section,Area,Bookings,Revenue')
-    for (const a of data.locations.top_areas) {
+    for (const a of data.locations!.top_areas!) {
       lines.push(toCsvRow(['Top Areas', a.city ?? 'Unknown', a.bookings ?? 0, a.revenue ?? 0]))
     }
   }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
+import { logger } from '@/lib/utils/logger'
 
 export async function GET(request: NextRequest) {
   try {
@@ -43,7 +44,7 @@ export async function GET(request: NextRequest) {
       .single()
 
     if (profileError) {
-      console.error('Profile fetch error:', profileError)
+      logger.error('Profile fetch error', profileError instanceof Error ? profileError : undefined)
       return NextResponse.json({
         success: true,
         data: {
@@ -76,7 +77,7 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('User fetch error:', error)
+    logger.error('User fetch error', error instanceof Error ? error : undefined)
     return NextResponse.json({
       success: true,
       data: {

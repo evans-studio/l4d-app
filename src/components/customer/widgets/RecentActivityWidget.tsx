@@ -5,6 +5,7 @@ import { useOverlay } from '@/lib/overlay/context'
 import { Button } from '@/components/ui/primitives/Button'
 import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/composites/Card'
 import { Badge } from '@/components/ui/primitives/Badge'
+import { isNewUIEnabled } from '@/lib/config/feature-flags'
 import { 
   Activity, 
   Calendar, 
@@ -21,7 +22,7 @@ interface RecentActivityWidgetProps {
     id: string
     booking_reference: string
     scheduled_date: string
-    status: 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled'
+    status: 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'rescheduled' | 'declined' | 'no_show'
     service: {
       name: string
       short_description?: string
@@ -44,6 +45,13 @@ const statusConfig = {
     bgColor: 'bg-warning-600/10',
     iconColor: 'text-warning-600',
     badgeColor: 'warning'
+  },
+  declined: {
+    label: 'Declined',
+    icon: X,
+    bgColor: 'bg-error-600/10',
+    iconColor: 'text-error-600',
+    badgeColor: 'error'
   },
   confirmed: {
     label: 'Confirmed',
@@ -113,7 +121,7 @@ export function RecentActivityWidget({ recentBookings }: RecentActivityWidgetPro
 
   if (recentBookings.length === 0) {
     return (
-      <Card className="h-full">
+      <Card className="h-full" data-ui={isNewUIEnabled() ? 'new' : 'old'}>
         <CardHeader>
           <h3 className="text-lg font-semibold text-text-primary flex items-center gap-2">
             <Activity className="w-5 h-5 text-brand-400" />
@@ -142,7 +150,7 @@ export function RecentActivityWidget({ recentBookings }: RecentActivityWidgetPro
   }
 
   return (
-    <Card className="h-full">
+    <Card className="h-full" data-ui={isNewUIEnabled() ? 'new' : 'old'}>
       <CardHeader>
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold text-text-primary flex items-center gap-2">
@@ -152,7 +160,8 @@ export function RecentActivityWidget({ recentBookings }: RecentActivityWidgetPro
           {recentBookings.length > 3 && (
             <Button
               variant="ghost"
-              size="sm"
+              size="icon"
+              aria-label="Go to bookings"
               onClick={() => router.push('/dashboard/bookings')}
             >
               <ChevronRight className="w-4 h-4" />
@@ -168,7 +177,7 @@ export function RecentActivityWidget({ recentBookings }: RecentActivityWidgetPro
           return (
             <div
               key={booking.id}
-              className="flex flex-col gap-4 p-5 rounded-xl bg-surface-tertiary hover:bg-surface-secondary transition-all duration-200 cursor-pointer min-h-[100px] touch-manipulation"
+              className="flex flex-col gap-4 p-5 rounded-xl bg-surface-tertiary border border-border-secondary hover:bg-surface-secondary transition-all duration-200 cursor-pointer min-h-[100px] touch-manipulation"
               onClick={() => openOverlay({
                 type: 'booking-view',
                 data: { bookingId: booking.id, booking }
@@ -195,7 +204,7 @@ export function RecentActivityWidget({ recentBookings }: RecentActivityWidgetPro
                   <p className="font-bold text-brand-600 text-xl whitespace-nowrap mb-1">
                     £{booking.total_price || 0}
                   </p>
-                  <Badge variant={config.badgeColor as any} size="sm">
+                  <Badge variant={config.badgeColor as 'default' | 'primary' | 'secondary' | 'success' | 'warning' | 'error' | 'info' | 'outline' | 'ghost'} size="sm">
                     {config.label}
                   </Badge>
                 </div>
@@ -225,7 +234,6 @@ export function RecentActivityWidget({ recentBookings }: RecentActivityWidgetPro
             variant="outline"
             onClick={() => router.push('/dashboard/bookings')}
             className="w-full min-h-[48px] touch-manipulation"
-            rightIcon={<ChevronRight className="w-4 h-4" />}
             fullWidth
           >
             View All Bookings ({recentBookings.length})

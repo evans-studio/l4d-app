@@ -4,6 +4,7 @@ import { ApiResponseHandler } from '@/lib/api/response'
 import { ApiValidation } from '@/lib/api/validation'
 import { authenticateAdmin } from '@/lib/api/auth-handler'
 import { z } from 'zod'
+import { logger } from '@/lib/utils/logger'
 
 const servicesQuerySchema = z.object({
   categoryId: z.string().optional(),
@@ -55,58 +56,53 @@ export async function GET(request: NextRequest) {
     const { data: services, error: servicesError } = await query
 
     if (servicesError) {
-      console.error('Services query error:', servicesError)
+      logger.error('Services query error:', servicesError)
       return ApiResponseHandler.serverError('Failed to fetch services')
     }
 
     // Vehicle sizes table no longer exists - using service_pricing directly
 
-    // Calculate price ranges from service_pricing table
-    const servicesWithPricing = await Promise.all(
-      services.map(async (service) => {
-        // Get pricing for this service (single row with all vehicle size columns)
-        const { data: pricingData, error: pricingError } = await supabase
-          .from('service_pricing')
-          .select('small, medium, large, extra_large')
-          .eq('service_id', service.id)
-          .single()
+    // Calculate price ranges with a bulk query instead of N+1
+    const serviceIds = services.map(s => s.id)
+    let pricingByServiceId: Record<string, { small: number | null; medium: number | null; large: number | null; extra_large: number | null }> = {}
+    if (serviceIds.length > 0) {
+      const { data: pricingRows, error: pricingBulkError } = await supabase
+        .from('service_pricing')
+        .select('service_id, small, medium, large, extra_large')
+        .in('service_id', serviceIds)
 
-        if (pricingError || !pricingData) {
-          // No pricing data available
-          return {
-            ...service,
-            priceRange: null,
+      if (pricingBulkError) {
+        logger.warn('Service pricing bulk query failed, proceeding without pricing')
+      } else if (pricingRows) {
+        pricingByServiceId = pricingRows.reduce((acc, row) => {
+          acc[row.service_id as string] = {
+            small: row.small as number | null,
+            medium: row.medium as number | null,
+            large: row.large as number | null,
+            extra_large: row.extra_large as number | null,
           }
-        }
+          return acc
+        }, {} as Record<string, { small: number | null; medium: number | null; large: number | null; extra_large: number | null }>)
+      }
+    }
 
-        // Extract prices from the columns, filtering out only null/undefined values (allow 0)
-        const prices = [
-          pricingData.small,
-          pricingData.medium, 
-          pricingData.large,
-          pricingData.extra_large
-        ].filter(price => price !== null && price !== undefined)
-
-        if (prices.length === 0) {
-          return {
-            ...service,
-            priceRange: null,
-          }
-        }
-
-        // Calculate min and max prices
-        const minPrice = Math.min(...prices)
-        const maxPrice = Math.max(...prices)
-
-        return {
-          ...service,
-          priceRange: {
-            min: minPrice,
-            max: maxPrice,
-          },
-        }
-      })
-    )
+    const servicesWithPricing = services.map((service) => {
+      const pricing = pricingByServiceId[service.id]
+      if (!pricing) {
+        return { ...service, priceRange: null }
+      }
+      const prices = [pricing.small, pricing.medium, pricing.large, pricing.extra_large]
+        .filter((p): p is number => p !== null && p !== undefined)
+      if (prices.length === 0) {
+        return { ...service, priceRange: null }
+      }
+      const minPrice = Math.min(...prices)
+      const maxPrice = Math.max(...prices)
+      return {
+        ...service,
+        priceRange: { min: minPrice, max: maxPrice },
+      }
+    })
 
     // Return all services, but mark those without pricing
     return ApiResponseHandler.success(servicesWithPricing, {
@@ -119,7 +115,7 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Get services error:', error)
+    logger.error('Get services error:', error)
     return ApiResponseHandler.serverError('Failed to fetch services')
   }
 }
@@ -133,15 +129,15 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    console.log('Service creation request body:', body)
+    logger.debug('Service creation request body:', body)
 
     const validation = await ApiValidation.validateBody(body, createServiceSchema)
     if (!validation.success) {
-      console.error('Service validation failed:', validation.error)
+      logger.error('Service validation failed:', validation.error)
       return validation.error
     }
 
-    console.log('Validated service data:', validation.data)
+    logger.debug('Validated service data:', validation.data)
 
     // Map frontend field names to database column names
     const serviceCreateData = {
@@ -154,15 +150,15 @@ export async function POST(request: NextRequest) {
       slug: validation.data.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
     }
 
-    console.log('Mapped service data for database:', serviceCreateData)
+    logger.debug('Mapped service data for database:', serviceCreateData)
 
     const servicesService = new ServicesService()
     const result = await servicesService.createService(serviceCreateData)
 
-    console.log('Service creation result:', result)
+    logger.debug('Service creation result:', result)
 
     if (!result.success) {
-      console.error('Service creation failed:', result.error)
+      logger.error('Service creation failed:', result.error)
       return ApiResponseHandler.error(
         result.error?.message || 'Failed to create service',
         'CREATE_SERVICE_FAILED'
@@ -178,7 +174,7 @@ export async function POST(request: NextRequest) {
     }, { status: 201 })
 
   } catch (error) {
-    console.error('Create service error:', error)
+    logger.error('Create service error:', error)
     return ApiResponseHandler.serverError('Failed to create service')
   }
 }

@@ -14,6 +14,7 @@ import {
   BarChart3
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { isNewUIEnabled } from '@/lib/config/feature-flags'
 
 const dashboardBenefits = [
   'Book and reschedule services instantly',
@@ -51,6 +52,7 @@ export function DashboardPreview() {
     <section 
       ref={sectionRef}
       className="relative overflow-hidden min-h-screen flex flex-col justify-center py-32 md:py-40 lg:py-48"
+      data-ui={isNewUIEnabled() ? 'new' : 'old'}
     >
       
       <Container>

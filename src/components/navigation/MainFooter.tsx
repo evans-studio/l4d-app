@@ -3,12 +3,13 @@
 import { PhoneIcon, MailIcon, MapPinIcon } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
+import { isNewUIEnabled } from '@/lib/config/feature-flags'
 
 export function MainFooter() {
   const currentYear = new Date().getFullYear()
 
   return (
-    <footer className="bg-surface-secondary border-t border-border-secondary">
+    <footer className="bg-surface-secondary border-t border-border-secondary" data-ui={isNewUIEnabled() ? 'new' : 'old'}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
           {/* Company Info */}
@@ -51,10 +52,10 @@ export function MainFooter() {
             <div className="flex items-center gap-3 text-sm">
               <MailIcon className="w-4 h-4 text-brand-400" />
               <a 
-                href="mailto:zell@love4detailing.com"
+                href={`mailto:${process.env.NEXT_PUBLIC_COMPANY_EMAIL || 'zell@love4detailing.com'}`}
                 className="text-text-secondary hover:text-brand-400 transition-colors"
               >
-                zell@love4detailing.com
+                {process.env.NEXT_PUBLIC_COMPANY_EMAIL || 'zell@love4detailing.com'}
               </a>
             </div>
             

@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/primitives/Button'
 import { ClockIcon, XIcon, CalendarIcon, PlusIcon } from 'lucide-react'
+import { logger } from '@/lib/utils/logger'
 
 interface TimeSlotModalProps {
   isOpen: boolean
@@ -76,7 +77,7 @@ export function TimeSlotModal({ isOpen, onClose, selectedDate, onSuccess }: Time
       })
 
     } catch (error) {
-      console.error('Error creating time slot:', error)
+      logger.error('Error creating time slot:', error)
       setError('Failed to create time slot. Please try again.')
     } finally {
       setIsLoading(false)

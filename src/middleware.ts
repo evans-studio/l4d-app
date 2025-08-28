@@ -3,25 +3,73 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { logger } from '@/lib/utils/logger'
 
+// Types for cookie options
+interface CookieOptions {
+  name: string
+  value: string
+  domain?: string
+  expires?: Date
+  httpOnly?: boolean
+  maxAge?: number
+  path?: string
+  secure?: boolean
+  sameSite?: 'strict' | 'lax' | 'none'
+}
+
+type CookieSetOptions = Partial<Omit<CookieOptions, 'name' | 'value'>>
+
+// Types for rate limiting store
+interface RateLimitEntry {
+  count: number
+  reset: number
+}
+
+interface RateLimitStore {
+  get(key: string): RateLimitEntry | undefined
+  set(key: string, value: RateLimitEntry): void
+}
+
+declare global {
+  var __rateLimitStore: RateLimitStore | undefined
+}
+
 export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname
   const response = NextResponse.next()
 
   // Security Headers applied to every response
+  const isDev = process.env.NODE_ENV !== 'production'
   const securityHeaders: Record<string, string> = {
     'Strict-Transport-Security': 'max-age=63072000; includeSubDomains; preload',
     'X-Frame-Options': 'DENY',
     'X-Content-Type-Options': 'nosniff',
     'Referrer-Policy': 'strict-origin-when-cross-origin',
-    // Allow required domains; adjust if additional CDNs/providers used
+    // Strict Content Security Policy for production security
     'Content-Security-Policy': [
       "default-src 'self'",
       "img-src 'self' data: blob: https:",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https:",
+      // Allow essential Next.js inline and blob scripts used for hydration/runtime
+      // In development, Next uses eval and ws for HMR; enable narrowly there
+      isDev
+        ? "script-src 'self' 'unsafe-inline' 'unsafe-eval' https: blob:"
+        : "script-src 'self' 'unsafe-inline' https: blob:",
+      // Allow inline styles required by Next.js and UI libraries
       "style-src 'self' 'unsafe-inline' https:",
-      "connect-src 'self' https: http:",
+      // Allow HTTPS/WSS for prod and WS for dev (Next HMR)
+      isDev
+        ? "connect-src 'self' https: ws: wss:"
+        : "connect-src 'self' https: wss:",
       "font-src 'self' data: https:",
+      // Restrict framing and forms
       "frame-ancestors 'none'",
+      "object-src 'none'",
+      "base-uri 'self'",
+      // Allow PayPal frames explicitly when used
+      "frame-src https://www.paypal.com https://www.sandbox.paypal.com",
+      // Restrict form submissions to self and PayPal
+      "form-action 'self' https://www.paypal.com https://www.sandbox.paypal.com",
+      // Upgrade insecure requests in prod environments
+      'upgrade-insecure-requests'
     ].join('; '),
     // A conservative baseline; enable specific features as needed
     'Permissions-Policy': [
@@ -73,7 +121,70 @@ export async function middleware(request: NextRequest) {
     // - /api/auth/setup-password (deprecated)
   ]
 
-  // Skip auth check for public routes
+  // Special handling for auth routes: if already authenticated, redirect away to avoid flicker,
+  // but always preserve intended destination via redirect param
+  if (path.startsWith('/auth/')) {
+    try {
+      const supabase = createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        {
+          cookies: {
+            getAll: () => request.cookies.getAll(),
+            set: (name: string, value: string, options?: CookieSetOptions) => {
+              response.cookies.set(name, value, options)
+            },
+            remove: (name: string, options?: CookieSetOptions) => {
+              response.cookies.set(name, '', { ...(options || {}), maxAge: 0 })
+            },
+          } as unknown as Parameters<typeof createServerClient>[2]['cookies'],
+        }
+      )
+
+      const { data: { user } } = await supabase.auth.getUser()
+      const isVerified = user && user.email_confirmed_at
+
+      if (isVerified) {
+        // If a redirect param is present, honor it to preserve the exact page
+        const redirectTarget = request.nextUrl.searchParams.get('redirect')
+        if (redirectTarget && redirectTarget.startsWith('/')) {
+          return NextResponse.redirect(new URL(redirectTarget, request.url))
+        }
+
+        // Otherwise, keep user on current page if it isn't a login/register/reset page to avoid jumping
+        const authLanding = ['/auth/login', '/auth/register', '/auth/forgot-password', '/auth/reset-password']
+        if (!authLanding.includes(path)) {
+          return response
+        }
+
+        // Determine role to choose destination
+        const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+        const supabaseService = createServerClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          serviceKey!,
+          {
+            cookies: { get: () => null, set: () => {}, remove: () => {} } as { get(): null; set(): void; remove(): void },
+            auth: { autoRefreshToken: false, persistSession: false }
+          }
+        )
+
+        const { data: profile } = await supabaseService
+          .from('user_profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single()
+
+        const userRole = profile?.role || 'customer'
+        const dest = (userRole === 'admin' || userRole === 'super_admin') ? '/admin' : '/dashboard'
+        return NextResponse.redirect(new URL(dest, request.url))
+      }
+    } catch (_) {
+      // Fail-open to the auth page if any issue occurs
+    }
+    return response
+  }
+
+  // Skip auth check for other public routes
   if (publicRoutes.includes(path)) {
     return response
   }
@@ -89,16 +200,14 @@ export async function middleware(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get(name: string) {
-          return request.cookies.get(name)?.value
-        },
-        set(name: string, value: string, options: any) {
+        getAll: () => request.cookies.getAll(),
+        set: (name: string, value: string, options?: CookieSetOptions) => {
           response.cookies.set(name, value, options)
         },
-        remove(name: string, options: any) {
-          response.cookies.set(name, '', { ...options, maxAge: 0 })
+        remove: (name: string, options?: CookieSetOptions) => {
+          response.cookies.set(name, '', { ...(options || {}), maxAge: 0 })
         },
-      },
+      } as unknown as Parameters<typeof createServerClient>[2]['cookies'],
     }
   )
 
@@ -122,7 +231,7 @@ export async function middleware(request: NextRequest) {
         get: () => null,  // No cookies for service client
         set: () => {},    // No cookie setting
         remove: () => {}  // No cookie removal
-      },
+      } as { get(): null; set(): void; remove(): void },
       auth: {
         autoRefreshToken: false,
         persistSession: false
@@ -140,9 +249,8 @@ export async function middleware(request: NextRequest) {
       const windowMs = 5 * 60 * 1000 // 5 minutes
       const maxRequests = 200
       // Use global store to persist within a single server process
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const store: any = (globalThis as any).__rateLimitStore || ((globalThis as any).__rateLimitStore = new Map<string, { count: number, reset: number }>())
-      const entry = store.get(key) as { count: number, reset: number } | undefined
+      const store: RateLimitStore = globalThis.__rateLimitStore || (globalThis.__rateLimitStore = new Map<string, RateLimitEntry>() as RateLimitStore)
+      const entry = store.get(key)
       if (!entry || now > entry.reset) {
         store.set(key, { count: 1, reset: now + windowMs })
       } else {
@@ -191,7 +299,7 @@ export async function middleware(request: NextRequest) {
     return response
   }
 
-  // Handle page routes - redirect to login if not authenticated
+  // Handle page routes - if not verified, redirect to login (preserving destination). If verified, never redirect.
   if (!isVerified) {
     const loginUrl = new URL('/auth/login', request.url)
     loginUrl.searchParams.set('redirect', request.nextUrl.pathname + request.nextUrl.search)
@@ -230,23 +338,56 @@ export async function middleware(request: NextRequest) {
     isAdminPath: path.startsWith('/admin/')
   })
 
-  // Role-based access control
+  // Role-based access control - enforce admin access at middleware level for security
   if (path.startsWith('/admin/')) {
-    // Temporarily bypass middleware check - let AdminRoute handle it
-    logger.debug('Middleware: Temporarily bypassing admin check', { userRole })
+    if (userRole !== 'admin' && userRole !== 'super_admin') {
+      logger.security('Unauthorized admin access attempt', { 
+        userId: user.id,
+        email: user.email,
+        userRole,
+        path,
+        ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'
+      })
+      
+      // Redirect to appropriate dashboard with error message
+      const redirectUrl = new URL('/dashboard', request.url)
+      redirectUrl.searchParams.set('error', 'admin-access-denied')
+      return NextResponse.redirect(redirectUrl)
+    }
     
-    // if (userRole !== 'admin' && userRole !== 'super_admin') {
-    //   logger.debug('Middleware: Redirecting to dashboard - role not allowed', { userRole })
-    //   return NextResponse.redirect(new URL('/dashboard', request.url))
-    // }
-    
-    logger.debug('Middleware: Admin access granted (bypassed)', { userRole })
+    logger.security('Admin access granted', { 
+      userId: user.id,
+      email: user.email,
+      userRole,
+      path 
+    })
   }
 
-  // If user is admin trying to access /dashboard, redirect to /admin
-  if (path.startsWith('/dashboard/') && (userRole === 'admin' || userRole === 'super_admin')) {
-    return NextResponse.redirect(new URL('/admin', request.url))
+  // Also enforce admin access for admin API routes
+  if (path.startsWith('/api/admin/')) {
+    if (userRole !== 'admin' && userRole !== 'super_admin') {
+      logger.security('Unauthorized admin API access attempt', { 
+        userId: user.id,
+        email: user.email,
+        userRole,
+        path,
+        ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'
+      })
+      
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: { 
+            message: 'Admin access required', 
+            code: 'ADMIN_ACCESS_DENIED' 
+          } 
+        },
+        { status: 403 }
+      )
+    }
   }
+
+  // Do not auto-redirect admins off customer pages on refresh; allow CSR to handle
 
   return response
 }

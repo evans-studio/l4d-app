@@ -3,10 +3,18 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/primitives/Button'
+import { MarkAsPaidModal } from '@/components/admin/MarkAsPaidModal'
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb'
+import { Badge } from '@/components/ui/badge'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { isNewUIEnabled } from '@/lib/config/feature-flags'
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/primitives/Alert'
+import { ConfirmDialog } from '@/components/ui/overlays/modals/ConfirmDialog'
 import { AdminLayout } from '@/components/layouts/AdminLayout'
 import { AdminRoute } from '@/components/ProtectedRoute'
 // BookingStatus imported but not used - removed
-import { 
+import { logger } from '@/lib/utils/logger'
+import {
   CalendarIcon, 
   ClockIcon,
   CheckIcon,
@@ -36,6 +44,7 @@ interface BookingDetails {
   start_time: string
   end_time?: string
   status: 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled'
+  payment_status?: 'pending' | 'awaiting_payment' | 'paid' | 'payment_failed' | 'refunded'
   total_price: number
   special_instructions?: string
   admin_notes?: string
@@ -124,6 +133,9 @@ function AdminBookingDetailsPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isUpdating, setIsUpdating] = useState(false)
   const [adminNotes, setAdminNotes] = useState('')
+  const [markPaidOpen, setMarkPaidOpen] = useState(false)
+  const [approveOpen, setApproveOpen] = useState(false)
+  const [declineOpen, setDeclineOpen] = useState(false)
 
   useEffect(() => {
     const fetchBooking = async () => {
@@ -140,18 +152,17 @@ function AdminBookingDetailsPage() {
           setBooking(data.data)
           setAdminNotes(data.data.admin_notes || '')
         } else {
-          console.error('Failed to fetch booking:', data.error)
-          console.error('Booking ID:', bookingId)
-          console.error('Response status:', response.status)
+          logger.error('Failed to fetch booking', undefined, { apiError: data.error })
+          logger.error('Booking fetch meta', undefined, { bookingId })
+          logger.error('Booking fetch meta', undefined, { status: response.status })
         }
       } catch (error) {
-        console.error('Failed to fetch booking:', error)
-        console.error('Booking ID:', bookingId)
+        logger.error('Failed to fetch booking', error instanceof Error ? error : undefined, { bookingId })
         
         // Check if it's a 404 error (booking not found)
         if (error instanceof Error && error.message.includes('404')) {
           // The booking doesn't exist - redirect back to bookings list
-          console.warn('Booking not found, redirecting to bookings list')
+          logger.warn('Booking not found, redirecting to bookings list')
           router.push('/admin/bookings?error=booking-not-found')
           return
         }
@@ -181,7 +192,7 @@ function AdminBookingDetailsPage() {
         setBooking(prev => prev ? { ...prev, status: newStatus as "pending" | "confirmed" | "in_progress" | "completed" | "cancelled" } : null)
       }
     } catch (error) {
-      console.error('Failed to update booking status:', error)
+      logger.error('Failed to update booking status', error instanceof Error ? error : undefined, { bookingId: booking.id, newStatus })
     } finally {
       setIsUpdating(false)
     }
@@ -202,35 +213,58 @@ function AdminBookingDetailsPage() {
         setBooking(prev => prev ? { ...prev, admin_notes: adminNotes } : null)
       }
     } catch (error) {
-      console.error('Failed to update admin notes:', error)
+      logger.error('Failed to update admin notes', error instanceof Error ? error : undefined, { bookingId: booking.id })
     }
+  }
+
+  const handleMarkPaidSuccess = async () => {
+    // After marking paid, re-fetch booking to reflect new payment_status and status
+    try {
+      const response = await fetch(`/api/bookings/${booking!.id}`)
+      const data = await response.json()
+      if (data.success) {
+        setBooking(data.data)
+      }
+    } catch (_) {}
+    setMarkPaidOpen(false)
   }
 
   const handleApproveReschedule = async (rescheduleRequest: NonNullable<BookingDetails['reschedule_request']>) => {
     if (!booking) return
-    
     setIsUpdating(true)
     try {
-      const response = await fetch(`/api/admin/bookings/${booking.id}/reschedule/approve`, {
+      const response = await fetch(`/api/admin/reschedule-requests/${rescheduleRequest.id}/respond`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          reschedule_request_id: rescheduleRequest.id,
-          new_date: rescheduleRequest.requested_date,
-          new_time: rescheduleRequest.requested_time
-        })
+        body: JSON.stringify({ action: 'approve', adminResponse: '', adminNotes: '' })
       })
-
       const data = await response.json()
       if (data.success) {
-        // Refresh booking data to show updated status
+        // Refresh booking data to show updated status/time
         window.location.reload()
       } else {
-        console.error('Failed to approve reschedule:', data.error)
+        // Fallback to booking endpoint if request not found
+        if (data?.error?.code === 'NOT_FOUND') {
+          const fb = await fetch(`/api/admin/bookings/${booking.id}/reschedule`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              newDate: rescheduleRequest.requested_date,
+              newTime: rescheduleRequest.requested_time,
+              reason: rescheduleRequest.reason
+            })
+          })
+          const fbJson = await fb.json()
+          if (fbJson?.success) {
+            window.location.reload()
+            return
+          }
+        }
+        logger.error('Failed to approve reschedule', undefined, { apiError: data.error })
         alert('Failed to approve reschedule request: ' + (data.error?.message || 'Unknown error'))
       }
     } catch (error) {
-      console.error('Failed to approve reschedule:', error)
+      logger.error('Failed to approve reschedule', error instanceof Error ? error : undefined, { bookingId: booking.id })
       alert('Failed to approve reschedule request')
     } finally {
       setIsUpdating(false)
@@ -239,30 +273,23 @@ function AdminBookingDetailsPage() {
 
   const handleDeclineReschedule = async (rescheduleRequest: NonNullable<BookingDetails['reschedule_request']>) => {
     if (!booking) return
-    
     const declineReason = window.prompt('Optional: Provide a reason for declining this reschedule request:')
-    
     setIsUpdating(true)
     try {
-      const response = await fetch(`/api/admin/bookings/${booking.id}/reschedule/decline`, {
+      const response = await fetch(`/api/admin/reschedule-requests/${rescheduleRequest.id}/respond`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          reschedule_request_id: rescheduleRequest.id,
-          decline_reason: declineReason || undefined
-        })
+        body: JSON.stringify({ action: 'reject', adminResponse: declineReason || '', adminNotes: '' })
       })
-
       const data = await response.json()
       if (data.success) {
-        // Refresh booking data to show updated status
         window.location.reload()
       } else {
-        console.error('Failed to decline reschedule:', data.error)
+        logger.error('Failed to decline reschedule', undefined, { apiError: data.error })
         alert('Failed to decline reschedule request: ' + (data.error?.message || 'Unknown error'))
       }
     } catch (error) {
-      console.error('Failed to decline reschedule:', error)
+      logger.error('Failed to decline reschedule', error instanceof Error ? error : undefined, { bookingId: booking.id })
       alert('Failed to decline reschedule request')
     } finally {
       setIsUpdating(false)
@@ -322,36 +349,90 @@ function AdminBookingDetailsPage() {
   const status = statusConfig[booking.status] || statusConfig.pending
   const StatusIcon = status.icon
 
+  const renderPaymentBadge = () => {
+    const ps = booking.payment_status || 'pending'
+    const map: Record<string, { label: string; className: string }> = {
+      pending: { label: 'Payment Pending', className: 'bg-[var(--warning-bg)] border border-[var(--warning)] text-[var(--warning)]' },
+      awaiting_payment: { label: 'Awaiting Payment', className: 'bg-[var(--warning-bg)] border border-[var(--warning)] text-[var(--warning)]' },
+      paid: { label: 'Paid', className: 'bg-[var(--success-bg)] border border-[var(--success)] text-[var(--success)]' },
+      payment_failed: { label: 'Payment Failed', className: 'bg-[var(--error-bg)] border border-[var(--error)] text-[var(--error)]' },
+      refunded: { label: 'Refunded', className: 'bg-[var(--info-bg)] border border-[var(--info)] text-[var(--info)]' },
+    }
+    const cfg = (map[ps] as { label: string; className: string }) || map['pending']
+    return <Badge variant="outline" className={cfg!.className}>{cfg!.label}</Badge>
+  }
+
   return (
     <AdminLayout>
       <div className="max-w-4xl mx-auto">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
-            <Button
-              onClick={() => router.push('/admin/bookings')}
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-2"
-            >
-              <ArrowLeftIcon className="w-4 h-4" />
-              Back
-            </Button>
-            <div>
-              <h1 className="text-3xl font-bold text-[var(--text-primary)]">
-                Booking #{booking.booking_reference}
+        {isNewUIEnabled() ? (
+          <div className="mb-6 space-y-3">
+            <Breadcrumb>
+              <BreadcrumbList>
+                <BreadcrumbItem>
+                  <BreadcrumbLink href="/admin/bookings">Bookings</BreadcrumbLink>
+                </BreadcrumbItem>
+                <BreadcrumbSeparator />
+                <BreadcrumbItem>
+                  <BreadcrumbPage>#{booking.booking_reference}</BreadcrumbPage>
+                </BreadcrumbItem>
+              </BreadcrumbList>
+            </Breadcrumb>
+            <div className="flex items-center justify-between">
+              <h1 className="text-2xl sm:text-3xl font-bold text-[var(--text-primary)]">
+                Booking 
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        onClick={() => navigator.clipboard.writeText(booking.booking_reference)}
+                        className="underline-offset-4 hover:underline ml-1 text-[var(--text-link)] hover:text-[var(--text-link-hover)]"
+                        aria-label="Copy booking reference"
+                      >
+                        #{booking.booking_reference}
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent>Click to copy</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </h1>
-              <p className="text-[var(--text-secondary)]">
-                Created {formatDate(booking.created_at)}
-              </p>
+              <div className="flex items-center gap-2">
+                <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border ${status.bgColor} ${status.borderColor}`}>
+                  <StatusIcon className={`w-4 h-4 ${status.color}`} />
+                  <span className={`text-sm font-medium ${status.color}`}>{status.label}</span>
+                </div>
+              </div>
+            </div>
+            <p className="text-[var(--text-secondary)]">Created {formatDate(booking.created_at)}</p>
+          </div>
+        ) : (
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center gap-4">
+              <Button
+                onClick={() => router.push('/admin/bookings')}
+                variant="outline"
+                size="sm"
+              >
+                Back
+              </Button>
+              <div>
+                <h1 className="text-3xl font-bold text-[var(--text-primary)]">
+                  Booking #{booking.booking_reference}
+                </h1>
+                <p className="text-[var(--text-secondary)]">
+                  Created {formatDate(booking.created_at)}
+                </p>
+              </div>
+            </div>
+            
+            <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full border ${status.bgColor} ${status.borderColor}`}>
+              <StatusIcon className={`w-5 h-5 ${status.color}`} />
+              <span className={`font-medium ${status.color}`}>{status.label}</span>
             </div>
           </div>
-          
-          <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full border ${status.bgColor} ${status.borderColor}`}>
-            <StatusIcon className={`w-5 h-5 ${status.color}`} />
-            <span className={`font-medium ${status.color}`}>{status.label}</span>
-          </div>
-        </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main Content */}
@@ -369,24 +450,38 @@ function AdminBookingDetailsPage() {
                 </div>
                 <div>
                   <p className="text-[var(--text-secondary)] text-sm mb-1">Email</p>
-                  <a 
-                    href={`mailto:${booking.customer_email}`}
-                    className="text-[var(--text-link)] hover:text-[var(--text-link-hover)] flex items-center gap-2"
-                  >
-                    <MailIcon className="w-4 h-4" />
-                    {booking.customer_email}
-                  </a>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <a 
+                          href={`mailto:${booking.customer_email}`}
+                          className="text-[var(--text-link)] hover:text-[var(--text-link-hover)] flex items-center gap-2"
+                        >
+                          <MailIcon className="w-4 h-4" />
+                          {booking.customer_email}
+                        </a>
+                      </TooltipTrigger>
+                      <TooltipContent>Click to email</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </div>
                 {booking.customer_phone && (
                   <div>
                     <p className="text-[var(--text-secondary)] text-sm mb-1">Phone</p>
-                    <a 
-                      href={`tel:${booking.customer_phone}`}
-                      className="text-[var(--text-link)] hover:text-[var(--text-link-hover)] flex items-center gap-2"
-                    >
-                      <PhoneIcon className="w-4 h-4" />
-                      {booking.customer_phone}
-                    </a>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <a 
+                            href={`tel:${booking.customer_phone}`}
+                            className="text-[var(--text-link)] hover:text-[var(--text-link-hover)] flex items-center gap-2"
+                          >
+                            <PhoneIcon className="w-4 h-4" />
+                            {booking.customer_phone}
+                          </a>
+                        </TooltipTrigger>
+                        <TooltipContent>Tap to call</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </div>
                 )}
               </div>
@@ -405,8 +500,7 @@ function AdminBookingDetailsPage() {
                 </div>
                 <div>
                   <p className="text-[var(--text-secondary)] text-sm mb-1">Start Time</p>
-                  <p className="text-[var(--text-primary)] font-medium flex items-center gap-2">
-                    <ClockIcon className="w-4 h-4" />
+                  <p className="text-[var(--text-primary)] font-medium">
                     {formatTime(booking.start_time)}
                   </p>
                 </div>
@@ -443,7 +537,21 @@ function AdminBookingDetailsPage() {
                     {booking.vehicle.license_plate && (
                       <div>
                         <p className="text-[var(--text-secondary)] text-sm mb-1">License Plate</p>
-                        <p className="text-[var(--text-primary)] font-medium">{booking.vehicle.license_plate}</p>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                type="button"
+                                onClick={() => navigator.clipboard.writeText(booking.vehicle.license_plate || '')}
+                                className="text-[var(--text-link)] hover:text-[var(--text-link-hover)] font-medium underline-offset-4 hover:underline"
+                                aria-label="Copy license plate"
+                              >
+                                {booking.vehicle.license_plate}
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>Click to copy</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       </div>
                     )}
                   </>
@@ -482,39 +590,48 @@ function AdminBookingDetailsPage() {
                 <CreditCardIcon className="w-5 h-5" />
                 Services & Pricing
               </h2>
-              <div className="space-y-3">
-                {booking.services.map((service, index) => (
-                  <div key={index} className="flex justify-between items-center py-2 border-b border-[var(--border-secondary)] last:border-b-0">
-                    <div>
-                      <p className="text-[var(--text-primary)] font-medium">{service.name}</p>
-                      {service.quantity > 1 && (
-                        <p className="text-[var(--text-secondary)] text-sm">Quantity: {service.quantity}</p>
-                      )}
-                    </div>
-                    <div className="text-right">
-                      <p className="text-[var(--text-primary)] font-medium">£{service.total_price}</p>
-                      {service.quantity > 1 && (
-                        <p className="text-[var(--text-secondary)] text-sm">£{service.base_price} each</p>
-                      )}
-                    </div>
-                  </div>
-                ))}
-                <div className="flex justify-between items-center pt-3 border-t border-[var(--border-primary)]">
-                  <p className="text-lg font-semibold text-[var(--text-primary)]">Total</p>
-                  <p className="text-2xl font-bold text-[var(--primary)]">£{booking.total_price}</p>
-                </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-[var(--text-secondary)] border-b border-[var(--border-secondary)]">
+                      <th className="py-2 pr-4 font-medium">Service</th>
+                      <th className="py-2 pr-4 font-medium">Qty</th>
+                      <th className="py-2 pr-4 font-medium">Price</th>
+                      <th className="py-2 font-medium text-right">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {booking.services.map((service, index) => (
+                      <tr key={index} className="border-b border-[var(--border-secondary)] last:border-b-0">
+                        <td className="py-2 pr-4 text-[var(--text-primary)]">{service.name}</td>
+                        <td className="py-2 pr-4 text-[var(--text-primary)]">{service.quantity}</td>
+                        <td className="py-2 pr-4 text-[var(--text-primary)]">£{service.base_price}</td>
+                        <td className="py-2 text-right text-[var(--text-primary)] font-medium">£{service.total_price}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                      <td className="pt-3 pr-4" colSpan={3}>
+                        <span className="text-[var(--text-primary)] font-semibold">Total</span>
+                      </td>
+                      <td className="pt-3 text-right text-[var(--primary)] font-bold">£{booking.total_price}</td>
+                    </tr>
+                  </tfoot>
+                </table>
               </div>
             </div>
 
             {/* Special Instructions */}
             {booking.special_instructions && (
-              <div className="bg-[var(--surface-secondary)] rounded-lg p-6 border border-[var(--border-secondary)]">
-                <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-4 flex items-center gap-2">
-                  <MessageSquareIcon className="w-5 h-5" />
-                  Customer Instructions
-                </h2>
-                <p className="text-[var(--text-primary)]">{booking.special_instructions}</p>
-              </div>
+              <Alert className="bg-[var(--surface-secondary)] border border-[var(--border-secondary)]">
+                <AlertTitle className="flex items-center gap-2 text-[var(--text-primary)]">
+                  <MessageSquareIcon className="w-4 h-4" /> Customer Instructions
+                </AlertTitle>
+                <AlertDescription className="text-[var(--text-primary)]">
+                  {booking.special_instructions}
+                </AlertDescription>
+              </Alert>
             )}
 
             {/* Reschedule Request */}
@@ -566,20 +683,18 @@ function AdminBookingDetailsPage() {
                   {/* Action Buttons */}
                   <div className="flex gap-3 pt-4 border-t border-yellow-300">
                     <Button
-                      onClick={() => handleApproveReschedule(booking.reschedule_request!)}
+                      onClick={() => setApproveOpen(true)}
                       disabled={isUpdating}
-                      className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white"
+                      className="bg-green-600 hover:bg-green-700 text-white"
                     >
-                      <CalendarCheckIcon className="w-4 h-4" />
                       Approve Request
                     </Button>
                     <Button
-                      onClick={() => handleDeclineReschedule(booking.reschedule_request!)}
+                      onClick={() => setDeclineOpen(true)}
                       disabled={isUpdating}
                       variant="outline"
-                      className="flex items-center gap-2 text-red-600 border-red-200 hover:bg-red-50"
+                      className="text-red-600 border-red-200 hover:bg-red-50"
                     >
-                      <CalendarXIcon className="w-4 h-4" />
                       Decline Request
                     </Button>
                   </div>
@@ -593,24 +708,50 @@ function AdminBookingDetailsPage() {
             {/* Status Actions */}
             <div className="bg-[var(--surface-secondary)] rounded-lg p-6 border border-[var(--border-secondary)]">
               <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">Actions</h3>
+              {/* Payment status (moved from header to avoid duplicate badges) */}
+              <div className="mb-3 text-sm flex items-center justify-between">
+                <span className="text-[var(--text-secondary)]">Payment Status</span>
+                {renderPaymentBadge()}
+              </div>
               <div className="space-y-3">
+                {booking.payment_status !== 'paid' && (
+                  <Button
+                    onClick={() => setMarkPaidOpen(true)}
+                    className="w-full"
+                  >
+                    Mark as Paid
+                  </Button>
+                )}
                 {booking.status === 'pending' && (
                   <>
                     <Button
                       onClick={() => updateBookingStatus('confirmed')}
                       disabled={isUpdating}
-                      className="w-full flex items-center gap-2"
+                      className="w-full"
                     >
-                      <CheckIcon className="w-4 h-4" />
                       Confirm Booking
                     </Button>
                     <Button
-                      onClick={() => updateBookingStatus('cancelled')}
+                      onClick={async () => {
+                        if (!booking) return
+                        setIsUpdating(true)
+                        try {
+                          const res = await fetch(`/api/admin/bookings/${booking.id}/cancel`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ reason: 'Cancelled by admin via booking page' })
+                          })
+                          const json = await res.json()
+                          if (json?.success) {
+                            setBooking(prev => prev ? { ...prev, status: 'cancelled' } : prev)
+                          }
+                        } catch (_) {}
+                        setIsUpdating(false)
+                      }}
                       disabled={isUpdating}
                       variant="outline"
-                      className="w-full flex items-center gap-2"
+                      className="w-full"
                     >
-                      <XIcon className="w-4 h-4" />
                       Cancel Booking
                     </Button>
                   </>
@@ -620,9 +761,8 @@ function AdminBookingDetailsPage() {
                   <Button
                     onClick={() => updateBookingStatus('in_progress')}
                     disabled={isUpdating}
-                    className="w-full flex items-center gap-2"
+                    className="w-full"
                   >
-                    <ClockIcon className="w-4 h-4" />
                     Start Service
                   </Button>
                 )}
@@ -631,9 +771,8 @@ function AdminBookingDetailsPage() {
                   <Button
                     onClick={() => updateBookingStatus('completed')}
                     disabled={isUpdating}
-                    className="w-full flex items-center gap-2"
+                    className="w-full"
                   >
-                    <CheckCircleIcon className="w-4 h-4" />
                     Complete Service
                   </Button>
                 )}
@@ -663,31 +802,44 @@ function AdminBookingDetailsPage() {
               </Button>
             </div>
 
-            {/* Booking Timeline */}
-            <div className="bg-[var(--surface-secondary)] rounded-lg p-6 border border-[var(--border-secondary)]">
-              <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">Timeline</h3>
-              <div className="space-y-3 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-[var(--text-secondary)]">Created</span>
-                  <span className="text-[var(--text-primary)]">
-                    {new Date(booking.created_at).toLocaleDateString()}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-[var(--text-secondary)]">Last Updated</span>
-                  <span className="text-[var(--text-primary)]">
-                    {new Date(booking.updated_at).toLocaleDateString()}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-[var(--text-secondary)]">Scheduled</span>
-                  <span className="text-[var(--text-primary)]">
-                    {formatDate(booking.scheduled_date)}
-                  </span>
-                </div>
-              </div>
-            </div>
           </div>
+          {markPaidOpen && booking && (
+            <MarkAsPaidModal
+              booking={{
+                id: booking.id,
+                booking_reference: booking.booking_reference,
+                customer_name: booking.customer_name,
+                total_price: booking.total_price,
+                payment_status: booking.payment_status,
+              }}
+              open={markPaidOpen}
+              onClose={() => setMarkPaidOpen(false)}
+              onSuccess={handleMarkPaidSuccess}
+            />
+          )}
+
+          {booking?.has_pending_reschedule && booking.reschedule_request && (
+            <>
+              <ConfirmDialog
+                open={approveOpen}
+                onOpenChange={setApproveOpen}
+                title="Approve reschedule?"
+                description={`Move to ${formatDate(booking.reschedule_request.requested_date)} at ${formatTime(booking.reschedule_request.requested_time)}.`}
+                confirmLabel="Approve"
+                onConfirm={() => handleApproveReschedule(booking.reschedule_request!)}
+                isLoading={isUpdating}
+              />
+              <ConfirmDialog
+                open={declineOpen}
+                onOpenChange={setDeclineOpen}
+                title="Decline reschedule?"
+                description="You can provide an optional reason after confirming."
+                confirmLabel="Decline"
+                onConfirm={() => handleDeclineReschedule(booking.reschedule_request!)}
+                isLoading={isUpdating}
+              />
+            </>
+          )}
         </div>
       </div>
     </AdminLayout>

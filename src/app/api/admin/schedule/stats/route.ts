@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { createClientFromRequest } from '@/lib/supabase/server'
+import { logger } from '@/lib/utils/logger'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -54,7 +55,7 @@ export async function GET(request: NextRequest) {
     const { data: allSlots, error: slotsError } = await slotsQuery
 
     if (slotsError) {
-      console.error('Error fetching slots for stats:', slotsError)
+      logger.error('Error fetching slots for stats:', slotsError)
       return NextResponse.json(
         { success: false, error: { message: 'Failed to fetch schedule statistics' } },
         { status: 500 }
@@ -85,7 +86,7 @@ export async function GET(request: NextRequest) {
     const { data: bookedSlots, error: bookedSlotsError } = await bookedSlotsQuery
 
     if (bookedSlotsError) {
-      console.error('Error fetching booked slots:', bookedSlotsError)
+      logger.error('Error fetching booked slots:', bookedSlotsError)
       return NextResponse.json(
         { success: false, error: { message: 'Failed to fetch schedule statistics' } },
         { status: 500 }
@@ -98,7 +99,7 @@ export async function GET(request: NextRequest) {
     }, 0) || 0
 
     // Build sets to compute counts quickly
-    const bookedSlotIds = new Set((bookedSlots || []).map((b: any) => b.time_slot_id).filter(Boolean))
+    const bookedSlotIds = new Set((bookedSlots || []).map((b: { time_slot_id?: string }) => b.time_slot_id).filter(Boolean))
 
     const totalSlots = futureSlots.length
     const bookedCount = futureSlots.filter(s => bookedSlotIds.has(s.id)).length
@@ -121,7 +122,7 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('API error:', error)
+    logger.error('API error:', error instanceof Error ? error : undefined)
     return NextResponse.json(
       { success: false, error: { message: 'Internal server error' } },
       { status: 500 }

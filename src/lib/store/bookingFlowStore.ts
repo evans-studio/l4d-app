@@ -1,9 +1,12 @@
+export * from '../store/bookingFlowStore'
+
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import { BookingFlowData, PricingBreakdown, CustomerVehicle, CustomerAddress } from '@/lib/utils/booking-types'
 import { Database } from '@/lib/db/database.types'
 import { calculatePostcodeDistance } from '@/lib/utils/postcode-distance'
 import { calculateBookingPrice, PriceBreakdown as EnhancedPriceBreakdown } from '@/lib/pricing/calculator'
+import { logger } from '@/lib/utils/logger'
 
 // Type aliases for database types  
 type ServiceRow = Database['public']['Tables']['services']['Row']
@@ -82,7 +85,7 @@ export interface PriceCalculation {
 }
 
 // API response types following the PRD standard format
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = Record<string, unknown> | Array<Record<string, unknown>> | null> {
   success: boolean
   data?: T
   error?: {
@@ -90,7 +93,11 @@ export interface ApiResponse<T = any> {
     code?: string
   }
   metadata?: {
-    pagination?: any
+    pagination?: {
+      page?: number
+      limit?: number
+      total?: number
+    }
     timestamp?: string
   }
 }
@@ -147,8 +154,8 @@ interface BookingFlowState {
     scheduled_date: string
     status: string
     total_price: number
-    vehicle_details: any
-    service_address: any
+    vehicle_details: { make?: string; model?: string; year?: number; size?: 'S' | 'M' | 'L' | 'XL'; color?: string; license_plate?: string } | null
+    service_address: { address_line_1?: string; address_line_2?: string | null; city?: string; postal_code?: string } | null
     services: {
       id: string
       name: string
@@ -374,7 +381,7 @@ export const useBookingFlowStore = create<BookingFlowStore>()(
       calculatePrice: async () => {
         const { formData, setLoading, setError } = get()
         
-        console.log('💰 Starting price calculation with data:', {
+        logger.debug('💰 Starting price calculation with data:', {
           service: formData.service ? {
             id: formData.service.serviceId,
             name: formData.service.name,
@@ -391,7 +398,7 @@ export const useBookingFlowStore = create<BookingFlowStore>()(
         })
         
         if (!formData.service || !formData.vehicle) {
-          console.error('❌ Missing required data for pricing')
+          logger.error('❌ Missing required data for pricing')
           setError('Service and vehicle data required for pricing')
           return
         }
@@ -401,7 +408,7 @@ export const useBookingFlowStore = create<BookingFlowStore>()(
         try {
           // If we have address data, use comprehensive pricing calculator
           if (formData.address && formData.address.postcode) {
-            console.log('🏠 Using comprehensive pricing with address')
+            logger.debug('🏠 Using comprehensive pricing with address')
             
             const serviceDetails = {
               id: formData.service.serviceId,
@@ -424,7 +431,7 @@ export const useBookingFlowStore = create<BookingFlowStore>()(
               postcode: formData.address.postcode
             }
             
-            console.log('🔄 Calling calculateBookingPrice with:', {
+            logger.debug('🔄 Calling calculateBookingPrice with:', {
               serviceDetails,
               vehicleDetails,
               addressDetails
@@ -436,7 +443,7 @@ export const useBookingFlowStore = create<BookingFlowStore>()(
               addressDetails
             )
             
-            console.log('📊 Price breakdown result:', priceBreakdown)
+            logger.debug('📊 Price breakdown result:', priceBreakdown)
             
             // Convert to store format with fallback calculation
             const servicePrice = priceBreakdown.servicePrice || priceBreakdown.serviceBasePrice || 0
@@ -455,7 +462,7 @@ export const useBookingFlowStore = create<BookingFlowStore>()(
               withinFreeRadius: priceBreakdown.breakdown.travel.withinFreeRadius
             }
             
-            console.log('🔍 Store conversion details:', {
+            logger.debug('🔍 Store conversion details:', {
               'priceBreakdown.totalPrice': priceBreakdown.totalPrice,
               'fallbackFinalPrice': fallbackFinalPrice,
               'calculatedPrice.finalPrice': calculatedPrice.finalPrice,
@@ -463,11 +470,11 @@ export const useBookingFlowStore = create<BookingFlowStore>()(
               'travelSurcharge': travelSurcharge
             })
             
-            console.log('✅ Setting calculated price:', calculatedPrice)
+            logger.debug('✅ Setting calculated price:', calculatedPrice)
             set({ calculatedPrice })
           } else {
             // Fallback to basic service pricing without address
-            console.log('🔧 Using fallback pricing without address')
+            logger.debug('🔧 Using fallback pricing without address')
             
             const response = await apiCall<PriceCalculation>('/api/pricing/calculate', {
               method: 'POST',
@@ -477,18 +484,18 @@ export const useBookingFlowStore = create<BookingFlowStore>()(
               }),
             })
             
-            console.log('📡 Fallback API response:', response)
+            logger.debug('📡 Fallback API response:', response)
             
             if (response.success && response.data) {
-              console.log('✅ Setting fallback calculated price:', response.data)
+              logger.debug('✅ Setting fallback calculated price:', response.data)
               set({ calculatedPrice: response.data })
             } else {
-              console.error('❌ Fallback pricing failed:', response.error)
+              logger.error('❌ Fallback pricing failed:', response.error)
               setError(response.error?.message || 'Failed to calculate price')
             }
           }
         } catch (error) {
-          console.error('❌ Price calculation error:', error)
+          logger.error('❌ Price calculation error:', error instanceof Error ? error : undefined)
           setError('Failed to calculate price')
         } finally {
           setLoading(false)
@@ -501,7 +508,7 @@ export const useBookingFlowStore = create<BookingFlowStore>()(
         setLoading(true)
         
         // Clear any previous user validation state before making new API call
-        console.log('🔍 Starting user validation for:', { email, phone })
+        logger.debug('🔍 Starting user validation for:', { email, phone })
         set({
           isExistingUser: false,
           userVehicles: [],
@@ -527,8 +534,8 @@ export const useBookingFlowStore = create<BookingFlowStore>()(
               scheduled_date: string
               status: string
               total_price: number
-              vehicle_details: any
-              service_address: any
+              vehicle_details: { make?: string; model?: string; year?: number; size?: 'S' | 'M' | 'L' | 'XL'; color?: string; license_plate?: string } | null
+              service_address: { address_line_1?: string; address_line_2?: string | null; city?: string; postal_code?: string } | null
               services: {
                 id: string
                 name: string
@@ -549,8 +556,8 @@ export const useBookingFlowStore = create<BookingFlowStore>()(
           })
           
           if (response.success && response.data) {
-            console.log('✅ User validation API response:', response.data)
-            console.log('📊 Setting isExistingUser to:', response.data.isExistingUser)
+            logger.debug('✅ User validation API response:', response.data)
+            logger.debug('📊 Setting isExistingUser to', { isExistingUser: response.data.isExistingUser })
             
             set({
               isExistingUser: response.data.isExistingUser,
@@ -561,17 +568,17 @@ export const useBookingFlowStore = create<BookingFlowStore>()(
             
             // Verify the state was set correctly
             const currentState = get()
-            console.log('🔄 State after update - isExistingUser:', currentState.isExistingUser)
+            logger.debug('🔄 State after update - isExistingUser', { isExistingUser: currentState.isExistingUser })
           } else {
-            console.error('❌ User validation API failed:', response.error)
+            logger.error('❌ User validation API failed:', response.error)
             setError(response.error?.message || 'Failed to validate user')
           }
         } catch (error) {
-          console.error('BookingFlowStore: loadExistingUserData error:', error)
+          logger.error('BookingFlowStore: loadExistingUserData error:', error instanceof Error ? error : undefined)
           
           // Enhanced error logging
           if (error instanceof Error) {
-            console.error('BookingFlowStore: Error details:', {
+            logger.error('BookingFlowStore: Error details:', {
               name: error.name,
               message: error.message,
               stack: error.stack
@@ -599,8 +606,8 @@ export const useBookingFlowStore = create<BookingFlowStore>()(
             booking_reference: string
             scheduled_date: string
             total_price: number
-            vehicle_details: any
-            service_address: any
+            vehicle_details: { make?: string; model?: string; year?: number; size?: 'S' | 'M' | 'L' | 'XL'; color?: string; license_plate?: string } | null
+            service_address: { address_line_1?: string; address_line_2?: string | null; city?: string; postal_code?: string; county?: string | null } | null
             customer: {
               id: string
               email: string
@@ -635,18 +642,18 @@ export const useBookingFlowStore = create<BookingFlowStore>()(
                 duration: booking.services.estimated_duration
               } : undefined,
               vehicle: booking.vehicle_details ? {
-                make: booking.vehicle_details.make,
-                model: booking.vehicle_details.model,
-                year: booking.vehicle_details.year,
-                size: booking.vehicle_details.size,
-                color: booking.vehicle_details.color,
+                make: booking.vehicle_details.make || '',
+                model: booking.vehicle_details.model || '',
+                year: booking.vehicle_details.year || new Date().getFullYear(),
+                size: (booking.vehicle_details.size as 'S' | 'M' | 'L' | 'XL') || 'M',
+                color: booking.vehicle_details.color || '',
                 registration: booking.vehicle_details.license_plate || ''
               } : undefined,
               address: booking.service_address ? {
-                addressLine1: booking.service_address.address_line_1,
+                addressLine1: booking.service_address.address_line_1 || '',
                 addressLine2: booking.service_address.address_line_2 || '',
-                city: booking.service_address.city,
-                postcode: booking.service_address.postal_code,
+                city: booking.service_address.city || '',
+                postcode: booking.service_address.postal_code || '',
                 state: booking.service_address.county || ''
               } : undefined,
               user: {
@@ -720,7 +727,7 @@ export const useBookingFlowStore = create<BookingFlowStore>()(
           }
         } catch (error) {
           // Silent fail for vehicle sizes as they're now hardcoded
-          console.warn('Vehicle sizes API unavailable, using defaults')
+          logger.warn('Vehicle sizes API unavailable, using defaults')
         }
       },
       
@@ -803,7 +810,7 @@ export const useBookingFlowStore = create<BookingFlowStore>()(
                 
                 const totalPrice = finalPrice || fallbackTotal || 0
                 
-                console.log('🎯 Booking submission total price calculation:', {
+                logger.debug('🎯 Booking submission total price calculation:', {
                   'calculatedPrice.finalPrice': finalPrice,
                   'servicePrice': servicePrice,
                   'travelSurcharge': travelSurcharge,
@@ -818,7 +825,13 @@ export const useBookingFlowStore = create<BookingFlowStore>()(
           
           if (response.success && response.data) {
             // Map API response to expected format
-            const apiData = response.data as any // API response has different structure
+            const apiData = response.data as unknown as {
+              bookingId: string
+              bookingReference: string
+              customerId: string
+              requiresPasswordSetup?: boolean
+              passwordSetupToken?: string
+            }
             return {
               bookingId: apiData.bookingId,
               confirmationNumber: apiData.bookingReference,
@@ -894,13 +907,13 @@ export const useBookingFlowStore = create<BookingFlowStore>()(
       // Check for expired sessions on rehydration
       onRehydrateStorage: () => (state, error) => {
         if (error) {
-          console.warn('Failed to rehydrate booking flow state:', error)
+          logger.warn('Failed to rehydrate booking flow state:', error)
           return
         }
         
         // Check if session has expired
         if (state && isSessionExpired(state.sessionTimestamp || 0, state.sessionExpiry || SESSION_EXPIRY_MS)) {
-          console.log('📅 Booking session expired, resetting to fresh state')
+          logger.debug('📅 Booking session expired, resetting to fresh state')
           // Reset to initial state if session has expired
           Object.assign(state, {
             ...initialState,

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useOverlay } from '@/lib/overlay/context'
 import { Button } from '@/components/ui/primitives/Button'
 import { Card, CardHeader, CardContent } from '@/components/ui/composites/Card'
+import { isNewUIEnabled } from '@/lib/config/feature-flags'
 import { 
   Calendar, 
   Clock, 
@@ -22,7 +23,7 @@ interface NextBookingWidgetProps {
     booking_reference: string
     scheduled_date: string
     scheduled_start_time: string
-    status: 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled'
+    status: 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'rescheduled' | 'declined'
     service: {
       name: string
       short_description?: string
@@ -92,7 +93,7 @@ export function NextBookingWidget({ booking }: NextBookingWidgetProps) {
 
   if (!booking) {
     return (
-      <Card className="h-full">
+      <Card className="h-full" data-ui={isNewUIEnabled() ? 'new' : 'old'}>
         <CardHeader>
           <h3 className="text-lg font-semibold text-text-primary flex items-center gap-2">
             <Calendar className="w-5 h-5 text-brand-400" />
@@ -113,7 +114,7 @@ export function NextBookingWidget({ booking }: NextBookingWidgetProps) {
   }
 
   return (
-    <Card className="h-full">
+    <Card className="h-full" data-ui={isNewUIEnabled() ? 'new' : 'old'}>
       <CardHeader>
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold text-text-primary flex items-center gap-2">
@@ -122,7 +123,8 @@ export function NextBookingWidget({ booking }: NextBookingWidgetProps) {
           </h3>
           <Button
             variant="ghost"
-            size="sm"
+            size="icon"
+            aria-label="View booking details"
             onClick={() => openOverlay({
               type: 'booking-view',
               data: { bookingId: booking.id, booking }
@@ -134,7 +136,7 @@ export function NextBookingWidget({ booking }: NextBookingWidgetProps) {
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Countdown */}
-        <div className="bg-brand-600/10 rounded-lg p-3 text-center">
+        <div className="bg-brand-600/10 rounded-lg p-3 text-center border border-brand-600/20">
           <p className="text-sm text-text-secondary mb-1">Starting</p>
           <p className="text-lg font-bold text-brand-400">{timeUntil}</p>
         </div>
@@ -142,7 +144,7 @@ export function NextBookingWidget({ booking }: NextBookingWidgetProps) {
         {/* Booking Details */}
         <div className="space-y-3">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-surface-tertiary flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-surface-tertiary border border-border-secondary flex items-center justify-center">
               <Calendar className="w-4 h-4 text-brand-400" />
             </div>
             <div>
@@ -156,7 +158,7 @@ export function NextBookingWidget({ booking }: NextBookingWidgetProps) {
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-surface-tertiary flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-surface-tertiary border border-border-secondary flex items-center justify-center">
               <Car className="w-4 h-4 text-brand-400" />
             </div>
             <div>
@@ -170,7 +172,7 @@ export function NextBookingWidget({ booking }: NextBookingWidgetProps) {
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-surface-tertiary flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-surface-tertiary border border-border-secondary flex items-center justify-center">
               <MapPin className="w-4 h-4 text-brand-400" />
             </div>
             <div>
@@ -195,7 +197,6 @@ export function NextBookingWidget({ booking }: NextBookingWidgetProps) {
                 type: 'booking-reschedule',
                 data: { bookingId: booking.id, booking }
               })}
-              leftIcon={<Edit className="w-4 h-4" />}
               fullWidth
             >
               Reschedule
@@ -209,7 +210,6 @@ export function NextBookingWidget({ booking }: NextBookingWidgetProps) {
               type: 'booking-cancel',
               data: { bookingId: booking.id, booking }
             })}
-            leftIcon={<X className="w-4 h-4" />}
             fullWidth
           >
             Cancel

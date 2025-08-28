@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClientFromRequest } from '@/lib/supabase/server'
 import { ApiResponse } from '@/types/booking'
+import { logger } from '@/lib/utils/logger'
 
 export async function GET(request: NextRequest): Promise<NextResponse<ApiResponse>> {
   try {
@@ -42,6 +43,8 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
         status,
         total_price,
         pricing_breakdown,
+        vehicle_details,
+        service_address,
         special_instructions,
         created_at,
         customer_vehicles!vehicle_id (
@@ -75,7 +78,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
       .order('created_at', { ascending: false })
 
     if (bookingsError) {
-      console.error('Error fetching bookings:', bookingsError)
+      logger.error('Error fetching bookings:', bookingsError)
       return NextResponse.json({
         success: false,
         error: { message: 'Failed to fetch bookings', code: 'DATABASE_ERROR' }
@@ -83,17 +86,61 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
     }
 
     // Transform the data for frontend consumption
-    const transformedBookings = bookings?.map((booking: any) => ({
-      id: booking.id,
-      booking_reference: booking.booking_reference,
-      scheduled_date: booking.scheduled_date,
-      scheduled_start_time: booking.scheduled_start_time,
-      scheduled_end_time: booking.scheduled_end_time,
-      status: booking.status,
-      total_price: booking.total_price,
-      pricing_breakdown: booking.pricing_breakdown,
-      special_instructions: booking.special_instructions,
-      created_at: booking.created_at,
+    type CustomerVehicleLite = {
+      make?: string
+      model?: string
+      year?: number
+      color?: string
+      license_plate?: string
+      registration?: string
+    }
+    type CustomerAddressLite = {
+      address_line_1?: string
+      address_line_2?: string | null
+      city?: string
+      county?: string | null
+      postal_code?: string
+      country?: string
+      distance_from_business?: number | null
+    }
+    type ServiceLite = {
+      name?: string
+      short_description?: string
+      category?: string
+    }
+    type BookingServiceLite = {
+      service_details?: unknown
+      price?: number
+      estimated_duration?: number
+    }
+    type BookingRowLite = {
+      id: string
+      booking_reference: string
+      scheduled_date: string
+      scheduled_start_time: string
+      scheduled_end_time: string
+      status: string
+      total_price: number
+      pricing_breakdown?: unknown
+      special_instructions?: string | null
+      created_at: string
+      customer_vehicles?: CustomerVehicleLite[] | null
+      customer_addresses?: CustomerAddressLite[] | null
+      services?: ServiceLite | ServiceLite[] | null
+      booking_services?: BookingServiceLite[] | null
+    }
+
+    const transformedBookings = bookings?.map((booking: BookingRowLite) => ({
+      id: booking?.id,
+      booking_reference: booking?.booking_reference,
+      scheduled_date: booking?.scheduled_date,
+      scheduled_start_time: booking?.scheduled_start_time,
+      scheduled_end_time: booking?.scheduled_end_time,
+      status: booking?.status,
+      total_price: booking?.total_price,
+      pricing_breakdown: booking?.pricing_breakdown,
+      special_instructions: booking?.special_instructions,
+      created_at: booking?.created_at,
       
       // Customer information - include the customer's own details for consistency with admin view
       customer_id: profile.id,
@@ -104,39 +151,56 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
       customer_phone: profile.phone || '',
       
       // Service information from main service and booking services
-      service: booking.services ? {
-        name: booking.services.name,
-        short_description: booking.services.short_description,
-        category: 'General'
-      } : null,
+      service: booking?.services ? (() => {
+        const svc = Array.isArray(booking.services) ? booking.services[0] : booking.services
+        return svc ? {
+          name: svc.name,
+          short_description: svc.short_description,
+          category: 'General'
+        } : null
+      })() : null,
       
       // Detailed service breakdown from booking_services
-      booking_services: booking.booking_services?.map((service: any) => ({
-        service_details: service.service_details,
-        price: service.price,
-        estimated_duration: service.estimated_duration
-      })) || [],
+      booking_services: (booking?.booking_services || []).map((service: BookingServiceLite) => ({
+        service_details: service?.service_details,
+        price: service?.price,
+        estimated_duration: service?.estimated_duration
+      })),
       
-      // Vehicle information (no longer includes size details from deleted table)
-      vehicle: booking.customer_vehicles ? {
-        make: booking.customer_vehicles.make,
-        model: booking.customer_vehicles.model,
-        year: booking.customer_vehicles.year,
-        color: booking.customer_vehicles.color,
-        license_plate: booking.customer_vehicles.license_plate || booking.customer_vehicles.registration,
-        registration: booking.customer_vehicles.registration || booking.customer_vehicles.license_plate
-      } : null,
+      // Vehicle information (prefer normalized relation; fallback to embedded snapshot)
+      vehicle: (booking?.customer_vehicles && booking.customer_vehicles[0]) ? {
+        make: booking.customer_vehicles[0]?.make,
+        model: booking.customer_vehicles[0]?.model,
+        year: booking.customer_vehicles[0]?.year,
+        color: booking.customer_vehicles[0]?.color,
+        license_plate: booking.customer_vehicles[0]?.license_plate || booking.customer_vehicles[0]?.registration,
+        registration: booking.customer_vehicles[0]?.registration || booking.customer_vehicles[0]?.license_plate
+      } : ((booking as unknown as { vehicle_details?: { make?: string; model?: string; year?: number; color?: string; registration?: string; license_plate?: string } }).vehicle_details ? {
+        make: (booking as unknown as { vehicle_details?: { make?: string } }).vehicle_details?.make,
+        model: (booking as unknown as { vehicle_details?: { model?: string } }).vehicle_details?.model,
+        year: (booking as unknown as { vehicle_details?: { year?: number } }).vehicle_details?.year,
+        color: (booking as unknown as { vehicle_details?: { color?: string } }).vehicle_details?.color,
+        license_plate: (booking as unknown as { vehicle_details?: { license_plate?: string; registration?: string } }).vehicle_details?.license_plate || (booking as unknown as { vehicle_details?: { registration?: string } }).vehicle_details?.registration,
+        registration: (booking as unknown as { vehicle_details?: { registration?: string; license_plate?: string } }).vehicle_details?.registration || (booking as unknown as { vehicle_details?: { license_plate?: string } }).vehicle_details?.license_plate
+      } : null),
       
-      // Address information with distance
-      address: booking.customer_addresses ? {
-        address_line_1: booking.customer_addresses.address_line_1,
-        address_line_2: booking.customer_addresses.address_line_2,
-        city: booking.customer_addresses.city,
-        county: booking.customer_addresses.county,
-        postal_code: booking.customer_addresses.postal_code,
-        country: booking.customer_addresses.country,
-        distance_from_business: booking.customer_addresses.distance_from_business
-      } : null
+      // Address information with distance (prefer relation; fallback to embedded snapshot)
+      address: (booking?.customer_addresses && booking.customer_addresses[0]) ? {
+        address_line_1: booking.customer_addresses[0]?.address_line_1,
+        address_line_2: booking.customer_addresses[0]?.address_line_2 ?? null,
+        city: booking.customer_addresses[0]?.city,
+        county: booking.customer_addresses[0]?.county ?? null,
+        postal_code: booking.customer_addresses[0]?.postal_code,
+        country: booking.customer_addresses[0]?.country,
+        distance_from_business: booking.customer_addresses[0]?.distance_from_business ?? null
+      } : ((booking as unknown as { service_address?: { address_line_1?: string; address_line_2?: string | null; city?: string; county?: string | null; postal_code?: string; country?: string } }).service_address ? {
+        address_line_1: (booking as unknown as { service_address?: { address_line_1?: string } }).service_address?.address_line_1 || '',
+        address_line_2: (booking as unknown as { service_address?: { address_line_2?: string | null } }).service_address?.address_line_2 ?? null,
+        city: (booking as unknown as { service_address?: { city?: string } }).service_address?.city || '',
+        county: (booking as unknown as { service_address?: { county?: string | null } }).service_address?.county ?? null,
+        postal_code: (booking as unknown as { service_address?: { postal_code?: string } }).service_address?.postal_code || '',
+        country: (booking as unknown as { service_address?: { country?: string } }).service_address?.country || ''
+      } : null)
     })) || []
 
     return NextResponse.json({
@@ -145,7 +209,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
     })
 
   } catch (error) {
-    console.error('Customer bookings API error:', error)
+    logger.error('Customer bookings API error', error instanceof Error ? error : undefined)
     return NextResponse.json({
       success: false,
       error: { message: 'Internal server error', code: 'SERVER_ERROR' }

@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { ApiResponseHandler } from '@/lib/api/response'
 import { z } from 'zod'
+import { logger } from '@/lib/utils/logger'
 
 // Force Node.js runtime
 export const runtime = 'nodejs'
@@ -46,7 +47,7 @@ export async function PUT(request: NextRequest) {
     })
 
     if (updateError) {
-      console.error('Password update error:', updateError)
+      logger.error('Password update error', updateError instanceof Error ? updateError : undefined)
       return ApiResponseHandler.serverError('Failed to update password')
     }
 
@@ -61,7 +62,7 @@ export async function PUT(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Password update error:', error)
+    logger.error('Password update error', error instanceof Error ? error : undefined)
     
     if (error instanceof z.ZodError) {
       const firstError = error.issues[0]

@@ -6,6 +6,7 @@
  */
 
 import { analytics } from '@/lib/analytics/google-analytics'
+import { logger } from '@/lib/utils/logger'
 
 // Alert severity levels
 export type AlertSeverity = 'info' | 'warning' | 'error' | 'critical'
@@ -42,7 +43,7 @@ export interface Alert {
   threshold: number
   timestamp: number
   resolved: boolean
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
 }
 
 // Alert notification channels
@@ -228,7 +229,7 @@ export class AlertManager {
   /**
    * Record a metric value
    */
-  public recordMetric(metricId: string, value: number, metadata?: Record<string, any>) {
+  public recordMetric(metricId: string, value: number, metadata?: Record<string, unknown>) {
     const timestamp = Date.now()
     
     if (!this.metrics.has(metricId)) {
@@ -246,14 +247,14 @@ export class AlertManager {
     this.evaluateAlerts(metricId, value, metadata)
     
     if (process.env.NODE_ENV === 'development') {
-      console.log(`📊 Metric: ${metricId} = ${value}`)
+      logger.debug(`📊 Metric: ${metricId} = ${value}`)
     }
   }
 
   /**
    * Evaluate alert rules for a metric
    */
-  private evaluateAlerts(metricId: string, currentValue: number, metadata?: Record<string, any>) {
+  private evaluateAlerts(metricId: string, currentValue: number, metadata?: Record<string, unknown>) {
     const rule = this.rules.get(metricId)
     if (!rule || !rule.enabled) return
 
@@ -338,7 +339,7 @@ export class AlertManager {
             break
         }
       } catch (error) {
-        console.error(`Failed to send ${channel.type} notification:`, error)
+        logger.error(`Failed to send ${channel.type} notification:`, error instanceof Error ? error : undefined)
       }
     }
   }
@@ -381,7 +382,7 @@ Love4Detailing Monitoring System
         })
       })
     } catch (error) {
-      console.error('Failed to send alert email:', error)
+      logger.error('Failed to send alert email:', error instanceof Error ? error : undefined)
     }
   }
 
@@ -392,7 +393,7 @@ Love4Detailing Monitoring System
     const icon = alert.resolved ? '✅' : this.getSeverityIcon(alert.severity)
     const prefix = alert.resolved ? 'RESOLVED' : alert.severity.toUpperCase()
     
-    console.log(`${icon} [${prefix}] ${alert.name}: ${alert.message}`)
+    logger.debug(`${icon} [${prefix}] ${alert.name}: ${alert.message}`)
   }
 
   /**
@@ -438,8 +439,10 @@ Love4Detailing Monitoring System
 
     // Memory usage (if available)
     if ('memory' in performance) {
-      const memory = (performance as any).memory
-      this.recordMetric('memory_usage', memory.usedJSHeapSize / memory.jsHeapSizeLimit)
+      const perfWithMemory = performance as unknown as { memory?: { usedJSHeapSize: number; jsHeapSizeLimit: number } }
+      if (perfWithMemory.memory) {
+        this.recordMetric('memory_usage', perfWithMemory.memory.usedJSHeapSize / perfWithMemory.memory.jsHeapSizeLimit)
+      }
     }
   }
 
@@ -527,7 +530,7 @@ Love4Detailing Monitoring System
 export const alertManager = typeof window !== 'undefined' ? AlertManager.getInstance() : null
 
 // Convenience functions for common use cases
-export const recordBookingEvent = (event: 'started' | 'completed' | 'abandoned', data?: any) => {
+export const recordBookingEvent = (event: 'started' | 'completed' | 'abandoned', data?: { value?: number; step?: string }) => {
   if (!alertManager) return
   
   switch (event) {
@@ -543,7 +546,7 @@ export const recordBookingEvent = (event: 'started' | 'completed' | 'abandoned',
   }
 }
 
-export const recordPerformanceMetric = (metric: string, value: number, metadata?: Record<string, any>) => {
+export const recordPerformanceMetric = (metric: string, value: number, metadata?: Record<string, unknown>) => {
   alertManager?.recordMetric(metric, value, metadata)
 }
 

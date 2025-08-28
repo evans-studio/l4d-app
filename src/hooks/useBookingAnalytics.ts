@@ -209,8 +209,7 @@ export function useBookingAnalytics(options: UseBookingAnalyticsOptions = {}) {
     action: 'focus' | 'blur' | 'change' | 'submit',
     fieldName: string,
     fieldType?: string,
-    value?: any
-  ) => {
+    value?: unknown) => {
     if (!hasConsent('analytics')) return
 
     analytics?.trackEvent('form_interaction', {
@@ -242,7 +241,7 @@ export function useBookingAnalytics(options: UseBookingAnalyticsOptions = {}) {
    */
   const trackEvent = useCallback((
     eventName: string,
-    parameters?: Record<string, any>
+    parameters?: Record<string, unknown>
   ) => {
     if (!hasConsent('analytics')) return
 
@@ -255,7 +254,7 @@ export function useBookingAnalytics(options: UseBookingAnalyticsOptions = {}) {
   const trackPerformanceMetric = useCallback((
     metricName: string,
     value: number,
-    additionalData?: Record<string, any>
+    additionalData?: Record<string, unknown>
   ) => {
     if (!hasConsent('analytics') || !trackPerformance) return
 

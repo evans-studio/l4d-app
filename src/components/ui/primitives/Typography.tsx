@@ -1,6 +1,7 @@
 import React from 'react'
 import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '@/lib/utils'
+import { isNewUIEnabled } from '@/lib/config/feature-flags'
 
 // Heading Component
 const headingVariants = cva(
@@ -60,6 +61,8 @@ const Heading = React.forwardRef<HTMLHeadingElement, HeadingProps>(
     return (
       <Component
         className={cn(headingVariants({ size, weight, color, align, className }))}
+        data-ui={isNewUIEnabled() ? 'new' : 'old'}
+        data-typo="heading"
         ref={ref}
         {...props}
       >
@@ -152,31 +155,34 @@ const Text = React.forwardRef<TextElement, TextProps>(
   }, ref) => {
     const truncateClasses = truncate ? 'truncate' : lineClamp ? `line-clamp-${lineClamp}` : ''
     
-    const elementProps = {
+    const elementPropsBase = {
       className: cn(
         textVariants({ size, weight, color, align, leading }),
         truncateClasses,
         className
       ),
-      ref,
+      'data-ui': isNewUIEnabled() ? 'new' : 'old',
+      'data-typo': 'text',
       ...props
     }
     
+    // Create element-specific props with correct ref typing at the call sites below
+    
     switch (as) {
       case 'span':
-        return <span {...elementProps}>{children}</span>
+        return <span ref={ref as React.Ref<HTMLSpanElement>} {...elementPropsBase}>{children}</span>
       case 'div':
-        return <div {...(elementProps as any)}>{children}</div>
+        return <div ref={ref as React.Ref<HTMLDivElement>} {...(elementPropsBase as React.HTMLAttributes<HTMLDivElement>)}>{children}</div>
       case 'label':
-        return <label {...(elementProps as any)}>{children}</label>
+        return <label ref={ref as React.Ref<HTMLLabelElement>} {...(elementPropsBase as React.LabelHTMLAttributes<HTMLLabelElement>)}>{children}</label>
       case 'small':
-        return <small {...elementProps}>{children}</small>
+        return <small ref={ref as React.Ref<HTMLElement>} {...elementPropsBase}>{children}</small>
       case 'strong':
-        return <strong {...elementProps}>{children}</strong>
+        return <strong ref={ref as React.Ref<HTMLElement>} {...elementPropsBase}>{children}</strong>
       case 'em':
-        return <em {...elementProps}>{children}</em>
+        return <em ref={ref as React.Ref<HTMLElement>} {...elementPropsBase}>{children}</em>
       default:
-        return <p {...(elementProps as any)}>{children}</p>
+        return <p ref={ref as React.Ref<HTMLParagraphElement>} {...(elementPropsBase as React.HTMLAttributes<HTMLParagraphElement>)}>{children}</p>
     }
   }
 )
@@ -226,6 +232,8 @@ const Label = React.forwardRef<HTMLLabelElement, LabelProps>(
       <label
         ref={ref}
         className={cn(labelVariants({ size, required, className }))}
+        data-ui={isNewUIEnabled() ? 'new' : 'old'}
+        data-typo="label"
         {...props}
       >
         <span className="flex items-center gap-1">
@@ -300,6 +308,8 @@ const Link = React.forwardRef<HTMLAnchorElement, LinkProps>(
     return (
       <a
         className={cn(linkVariants({ variant, size, underline, className }))}
+        data-ui={isNewUIEnabled() ? 'new' : 'old'}
+        data-typo="link"
         ref={ref}
         {...(external && {
           target: '_blank',
@@ -359,12 +369,14 @@ const Code = React.forwardRef<CodeElement, CodeProps>(
   ({ className, variant, size, as = 'code', children, ...props }, ref) => {
     const elementProps = {
       className: cn(codeVariants({ variant, size, className })),
+      'data-ui': isNewUIEnabled() ? 'new' : 'old',
+      'data-typo': 'code',
       ref,
       ...props
     }
     
     if (as === 'pre') {
-      return <pre {...(elementProps as any)}>{children}</pre>
+      return <pre {...(elementProps as React.HTMLAttributes<HTMLPreElement>)}>{children}</pre>
     }
     
     return <code {...elementProps}>{children}</code>

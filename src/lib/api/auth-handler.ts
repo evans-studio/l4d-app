@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
+import { logger } from '@/lib/utils/logger'
 
 export interface AuthenticatedUser {
   id: string
@@ -88,7 +89,7 @@ export class AuthHandler {
         role: profile?.role || 'customer'
       }
     } catch (error) {
-      console.error('Auth error:', error)
+      logger.error('Auth error:', error instanceof Error ? error : undefined)
       return null
     }
   }

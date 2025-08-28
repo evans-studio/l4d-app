@@ -90,6 +90,7 @@ export function StatusBadge({
   truncate = true
 }: StatusBadgeProps) {
   const config = statusConfig[status as keyof typeof statusConfig]
+  const variantStatus = (config ? status : 'pending') as keyof typeof statusConfig
   
   // Size-responsive icon sizing for better alignment
   const iconSize = {
@@ -116,7 +117,7 @@ export function StatusBadge({
 
   return (
     <span 
-      className={statusBadgeVariants({ status: status as any, size, className })}
+      className={statusBadgeVariants({ status: variantStatus, size, className })}
       title={config.label}
     >
       {showIcon && <Icon className={`${iconSize} flex-shrink-0`} />}
@@ -176,7 +177,8 @@ export function PaymentDeadlineBadge({
   const now = new Date()
   const hoursUntilDeadline = Math.ceil((deadlineDate.getTime() - now.getTime()) / (1000 * 60 * 60))
   
-  let config: { color: string; label: string; icon: any }
+  type DeadlineConfig = { color: string; label: string; icon: React.ComponentType<{ className?: string }> }
+  let config: DeadlineConfig
   
   if (hoursUntilDeadline <= 0) {
     config = {

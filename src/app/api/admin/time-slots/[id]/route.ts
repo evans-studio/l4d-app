@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { createClientFromRequest } from '@/lib/supabase/server'
+import { logger } from '@/lib/utils/logger'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -140,7 +141,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       .single()
 
     if (error) {
-      console.error('Database error:', error)
+      logger.error('Database error:', error)
       return NextResponse.json(
         { success: false, error: { message: 'Failed to update time slot' } },
         { status: 500 }
@@ -153,7 +154,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     })
 
   } catch (error) {
-    console.error('API error:', error)
+    logger.error('API error:', error instanceof Error ? error : undefined)
     return NextResponse.json(
       { success: false, error: { message: 'Internal server error' } },
       { status: 500 }
@@ -217,7 +218,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       .eq('id', id)
 
     if (error) {
-      console.error('Database error:', error)
+      logger.error('Database error:', error)
       return NextResponse.json(
         { success: false, error: { message: 'Failed to delete time slot' } },
         { status: 500 }
@@ -230,7 +231,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     })
 
   } catch (error) {
-    console.error('API error:', error)
+    logger.error('API error:', error instanceof Error ? error : undefined)
     return NextResponse.json(
       { success: false, error: { message: 'Internal server error' } },
       { status: 500 }

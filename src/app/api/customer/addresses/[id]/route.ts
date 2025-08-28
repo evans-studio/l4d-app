@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClientFromRequest } from '@/lib/supabase/server'
 import { createClient } from '@supabase/supabase-js'
+import { logger } from '@/lib/utils/logger'
 
 // Service client for profile lookups (bypasses RLS)
 const supabaseService = createClient(
@@ -66,7 +67,7 @@ export async function PUT(
     }
 
     // Prepare update object
-    const updateObject: any = {}
+    const updateObject: Record<string, unknown> = {}
     
     if (updateData.address_line_1) updateObject.address_line_1 = updateData.address_line_1.trim()
     if (updateData.address_line_2 !== undefined) updateObject.address_line_2 = updateData.address_line_2?.trim() || null
@@ -75,25 +76,25 @@ export async function PUT(
     if (updateData.postal_code) {
       updateObject.postal_code = updateData.postal_code.trim().toUpperCase()
       
-      // Recalculate distance if postcode changed
-      if (updateObject.postal_code !== existingAddress.postal_code) {
-        try {
-          const distanceResponse = await fetch(`${request.nextUrl.origin}/api/pricing/distance`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ postcode: updateObject.postal_code })
-          })
-          
-          if (distanceResponse.ok) {
-            const distanceResult = await distanceResponse.json()
-            if (distanceResult.success && distanceResult.data?.distance !== undefined) {
-              updateObject.distance_from_business = distanceResult.data.distance
-            }
+      // Recalculate distance whenever a postcode is provided on update
+      try {
+        const distanceResponse = await fetch(`${request.nextUrl.origin}/api/pricing/distance`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ postcode: updateObject.postal_code })
+        })
+        
+        if (distanceResponse.ok) {
+          const distanceResult = await distanceResponse.json()
+          // Convert km -> miles for storage/display consistency on customer UI
+          if (distanceResult.success && distanceResult.data?.distanceKm !== undefined) {
+            const miles = distanceResult.data.distanceKm * 0.621371
+            updateObject.distance_from_business = Math.round(miles * 10) / 10
           }
-        } catch (distanceError) {
-          console.error('Distance calculation failed:', distanceError)
-          // Continue without updating distance
         }
+      } catch (distanceError) {
+        logger.error('Distance calculation failed', distanceError instanceof Error ? distanceError : undefined)
+        // Continue without updating distance
       }
     }
     if (updateData.country !== undefined) updateObject.country = updateData.country?.trim() || 'United Kingdom'
@@ -119,7 +120,7 @@ export async function PUT(
       .single()
 
     if (updateError) {
-      console.error('Address update error:', updateError)
+      logger.error('Address update error:', updateError)
       return NextResponse.json({
         success: false,
         error: { message: 'Failed to update address', code: 'DATABASE_ERROR' }
@@ -136,7 +137,7 @@ export async function PUT(
         .neq('id', addressId)
 
       if (unsetError) {
-        console.error('Failed to unset other default addresses:', unsetError)
+        logger.error('Failed to unset other default addresses:', unsetError)
         // Continue anyway, this is not critical
       }
 
@@ -148,7 +149,7 @@ export async function PUT(
         .eq('user_id', profile.id)
 
       if (setDefaultError) {
-        console.error('Failed to set address as default:', setDefaultError)
+        logger.error('Failed to set address as default:', setDefaultError)
         return NextResponse.json({
           success: false,
           error: { message: 'Failed to set address as default', code: 'DATABASE_ERROR' }
@@ -156,7 +157,7 @@ export async function PUT(
       }
 
       // Update the response data to reflect the change
-      updatedAddress.is_default = true
+      ;(updatedAddress as { is_default: boolean }).is_default = true
     }
 
     // Transform the response
@@ -179,7 +180,7 @@ export async function PUT(
     })
 
   } catch (error) {
-    console.error('Update address API error:', error)
+    logger.error('Update address API error', error instanceof Error ? error : undefined)
     return NextResponse.json({
       success: false,
       error: { message: 'Internal server error', code: 'SERVER_ERROR' }
@@ -244,7 +245,7 @@ export async function DELETE(
       .eq('user_id', profile.id)
 
     if (allAddressesError) {
-      console.error('Error checking address count:', allAddressesError)
+      logger.error('Error checking address count:', allAddressesError)
       return NextResponse.json({
         success: false,
         error: { message: 'Failed to check address count', code: 'DATABASE_ERROR' }
@@ -273,7 +274,7 @@ export async function DELETE(
       .limit(1)
 
     if (bookingsError) {
-      console.error('Bookings check error:', bookingsError)
+      logger.error('Bookings check error:', bookingsError)
       return NextResponse.json({
         success: false,
         error: { message: 'Failed to check address usage', code: 'DATABASE_ERROR' }
@@ -299,7 +300,7 @@ export async function DELETE(
       .eq('user_id', profile.id)
 
     if (deleteError) {
-      console.error('Address delete error:', deleteError)
+      logger.error('Address delete error:', deleteError)
       return NextResponse.json({
         success: false,
         error: { message: 'Failed to delete address', code: 'DATABASE_ERROR' }
@@ -312,7 +313,7 @@ export async function DELETE(
     })
 
   } catch (error) {
-    console.error('Delete address API error:', error)
+    logger.error('Delete address API error', error instanceof Error ? error : undefined)
     return NextResponse.json({
       success: false,
       error: { message: 'Internal server error', code: 'SERVER_ERROR' }

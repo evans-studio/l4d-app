@@ -1,6 +1,7 @@
 import { supabaseAdmin } from '@/lib/supabase/direct'
 import { EmailService } from '@/lib/services/email'
 import { paypalService } from '@/lib/services/paypal'
+import { logger } from '@/lib/utils/logger'
 
 export interface OverduePayment {
   id: string
@@ -46,7 +47,7 @@ export class PaymentReminderService {
         .order('created_at', { ascending: true })
 
       if (bookingsError) {
-        console.error('Error fetching overdue payments:', bookingsError)
+        logger.error('Error fetching overdue payments:', bookingsError)
         return { success: false, error: bookingsError.message }
       }
 
@@ -62,7 +63,7 @@ export class PaymentReminderService {
         .in('id', customerIds)
 
       if (customersError) {
-        console.error('Error fetching customer profiles:', customersError)
+        logger.error('Error fetching customer profiles:', customersError)
         return { success: false, error: customersError.message }
       }
 
@@ -100,7 +101,7 @@ export class PaymentReminderService {
       return { success: true, data: overduePayments }
 
     } catch (error) {
-      console.error('Error getting overdue payments:', error)
+      logger.error('Error getting overdue payments:', error)
       return { success: false, error: 'Failed to fetch overdue payments' }
     }
   }
@@ -131,7 +132,7 @@ export class PaymentReminderService {
       return result
 
     } catch (error) {
-      console.error('Error sending payment reminder:', error)
+      logger.error('Error sending payment reminder:', error)
       return { success: false, error: 'Failed to send reminder email' }
     }
   }
@@ -194,7 +195,7 @@ export class PaymentReminderService {
       return result
 
     } catch (error) {
-      console.error('Error processing payment reminders:', error)
+      logger.error('Error processing payment reminders:', error)
       return {
         success: false,
         processed: 0,
@@ -466,10 +467,10 @@ This is an automated reminder. Please do not reply to this email.
     //     .eq('id', bookingId)
     //
     //   if (error) {
-    //     console.error('Error updating reminder count:', error)
+    //     logger.error('Error updating reminder count:', error)
     //   }
     // } catch (error) {
-    //   console.error('Error updating reminder count:', error)
+    //   logger.error('Error updating reminder count:', error)
     // }
   }
 }

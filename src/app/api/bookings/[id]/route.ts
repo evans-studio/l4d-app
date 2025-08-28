@@ -2,11 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClientFromRequest } from '@/lib/supabase/server'
 import { supabaseAdmin } from '@/lib/supabase/direct'
 import { ApiResponse } from '@/types/booking'
-
-const ADMIN_EMAILS = [
-  'zell@love4detailing.com',
-  'paul@evans-studio.co.uk'
-]
+import { logger } from '@/lib/utils/logger'
+import { env } from '@/lib/config/environment'
 
 export async function GET(
   request: NextRequest,
@@ -43,7 +40,7 @@ export async function GET(
     const bookingId = params.id
 
     // Determine if user is admin
-    const isAdmin = profile.role === 'admin' || ADMIN_EMAILS.includes(profile.email.toLowerCase())
+    const isAdmin = profile.role === 'admin' || env.auth.adminEmails.includes(profile.email.toLowerCase())
     
     // Use admin client for admin users to bypass RLS, user client for regular users
     const dbClient = isAdmin ? supabaseAdmin : supabase
@@ -56,7 +53,7 @@ export async function GET(
       .single()
 
     if (bookingError) {
-      console.error('Error fetching booking (basic query):', bookingError)
+      logger.error('Error fetching booking (basic query):', bookingError)
       if (bookingError.code === 'PGRST116') {
         return NextResponse.json({
           success: false,
@@ -71,10 +68,15 @@ export async function GET(
 
 
     // Now fetch related data separately to avoid join issues
-    let vehicle: any = null
-    let address: any = null
-    let services: any[] = []
-    let customer: any = null
+    type CustomerProfileLite = { id: string; first_name?: string | null; last_name?: string | null; email?: string | null; phone?: string | null }
+    type VehicleLite = { make?: string | null; model?: string | null; year?: number | null; color?: string | null; license_plate?: string | null; registration?: string | null }
+    type AddressLoose = Record<string, unknown>
+    type ServiceLite = { name?: string; price?: number; duration?: number }
+
+    let vehicle: VehicleLite | null = null
+    let address: AddressLoose | null = null
+    let services: ServiceLite[] = []
+    let customer: CustomerProfileLite | null = null
 
     // Get vehicle if vehicle_id exists, otherwise use embedded vehicle_details
     if (booking.vehicle_id) {
@@ -119,7 +121,7 @@ export async function GET(
         .select('id, first_name, last_name, email, phone')
         .eq('id', booking.customer_id)
         .single()
-      customer = customerData
+      customer = (customerData as CustomerProfileLite) || null
     }
 
     // Get booking services (avoid broken foreign key relationships)
@@ -134,11 +136,11 @@ export async function GET(
       .eq('booking_id', bookingId)
 
     if (bookingServices) {
-      services = bookingServices.map((service: any) => ({
-        name: service.service_details?.name || 'Vehicle Detailing Service',
-        price: service.price,
-        duration: service.estimated_duration
-      }))
+      services = bookingServices.map((service) => ({
+        name: service?.service_details?.name || 'Vehicle Detailing Service',
+        price: service?.price,
+        duration: service?.estimated_duration
+      })) as ServiceLite[]
     }
 
     // Check access permissions
@@ -162,7 +164,7 @@ export async function GET(
       id: booking.id,
       booking_reference: booking.booking_reference,
       customer_id: booking.customer_id,
-      customer_name: customer ? `${customer.first_name} ${customer.last_name}` : 'Unknown Customer',
+      customer_name: customer ? `${customer.first_name || ''} ${customer.last_name || ''}`.trim() : 'Unknown Customer',
       customer_email: customer?.email || '',
       customer_phone: customer?.phone || '',
       scheduled_date: booking.scheduled_date,
@@ -175,32 +177,32 @@ export async function GET(
       admin_notes: booking.admin_notes,
       created_at: booking.created_at,
       updated_at: booking.updated_at,
-      services: services.map(service => ({
-        name: service.name,
-        base_price: service.price,
+      services: services.map((service) => ({
+        name: service?.name,
+        base_price: service?.price,
         quantity: 1, // Default quantity for compatibility
-        total_price: service.price
+        total_price: service?.price
       })),
       vehicle: vehicle ? {
         make: vehicle.make || 'Unknown',
         model: vehicle.model || 'Vehicle',
-        year: vehicle.year,
-        color: vehicle.color,
-        license_plate: vehicle.license_plate || vehicle.registration
+        year: vehicle.year || undefined,
+        color: vehicle.color || undefined,
+        license_plate: vehicle.license_plate || vehicle.registration || undefined
       } : null,
       address: address ? {
         // Prefer explicit street line; fall back to saved name or common alternate keys
         address_line_1: (
-          address.address_line_1 ||
-          address.name ||
-          address.address ||
-          address.line1 ||
-          address.address1 ||
+          (address['address_line_1'] as string) ||
+          (address['name'] as string) ||
+          (address['address'] as string) ||
+          (address['line1'] as string) ||
+          (address['address1'] as string) ||
           ''
         ),
-        address_line_2: address.address_line_2 || address.line2 || null,
-        city: address.city || address.town || 'Unknown',
-        postal_code: address.postal_code || address.postcode || ''
+        address_line_2: (address['address_line_2'] as string) || (address['line2'] as string) || null,
+        city: (address['city'] as string) || (address['town'] as string) || 'Unknown',
+        postal_code: (address['postal_code'] as string) || (address['postcode'] as string) || ''
       } : null,
       // Include reschedule request data if present
       has_pending_reschedule: !!rescheduleRequest,
@@ -219,7 +221,7 @@ export async function GET(
     })
 
   } catch (error) {
-    console.error('Admin booking details API error:', error)
+    logger.error('Admin booking details API error', error instanceof Error ? error : undefined)
     return NextResponse.json({
       success: false,
       error: { message: 'Internal server error', code: 'SERVER_ERROR' }
@@ -263,7 +265,7 @@ export async function PUT(
     const body = await request.json()
 
     // Only admins can update bookings via this route
-    const isAdmin = profile.role === 'admin' || ADMIN_EMAILS.includes(profile.email.toLowerCase())
+    const isAdmin = profile.role === 'admin' || env.auth.adminEmails.includes(profile.email.toLowerCase())
     
     if (!isAdmin) {
       return NextResponse.json({
@@ -285,7 +287,7 @@ export async function PUT(
       .single()
 
     if (updateError) {
-      console.error('Error updating booking:', updateError)
+      logger.error('Error updating booking:', updateError)
       return NextResponse.json({
         success: false,
         error: { message: 'Failed to update booking', code: 'UPDATE_FAILED' }
@@ -298,7 +300,7 @@ export async function PUT(
     })
 
   } catch (error) {
-    console.error('Update booking API error:', error)
+    logger.error('Update booking API error', error instanceof Error ? error : undefined)
     return NextResponse.json({
       success: false,
       error: { message: 'Internal server error', code: 'SERVER_ERROR' }

@@ -4,6 +4,7 @@ import { ApiResponseHandler } from '@/lib/api/response'
 import { ApiValidation } from '@/lib/api/validation'
 import { authenticateAdmin } from '@/lib/api/auth-handler'
 import { z } from 'zod'
+import { logger } from '@/lib/utils/logger'
 
 const updateCategorySchema = z.object({
   name: z.string().min(1).max(100).optional(),
@@ -35,7 +36,7 @@ export async function GET(
     return ApiResponseHandler.success(result.data)
 
   } catch (error) {
-    console.error('Get service category error:', error)
+    logger.error('Get service category error', error instanceof Error ? error : undefined)
     return ApiResponseHandler.serverError('Failed to fetch service category')
   }
 }
@@ -58,7 +59,7 @@ export async function PUT(
       return validation.error
     }
 
-    const updateData: any = {}
+    const updateData: Partial<{ name: string; description: string; display_order: number; is_active: boolean }> = {}
     if (validation.data.name !== undefined) updateData.name = validation.data.name
     if (validation.data.description !== undefined) updateData.description = validation.data.description
     if (validation.data.displayOrder !== undefined) updateData.display_order = validation.data.displayOrder
@@ -81,7 +82,7 @@ export async function PUT(
     return ApiResponseHandler.success(result.data)
 
   } catch (error) {
-    console.error('Update service category error:', error)
+    logger.error('Update service category error', error instanceof Error ? error : undefined)
     return ApiResponseHandler.serverError('Failed to update service category')
   }
 }
@@ -126,7 +127,7 @@ export async function DELETE(
     return ApiResponseHandler.success({ message: 'Service category deleted successfully' })
 
   } catch (error) {
-    console.error('Delete service category error:', error)
+    logger.error('Delete service category error', error instanceof Error ? error : undefined)
     return ApiResponseHandler.serverError('Failed to delete service category')
   }
 }

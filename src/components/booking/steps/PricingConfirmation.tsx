@@ -107,19 +107,18 @@ export function PricingConfirmation() {
     try {
       const result = await submitBooking()
       
-      const bookingData = {
-        success: true,
-        confirmationNumber: result.confirmationNumber,
-        bookingId: result.bookingId,
-        isNewUser: !isAuthenticated // Track if this was a new user
-      }
-      setBookingResult(bookingData)
-      
       if (!isAuthenticated) {
         // For new users, show verification message instead of redirecting
+        const bookingData = {
+          success: true,
+          confirmationNumber: result.confirmationNumber,
+          bookingId: result.bookingId,
+          isNewUser: true,
+        }
+        setBookingResult(bookingData)
       } else {
-        // Redirect existing users to booking success page
-        router.push(`/booking/success?ref=${result.confirmationNumber}`)
+        // For existing users, skip inline success and go straight to success page
+        router.replace(`/booking/success?ref=${result.confirmationNumber}`)
       }
     } catch (error) {
       safeConsole.error('Booking submission failed', error as Error)
@@ -166,7 +165,7 @@ export function PricingConfirmation() {
 
   // Show success screen after booking confirmation
   if (bookingResult?.success) {
-    const isNewUser = (bookingResult as any)?.isNewUser
+    const isNewUser = !isAuthenticated
     
     return (
       <div className="space-y-8 text-center">
@@ -262,7 +261,7 @@ export function PricingConfirmation() {
               
               <div className="bg-white/60 rounded-lg p-4 border border-blue-100">
                 <div className="flex items-center justify-between mb-3">
-                  <span className="text-blue-900 font-medium">Amount Due:</span>
+                  <span className="text-blue-900 font-medium">Amount Due: "/@"</span>
                   <span className="bg-blue-600 text-white px-4 py-2 rounded-full font-bold">
                     £{calculatedPrice?.finalPrice || '0'}
                   </span>
@@ -295,14 +294,14 @@ export function PricingConfirmation() {
                 <li>• <span className="font-medium">Payment Link:</span> You'll receive a secure PayPal payment link in your confirmation email</li>
                 <li>• <span className="font-medium">Complete Payment:</span> Pay within 48 hours to confirm your booking</li>
                 <li>• <span className="font-medium">Service Reminder:</span> We'll send you a reminder 24 hours before your appointment</li>
-                <li>• <span className="font-medium">Professional Service:</span> Our team will arrive at your location at the scheduled time</li>
+                <li>• <span className="font-medium">Professional Service:</span> I'll arrive at your location at the scheduled time</li>
               </>
             ) : (
               <>
                 <li>• <span className="font-medium">Confirmation Email:</span> You'll receive your booking confirmation with PayPal payment link shortly</li>
                 <li>• <span className="font-medium">Secure Payment:</span> Complete payment within 48 hours using the PayPal link</li>
                 <li>• <span className="font-medium">Service Reminder:</span> We'll send you a reminder 24 hours before your appointment</li>
-                <li>• <span className="font-medium">Professional Service:</span> Our team will arrive at your location at the scheduled time</li>
+                <li>• <span className="font-medium">Professional Service:</span> I'll arrive at your location at the scheduled time</li>
                 <li>• <span className="font-medium">Account Access:</span> Your dashboard is ready - manage bookings anytime</li>
               </>
             )}
@@ -356,9 +355,9 @@ export function PricingConfirmation() {
               <PhoneIcon className="w-4 h-4" />
               07908 625581
             </a>
-            <a href="mailto:zell@love4detailing.com" className="flex items-center gap-2 text-brand-400 hover:text-brand-300">
+            <a href={`mailto:${process.env.NEXT_PUBLIC_COMPANY_EMAIL || 'zell@love4detailing.com'}`} className="flex items-center gap-2 text-brand-400 hover:text-brand-300">
               <MailIcon className="w-4 h-4" />
-              zell@love4detailing.com
+              {process.env.NEXT_PUBLIC_COMPANY_EMAIL || 'zell@love4detailing.com'}
             </a>
           </div>
         </div>
@@ -535,25 +534,25 @@ export function PricingConfirmation() {
                     <h4 className="font-semibold text-text-primary text-lg">Travel Information</h4>
                   </div>
                   
-                  {(calculatedPrice.travelDistance || (calculatedPrice.breakdown as any)?.breakdown?.travel?.distance) && (
+                  {(calculatedPrice.travelDistance || (calculatedPrice as unknown as { breakdown?: { breakdown?: { travel?: { distance?: number } } } })?.breakdown?.breakdown?.travel?.distance) && (
                     <div className="flex justify-between items-center py-2">
                       <span className="text-base text-text-secondary">Distance from SW9</span>
-                      <span className="text-base text-text-primary font-medium">{calculatedPrice.travelDistance || (calculatedPrice.breakdown as any)?.breakdown?.travel?.distance || '0'} miles</span>
+                      <span className="text-base text-text-primary font-medium">{calculatedPrice.travelDistance || (calculatedPrice as unknown as { breakdown?: { breakdown?: { travel?: { distance?: number } } } })?.breakdown?.breakdown?.travel?.distance || '0'} miles</span>
                     </div>
                   )}
                   
                   <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 gap-2">
                     <span className="text-sm sm:text-base text-text-secondary leading-snug">
-                      Travel Surcharge {(calculatedPrice.withinFreeRadius || (calculatedPrice.breakdown as any)?.breakdown?.travel?.withinFreeRadius) ? '(Within 17.5 miles)' : '(Beyond 17.5 miles)'}
+                      Travel Surcharge {(calculatedPrice.withinFreeRadius || (calculatedPrice as unknown as { breakdown?: { breakdown?: { travel?: { withinFreeRadius?: boolean } } } })?.breakdown?.breakdown?.travel?.withinFreeRadius) ? '(Within 17.5 miles)' : '(Beyond 17.5 miles)'}
                     </span>
                     <span className={`text-base font-semibold ${
-                      (calculatedPrice.withinFreeRadius || (calculatedPrice.breakdown as any)?.breakdown?.travel?.withinFreeRadius) ? 'text-green-600' : 'text-text-primary'
+                      (calculatedPrice.withinFreeRadius || (calculatedPrice as unknown as { breakdown?: { breakdown?: { travel?: { withinFreeRadius?: boolean } } } })?.breakdown?.breakdown?.travel?.withinFreeRadius) ? 'text-green-600' : 'text-text-primary'
                     }`}>
-                      {(calculatedPrice.withinFreeRadius || (calculatedPrice.breakdown as any)?.breakdown?.travel?.withinFreeRadius) ? 'FREE' : `£${calculatedPrice.travelSurcharge || (calculatedPrice.breakdown as any)?.breakdown?.travel?.surcharge || '0'}`}
+                      {(calculatedPrice.withinFreeRadius || (calculatedPrice as unknown as { breakdown?: { breakdown?: { travel?: { withinFreeRadius?: boolean } } } })?.breakdown?.breakdown?.travel?.withinFreeRadius) ? 'FREE' : `£${calculatedPrice.travelSurcharge || (calculatedPrice as unknown as { breakdown?: { breakdown?: { travel?: { surcharge?: number } } } })?.breakdown?.breakdown?.travel?.surcharge || '0'}`}
                     </span>
                   </div>
                   
-                  {!(calculatedPrice.withinFreeRadius || (calculatedPrice.breakdown as any)?.breakdown?.travel?.withinFreeRadius) && (
+                  {!(calculatedPrice.withinFreeRadius || (calculatedPrice as unknown as { breakdown?: { breakdown?: { travel?: { withinFreeRadius?: boolean } } } })?.breakdown?.breakdown?.travel?.withinFreeRadius) && (
                     <div className="text-sm text-text-muted mt-2">
                       £0.50 per mile beyond free radius
                     </div>
@@ -571,8 +570,8 @@ export function PricingConfirmation() {
                       const calculatedTotal = servicePrice + travelSurcharge
                       
                       const finalPrice = calculatedPrice.finalPrice || 
-                                      (calculatedPrice.breakdown as any)?.totalPrice ||
-                                      (calculatedPrice.breakdown as any)?.breakdown?.total ||
+                                      (calculatedPrice as unknown as { breakdown?: { totalPrice?: number; breakdown?: { total?: number } } })?.breakdown?.totalPrice ||
+                                      (calculatedPrice as unknown as { breakdown?: { totalPrice?: number; breakdown?: { total?: number } } })?.breakdown?.breakdown?.total ||
                                       calculatedTotal ||
                                       '0'
                       

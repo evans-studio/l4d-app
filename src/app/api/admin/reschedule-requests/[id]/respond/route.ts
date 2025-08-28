@@ -2,13 +2,14 @@ import { NextRequest } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase/direct'
 import { ApiResponseHandler } from '@/lib/api/response'
 import { EmailService } from '@/lib/services/email'
+import { logger } from '@/lib/utils/logger'
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { action, adminResponse, adminNotes, proposedDate, proposedTime } = await request.json()
+    const { action, adminResponse, adminNotes, proposedDate, proposedTime, bookingId: bodyBookingId } = await request.json()
     const { id } = await params
     
     if (!action || !['approve', 'reject', 'propose'].includes(action)) {
@@ -19,7 +20,7 @@ export async function POST(
     const supabase = supabaseAdmin
     
     // First, get the reschedule request with booking details
-    const { data: rescheduleRequest, error: requestError } = await supabase
+    let { data: rescheduleRequest, error: requestError } = await supabase
       .from('booking_reschedule_requests')
       .select(`
         id,
@@ -48,16 +49,62 @@ export async function POST(
       .eq('id', id)
       .single()
 
+    // Fallback: If not found by id, try to find by bookingId from body (latest pending)
     if (requestError || !rescheduleRequest) {
-      return ApiResponseHandler.notFound('Reschedule request not found')
+      if (bodyBookingId) {
+        const { data: fallbackReq } = await supabase
+          .from('booking_reschedule_requests')
+          .select(`
+            id,
+            booking_id,
+            requested_date,
+            requested_time,
+            reason,
+            status,
+            original_date,
+            original_time,
+            bookings!booking_id (
+              id,
+              booking_reference,
+              status,
+              customer_id,
+              scheduled_date,
+              scheduled_start_time,
+              time_slot_id,
+              user_profiles!customer_id (
+                email,
+                first_name,
+                last_name
+              )
+            )
+          `)
+          .eq('booking_id', bodyBookingId)
+          .eq('status', 'pending')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+        if (fallbackReq) {
+          rescheduleRequest = fallbackReq as typeof rescheduleRequest
+        }
+      }
+      if (!rescheduleRequest) {
+        return ApiResponseHandler.notFound('Reschedule request not found')
+      }
     }
 
     if (rescheduleRequest.status !== 'pending') {
       return ApiResponseHandler.badRequest('Can only respond to pending reschedule requests')
     }
 
-    const booking = rescheduleRequest.bookings as any
-    const customer = booking?.user_profiles
+    const booking = (rescheduleRequest.bookings as Array<{
+      id: string
+      user_profiles?: { email?: string; first_name?: string; last_name?: string } | null
+      scheduled_date: string
+      scheduled_start_time: string
+      status: import('@/lib/utils/booking-types').BookingStatus
+      time_slot_id?: string | null
+    }> | null | undefined)?.[0]
+    const customer = booking?.user_profiles || null
 
     let newStatus = action === 'approve' ? 'approved' : action === 'reject' ? 'rejected' : 'pending'
     let responseMessage = adminResponse
@@ -67,7 +114,7 @@ export async function POST(
     }
 
     // Update the reschedule request
-    const { error: updateError } = await supabase
+    const { error: updateError, count } = await supabase
       .from('booking_reschedule_requests')
       .update({
         status: newStatus,
@@ -76,33 +123,76 @@ export async function POST(
         responded_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       })
-      .eq('id', id)
+      .eq('id', rescheduleRequest.id)
+      .eq('status', 'pending')
 
     if (updateError) {
-      console.error('Error updating reschedule request:', updateError)
+      logger.error('Error updating reschedule request:', updateError)
       return ApiResponseHandler.serverError('Failed to update reschedule request')
     }
+
+    // If no rows were updated (already processed), try to load it again to surface state
+    const { data: afterUpdate } = await supabase
+      .from('booking_reschedule_requests')
+      .select('id, status')
+      .eq('id', rescheduleRequest.id)
+      .single()
 
     // If approved, update the actual booking
     if (action === 'approve' && booking) {
       const newDate = rescheduleRequest.requested_date
       const newTime = rescheduleRequest.requested_time
 
-      // Update booking with new date and time and set status to rescheduled
+      // Attempt to reserve the requested time slot if it exists and is available
+      const { data: newSlot, error: findSlotError } = await supabase
+        .from('time_slots')
+        .select('id, is_available')
+        .eq('slot_date', newDate)
+        .eq('start_time', newTime)
+        .eq('is_available', true)
+        .single()
+
+      if (findSlotError || !newSlot) {
+        return ApiResponseHandler.badRequest('Requested time slot is no longer available')
+      }
+
+      // Update booking with new date and time and set status to rescheduled, link to new slot
       const { error: bookingUpdateError } = await supabase
         .from('bookings')
         .update({
           scheduled_date: newDate,
           scheduled_start_time: newTime,
           status: 'rescheduled',
-          time_slot_id: null, // Clear existing time slot link
+          time_slot_id: newSlot.id,
           updated_at: new Date().toISOString()
         })
         .eq('id', booking.id)
 
       if (bookingUpdateError) {
-        console.error('Error updating booking:', bookingUpdateError)
+        logger.error('Error updating booking:', bookingUpdateError)
         return ApiResponseHandler.serverError('Failed to update booking')
+      }
+
+      // Mark the new time slot as unavailable
+      const { error: reserveNewSlotError } = await supabase
+        .from('time_slots')
+        .update({ is_available: false })
+        .eq('id', newSlot.id)
+
+      if (reserveNewSlotError) {
+        logger.error('Error reserving new time slot:', reserveNewSlotError)
+        // Roll back booking link to avoid dangling reference
+        await supabase
+          .from('bookings')
+          .update({
+            scheduled_date: booking.scheduled_date,
+            scheduled_start_time: booking.scheduled_start_time,
+            status: booking.status,
+            time_slot_id: booking.time_slot_id,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', booking.id)
+        return ApiResponseHandler.serverError('Failed to reserve the requested time slot')
       }
 
       // Free up the old time slot if it was linked
@@ -115,7 +205,7 @@ export async function POST(
           .eq('id', booking.time_slot_id)
 
         if (slotError) {
-          console.error('Error freeing old time slot:', slotError)
+          logger.error('Error freeing old time slot:', slotError)
           // Don't fail the request, but log the error
         }
       }
@@ -141,7 +231,7 @@ export async function POST(
         })
 
       if (historyError) {
-        console.error('Error adding to booking history:', historyError)
+        logger.error('Error adding to booking history:', historyError)
         // Don't fail the request for history error, just log it
       }
     }
@@ -152,9 +242,13 @@ export async function POST(
       const customerName = `${customer.first_name} ${customer.last_name}`
       
       const emailResult = await emailService.sendRescheduleRequestResponse(
-        customer.email,
+        String(customer.email || ''),
         customerName,
-        booking!,
+        ({ 
+          ...booking,
+          time_slot_id: booking?.time_slot_id ?? undefined,
+          customer_id: (booking as { customer_id?: string | null })?.customer_id ?? undefined
+        } as unknown) as Partial<import('@/lib/utils/booking-types').Booking>,
         rescheduleRequest,
         action,
         responseMessage,
@@ -163,7 +257,7 @@ export async function POST(
       )
       
       if (!emailResult.success) {
-        console.error('Failed to send reschedule response email:', emailResult.error)
+        logger.error('Failed to send reschedule response email:', emailResult.error ? new Error(emailResult.error) : undefined)
         // Don't fail the request if email fails
       }
     }
@@ -178,7 +272,7 @@ export async function POST(
     })
 
   } catch (error) {
-    console.error('Respond to reschedule request error:', error)
+    logger.error('Respond to reschedule request error:', error instanceof Error ? error : undefined)
     return ApiResponseHandler.serverError('Failed to respond to reschedule request')
   }
 }

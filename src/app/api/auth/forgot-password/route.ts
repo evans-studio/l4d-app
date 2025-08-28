@@ -6,6 +6,7 @@ import { ForgotPasswordRequestSchema } from '@/schemas/auth.schema'
 import { Resend } from 'resend'
 import { randomBytes, createHash } from 'crypto'
 import { z } from 'zod'
+import { logger } from '@/lib/utils/logger'
 
 // Force Node.js runtime for email service compatibility
 export const runtime = 'nodejs'
@@ -27,7 +28,7 @@ export async function POST(request: NextRequest) {
     const { email } = validation.data
 
     if (process.env.NODE_ENV !== 'production') {
-      console.log('Password reset request for:', email.toLowerCase())
+      logger.debug('Password reset request for', { email: email.toLowerCase() })
     }
     
     // Check if user exists (for logging purposes, but don't reveal to client)
@@ -39,13 +40,13 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (process.env.NODE_ENV !== 'production') {
-      console.log('User lookup result:', { existingUser: !!existingUser, userError: !!userError })
+      logger.debug('User lookup result:', { existingUser: !!existingUser, userError: !!userError })
     }
 
     // If user doesn't exist, still return success for security (don't reveal whether email exists)
     if (userError && userError.code === 'PGRST116') {
       if (process.env.NODE_ENV !== 'production') {
-        console.log('User not found but returning success for security')
+        logger.debug('User not found but returning success for security')
       }
       return ApiResponseHandler.success({
         message: 'If an account with this email exists, you will receive a password reset link.'
@@ -57,12 +58,12 @@ export async function POST(request: NextRequest) {
       // First try our custom Resend approach
       try {
         if (process.env.NODE_ENV !== 'production') {
-          console.log('Attempting custom email with Resend...')
+          logger.debug('Attempting custom email with Resend...')
         }
         
         // Check if we have required environment variables
         if (!process.env.RESEND_API_KEY) {
-          console.error('RESEND_API_KEY not configured, falling back to Supabase')
+          logger.error('RESEND_API_KEY not configured, falling back to Supabase')
           throw new Error('Resend not configured')
         }
 
@@ -73,7 +74,7 @@ export async function POST(request: NextRequest) {
           .limit(1)
 
         if (tableCheckError) {
-          console.error('password_reset_tokens table not found, falling back to Supabase:', tableCheckError)
+          logger.error('password_reset_tokens table not found, falling back to Supabase', tableCheckError instanceof Error ? tableCheckError : undefined, { tableCheckError })
           throw new Error('Database table not ready')
         }
 
@@ -98,7 +99,7 @@ export async function POST(request: NextRequest) {
           })
 
         if (tokenError) {
-          console.error('Error storing reset token:', tokenError)
+          logger.error('Error storing reset token', tokenError instanceof Error ? tokenError : undefined, { tokenError })
           throw new Error('Failed to store reset token')
         }
 
@@ -109,42 +110,25 @@ export async function POST(request: NextRequest) {
         const subject = 'Reset Your Password - Love 4 Detailing'
         const firstName = existingUser.first_name || 'there'
         
-        const html = `
-          <!DOCTYPE html>
-          <html>
-          <head>
-            <meta charset="utf-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Reset Your Password</title>
-          </head>
-          <body style="margin:0; padding:0; background-color:#0a0a0a;">
-            <div style="max-width:600px; margin:0 auto; padding:24px 16px;">
-              <div style="text-align:center; padding:16px 0 24px 0;">
-                <img src="${baseUrl}/logo.png" alt="Love 4 Detailing" width="64" style="display:inline-block; height:auto;" />
-              </div>
-              <div style="background-color:#0f172a; border:1px solid #1f2937; border-radius:12px; padding:28px 20px;">
-                <h2 style="color:#e5e7eb; margin:0 0 16px 0; font-size:22px; line-height:1.3;">Hi ${firstName}!</h2>
-                <p style="color:#cbd5e1; font-size:16px; line-height:1.6; margin:0 0 16px 0;">
-                  We received a request to reset your password for your Love 4 Detailing account. If you made this request, click the button below to set a new password.
-                </p>
-                <div style="text-align:center; margin:28px 0;">
-                  <a href="${resetUrl}" style="display:inline-block; background:#7c3aed; color:#ffffff; text-decoration:none; padding:14px 28px; border-radius:8px; font-weight:600; font-size:16px;">Reset My Password</a>
+        const { EmailService } = await import('@/lib/services/email')
+        const emailService = new EmailService()
+        const html = emailService.createUnifiedEmail({
+          title: 'Reset Your Password',
+          header: { title: 'Reset Your Password', subtitle: 'Secure your account access', type: 'default' },
+          content: `
+            <div class="content-card">
+              <div class="card-content">
+                <p>Hi ${firstName},</p>
+                <p>We received a request to reset your password for your Love 4 Detailing account. If you made this request, click the button below to set a new password.</p>
+                <div style="text-align:center; margin:24px 0;">
+                  <a href="${resetUrl}" class="button-primary">Reset My Password</a>
                 </div>
-                <p style="color:#94a3b8; font-size:14px; line-height:1.6; margin:0 0 12px 0;">
-                  This link will expire in 1 hour. If you didn’t request this, you can safely ignore this email.
-                </p>
-                <p style="color:#94a3b8; font-size:13px; line-height:1.6; margin:0; word-break:break-all;">
-                  If the button doesn’t work, copy and paste this link into your browser:<br />
-                  <span style="color:#a78bfa;">${resetUrl}</span>
-                </p>
-              </div>
-              <div style="text-align:center; padding:12px 0 0 0;">
-                <p style="color:#9ca3af; font-size:12px; margin:0;">Love 4 Detailing — Professional Mobile Car Detailing</p>
+                <p class="muted">This link will expire in 1 hour. If you didn’t request this, you can safely ignore this email.</p>
+                <p class="muted">If the button doesn’t work, copy and paste this link into your browser:<br /><span>${resetUrl}</span></p>
               </div>
             </div>
-          </body>
-          </html>
-        `
+          `
+        })
         
         const text = `
           Hi ${firstName}!
@@ -171,23 +155,19 @@ export async function POST(request: NextRequest) {
         })
 
         if (emailError) {
-          console.error('❌ Resend email API error:', emailError)
-          console.error('Error details:', JSON.stringify(emailError, null, 2))
+          logger.error('❌ Resend email API error', emailError instanceof Error ? emailError : undefined, { emailError })
           throw new Error(`Resend API error: ${emailError.message || 'Unknown error'}`)
         }
 
         if (process.env.NODE_ENV !== 'production') {
-          console.log('✅ Password reset email sent successfully via Resend')
-          console.log('Email ID:', data?.id)
-          console.log('Recipient:', email)
-          console.log('Sender:', process.env.NEXT_PUBLIC_FROM_EMAIL || 'zell@love4detailing.com')
-          console.log('Full Resend response:', JSON.stringify(data, null, 2))
+          logger.debug('✅ Password reset email sent successfully via Resend')
+          logger.debug('Email metadata', { id: data?.id, recipient: email, sender: process.env.NEXT_PUBLIC_FROM_EMAIL || 'zell@love4detailing.com', response: data })
         }
         
       } catch (customEmailError) {
-        console.error('Custom email system failed:', customEmailError)
+        logger.error('Custom email system failed', customEmailError instanceof Error ? customEmailError : undefined)
         if (process.env.NODE_ENV !== 'production') {
-          console.log('Falling back to Supabase built-in password reset...')
+          logger.debug('Falling back to Supabase built-in password reset...')
         }
         
         // Fallback to Supabase's built-in password reset
@@ -197,7 +177,7 @@ export async function POST(request: NextRequest) {
           })
 
           if (supabaseResetError) {
-            console.error('Supabase reset also failed:', supabaseResetError)
+            logger.error('Supabase reset also failed', supabaseResetError instanceof Error ? supabaseResetError : undefined)
             return ApiResponseHandler.error(
               'Failed to send reset email', 
               'EMAIL_SEND_FAILED',
@@ -206,11 +186,11 @@ export async function POST(request: NextRequest) {
           }
 
           if (process.env.NODE_ENV !== 'production') {
-            console.log('Password reset email sent via Supabase fallback to:', email)
+            logger.debug('Password reset email sent via Supabase fallback', { recipient: email })
           }
           
         } catch (fallbackError) {
-          console.error('Both email systems failed:', fallbackError)
+          logger.error('Both email systems failed', fallbackError instanceof Error ? fallbackError : undefined)
           return ApiResponseHandler.error(
             'Failed to send reset email', 
             'EMAIL_SEND_FAILED',
@@ -225,7 +205,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Password reset error:', error)
+    logger.error('Password reset error', error instanceof Error ? error : undefined)
     
     if (error instanceof z.ZodError) {
       return ApiResponseHandler.validationError('Invalid email address')

@@ -18,6 +18,7 @@ import { HeroSection } from '@/components/home/HeroSection'
 import { DashboardPreview } from '@/components/home/DashboardPreview'
 import { HowItWorksSection } from '@/components/home/HowItWorksSection'
 import { ServiceAreaAndFAQ } from '@/components/home/ServiceAreaAndFAQ'
+import { logger } from '@/lib/utils/logger'
 
 interface ServiceData {
   id: string
@@ -47,10 +48,10 @@ export default function HomePage() {
         if (data.success) {
           setServices(data.data || [])
         } else {
-          console.error('Failed to fetch services:', data.error)
+          logger.error('Failed to fetch services:', data.error)
         }
       } catch (error) {
-        console.error('Services fetch error:', error)
+        logger.error('Services fetch error:', error)
       } finally {
         setServicesLoading(false)
       }

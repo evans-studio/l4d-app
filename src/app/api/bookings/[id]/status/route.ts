@@ -1,11 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClientFromRequest } from '@/lib/supabase/server'
 import { ApiResponse } from '@/types/booking'
-
-const ADMIN_EMAILS = [
-  'zell@love4detailing.com',
-  'paul@evans-studio.co.uk'
-]
+import { logger } from '@/lib/utils/logger'
+import { env } from '@/lib/config/environment'
 
 export async function PUT(
   request: NextRequest,
@@ -39,7 +36,7 @@ export async function PUT(
     }
 
     // Only admins can update booking status
-    const isAdmin = profile.role === 'admin' || ADMIN_EMAILS.includes(profile.email.toLowerCase())
+    const isAdmin = profile.role === 'admin' || env.auth.adminEmails.includes(profile.email.toLowerCase())
     
     if (!isAdmin) {
       return NextResponse.json({
@@ -78,7 +75,7 @@ export async function PUT(
           error: { message: 'Booking not found', code: 'NOT_FOUND' }
         }, { status: 404 })
       }
-      console.error('Error updating booking status:', updateError)
+      logger.error('Error updating booking status', updateError instanceof Error ? updateError : undefined)
       return NextResponse.json({
         success: false,
         error: { message: 'Failed to update booking status', code: 'UPDATE_FAILED' }
@@ -91,7 +88,7 @@ export async function PUT(
     })
 
   } catch (error) {
-    console.error('Update booking status API error:', error)
+    logger.error('Update booking status API error', error instanceof Error ? error : undefined)
     return NextResponse.json({
       success: false,
       error: { message: 'Internal server error', code: 'SERVER_ERROR' }

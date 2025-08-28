@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { ApiResponseHandler } from '@/lib/api/response'
+import { logger } from '@/lib/utils/logger'
 
 /**
  * Get pricing for services based on vehicle sizes
@@ -35,7 +36,7 @@ export async function GET(request: NextRequest) {
     const { data: pricingData, error } = await query
     
     if (error) {
-      console.error('Error fetching service pricing:', error)
+      logger.error('Error fetching service pricing:', error)
       return ApiResponseHandler.serverError('Failed to fetch pricing data')
     }
     
@@ -46,10 +47,17 @@ export async function GET(request: NextRequest) {
     
     // Handle direct column access for pricing calculator
     if (sizeColumn && serviceId && pricingData.length > 0) {
-      const pricingRecord = pricingData[0]
+      const pricingRecord = pricingData[0] as {
+        small?: number
+        medium?: number
+        large?: number
+        extra_large?: number
+        services?: { name?: string } | { name?: string }[]
+        [key: string]: unknown
+      }
       if (pricingRecord) {
-        const price = (pricingRecord as any)[sizeColumn]
-        console.log(`🔍 Service pricing API: service_id=${serviceId}, size=${sizeColumn}, price=${price}`)
+        const price = pricingRecord[sizeColumn as keyof typeof pricingRecord] as number | undefined
+        logger.debug(`🔍 Service pricing API: service_id=${serviceId}, size=${sizeColumn}, price=${price}`)
         
         return ApiResponseHandler.success({
           service_id: serviceId,
@@ -61,7 +69,7 @@ export async function GET(request: NextRequest) {
           extra_large: pricingRecord.extra_large,
           service_name: Array.isArray(pricingRecord.services) 
             ? pricingRecord.services[0]?.name 
-            : (pricingRecord.services as any)?.name
+            : (pricingRecord.services as { name?: string } | undefined)?.name
         })
       }
     }
@@ -84,9 +92,16 @@ export async function GET(request: NextRequest) {
     }
     
     // Transform denormalized data back to individual pricing records for compatibility
-    const transformedData: any[] = []
+    type TransformedRecord = {
+      serviceId: string
+      vehicleSize: 'S' | 'M' | 'L' | 'XL'
+      vehicleSizeName: keyof typeof sizeNameToLetter
+      price: number
+      serviceName?: string
+    }
+    const transformedData: TransformedRecord[] = []
     
-    pricingData.forEach((item: any) => {
+    pricingData.forEach((item: { service_id: string; small?: number; medium?: number; large?: number; extra_large?: number; services?: { name?: string } | { name?: string }[] }) => {
       const priceMap = {
         'Small': item.small,
         'Medium': item.medium,
@@ -96,16 +111,16 @@ export async function GET(request: NextRequest) {
 
       Object.entries(priceMap).forEach(([sizeName, price]) => {
         if (price && price > 0) {
-          const sizeLetter = sizeNameToLetter[sizeName]
+          const sizeLetter = sizeNameToLetter[sizeName as keyof typeof sizeNameToLetter] as 'S' | 'M' | 'L' | 'XL'
           if (sizeLetter) {
             transformedData.push({
               serviceId: item.service_id,
               vehicleSize: sizeLetter, // Changed from vehicleSizeId to vehicleSize (letter)
-              vehicleSizeName: sizeName,
+              vehicleSizeName: sizeName as keyof typeof sizeNameToLetter,
               price: price,
               serviceName: Array.isArray(item.services) 
                 ? item.services[0]?.name 
-                : (item.services as any)?.name
+                : (item.services as { name?: string } | undefined)?.name
             })
           }
         }
@@ -122,14 +137,14 @@ export async function GET(request: NextRequest) {
         filteredData = transformedData.filter(item => item.vehicleSize === vehicleSizeId)
       } else {
         // Legacy support: might be getting old UUID, just return all data
-        console.warn('Received legacy vehicle size ID:', vehicleSizeId)
+        logger.warn('Received legacy vehicle size ID', { vehicleSizeId })
       }
     }
     
     return ApiResponseHandler.success(filteredData)
     
   } catch (error) {
-    console.error('Service pricing API error:', error)
+    logger.error('Service pricing API error', error instanceof Error ? error : undefined)
     return ApiResponseHandler.serverError('Failed to fetch service pricing')
   }
 }

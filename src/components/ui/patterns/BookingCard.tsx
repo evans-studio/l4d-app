@@ -23,6 +23,7 @@ import { Card, CardHeader, CardContent, CardFooter } from '../composites/Card'
 import { Button } from '../primitives/Button'
 import { Text, Heading } from '../primitives/Typography'
 import { Icon, IconButton } from '../primitives/Icon'
+import { isNewUIEnabled } from '@/lib/config/feature-flags'
 
 const bookingCardVariants = cva(
   'transition-all duration-300',
@@ -32,6 +33,7 @@ const bookingCardVariants = cva(
         draft: 'border-l-4 border-l-[var(--text-muted)]',
         pending: 'border-l-4 border-l-[var(--warning)]',
         confirmed: 'border-l-4 border-l-[var(--success)]',
+        rescheduled: 'border-l-4 border-l-[var(--primary)]',
         in_progress: 'border-l-4 border-l-[var(--primary)]',
         completed: 'border-l-4 border-l-[var(--success)]',
         cancelled: 'border-l-4 border-l-[var(--error)]',
@@ -75,6 +77,12 @@ const statusConfig = {
     label: 'Confirmed',
     color: 'text-[var(--success)]',
     bgColor: 'bg-[var(--success)]/10',
+  },
+  rescheduled: {
+    icon: Calendar,
+    label: 'Rescheduled',
+    color: 'text-[var(--primary)]',
+    bgColor: 'bg-[var(--primary)]/10',
   },
   in_progress: {
     icon: Loader2,
@@ -173,7 +181,7 @@ const BookingCard = React.forwardRef<HTMLDivElement, BookingCardProps>(
     ...props
   }, ref) => {
     const status = statusProp || 'pending'
-    const statusInfo = statusConfig[status]
+    const statusInfo = statusConfig[status as keyof typeof statusConfig] || statusConfig.pending
     const StatusIcon = statusInfo.icon
     
     const formatDate = (dateStr: string) => {
@@ -226,6 +234,7 @@ const BookingCard = React.forwardRef<HTMLDivElement, BookingCardProps>(
         variant={interactive ? 'interactive' : 'default'}
         clickable={interactive}
         onClick={handleCardClick}
+        data-ui={isNewUIEnabled() ? 'new' : 'old'}
         {...props}
       >
         {/* Header: Status, Reference, Actions */}
@@ -258,13 +267,6 @@ const BookingCard = React.forwardRef<HTMLDivElement, BookingCardProps>(
                   className="truncate"
                 >
                   #{booking.bookingReference}
-                </Text>
-                <Text 
-                  size="xs" 
-                  color="muted"
-                  className="hidden sm:block"
-                >
-                  {formatDate(booking.createdAt)}
                 </Text>
               </div>
             </div>

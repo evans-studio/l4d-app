@@ -14,6 +14,8 @@ import {
 } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
+import { isNewUIEnabled } from '@/lib/config/feature-flags'
+import { logger } from '@/lib/utils/logger'
 
 interface CustomerSidebarProps {
   isOpen: boolean
@@ -69,15 +71,15 @@ export function CustomerSidebar({ isOpen, onClose }: CustomerSidebarProps) {
       await fetch('/api/auth/logout', { method: 'POST' })
       router.push('/')
     } catch (error) {
-      console.error('Logout failed:', error)
+      logger.error('Logout failed:', error)
     }
   }
 
   return (
     <>
       {/* Desktop Sidebar */}
-      <div className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0">
-        <div className="flex flex-col flex-grow bg-[var(--bg-secondary)] border-r border-[var(--border-primary)] overflow-y-auto">
+      <div className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0 lg:left-0" data-ui={isNewUIEnabled() ? 'new' : 'old'}>
+        <div className="flex flex-col flex-grow bg-[var(--bg-secondary)] border-r border-[var(--border-primary)] overflow-y-auto overflow-x-hidden">
           {/* Logo */}
           <div className="flex items-center gap-3 px-6 py-6 border-b border-[var(--border-secondary)]">
             <Image

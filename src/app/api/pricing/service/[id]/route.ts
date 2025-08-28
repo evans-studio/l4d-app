@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import { PricingService } from '@/lib/services/pricing'
 import { ApiResponseHandler } from '@/lib/api/response'
+import { logger } from '@/lib/utils/logger'
 
 export async function GET(
   request: NextRequest,
@@ -25,7 +26,7 @@ export async function GET(
     return ApiResponseHandler.success(result.data)
 
   } catch (error) {
-    console.error('Get service pricing error:', error)
+    logger.error('Get service pricing error:', error)
     return ApiResponseHandler.serverError('Failed to fetch service pricing')
   }
 }

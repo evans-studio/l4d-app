@@ -53,7 +53,7 @@ export default function PrivacyPolicyPage() {
                   <Text weight="semibold" className="mb-2">Contact Information:</Text>
                   <Text size="sm">
                     Love 4 Detailing<br />
-                    Email: zell@love4detailing.com<br />
+                    Email: {process.env.NEXT_PUBLIC_COMPANY_EMAIL || 'zell@love4detailing.com'}<br />
                     Phone: +44 7908 625581<br />
                     Service Area: South London, United Kingdom
                   </Text>
@@ -314,8 +314,8 @@ export default function PrivacyPolicyPage() {
                   <Heading size="h4" color="white" className="mb-2">How to Exercise Your Rights</Heading>
                   <Text size="sm">
                     To exercise any of these rights, contact us at{' '}
-                    <Link href="mailto:zell@love4detailing.com" className="text-brand-400 hover:text-brand-300 underline">
-                      zell@love4detailing.com
+                    <Link href={`mailto:${process.env.NEXT_PUBLIC_COMPANY_EMAIL || 'zell@love4detailing.com'}`} className="text-brand-400 hover:text-brand-300 underline">
+                      {process.env.NEXT_PUBLIC_COMPANY_EMAIL || 'zell@love4detailing.com'}
                     </Link>{' '}
                     or call{' '}
                     <Link href="tel:+447908625581" className="text-brand-400 hover:text-brand-300 underline">
@@ -424,7 +424,7 @@ export default function PrivacyPolicyPage() {
                     <div>
                       <Text weight="semibold" className="mb-2">Love 4 Detailing</Text>
                       <div className="space-y-1 text-sm">
-                        <Text>Email: zell@love4detailing.com</Text>
+                        <Text>Email: {process.env.NEXT_PUBLIC_COMPANY_EMAIL || 'zell@love4detailing.com'}</Text>
                         <Text>Phone: +44 7908 625581</Text>
                         <Text>Service Area: South London, UK</Text>
                       </div>

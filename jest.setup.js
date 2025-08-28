@@ -29,6 +29,15 @@ if (typeof global.Response === 'undefined') {
   global.Response = NodeResponse
 }
 
+// Ensure a static Response.json helper exists for tests that call it directly
+if (typeof (global.Response && (global.Response).json) === 'undefined') {
+  // @ts-ignore
+  global.Response.json = (body, init) => new global.Response(JSON.stringify(body), {
+    status: (init && init.status) || 200,
+    headers: { 'content-type': 'application/json' },
+  })
+}
+
 /**
  * Jest Test Setup Configuration
  * 
@@ -36,8 +45,24 @@ if (typeof global.Response === 'undefined') {
  * Configures testing environment, mocks, and utilities.
  */
 
-// Import Jest DOM matchers
-import '@testing-library/jest-dom'
+// Import Jest DOM matchers (already imported above)
+
+// Import custom API validation matchers
+// Note: Using require for compatibility with Jest setup
+const {
+  toHaveValidApiStructure,
+  toBeSuccessfulApiResponse,
+  toBeFailedApiResponse,
+  toHavePagination
+} = require('./src/__tests__/helpers/api-validators')
+
+// Extend Jest matchers
+expect.extend({
+  toHaveValidApiStructure,
+  toBeSuccessfulApiResponse,
+  toBeFailedApiResponse,
+  toHavePagination
+})
 
 // Mock Next.js router
 jest.mock('next/router', () => ({
@@ -99,13 +124,22 @@ jest.mock('framer-motion', () => {
 jest.mock('next/server', () => {
   class NextRequest {}
   const NextResponse = {
-    json: (body, init) => new Response(JSON.stringify(body), {
+    json: (body, init) => new global.Response(JSON.stringify(body), {
       status: (init && init.status) || 200,
       headers: { 'content-type': 'application/json' },
     }),
   }
   return { __esModule: true, NextRequest, NextResponse }
 })
+
+// Polyfill TextEncoder/TextDecoder for Node test env when required by deps
+if (typeof global.TextEncoder === 'undefined') {
+  const { TextEncoder, TextDecoder } = require('util')
+  // @ts-ignore
+  global.TextEncoder = TextEncoder
+  // @ts-ignore
+  global.TextDecoder = TextDecoder
+}
 
 // Mock authenticateAdmin to always return an admin user in tests
 jest.mock('@/lib/api/auth-handler', () => ({

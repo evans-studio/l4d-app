@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/primitives/Button'
 import { ResponsiveLogo } from '@/components/ui/primitives/Logo'
 import { MenuIcon, XIcon, PhoneIcon, MailIcon, User, Settings, LogOut, Home } from 'lucide-react'
 import Link from 'next/link'
+import { isNewUIEnabled } from '@/lib/config/feature-flags'
+import { logger } from '@/lib/utils/logger'
 
 export function MainHeader() {
   const router = useRouter()
@@ -37,7 +39,7 @@ export function MainHeader() {
           setProfile(null)
         }
       } catch (error) {
-        console.error('Auth check failed:', error)
+        logger.error('Auth check failed:', error)
         setIsAuthenticated(false)
         setProfile(null)
       } finally {
@@ -49,9 +51,9 @@ export function MainHeader() {
   }, [])
 
   return (
-    <header className="bg-[var(--bg-secondary)] border-b border-[var(--border-primary)] sticky top-0 z-50">
+    <header className="bg-[var(--bg-secondary)]/95 backdrop-blur supports-[backdrop-filter]:bg-[color:var(--bg-secondary)/0.85] border-b border-[var(--border-primary)] sticky top-0 z-[var(--z-header)]" data-ui={isNewUIEnabled() ? 'new' : 'old'}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
+        <div className="flex justify-between items-center h-14 sm:h-16">
           {/* Logo */}
           <div className="flex items-center flex-1 sm:flex-initial">
             <Link href="/" className="flex items-center w-full sm:w-auto">

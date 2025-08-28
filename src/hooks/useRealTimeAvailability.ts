@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { logger } from '@/lib/utils/logger'
 
 interface TimeSlot {
   id: string
@@ -78,7 +79,7 @@ export function useRealTimeAvailability({
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch availability'
       setError(errorMessage)
-      console.error('Availability fetch error:', err)
+      logger.error('Availability fetch error:', err)
     } finally {
       setIsLoading(false)
     }
@@ -384,7 +385,7 @@ export function useMultiDateAvailability(dates: string[], pollInterval = 60000) 
       const newAvailabilityMap = new Map()
       results.forEach((result) => {
         if ('error' in result && result.error) {
-          console.error(`Error fetching availability for ${result.date}:`, result.error)
+          logger.error(`Error fetching availability for ${result.date}:`, result.error)
         }
         newAvailabilityMap.set(result.date, result.slots)
       })

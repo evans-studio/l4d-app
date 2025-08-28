@@ -790,7 +790,7 @@ export default function TermsOfServicePage() {
                     <div>
                       <Text weight="semibold" className="mb-2">Contact Details</Text>
                       <div className="space-y-1 text-sm">
-                        <Text>📧 Email: zell@love4detailing.com</Text>
+                        <Text>📧 Email: {process.env.NEXT_PUBLIC_COMPANY_EMAIL || 'zell@love4detailing.com'}</Text>
                         <Text>📞 Phone: +44 7908 625581</Text>
                         <Text>🌍 Service Area: South London, UK</Text>
                         <Text>🕒 Business Hours: 8 AM - 6 PM, Mon-Sat</Text>

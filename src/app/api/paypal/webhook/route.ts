@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase/direct'
+import type { Booking } from '@/lib/utils/booking-types'
 
 // Minimal responses for webhook semantics
 function ok(body?: unknown, init: ResponseInit = {}) {
@@ -52,7 +53,7 @@ async function getPayPalAccessToken(): Promise<string> {
 
 async function verifyWebhookSignature(
   headers: Headers,
-  bodyJson: any,
+  bodyJson: unknown,
 ): Promise<boolean> {
   const webhookId = process.env.PAYPAL_WEBHOOK_ID
   if (!webhookId) return false
@@ -86,9 +87,16 @@ async function verifyWebhookSignature(
   return json.verification_status === 'SUCCESS'
 }
 
-function extractBookingReferenceFromEvent(event: any): { bookingReference?: string, paymentReference?: string, amount?: number } {
+type PayPalResource = {
+  amount?: { value?: string }
+  invoice_id?: string
+  custom_id?: string
+  id?: string
+}
+
+function extractBookingReferenceFromEvent(event: Record<string, unknown>): { bookingReference?: string, paymentReference?: string, amount?: number } {
   // Prefer invoice_id or custom_id (should be set during order creation)
-  const resource = event?.resource || {}
+  const resource = (event as { resource?: PayPalResource })?.resource || {}
   const amountStr = resource?.amount?.value
   const amount = amountStr ? parseFloat(amountStr) : undefined
 
@@ -176,13 +184,13 @@ async function markBookingPaidByReference(
       await emailService.sendPaymentConfirmation(
         profile.email,
         customerName,
-        { ...updated, payment_status: 'paid', payment_method: 'paypal', status: 'confirmed' } as any,
+        { ...updated, payment_status: 'paid', payment_method: 'paypal', status: 'confirmed' } as Booking,
         'paypal',
         paymentRef || booking.booking_reference,
       )
 
       await emailService.sendAdminPaymentNotification(
-        updated as any,
+        updated as Booking,
         profile.email,
         customerName,
         'paypal',
@@ -203,9 +211,9 @@ export async function POST(request: NextRequest) {
 
     // Raw text body is needed for exact signature verification, but PayPal uses JSON compare API
     const text = await request.text()
-    let bodyJson: any
+    let bodyJson: unknown
     try {
-      bodyJson = JSON.parse(text)
+      bodyJson = JSON.parse(text) as unknown
     } catch {
       return badRequest('Invalid JSON')
     }
@@ -215,14 +223,14 @@ export async function POST(request: NextRequest) {
       return badRequest('Invalid signature')
     }
 
-    const eventType = bodyJson?.event_type
+    const eventType = (bodyJson as Record<string, unknown>)?.event_type as string | undefined
     // We act on successful capture or order
     const actionable = eventType === 'PAYMENT.CAPTURE.COMPLETED' || eventType === 'CHECKOUT.ORDER.APPROVED'
     if (!actionable) {
       return ok({ ignored: true })
     }
 
-    const { bookingReference, paymentReference, amount } = extractBookingReferenceFromEvent(bodyJson)
+    const { bookingReference, paymentReference, amount } = extractBookingReferenceFromEvent(bodyJson as Record<string, unknown>)
     if (!bookingReference) {
       // Without a reference we cannot map to a booking
       return ok({ ignored: true, reason: 'missing_reference' })

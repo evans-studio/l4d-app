@@ -2,10 +2,12 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { AdminLayout } from '@/components/layouts/AdminLayout'
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb'
 import { AdminRoute } from '@/components/ProtectedRoute'
 import { Card, CardHeader, CardContent } from '@/components/ui/composites/Card'
 import { Button } from '@/components/ui/primitives/Button'
-import { 
+import { logger } from '@/lib/utils/logger'
+import {
   EyeIcon,
   EyeOffIcon,
   LoaderIcon
@@ -60,7 +62,7 @@ function SettingsPage() {
         setSettings({ ...settings, ...data.data })
       }
     } catch (error) {
-      console.error('Settings load error:', error)
+      logger.error('Settings load error:', error instanceof Error ? error : undefined)
       setError('Failed to load settings')
     } finally {
       setIsLoading(false)
@@ -92,7 +94,7 @@ function SettingsPage() {
         setError(data.error?.message || 'Failed to save settings')
       }
     } catch (error) {
-      console.error('Settings save error:', error)
+      logger.error('Settings save error:', error instanceof Error ? error : undefined)
       setError('Failed to save settings')
     } finally {
       setIsSaving(false)
@@ -156,6 +158,19 @@ function SettingsPage() {
     <AdminLayout>
       <div className="space-y-6">
         {/* Header */}
+        <div className="mb-2">
+          <Breadcrumb>
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbLink href="/admin">Admin</BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbPage>Settings</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+        </div>
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-text-primary">Settings</h1>

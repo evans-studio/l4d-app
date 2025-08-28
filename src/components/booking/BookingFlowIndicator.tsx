@@ -69,7 +69,7 @@ export function BookingFlowIndicator({ variant = 'default' }: BookingFlowIndicat
   const handleStepClick = (stepNumber: number) => {
     // Only allow navigation to previous/completed steps
     if (stepNumber < currentStep) {
-      setStep(stepNumber as any);
+      setStep(stepNumber as 1 | 2 | 3 | 4 | 5 | 6);
     }
   };
 
@@ -160,9 +160,9 @@ export function BookingFlowIndicator({ variant = 'default' }: BookingFlowIndicat
                     <div className={`
                       w-8 h-8 rounded-full flex items-center justify-center transition-all
                       ${isCompleted 
-                        ? 'bg-brand-600 text-white' 
+                        ? 'bg-brand-600 text-white shadow-[var(--elevation-1)]' 
                         : isActive 
-                          ? 'bg-brand-600 text-white shadow-purple-lg' 
+                          ? 'bg-brand-600 text-white shadow-[var(--elevation-2)]' 
                           : 'bg-surface-tertiary text-text-muted'
                       }
                       ${isClickable ? 'hover:bg-brand-700' : ''}
@@ -218,9 +218,9 @@ export function BookingFlowIndicator({ variant = 'default' }: BookingFlowIndicat
                   <div className={`
                     w-12 h-12 rounded-full flex items-center justify-center mb-3 transition-all
                     ${isCompleted 
-                      ? 'bg-brand-600 text-white shadow-purple' 
+                      ? 'bg-brand-600 text-white shadow-[var(--elevation-1)]' 
                       : isActive 
-                        ? 'bg-brand-600 text-white shadow-purple-lg animate-purple-pulse' 
+                        ? 'bg-brand-600 text-white shadow-[var(--elevation-2)]' 
                         : 'bg-surface-tertiary text-text-muted'
                     }
                     ${isClickable ? 'hover:bg-brand-700' : ''}
@@ -256,7 +256,7 @@ export function BookingFlowIndicator({ variant = 'default' }: BookingFlowIndicat
         {/* Overall progress */}
         <div className="mt-6 w-full h-2 bg-surface-tertiary rounded-full overflow-hidden">
           <div 
-            className="h-full bg-gradient-to-r from-brand-600 to-brand-400 transition-all duration-500 ease-out shadow-purple"
+            className="h-full bg-gradient-to-r from-brand-600 to-brand-400 transition-all duration-500 ease-out"
             style={{ width: `${(currentStep / steps.length) * 100}%` }}
           />
         </div>

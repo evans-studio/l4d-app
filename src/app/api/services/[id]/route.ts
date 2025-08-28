@@ -4,6 +4,7 @@ import { ApiResponseHandler } from '@/lib/api/response'
 import { ApiValidation } from '@/lib/api/validation'
 import { authenticateAdmin } from '@/lib/api/auth-handler'
 import { z } from 'zod'
+import { logger } from '@/lib/utils/logger'
 
 const updateServiceSchema = z.object({
   name: z.string().min(1).optional(),
@@ -36,7 +37,7 @@ export async function GET(
     return ApiResponseHandler.success(result.data)
 
   } catch (error) {
-    console.error('Get service error:', error)
+    logger.error('Get service error:', error)
     return ApiResponseHandler.serverError('Failed to fetch service')
   }
 }
@@ -86,7 +87,7 @@ export async function PUT(
     return ApiResponseHandler.success(result.data)
 
   } catch (error) {
-    console.error('Update service error:', error)
+    logger.error('Update service error:', error)
     return ApiResponseHandler.serverError('Failed to update service')
   }
 }
@@ -120,7 +121,7 @@ export async function DELETE(
     return ApiResponseHandler.success({ message: 'Service deleted successfully' })
 
   } catch (error) {
-    console.error('Delete service error:', error)
+    logger.error('Delete service error:', error)
     return ApiResponseHandler.serverError('Failed to delete service')
   }
 }

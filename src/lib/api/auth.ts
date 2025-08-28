@@ -2,19 +2,21 @@
 export { AuthHandler as auth, authenticateAdmin, type AuthResult, type AuthenticatedUser } from './auth-handler'
 
 // For backward compatibility
-export const getUser = (request: any) => {
+export const getUser = (request: unknown) => {
   const { AuthHandler } = require('./auth-handler')
   return AuthHandler.getUserFromHeaders(request) || AuthHandler.getUserFromRequest(request)
 }
 
 // ApiAuth class for backward compatibility with existing API routes
+import type { NextRequest } from 'next/server'
+
 export class ApiAuth {
-  static async getUserFromRequest(request: any) {
+  static async getUserFromRequest(request: NextRequest) {
     const { AuthHandler } = await import('./auth-handler')
     return AuthHandler.getUserFromRequest(request)
   }
 
-  static async authenticateUser(request: any) {
+  static async authenticateUser(request: NextRequest) {
     try {
       const { AuthHandler } = await import('./auth-handler')
       const { NextResponse } = await import('next/server')
@@ -46,17 +48,17 @@ export class ApiAuth {
     }
   }
 
-  static async authenticateAdmin(request: any) {
+  static async authenticateAdmin(request: NextRequest) {
     const { authenticateAdmin } = await import('./auth-handler')
     return authenticateAdmin(request)
   }
 
-  static isAdmin(user: any): boolean {
-    return user?.role === 'admin'
+  static isAdmin(user: { role?: string } | null | undefined): boolean {
+    return (user?.role || '').toLowerCase() === 'admin'
   }
 
-  static isCustomer(user: any): boolean {
-    return user?.role === 'customer'
+  static isCustomer(user: { role?: string } | null | undefined): boolean {
+    return (user?.role || '').toLowerCase() === 'customer'
   }
 
   // Legacy authenticate method (without request parameter)

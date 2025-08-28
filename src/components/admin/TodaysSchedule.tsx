@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/primitives/Button'
-import { 
+import { logger } from '@/lib/utils/logger'
+import {
   CalendarIcon,
   ClockIcon,
   MapPinIcon,
@@ -98,7 +99,7 @@ export function TodaysSchedule({ onRefresh }: TodaysScheduleProps) {
         setBookings(data.data)
       }
     } catch (error) {
-      console.error('Failed to fetch today\'s bookings:', error)
+      logger.error('Failed to fetch today\'s bookings:', error)
     } finally {
       setIsLoading(false)
     }
@@ -127,7 +128,7 @@ export function TodaysSchedule({ onRefresh }: TodaysScheduleProps) {
         onRefresh?.()
       }
     } catch (error) {
-      console.error('Failed to update booking status:', error)
+      logger.error('Failed to update booking status:', error)
     } finally {
       setIsUpdating(null)
     }

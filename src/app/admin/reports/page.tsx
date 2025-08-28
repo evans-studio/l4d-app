@@ -3,10 +3,12 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { AdminLayout } from '@/components/layouts/AdminLayout'
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb'
 import { AdminRoute } from '@/components/ProtectedRoute'
 import { Card, CardHeader, CardContent } from '@/components/ui/composites/Card'
 import { Button } from '@/components/ui/primitives/Button'
-import { 
+import { logger } from '@/lib/utils/logger'
+import {
   TrendingUpIcon, 
   DollarSignIcon, 
   UsersIcon,
@@ -70,7 +72,7 @@ function ReportsPage() {
         setError(data.error?.message || 'Failed to load report data')
       }
     } catch (error) {
-      console.error('Report data error:', error)
+      logger.error('Report data error:', error instanceof Error ? error : undefined)
       setError('Failed to load report data')
     } finally {
       setIsLoading(false)
@@ -96,7 +98,7 @@ function ReportsPage() {
         setError(data.error?.message || 'Failed to export report')
       }
     } catch (error) {
-      console.error('Export error:', error)
+      logger.error('Export error:', error instanceof Error ? error : undefined)
       setError('Failed to export report')
     }
   }
@@ -126,6 +128,19 @@ function ReportsPage() {
     <AdminLayout>
       <div className="space-y-6">
         {/* Header */}
+        <div className="mb-2">
+          <Breadcrumb>
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbLink href="/admin">Admin</BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbPage>Reports</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+        </div>
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-text-primary">Business Reports</h1>

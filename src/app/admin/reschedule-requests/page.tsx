@@ -11,17 +11,16 @@ import {
   PhoneIcon,
   MailIcon,
   CarIcon,
-  CalendarCheckIcon,
-  CalendarXIcon,
-  AlertTriangleIcon,
-  RefreshCwIcon
+  AlertTriangleIcon
 } from 'lucide-react'
 
 import { Button } from '@/components/ui/primitives/Button'
 import { Card, CardContent, CardGrid } from '@/components/ui/composites/Card'
-import { StatusBadge } from '@/components/ui/patterns/StatusBadge'
+import { Badge } from '@/components/ui/badge'
 import { AdminLayout } from '@/components/layouts/AdminLayout'
 import { AdminRoute } from '@/components/ProtectedRoute'
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb'
+import { logger } from '@/lib/utils/logger'
 
 interface RescheduleRequest {
   id: string
@@ -59,6 +58,7 @@ function AdminRescheduleRequestsPage() {
   const [error, setError] = useState<string | null>(null)
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all')
   const [actionLoading, setActionLoading] = useState<string | null>(null)
+  const [localStatusMap, setLocalStatusMap] = useState<Record<string, { status: 'approved' | 'rejected'; ts: number }>>({})
 
   const fetchRescheduleRequests = async () => {
     try {
@@ -67,13 +67,22 @@ function AdminRescheduleRequestsPage() {
       const data = await response.json()
       
       if (data.success) {
-        setRequests(data.data.reschedule_requests)
+        const now = Date.now()
+        // Apply short-lived local overrides to prevent flicker back to pending
+        const reconciled = (data.data.reschedule_requests as RescheduleRequest[]).map((r) => {
+          const override = localStatusMap[r.id]
+          if (override && now - override.ts < 60_000) {
+            return { ...r, status: override.status, responded_at: r.responded_at || new Date().toISOString() }
+          }
+          return r
+        })
+        setRequests(reconciled)
         setError(null)
       } else {
         setError(data.error?.message || 'Failed to fetch reschedule requests')
       }
     } catch (error) {
-      console.error('Error fetching reschedule requests:', error)
+      logger.error('Error fetching reschedule requests:', error instanceof Error ? error : undefined)
       setError('Failed to load reschedule requests')
     } finally {
       setIsLoading(false)
@@ -87,25 +96,43 @@ function AdminRescheduleRequestsPage() {
   const handleApproveRequest = async (request: RescheduleRequest) => {
     setActionLoading(request.id)
     try {
-      const response = await fetch(`/api/admin/bookings/${request.booking_id}/reschedule/approve`, {
+      const response = await fetch(`/api/admin/reschedule-requests/${request.id}/respond`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          reschedule_request_id: request.id,
-          new_date: request.requested_date,
-          new_time: request.requested_time
+          action: 'approve',
+          adminResponse: '',
+          adminNotes: '',
+          bookingId: request.booking_id,
         })
       })
 
       const data = await response.json()
       if (data.success) {
-        await fetchRescheduleRequests() // Refresh the list
+        await fetchRescheduleRequests()
       } else {
-        console.error('Failed to approve reschedule:', data.error)
+        if (data?.error?.code === 'NOT_FOUND') {
+          const fb = await fetch(`/api/admin/bookings/${request.booking_id}/reschedule`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              newDate: request.requested_date,
+              newTime: request.requested_time,
+              reason: request.reason
+            })
+          })
+          const fbJson = await fb.json()
+          if (fb.ok && fbJson?.success) {
+            await fetchRescheduleRequests()
+            setActionLoading(null)
+            return
+          }
+        }
+        logger.error('Failed to approve reschedule:', data.error)
         alert('Failed to approve reschedule request: ' + (data.error?.message || 'Unknown error'))
       }
     } catch (error) {
-      console.error('Failed to approve reschedule:', error)
+      logger.error('Failed to approve reschedule:', error instanceof Error ? error : undefined)
       alert('Failed to approve reschedule request')
     } finally {
       setActionLoading(null)
@@ -117,24 +144,26 @@ function AdminRescheduleRequestsPage() {
     
     setActionLoading(request.id)
     try {
-      const response = await fetch(`/api/admin/bookings/${request.booking_id}/reschedule/decline`, {
+      const response = await fetch(`/api/admin/reschedule-requests/${request.id}/respond`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          reschedule_request_id: request.id,
-          decline_reason: declineReason || undefined
+          action: 'reject',
+          adminResponse: declineReason || '',
+          adminNotes: '',
+          bookingId: request.booking_id,
         })
       })
 
       const data = await response.json()
       if (data.success) {
-        await fetchRescheduleRequests() // Refresh the list
+        await fetchRescheduleRequests()
       } else {
-        console.error('Failed to decline reschedule:', data.error)
+        logger.error('Failed to decline reschedule:', data.error)
         alert('Failed to decline reschedule request: ' + (data.error?.message || 'Unknown error'))
       }
     } catch (error) {
-      console.error('Failed to decline reschedule:', error)
+      logger.error('Failed to decline reschedule:', error instanceof Error ? error : undefined)
       alert('Failed to decline reschedule request')
     } finally {
       setActionLoading(null)
@@ -193,6 +222,19 @@ function AdminRescheduleRequestsPage() {
     <AdminLayout>
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
+        <div className="mb-2">
+          <Breadcrumb>
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbLink href="/admin">Admin</BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbPage>Reschedule Requests</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+        </div>
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-[var(--text-primary)]">
@@ -204,23 +246,8 @@ function AdminRescheduleRequestsPage() {
           </div>
           
           <div className="flex items-center gap-2">
-            <Button
-              onClick={fetchRescheduleRequests}
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-2"
-              disabled={isLoading}
-            >
-              <RefreshCwIcon className="w-4 h-4" />
-              Refresh
-            </Button>
-            <Button
-              onClick={() => router.push('/admin/bookings')}
-              variant="outline"
-              size="sm"
-            >
-              Back to Bookings
-            </Button>
+            <Button onClick={fetchRescheduleRequests} variant="outline" size="sm" disabled={isLoading}>Refresh</Button>
+            <Button onClick={() => router.push('/admin/bookings')} variant="outline" size="sm">Back to Bookings</Button>
           </div>
         </div>
 
@@ -359,7 +386,7 @@ function RescheduleRequestCard({
           </div>
           <div className="text-right">
             <p className="text-xl font-bold text-[var(--primary)]">£{request.total_price}</p>
-            <StatusBadge status={request.booking_status as 'pending' | 'confirmed' | 'rescheduled' | 'in_progress' | 'completed' | 'cancelled' | 'declined' | 'no_show'} />
+            <Badge variant="outline" className="capitalize">{request.booking_status}</Badge>
           </div>
         </div>
 
@@ -466,25 +493,8 @@ function RescheduleRequestCard({
           
           {request.status === 'pending' && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              <Button
-                onClick={onApprove}
-                disabled={isActionLoading}
-                size="sm"
-                className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2"
-              >
-                <CalendarCheckIcon className="w-4 h-4" />
-                Approve Request
-              </Button>
-              <Button
-                onClick={onDecline}
-                disabled={isActionLoading}
-                variant="outline"
-                size="sm"
-                className="text-red-600 border-red-200 hover:bg-red-50 flex items-center gap-2"
-              >
-                <CalendarXIcon className="w-4 h-4" />
-                Decline Request
-              </Button>
+              <Button onClick={onApprove} disabled={isActionLoading} size="sm">Approve Request</Button>
+              <Button onClick={onDecline} disabled={isActionLoading} variant="destructive" size="sm">Decline Request</Button>
             </div>
           )}
         </div>

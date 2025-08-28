@@ -19,6 +19,7 @@ import {
   Sparkles
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { isNewUIEnabled } from '@/lib/config/feature-flags'
 
 const benefits = [
   {
@@ -202,6 +203,7 @@ export function WhatWeDoSection() {
       id="what-we-do"
       ref={sectionRef}
       className="relative overflow-hidden py-16 lg:py-24 z-10"
+      data-ui={isNewUIEnabled() ? 'new' : 'old'}
     >
       
       <Container>

@@ -1,3 +1,4 @@
+import { logger } from '@/lib/utils/logger'
 /**
  * Performance Monitoring Utilities for Love4Detailing
  * 
@@ -83,8 +84,9 @@ export class WebVitalsTracker {
         // Track First Input Delay
         const fidObserver = new PerformanceObserver((list) => {
           const entries = list.getEntries()
-          entries.forEach((entry: any) => {
-            this.recordMetric('FID', entry.processingStart - entry.startTime)
+          entries.forEach((entry) => {
+            const e = entry as PerformanceEventTiming
+            this.recordMetric('FID', (e.processingStart || 0) - (e.startTime || 0))
           })
         })
         fidObserver.observe({ entryTypes: ['first-input'] })
@@ -93,9 +95,10 @@ export class WebVitalsTracker {
         let clsValue = 0
         const clsObserver = new PerformanceObserver((list) => {
           const entries = list.getEntries()
-          entries.forEach((entry: any) => {
-            if (!entry.hadRecentInput) {
-              clsValue += entry.value
+          entries.forEach((entry) => {
+            const e = entry as PerformanceEntry & { value?: number; hadRecentInput?: boolean }
+            if (!e.hadRecentInput) {
+              clsValue += e.value || 0
             }
           })
           this.recordMetric('CLS', clsValue)
@@ -103,12 +106,12 @@ export class WebVitalsTracker {
         clsObserver.observe({ entryTypes: ['layout-shift'] })
 
       } catch (error) {
-        console.warn('Performance tracking not supported:', error)
+        logger.warn('Performance tracking not supported', { error: error instanceof Error ? { name: error.name, message: error.message } : undefined })
       }
     }
   }
 
-  private handleMetric(metricName: string, metric: any) {
+  private handleMetric(metricName: string, metric: { value: number }) {
     this.recordMetric(metricName, metric.value)
   }
 
@@ -131,16 +134,13 @@ export class WebVitalsTracker {
 
     // Log in development
     if (process.env.NODE_ENV === 'development') {
-      console.log(`📊 Performance Metric: ${name} = ${value.toFixed(2)}ms`)
+      logger.debug(`📊 Performance Metric: ${name} = ${value.toFixed(2)}ms`)
     }
   }
 
   private getConnectionType(): string {
-    if ('connection' in navigator) {
-      const connection = (navigator as any).connection
-      return connection.effectiveType || 'unknown'
-    }
-    return 'unknown'
+    const nav = navigator as Navigator & { connection?: { effectiveType?: string } }
+    return nav.connection?.effectiveType || 'unknown'
   }
 
   private checkThresholds(metric: PerformanceMetric) {
@@ -186,7 +186,7 @@ export class WebVitalsTracker {
       //   `Performance Issue: ${name} (${value.toFixed(2)} > ${threshold})`,
       //   status === 'poor' ? 'error' : 'warning'
       // )
-      console.warn(`Performance Issue: ${name} (${value.toFixed(2)} > ${threshold})`)
+      logger.warn(`Performance Issue: ${name} (${value.toFixed(2)} > ${threshold})`)
     }
   }
 
@@ -230,8 +230,8 @@ export class APIPerformanceTracker {
     this.requests.delete(requestId)
 
     // Record API performance metric
-    if (typeof window !== 'undefined' && (window as any).webVitalsTracker) {
-      ;(window as any).webVitalsTracker.recordCustomMetric(`API_${url}`, duration)
+    if (typeof window !== 'undefined' && (globalThis as unknown as { webVitalsTracker?: { recordCustomMetric: (n: string, v: number) => void } }).webVitalsTracker) {
+      ;(globalThis as unknown as { webVitalsTracker?: { recordCustomMetric: (n: string, v: number) => void } }).webVitalsTracker!.recordCustomMetric(`API_${url}`, duration)
     }
 
     // Check API response time threshold
@@ -240,12 +240,12 @@ export class APIPerformanceTracker {
       //   `Slow API Response: ${url} took ${duration.toFixed(2)}ms`,
       //   'warning'
       // )
-      console.warn(`Slow API Response: ${url} took ${duration.toFixed(2)}ms`)
+      logger.warn(`Slow API Response: ${url} took ${duration.toFixed(2)}ms`)
     }
 
     // Log in development
     if (process.env.NODE_ENV === 'development') {
-      console.log(`🌐 API ${success ? '✅' : '❌'}: ${url} - ${duration.toFixed(2)}ms`)
+      logger.debug(`🌐 API ${success ? '✅' : '❌'}: ${url} - ${duration.toFixed(2)}ms`)
     }
   }
 }
@@ -279,7 +279,7 @@ export class BookingFlowTracker {
 
     // Log step timing in development
     if (process.env.NODE_ENV === 'development') {
-      console.log(`🎯 Booking Step: ${stepName} at ${elapsed.toFixed(2)}ms`)
+      logger.debug(`🎯 Booking Step: ${stepName} at ${elapsed.toFixed(2)}ms`)
     }
   }
 
@@ -289,8 +289,8 @@ export class BookingFlowTracker {
     const totalTime = performance.now() - this.flowStart
     
     // Record total booking flow time
-    if (typeof window !== 'undefined' && (window as any).webVitalsTracker) {
-      ;(window as any).webVitalsTracker.recordCustomMetric('BOOKING_FLOW_TOTAL', totalTime)
+    if (typeof window !== 'undefined' && (globalThis as unknown as { webVitalsTracker?: { recordCustomMetric: (n: string, v: number) => void } }).webVitalsTracker) {
+      ;(globalThis as unknown as { webVitalsTracker?: { recordCustomMetric: (n: string, v: number) => void } }).webVitalsTracker!.recordCustomMetric('BOOKING_FLOW_TOTAL', totalTime)
     }
 
     // Check booking flow threshold
@@ -299,18 +299,20 @@ export class BookingFlowTracker {
       //   `Long Booking Flow: ${totalTime.toFixed(2)}ms (${success ? 'success' : 'abandoned'})`,
       //   'warning'
       // )
-      console.warn(`Long Booking Flow: ${totalTime.toFixed(2)}ms (${success ? 'success' : 'abandoned'})`)
+      logger.warn(`Long Booking Flow: ${totalTime.toFixed(2)}ms (${success ? 'success' : 'abandoned'})`)
     }
 
     // Report step-by-step analysis
     const steps = Array.from(this.stepTimestamps.entries())
     if (process.env.NODE_ENV === 'development') {
+      // eslint-disable-next-line no-console
       console.group(`📊 Booking Flow Analysis (${totalTime.toFixed(2)}ms total)`)
       steps.forEach(([step, time], index) => {
         const previousTime = index > 0 ? (steps[index - 1]?.[1] || 0) : 0
         const stepDuration = time - previousTime
-        console.log(`  ${step}: ${stepDuration.toFixed(2)}ms (at ${time.toFixed(2)}ms)`)
+        logger.debug(`  ${step}: ${stepDuration.toFixed(2)}ms (at ${time.toFixed(2)}ms)`)
       })
+      // eslint-disable-next-line no-console
       console.groupEnd()
     }
 
@@ -326,15 +328,15 @@ export function initializePerformanceTracking() {
 
   // Initialize Web Vitals tracker
   const webVitalsTracker = new WebVitalsTracker()
-  ;(window as any).webVitalsTracker = webVitalsTracker
+  ;(globalThis as unknown as { webVitalsTracker?: unknown }).webVitalsTracker = webVitalsTracker as unknown as never
 
   // Initialize API tracker
   const apiTracker = APIPerformanceTracker.getInstance()
-  ;(window as any).apiTracker = apiTracker
+  ;(globalThis as unknown as { apiTracker?: unknown }).apiTracker = apiTracker as unknown as never
 
   // Initialize booking flow tracker
   const bookingTracker = BookingFlowTracker.getInstance()
-  ;(window as any).bookingTracker = bookingTracker
+  ;(globalThis as unknown as { bookingTracker?: unknown }).bookingTracker = bookingTracker as unknown as never
 
   // Track page load performance
   window.addEventListener('load', () => {
@@ -345,13 +347,13 @@ export function initializePerformanceTracking() {
         webVitalsTracker.recordCustomMetric('PAGE_LOAD', loadTime)
         
         if (process.env.NODE_ENV === 'development') {
-          console.log(`📄 Page Load: ${loadTime.toFixed(2)}ms`)
+          logger.debug(`📄 Page Load: ${loadTime.toFixed(2)}ms`)
         }
       }
     }, 0)
   })
 
-  console.log('📊 Performance tracking initialized')
+  logger.debug('📊 Performance tracking initialized')
 }
 
 // Export singleton instances

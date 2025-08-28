@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/primitives/Button';
 import { ResponsiveLogo } from '@/components/ui/primitives/Logo';
 import { Container, Section } from '@/components/layout/templates/PageLayout';
 import { useBookingFlowStore } from '@/lib/store/bookingFlowStore';
-import { BookingFlowIndicator } from '@/components/booking/BookingFlowIndicator';
+// import { BookingFlowIndicator } from '@/components/booking/BookingFlowIndicator';
+import { Stepper, StepperItem, StepperIndicator, StepperSeparator, StepperTrigger } from '@/components/ui/stepper';
 import { ServiceSelection } from '@/components/booking/steps/ServiceSelection';
 import { VehicleDetails } from '@/components/booking/steps/VehicleDetails';
 import { TimeSlotSelection } from '@/components/booking/steps/TimeSlotSelection';
@@ -15,6 +16,7 @@ import { UserDetails } from '@/components/booking/steps/UserDetails';
 import { PricingConfirmation } from '@/components/booking/steps/PricingConfirmation';
 import { Card, CardContent, CardHeader } from '@/components/ui/composites/Card';
 import { ArrowLeft, Phone, User, LogIn, Mail, Shield, CheckCircle } from 'lucide-react';
+import { logger } from '@/lib/utils/logger'
 
 function BookingPageContent(): React.JSX.Element {
   const router = useRouter();
@@ -68,7 +70,7 @@ function BookingPageContent(): React.JSX.Element {
     if (!isExplicitRebooking && hasExistingData && !serviceId) {
       if (process.env.NODE_ENV !== 'production') {
         // eslint-disable-next-line no-console
-        console.log('🔄 Detected fresh booking attempt with stale data - resetting flow');
+        logger.debug('🔄 Detected fresh booking attempt with stale data - resetting flow');
       }
       resetFlow();
     }
@@ -122,7 +124,7 @@ function BookingPageContent(): React.JSX.Element {
           setProfile(null);
         }
       } catch (error) {
-        console.error('Auth check failed:', error);
+        logger.error('Auth check failed:', error);
         setIsAuthenticated(false);
         setProfile(null);
       } finally {
@@ -169,7 +171,7 @@ function BookingPageContent(): React.JSX.Element {
             }
           }
         } catch (error) {
-          console.error('❌ Failed to pre-populate service:', error);
+          logger.error('❌ Failed to pre-populate service:', error);
         }
       };
       
@@ -205,6 +207,15 @@ function BookingPageContent(): React.JSX.Element {
 
   // No auth gate - allow all users to proceed with booking
   // Account will be created automatically during the booking process
+
+  const stepLabels = [
+    { step: 1, label: 'Service' },
+    { step: 2, label: 'Vehicle' },
+    { step: 3, label: 'Time' },
+    { step: 4, label: 'Address' },
+    { step: 5, label: 'Details' },
+    { step: 6, label: 'Confirm' },
+  ];
 
   return (
     <div className="min-h-screen bg-surface-primary">
@@ -252,10 +263,24 @@ function BookingPageContent(): React.JSX.Element {
       )}
 
 
-      {/* Progress Indicator - Responsive variants */}
-      <BookingFlowIndicator variant="mobile" />
-      <BookingFlowIndicator variant="compact" />
-      <BookingFlowIndicator variant="default" />
+      {/* Progress Stepper */}
+      <div className="px-4 py-3">
+        <div className="mx-auto max-w-4xl">
+          <Stepper value={currentStep} onValueChange={() => {}}>
+            {stepLabels.map(({ step, label }) => (
+              <StepperItem key={step} step={step} className="flex-1">
+                <StepperTrigger asChild>
+                  <div className="flex flex-col items-center">
+                    <StepperIndicator />
+                    <span className={`mt-1 text-xs ${step === currentStep ? 'text-text-primary font-medium' : 'text-text-secondary'}`}>{label}</span>
+                  </div>
+                </StepperTrigger>
+                {step < stepLabels.length && <StepperSeparator />}
+              </StepperItem>
+            ))}
+          </Stepper>
+        </div>
+      </div>
 
       {/* Main Content */}
       <Section background="default" padding="lg">

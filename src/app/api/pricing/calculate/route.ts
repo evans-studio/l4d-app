@@ -3,6 +3,7 @@ import { PricingService } from '@/lib/services/pricing'
 import { ApiResponseHandler } from '@/lib/api/response'
 import { ApiValidation } from '@/lib/api/validation'
 import { z } from 'zod'
+import { logger } from '@/lib/utils/logger'
 
 const pricingCalculationSchema = z.object({
   serviceId: z.string().uuid('Invalid service ID'),
@@ -44,7 +45,8 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      const totalPrice = result.data?.reduce((sum: number, calc: any) => sum + calc.totalPrice, 0) || 0
+      type Calc = { totalPrice?: number; distanceSurcharge?: number; distanceKm?: number }
+      const totalPrice = result.data?.reduce((sum: number, calc: Calc) => sum + (calc?.totalPrice || 0), 0) || 0
       const totalDistanceSurcharge = result.data?.[0]?.distanceSurcharge || 0
 
       return ApiResponseHandler.success({
@@ -63,27 +65,27 @@ export async function POST(request: NextRequest) {
         return validation.error
       }
 
-      console.log('💰 Single service pricing calculation requested:', validation.data)
+      logger.debug('💰 Single service pricing calculation requested', { request: validation.data })
       
       const pricingService = new PricingService()
       const result = await pricingService.calculateServicePrice(validation.data)
 
-      console.log('📊 Pricing service result:', result)
+      logger.debug('📊 Pricing service result', { result })
 
       if (!result.success) {
-        console.error('❌ Pricing calculation failed:', result.error)
+        logger.error('❌ Pricing calculation failed', result.error instanceof Error ? result.error : undefined)
         return ApiResponseHandler.error(
           result.error?.message || 'Failed to calculate pricing',
           'PRICING_CALCULATION_FAILED'
         )
       }
 
-      console.log('✅ Returning pricing data:', result.data)
+      logger.debug('✅ Returning pricing data', { data: result.data })
       return ApiResponseHandler.success(result.data)
     }
 
   } catch (error) {
-    console.error('Pricing calculation error:', error)
+    logger.error('Pricing calculation error', error instanceof Error ? error : undefined)
     return ApiResponseHandler.serverError('Failed to calculate pricing')
   }
 }

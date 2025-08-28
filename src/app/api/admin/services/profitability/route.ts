@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { ApiResponseHandler } from '@/lib/api/response'
+import { logger } from '@/lib/utils/logger'
 
 export async function GET(request: NextRequest) {
   try {
@@ -42,7 +43,7 @@ export async function GET(request: NextRequest) {
       .eq('status', 'completed')
 
     if (bookingsError) {
-      console.error('Error fetching bookings:', bookingsError)
+      logger.error('Error fetching bookings:', bookingsError)
       return ApiResponseHandler.serverError('Failed to fetch profitability data')
     }
 
@@ -57,7 +58,7 @@ export async function GET(request: NextRequest) {
       `)
 
     if (pricingError) {
-      console.error('Error fetching service pricing:', pricingError)
+      logger.error('Error fetching service pricing:', pricingError)
     }
 
     // Calculate profitability metrics
@@ -77,8 +78,8 @@ export async function GET(request: NextRequest) {
         const service = bs.service_details
         if (!service || Array.isArray(service)) return
 
-        const serviceId = (service as any).id
-        const serviceName = (service as any).name
+        const serviceId = (service as { id?: string; name?: string }).id || 'unknown'
+        const serviceName = (service as { id?: string; name?: string }).name || 'Unknown'
         
         if (!serviceMetrics.has(serviceId)) {
           serviceMetrics.set(serviceId, {
@@ -156,7 +157,7 @@ export async function GET(request: NextRequest) {
     return ApiResponseHandler.success(profitabilityData)
 
   } catch (error) {
-    console.error('Profitability analysis error:', error)
+    logger.error('Profitability analysis error:', error instanceof Error ? error : undefined)
     return ApiResponseHandler.serverError('Failed to analyze profitability')
   }
 }

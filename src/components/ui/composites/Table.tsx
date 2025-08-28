@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 import { ChevronUp, ChevronDown, ArrowUpDown, Search, Filter } from 'lucide-react';
+import { logger } from '@/lib/utils/logger'
 
 const tableVariants = cva(
   'w-full border-collapse rounded-lg overflow-hidden',
@@ -164,7 +165,7 @@ export const Table = <T extends Record<string, unknown>>({
   };
 
   if (loading) {
-    return <TableSkeleton columns={columns as any} rows={5} />;
+    return <TableSkeleton columns={columns as unknown as TableColumn<unknown>[]} rows={5} />;
   }
 
   return (
@@ -418,7 +419,7 @@ export const TableDemo: React.FC = () => {
         searchable
         filterable
         mobileView="auto"
-        onRowClick={(row) => console.log('Clicked:', row)}
+        onRowClick={(row) => logger.debug('Clicked:', row)}
       />
     </div>
   );

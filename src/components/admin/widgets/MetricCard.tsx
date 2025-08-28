@@ -64,7 +64,7 @@ export function MetricCard({
       <CardContent className="p-6">
         {loading && (
           <div className="absolute inset-0 bg-surface-primary/50 backdrop-blur-sm flex items-center justify-center">
-            <div className="animate-spin w-6 h-6 border-2 border-brand-purple border-t-transparent rounded-full"></div>
+            <div className="animate-spin w-6 h-6 border-2 border-[var(--primary)] border-t-transparent rounded-full"></div>
           </div>
         )}
         

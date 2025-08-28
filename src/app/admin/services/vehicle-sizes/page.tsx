@@ -5,10 +5,10 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/primitives/Button'
 import { AdminLayout } from '@/components/layouts/AdminLayout'
 import { AdminRoute } from '@/components/ProtectedRoute'
-import { 
-  ArrowLeftIcon,
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb'
+import { logger } from '@/lib/utils/logger'
+import {
   PlusIcon,
-  EditIcon,
   TrashIcon,
   CarIcon,
   DollarSignIcon,
@@ -410,7 +410,7 @@ function VehicleSizesPage() {
         setError('Failed to load vehicle sizes')
       }
     } catch (error) {
-      console.error('Failed to fetch vehicle sizes:', error)
+      logger.error('Failed to fetch vehicle sizes:', error instanceof Error ? error : undefined)
       setError('Failed to load vehicle sizes')
     } finally {
       setIsLoading(false)
@@ -459,7 +459,7 @@ function VehicleSizesPage() {
         setError(data.error?.message || 'Failed to save vehicle size')
       }
     } catch (error) {
-      console.error('Failed to save vehicle size:', error)
+      logger.error('Failed to save vehicle size:', error instanceof Error ? error : undefined)
       setError('Failed to save vehicle size')
     } finally {
       setIsModalLoading(false)
@@ -491,7 +491,7 @@ function VehicleSizesPage() {
         setShowDeleteModal(false)
       }
     } catch (error) {
-      console.error('Failed to delete vehicle size:', error)
+      logger.error('Failed to delete vehicle size:', error instanceof Error ? error : undefined)
       setError('Failed to delete vehicle size')
       setShowDeleteModal(false)
     } finally {
@@ -511,7 +511,7 @@ function VehicleSizesPage() {
         fetchVehicleSizes()
       }
     } catch (error) {
-      console.error('Failed to toggle vehicle size status:', error)
+      logger.error('Failed to toggle vehicle size status:', error instanceof Error ? error : undefined)
     }
   }
 
@@ -533,31 +533,31 @@ function VehicleSizesPage() {
     <AdminLayout>
       <div className="max-w-6xl mx-auto">
         {/* Header */}
+        <div className="mb-4">
+          <Breadcrumb>
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbLink href="/admin">Admin</BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbLink href="/admin/services">Services</BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbPage>Vehicle Sizes</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+        </div>
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-[var(--text-primary)] mb-2">
-              Vehicle Sizes
-            </h1>
-            <p className="text-[var(--text-secondary)]">
-              Manage vehicle size categories and pricing multipliers
-            </p>
+            <h1 className="text-3xl font-bold text-[var(--text-primary)] mb-2">Vehicle Sizes</h1>
+            <p className="text-[var(--text-secondary)]">Manage vehicle size categories and pricing multipliers</p>
           </div>
-          
           <div className="flex items-center gap-3">
-            <Button
-              onClick={() => router.push('/admin/services')}
-              variant="outline"
-            >
-              <ArrowLeftIcon className="w-4 h-4 mr-2" />
-              Back to Services
-            </Button>
-            <Button
-              onClick={handleCreateVehicleSize}
-              className="flex items-center gap-2"
-            >
-              <PlusIcon className="w-4 h-4" />
-              Add Vehicle Size
-            </Button>
+            <Button onClick={() => router.push('/admin/services')} variant="outline">Back to Services</Button>
+            <Button onClick={handleCreateVehicleSize}>Add Vehicle Size</Button>
           </div>
         </div>
 
@@ -657,15 +657,7 @@ function VehicleSizesPage() {
 
                 {/* Actions */}
                 <div className="flex items-center gap-2 pt-4 border-t border-[var(--border-secondary)]">
-                  <Button
-                    onClick={() => handleEditVehicleSize(vehicleSize)}
-                    variant="outline"
-                    size="sm"
-                    className="flex-1 flex items-center gap-2"
-                  >
-                    <EditIcon className="w-3 h-3" />
-                    Edit
-                  </Button>
+                  <Button onClick={() => handleEditVehicleSize(vehicleSize)} variant="outline" size="sm" className="flex-1">Edit</Button>
                   <Button
                     onClick={() => toggleVehicleSizeStatus(vehicleSize)}
                     variant={vehicleSize.is_active ? "outline" : "primary"}

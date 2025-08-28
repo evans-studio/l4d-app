@@ -6,19 +6,17 @@ import { useOverlay } from '@/lib/overlay/context'
 import { AdminLayout } from '@/components/layouts/AdminLayout'
 import { AdminRoute } from '@/components/ProtectedRoute'
 import { Button } from '@/components/ui/primitives/Button'
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb'
 import { 
   UsersIcon,
   SearchIcon,
-  PhoneIcon,
-  MailIcon,
-  CalendarIcon,
   DollarSignIcon,
   TrendingUpIcon,
-  EyeIcon,
-  UserCheckIcon,
-  DownloadIcon,
-  RefreshCwIcon
+  UserCheckIcon
 } from 'lucide-react'
+import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Checkbox } from '@/components/ui/checkbox'
+import { logger } from '@/lib/utils/logger'
 
 interface Customer {
   id: string
@@ -28,8 +26,9 @@ interface Customer {
   phone?: string
   created_at: string
   updated_at: string
-  role: string
-  is_active: boolean
+  role?: string
+  status: 'active' | 'inactive' | 'vip'
+  is_active?: boolean
 }
 
 interface CustomerStats {
@@ -84,7 +83,7 @@ function AdminCustomersPage() {
       
       // Load customers and stats in parallel
       const [customersResponse, statsResponse] = await Promise.all([
-        fetch('/api/admin/customers/simple'),
+        fetch('/api/admin/customers'),
         fetch('/api/admin/customers/stats')
       ])
       
@@ -97,10 +96,10 @@ function AdminCustomersPage() {
         if (customersData.success) {
           setCustomers(customersData.data)
         } else {
-          console.error('API returned success: false', customersData.error)
+          logger.error('API returned success: false', customersData.error)
         }
       } else {
-        console.error('Customers API request failed:', customersResponse.status)
+        logger.error('Customers API request failed', undefined, { status: customersResponse.status })
       }
 
       // Handle stats data
@@ -110,13 +109,13 @@ function AdminCustomersPage() {
         if (statsData.success) {
           setStats(statsData.data)
         } else {
-          console.error('Stats API returned success: false', statsData.error)
+          logger.error('Stats API returned success: false', statsData.error)
         }
       } else {
-        console.error('Stats API request failed:', statsResponse.status)
+        logger.error('Stats API request failed', undefined, { status: statsResponse.status })
       }
     } catch (error) {
-      console.error('Failed to load customer data:', error)
+      logger.error('Failed to load customer data', error instanceof Error ? error : undefined)
     } finally {
       setIsLoading(false)
     }
@@ -134,12 +133,12 @@ function AdminCustomersPage() {
       )
     }
 
-    // Status filter (based on is_active)
+    // Status filter (based on engagement status from API)
     if (statusFilter !== 'all') {
       if (statusFilter === 'active') {
-        filtered = filtered.filter(customer => customer.is_active)
+        filtered = filtered.filter(customer => customer.status === 'active' || customer.status === 'vip')
       } else if (statusFilter === 'inactive') {
-        filtered = filtered.filter(customer => !customer.is_active)
+        filtered = filtered.filter(customer => customer.status === 'inactive')
       }
     }
 
@@ -181,7 +180,7 @@ function AdminCustomersPage() {
         document.body.removeChild(a)
       }
     } catch (error) {
-      console.error('Export failed:', error)
+      logger.error('Export failed', error instanceof Error ? error : undefined)
     }
   }
 
@@ -193,9 +192,9 @@ function AdminCustomersPage() {
     })
   }
 
-  const getStatusBadge = (isActive: boolean) => {
-    const status = isActive ? 'active' : 'inactive'
-    const config = statusConfig[status as keyof typeof statusConfig]
+  const getStatusBadge = (status: Customer['status']) => {
+    const mapped = status === 'vip' ? 'vip' : (status === 'active' ? 'active' : 'inactive')
+    const config = statusConfig[mapped as keyof typeof statusConfig]
     
     return (
       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${config.bgColor} ${config.borderColor} ${config.color}`}>
@@ -227,6 +226,19 @@ function AdminCustomersPage() {
     <AdminLayout>
       <div className="space-y-6">
         {/* Header */}
+        <div className="mb-2">
+          <Breadcrumb>
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbLink href="/admin">Admin</BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbPage>Customers</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+        </div>
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-text-primary">Customer Database</h1>
@@ -235,20 +247,10 @@ function AdminCustomersPage() {
             </p>
           </div>
           <div className="flex items-center gap-3 mt-4 sm:mt-0">
-            <Button
-              variant="outline"
-              onClick={exportCustomers}
-              className="flex items-center gap-2"
-            >
-              <DownloadIcon className="w-4 h-4" />
+            <Button variant="outline" onClick={exportCustomers} size="sm">
               Export CSV
             </Button>
-            <Button
-              variant="outline"
-              onClick={loadCustomerData}
-              className="flex items-center gap-2"
-            >
-              <RefreshCwIcon className="w-4 h-4" />
+            <Button variant="outline" onClick={loadCustomerData} size="sm">
               Refresh
             </Button>
           </div>
@@ -363,108 +365,67 @@ function AdminCustomersPage() {
           </div>
         </div>
 
-        {/* Customers List */}
-        <div className="bg-surface-secondary rounded-lg border border-border-primary">
-          <div className="overflow-x-auto">
-            {filteredCustomers.length === 0 ? (
-              <div className="text-center py-12">
-                <UsersIcon className="w-12 h-12 text-text-muted mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-text-primary mb-2">No Customers Found</h3>
-                <p className="text-text-secondary">No customers match your current filters.</p>
-              </div>
-            ) : (
-              <div className="space-y-1">
-                {filteredCustomers.map((customer) => (
-                  <div
-                    key={customer.id}
-                    className="p-6 border-b border-border-secondary last:border-b-0 hover:bg-surface-hover transition-colors"
-                  >
-                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                      {/* Customer Info */}
-                      <div className="flex-1">
-                        <div className="flex items-start justify-between mb-3">
-                          <div>
-                            <h3 className="text-lg font-semibold text-text-primary">
-                              {customer.first_name} {customer.last_name}
-                            </h3>
-                            <div className="flex items-center gap-3 mt-1">
-                              {getStatusBadge(customer.is_active)}
-                              <span className="text-text-muted text-sm">
-                                Member since {formatDate(customer.created_at)}
-                              </span>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-lg font-semibold text-text-primary">{customer.role}</p>
-                            <p className="text-text-muted text-sm">Role</p>
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          {/* Contact */}
-                          <div className="space-y-2">
-                            <p className="text-text-secondary text-xs font-medium">Contact</p>
-                            <div className="flex items-center gap-2">
-                              <MailIcon className="w-4 h-4 text-text-secondary" />
-                              <span className="text-text-primary text-sm truncate">{customer.email}</span>
-                            </div>
-                            {customer.phone && (
-                              <div className="flex items-center gap-2">
-                                <PhoneIcon className="w-4 h-4 text-text-secondary" />
-                                <span className="text-text-primary text-sm">{customer.phone}</span>
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Account Info */}
-                          <div className="space-y-2">
-                            <p className="text-text-secondary text-xs font-medium">Account</p>
-                            <div className="flex items-center gap-2">
-                              <CalendarIcon className="w-4 h-4 text-text-secondary" />
-                              <span className="text-text-primary text-sm">
-                                Registered {getDaysSinceRegistration(customer.created_at)}
-                              </span>
-                            </div>
-                            <p className="text-text-muted text-xs">
-                              Last updated {formatDate(customer.updated_at)}
-                            </p>
-                          </div>
-                        </div>
-
-                      </div>
-
-                      {/* Actions */}
-                      <div className="flex flex-col gap-2 min-w-[140px]">
+        {/* Customers Table - new UI */}
+        <div className="bg-surface-secondary rounded-lg border border-border-primary overflow-hidden">
+          {filteredCustomers.length === 0 ? (
+            <div className="text-center py-12">
+              <UsersIcon className="w-12 h-12 text-text-muted mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-text-primary mb-2">No Customers Found</h3>
+              <p className="text-text-secondary">No customers match your current filters.</p>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className="h-11"><Checkbox /></TableHead>
+                  <TableHead className="h-11">Name</TableHead>
+                  <TableHead className="h-11">Email</TableHead>
+                  <TableHead className="h-11">Phone</TableHead>
+                  <TableHead className="h-11">Registered</TableHead>
+                  <TableHead className="h-11">Status</TableHead>
+                  <TableHead className="h-11 text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredCustomers.map((c) => (
+                  <TableRow key={c.id}>
+                    <TableCell><Checkbox /></TableCell>
+                    <TableCell className="font-medium">{c.first_name} {c.last_name}</TableCell>
+                    <TableCell>{c.email}</TableCell>
+                    <TableCell>{c.phone || '-'}</TableCell>
+                    <TableCell>{formatDate(c.created_at)}</TableCell>
+                    <TableCell>{getStatusBadge(c.status)}</TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <Button variant="outline" size="sm" onClick={() => openOverlay({ type: 'customer-view', data: { customerId: c.id } })}>
+                          View
+                        </Button>
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => openOverlay({ type: 'customer-view', data: { customerId: customer.id } })}
-                          className="flex items-center gap-2"
+                          onClick={() => {
+                            if (c.phone) window.location.href = `tel:${c.phone}`
+                          }}
+                          disabled={!c.phone}
                         >
-                          <EyeIcon className="w-4 h-4" />
-                          View Details
+                          Call
                         </Button>
-                        <div className="flex gap-2">
-                          <a
-                            href={`tel:${customer.phone}`}
-                            className="flex-1 flex items-center justify-center p-3 min-h-[48px] border border-border-secondary rounded hover:bg-surface-hover transition-colors touch-manipulation"
-                          >
-                            <PhoneIcon className="w-4 h-4 text-text-secondary" />
-                          </a>
-                          <a
-                            href={`mailto:${customer.email}`}
-                            className="flex-1 flex items-center justify-center p-3 min-h-[48px] border border-border-secondary rounded hover:bg-surface-hover transition-colors touch-manipulation"
-                          >
-                            <MailIcon className="w-4 h-4 text-text-secondary" />
-                          </a>
-                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            window.location.href = `mailto:${c.email}`
+                          }}
+                        >
+                          Email
+                        </Button>
                       </div>
-                    </div>
-                  </div>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </div>
-            )}
-          </div>
+              </TableBody>
+            </Table>
+          )}
         </div>
       </div>
     </AdminLayout>

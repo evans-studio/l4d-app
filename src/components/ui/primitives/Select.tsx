@@ -2,6 +2,7 @@ import React from 'react'
 import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '@/lib/utils'
 import { ChevronDown, AlertCircle, CheckCircle, Info } from 'lucide-react'
+import { isNewUIEnabled } from '@/lib/config/feature-flags'
 
 const selectVariants = cva(
   'flex w-full rounded-md border bg-surface-card transition-all duration-200 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer appearance-none',
@@ -98,7 +99,7 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
     const hasLeftIcon = leftIcon || statusContent?.icon
     
     return (
-      <div className="space-y-2">
+      <div className="space-y-2" data-ui={isNewUIEnabled() ? 'new' : 'old'}>
         {/* Label */}
         {label && (
           <label
@@ -142,6 +143,8 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
               helperText && helperId,
               error && errorId
             )}
+            data-variant={currentVariant}
+            data-size={size}
             {...props}
           >
             {placeholder && (

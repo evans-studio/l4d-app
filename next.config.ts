@@ -59,6 +59,12 @@ const baseConfig = {
       tls: false,
     }
 
+    // Alias Node's deprecated builtin 'punycode' to the maintained userland package
+    config.resolve.alias = {
+      ...(config.resolve.alias || {}),
+      punycode: require.resolve('punycode/'),
+    }
+
     // Optimize chunks
     if (!dev && !isServer) {
       config.optimization.splitChunks.cacheGroups = {
@@ -77,12 +83,25 @@ const baseConfig = {
       }
     }
 
+    // Reduce webpack cache string serialization warnings by preferring Buffer for large assets
+    config.snapshot = {
+      ...config.snapshot,
+      managedPaths: config.snapshot?.managedPaths || [],
+    }
+
+    // Hint to webpack cache to use memory for pack to avoid slow string serialization
+    config.cache = {
+      type: 'filesystem',
+      compression: 'gzip',
+      allowCollectingMemory: true,
+    }
+
     return config
   },
 }
 
 // Wrap with Sentry if available
-let nextConfig = baseConfig as any
+let nextConfig = baseConfig as import('next').NextConfig
 try {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const { withSentryConfig } = require('@sentry/nextjs')

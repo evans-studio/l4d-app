@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { logger } from '@/lib/utils/logger'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -20,7 +21,7 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
     // First get the auth user for email
     const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.getUserById(userId)
     if (authError || !authUser.user) {
-      console.error('Error fetching auth user:', authError)
+      logger.error('Error fetching auth user:', authError)
       return null
     }
 
@@ -32,7 +33,7 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
       .single()
 
     if (profileError) {
-      console.error('Error fetching user profile:', profileError)
+      logger.error('Error fetching user profile:', profileError)
       // Return basic info from auth user if profile doesn't exist
       return {
         id: authUser.user.id,
@@ -54,7 +55,7 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
       created_at: profile.created_at
     }
   } catch (error) {
-    console.error('Error in getUserProfile:', error)
+    logger.error('Error in getUserProfile:', error)
     return null
   }
 }

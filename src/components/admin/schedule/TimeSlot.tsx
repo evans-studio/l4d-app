@@ -15,6 +15,7 @@ import {
   XIcon,
   CheckIcon
 } from 'lucide-react'
+import { isNewUIEnabled } from '@/lib/config/feature-flags'
 
 interface TimeSlotData {
   id: string
@@ -155,6 +156,7 @@ export function TimeSlot({ slot, onClick, onUpdate, onDelete, isPast }: TimeSlot
           ? 'opacity-60' 
           : 'hover:shadow-sm'
       } bg-[var(--surface-primary)] border-[var(--border-secondary)]`}
+      data-ui={isNewUIEnabled() ? 'new' : 'old'}
     >
       <div className="p-4">
         <div className="flex items-center justify-between">

@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { createClientFromRequest } from '@/lib/supabase/server'
 import { ApiResponseHandler } from '@/lib/api/response'
 import { EmailService } from '@/lib/services/email'
+import { logger } from '@/lib/utils/logger'
 
 export const runtime = 'nodejs'
 
@@ -33,7 +34,7 @@ export async function PUT(
       .single()
 
     if (slotError) {
-      console.error('Error fetching time slot:', slotError)
+      logger.error('Error fetching time slot:', slotError)
       return ApiResponseHandler.serverError('Failed to fetch time slot')
     }
 
@@ -67,7 +68,7 @@ export async function PUT(
       .single()
 
     if (updateError) {
-      console.error('Error updating time slot:', updateError)
+      logger.error('Error updating time slot:', updateError)
       
       // Check if it's a race condition (slot was booked by someone else)
       if (updateError.code === 'PGRST116') { // No rows updated
@@ -114,18 +115,18 @@ export async function PUT(
                 status: 'confirmed',
                 scheduled_date: slot.slot_date,
                 scheduled_start_time: slot.start_time,
-              } as any,
+              } as Partial<import('@/lib/utils/booking-types').Booking>,
               booking.status || 'pending',
               'Booking confirmed via slot booking'
             )
             .catch(error => {
-              console.error('Failed to send booking confirmation email:', error)
+              logger.error('Failed to send booking confirmation email:', error)
             })
         }
       }
     } catch (emailError) {
       // Log email error but don't fail the booking
-      console.error('Error preparing confirmation email:', emailError)
+      logger.error('Error preparing confirmation email', emailError instanceof Error ? emailError : undefined)
     }
 
     // Log the booking action for audit trail
@@ -144,14 +145,14 @@ export async function PUT(
           created_at: new Date().toISOString()
         })
     } catch (error) {
-      console.error('Failed to log booking action:', error)
+      logger.error('Failed to log booking action:', error)
       // Don't fail the request for audit logging errors
     }
 
     return ApiResponseHandler.success(updatedSlot, 'Time slot booked successfully')
 
   } catch (error) {
-    console.error('Book time slot error:', error)
+    logger.error('Book time slot error', error instanceof Error ? error : undefined)
     return ApiResponseHandler.serverError('Failed to book time slot')
   }
 }

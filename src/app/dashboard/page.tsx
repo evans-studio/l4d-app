@@ -14,13 +14,15 @@ import { BookingStatsWidget } from '@/components/customer/widgets/BookingStatsWi
 import { RecentActivityWidget } from '@/components/customer/widgets/RecentActivityWidget'
 import { Card, CardContent, CardHeader } from '@/components/ui/composites/Card'
 import { ArrowRight, Calendar, Car, MapPin, Star, AlertCircle, RefreshCw } from 'lucide-react'
+import Image from 'next/image'
+import { logger } from '@/lib/utils/logger'
 
 interface DashboardBooking {
   id: string
   booking_reference: string
   scheduled_date: string
   scheduled_start_time: string
-  status: 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled'
+  status: 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'rescheduled' | 'declined'
   total_price: number
   service: {
     name: string
@@ -28,7 +30,7 @@ interface DashboardBooking {
     category?: string
   } | null
   booking_services: Array<{
-    service_details: any
+    service_details: { name?: string; description?: string } | null
     price: number
     estimated_duration: number
   }>
@@ -110,7 +112,7 @@ export default function DashboardPage() {
         // Handle authentication for all requests
         if (!bookingsResponse.ok || !vehiclesResponse.ok || !addressesResponse.ok) {
           if (bookingsResponse.status === 401 || vehiclesResponse.status === 401 || addressesResponse.status === 401) {
-            console.warn('User not authenticated, redirecting to login')
+            logger.warn('User not authenticated, redirecting to login')
             router.push('/auth/login')
             return
           }
@@ -129,12 +131,12 @@ export default function DashboardPage() {
           setBookings(bookingsArray)
 
           // Calculate customer stats
-          const totalSpent = bookingsArray.reduce((sum: number, booking: any) => sum + (booking.total_price || 0), 0)
+          const totalSpent = bookingsArray.reduce((sum: number, booking: { total_price?: number }) => sum + (booking?.total_price || 0), 0)
           
           // Find favorite service
           const serviceCount: Record<string, number> = {}
-          bookingsArray.forEach((booking: any) => {
-            if (booking.service?.name) {
+          bookingsArray.forEach((booking: { service?: { name?: string } }) => {
+            if (booking?.service?.name) {
               serviceCount[booking.service.name] = (serviceCount[booking.service.name] || 0) + 1
             }
           })
@@ -153,7 +155,7 @@ export default function DashboardPage() {
             } : undefined
           })
         } else {
-          console.warn('Bookings API returned error:', bookingsData.error)
+          logger.warn('Bookings API returned error:', bookingsData.error)
           // Don't treat this as an error if it's just auth - redirect to login
           if (bookingsData.error?.code === 'UNAUTHORIZED') {
             // User is not authenticated, redirect to login
@@ -169,7 +171,7 @@ export default function DashboardPage() {
           const vehiclesArray = vehiclesData.data || []
           setVehicleCount(vehiclesArray.length)
         } else {
-          console.warn('Vehicles API returned error:', vehiclesData.error)
+          logger.warn('Vehicles API returned error:', vehiclesData.error)
           setVehicleCount(0)
         }
 
@@ -178,12 +180,12 @@ export default function DashboardPage() {
           const addressesArray = addressesData.data || []
           setAddressCount(addressesArray.length)
         } else {
-          console.warn('Addresses API returned error:', addressesData.error)
+          logger.warn('Addresses API returned error:', addressesData.error)
           setAddressCount(0)
         }
 
       } catch (error) {
-        console.error('Dashboard data error:', error)
+        logger.error('Dashboard data error:', error)
         setError('Unable to load dashboard data. Please try refreshing the page.')
         setBookings([])
         setCustomerStats(null)
@@ -195,9 +197,14 @@ export default function DashboardPage() {
     fetchDashboardData()
   }, [user, authLoading, profile])
 
-  // Find next upcoming booking
+  // Find next upcoming booking (include rescheduled; exclude past/completed/cancelled)
+  const today = new Date().toISOString().split('T')[0] || ''
   const nextBooking = bookings
-    .filter(booking => ['pending', 'confirmed', 'in_progress'].includes(booking.status))
+    .filter(booking => 
+      booking.scheduled_date >= today &&
+      booking.status !== 'completed' &&
+      booking.status !== 'cancelled'
+    )
     .sort((a, b) => new Date(`${a.scheduled_date}T${a.scheduled_start_time}`).getTime() - new Date(`${b.scheduled_date}T${b.scheduled_start_time}`).getTime())
     [0]
 
@@ -267,14 +274,19 @@ export default function DashboardPage() {
         <Container>
           {/* Header - Mobile First Responsive */}
           <div className="mb-6 sm:mb-8">
-            <h1 className="text-2xl sm:text-3xl font-bold text-text-primary mb-1">
-              My Dashboard
-            </h1>
-            {profile && (
-              <p className="text-text-secondary text-sm sm:text-base">
-                {bookings.length === 0 ? `Welcome to Love 4 Detailing, ${profile.first_name || 'Customer'}!` : `Welcome back, ${profile.first_name || 'Customer'}`}
-              </p>
-            )}
+            <div className="flex items-center gap-3 sm:gap-4 mb-2">
+              <div className="relative w-10 h-10 sm:w-12 sm:h-12">
+                <Image src="/logo.png" alt="Love 4 Detailing" fill priority sizes="48px" className="object-contain rounded" />
+              </div>
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-bold text-text-primary leading-tight">Customer Dashboard</h1>
+                {profile && (
+                  <p className="text-text-secondary text-sm sm:text-base">
+                    {bookings.length === 0 ? `Welcome to Love 4 Detailing, ${profile.first_name || 'Customer'}!` : `Welcome back, ${profile.first_name || 'Customer'}`}
+                  </p>
+                )}
+              </div>
+            </div>
           </div>
 
           {/* New User Welcome Experience - Show only when no bookings AND no vehicles AND no addresses */}
@@ -329,22 +341,10 @@ export default function DashboardPage() {
                     </div>
                     
                     <div className="flex flex-col gap-3">
-                      <Button
-                        onClick={() => router.push('/book')}
-                        size="lg"
-                        className="bg-brand-600 hover:bg-brand-700 min-h-[48px]"
-                        rightIcon={<ArrowRight className="w-4 h-4" />}
-                        fullWidth
-                      >
+                      <Button onClick={() => router.push('/book')} size="lg" className="bg-brand-600 hover:bg-brand-700 min-h-[48px]" fullWidth>
                         Book Your First Service
                       </Button>
-                      <Button
-                        onClick={() => router.push('/dashboard/vehicles')}
-                        variant="outline"
-                        size="lg"
-                        className="min-h-[48px]"
-                        fullWidth
-                      >
+                      <Button onClick={() => router.push('/dashboard/vehicles')} variant="outline" size="lg" className="min-h-[48px]" fullWidth>
                         Add Your Vehicle
                       </Button>
                     </div>
@@ -382,13 +382,7 @@ export default function DashboardPage() {
                       Now you can book our professional mobile car detailing services with just a few clicks.
                     </p>
                     
-                    <Button
-                      onClick={() => router.push('/book')}
-                      size="lg"
-                      className="bg-brand-600 hover:bg-brand-700 min-h-[48px]"
-                      rightIcon={<ArrowRight className="w-4 h-4" />}
-                      fullWidth
-                    >
+                    <Button onClick={() => router.push('/book')} size="lg" className="bg-brand-600 hover:bg-brand-700 min-h-[48px]" fullWidth>
                       Book Your First Service
                     </Button>
                   </div>

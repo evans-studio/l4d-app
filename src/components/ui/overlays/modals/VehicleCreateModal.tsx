@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/primitives/Input'
 import { Select } from '@/components/ui/primitives/Select'
 import vehicleData from '@/data/vehicle-size-data.json'
 import { formatLicensePlateInput, getRandomLicensePlateExample } from '@/lib/utils/license-plate'
+import { logger } from '@/lib/utils/logger'
 
 interface VehicleSize {
   id: string
@@ -71,21 +72,21 @@ export const VehicleCreateModal: React.FC<BaseOverlayProps> = ({
 
   // Get size for selected make/model (auto-detection with duplicate handling)
   const getVehicleSize = (make: string, model: string): string => {
-    console.log('🔍 Auto-detecting size for:', { make, model })
+    logger.debug('🔍 Auto-detecting size for:', { make, model })
     const vehicleMake = vehicleData.vehicles.find(v => v.make === make)
     if (vehicleMake) {
       // Find the first matching model (handles duplicates by taking first occurrence)
       const vehicleModel = vehicleMake.models.find(m => m.model === model)
       if (vehicleModel) {
-        console.log('✅ Size detected:', vehicleModel.size)
+        logger.debug('✅ Size detected', { size: vehicleModel.size })
         return vehicleModel.size
       } else {
-        console.warn('⚠️ Model not found in data:', model)
+        logger.warn('⚠️ Model not found in data', { model })
       }
     } else {
-      console.warn('⚠️ Make not found in data:', make)
+      logger.warn('⚠️ Make not found in data', { make })
     }
-    console.warn('❌ Size detection failed for:', { make, model })
+    logger.warn('❌ Size detection failed for', { make, model })
     return ''
   }
 
@@ -110,11 +111,11 @@ export const VehicleCreateModal: React.FC<BaseOverlayProps> = ({
 
   // Auto-detect size when make/model changes
   useEffect(() => {
-    console.log('🔄 Auto-detection triggered:', { make: formData.make, model: formData.model, vehicleSizesLoaded: vehicleSizes.length > 0 })
+    logger.debug('🔄 Auto-detection triggered:', { make: formData.make, model: formData.model, vehicleSizesLoaded: vehicleSizes.length > 0 })
     
     if (formData.make && formData.model) {
       const detectedSize = getVehicleSize(formData.make, formData.model)
-      console.log('📊 Detected size:', detectedSize)
+      logger.debug('📊 Detected size', { detectedSize })
       
       if (detectedSize) {
         // Find the corresponding vehicle size ID
@@ -127,7 +128,7 @@ export const VehicleCreateModal: React.FC<BaseOverlayProps> = ({
           }[detectedSize]?.toLowerCase()
         )
         
-        console.log('📍 Size record found:', sizeRecord)
+        logger.debug('📍 Size record found', { sizeRecord })
         
         setFormData(prev => {
           const updated = {
@@ -135,11 +136,11 @@ export const VehicleCreateModal: React.FC<BaseOverlayProps> = ({
             detected_size: detectedSize,
             vehicle_size_id: sizeRecord?.id || ''
           }
-          console.log('💾 Form updated with size:', { detected_size: updated.detected_size, vehicle_size_id: updated.vehicle_size_id })
+          logger.debug('💾 Form updated with size', { detected_size: updated.detected_size, vehicle_size_id: updated.vehicle_size_id })
           return updated
         })
       } else {
-        console.warn('⚠️ No size detected - clearing vehicle_size_id')
+        logger.warn('⚠️ No size detected - clearing vehicle_size_id')
         setFormData(prev => ({
           ...prev,
           detected_size: '',
@@ -151,32 +152,32 @@ export const VehicleCreateModal: React.FC<BaseOverlayProps> = ({
 
   const loadVehicleSizes = async () => {
     try {
-      console.log('🔄 Loading vehicle sizes from API...')
+      logger.debug('🔄 Loading vehicle sizes from API...')
       setIsLoading(true)
       const response = await fetch('/api/services/vehicle-sizes')
       const result = await response.json()
       
-      console.log('📡 Vehicle sizes API response:', result)
+      logger.debug('📡 Vehicle sizes API response:', result)
       
       if (result.success) {
-        console.log('✅ Vehicle sizes loaded:', result.data?.length || 0, 'sizes')
+        logger.debug('✅ Vehicle sizes loaded', { count: result.data?.length || 0, unit: 'sizes' })
         setVehicleSizes(result.data || [])
       } else {
-        console.error('❌ Failed to load vehicle sizes:', result.error)
+        logger.error('❌ Failed to load vehicle sizes', result.error instanceof Error ? result.error : undefined)
         setVehicleSizes([]) // Ensure it's an empty array, not undefined
       }
     } catch (error) {
-      console.error('❌ Vehicle sizes API error:', error)
+      logger.error('❌ Vehicle sizes API error', error instanceof Error ? error : undefined)
       setVehicleSizes([]) // Ensure it's an empty array on error
     } finally {
       setIsLoading(false)
-      console.log('🏁 Vehicle sizes loading complete')
+      logger.debug('🏁 Vehicle sizes loading complete')
     }
   }
 
 
 
-  const handleFormChange = (field: string, value: any) => {
+  const handleFormChange = (field: string, value: unknown) => {
     setFormData(prev => {
       const newForm = { ...prev, [field]: value }
       
@@ -200,7 +201,7 @@ export const VehicleCreateModal: React.FC<BaseOverlayProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    console.log('📝 Form submission attempted with data:', {
+    logger.debug('📝 Form submission attempted with data:', {
       make: formData.make?.trim(),
       model: formData.model?.trim(), 
       license_plate: formData.license_plate?.trim(),
@@ -210,8 +211,8 @@ export const VehicleCreateModal: React.FC<BaseOverlayProps> = ({
       isLoading: isLoading
     })
     
-    console.log('🔍 Full form data state:', formData)
-    console.log('📊 Available vehicle sizes:', vehicleSizes)
+    logger.debug('🔍 Full form data state:', formData)
+    logger.debug('📊 Available vehicle sizes:', vehicleSizes)
     
     if (!formData.make.trim() || !formData.model.trim() || !formData.license_plate.trim()) {
       const missing = []
@@ -220,14 +221,14 @@ export const VehicleCreateModal: React.FC<BaseOverlayProps> = ({
       if (!formData.license_plate.trim()) missing.push('registration number')
       
       const errorMsg = `Please fill in all required fields: ${missing.join(', ')}`
-      console.error('❌ Validation failed - missing fields:', missing)
+      logger.error('❌ Validation failed - missing fields:', missing)
       setError(errorMsg)
       return
     }
     
     // Check if vehicle size was auto-detected
     if (!formData.vehicle_size_id) {
-      console.error('❌ Validation failed - no vehicle_size_id:', {
+      logger.error('❌ Validation failed - no vehicle_size_id:', {
         detected_size: formData.detected_size,
         vehicleSizes: vehicleSizes.length,
         make: formData.make,
@@ -237,8 +238,8 @@ export const VehicleCreateModal: React.FC<BaseOverlayProps> = ({
       return
     }
     
-    console.log('✅ Validation passed, proceeding with submission')
-    console.log('📤 [Frontend] Sending data to backend:', JSON.stringify(formData, null, 2))
+    logger.debug('✅ Validation passed, proceeding with submission')
+    logger.debug('📤 [Frontend] Sending data to backend', { formData })
 
     try {
       setIsSubmitting(true)
@@ -250,10 +251,10 @@ export const VehicleCreateModal: React.FC<BaseOverlayProps> = ({
         body: JSON.stringify(formData)
       })
 
-      console.log('📨 [Frontend] API Response status:', response.status, response.statusText)
+      logger.debug('📨 [Frontend] API Response status', { status: response.status, statusText: response.statusText })
       
       const result = await response.json()
-      console.log('📥 [Frontend] API Response data:', result)
+      logger.debug('📥 [Frontend] API Response data', { result })
 
       if (result.success) {
         if (onConfirm) {
@@ -264,7 +265,7 @@ export const VehicleCreateModal: React.FC<BaseOverlayProps> = ({
         setError(result.error?.message || 'Failed to create vehicle')
       }
     } catch (error) {
-      console.error('Create vehicle error:', error)
+      logger.error('Create vehicle error:', error)
       setError('Network error occurred')
     } finally {
       setIsSubmitting(false)

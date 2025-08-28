@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { ApiResponseHandler } from '@/lib/api/response'
 import { authenticateAdmin } from '@/lib/api/auth-handler'
+import { logger } from '@/lib/utils/logger'
 
 export async function GET(request: NextRequest) {
   try {
@@ -26,7 +27,7 @@ export async function GET(request: NextRequest) {
       `)
 
     if (pricingError) {
-      console.error('Error fetching service pricing:', pricingError)
+      logger.error('Error fetching service pricing:', pricingError)
       return ApiResponseHandler.serverError(`Failed to fetch pricing data: ${pricingError.message}`)
     }
 
@@ -89,7 +90,7 @@ export async function GET(request: NextRequest) {
     return ApiResponseHandler.success(pricingMatrix)
 
   } catch (error) {
-    console.error('Pricing data error:', error)
+    logger.error('Pricing data error:', error instanceof Error ? error : undefined)
     return ApiResponseHandler.serverError(`Failed to fetch pricing data: ${error instanceof Error ? error.message : 'Unknown error'}`)
   }
 }
@@ -145,7 +146,7 @@ export async function PUT(request: NextRequest) {
     Object.entries(pricing as Record<string, number>).forEach(([vehicleSizeId, price]) => {
       const columnName = sizeIdToColumn[vehicleSizeId]
       if (columnName && Number(price) >= 0) { // Allow 0 prices
-        (pricingRecord as any)[columnName] = Number(price)
+        ;(pricingRecord as unknown as Record<string, number>)[columnName] = Number(price)
       }
     })
 
@@ -157,7 +158,7 @@ export async function PUT(request: NextRequest) {
       .single()
 
     if (checkError && checkError.code !== 'PGRST116') { // PGRST116 is "not found"
-      console.error('Error checking existing pricing:', checkError)
+      logger.error('Error checking existing pricing:', checkError)
       return ApiResponseHandler.serverError('Failed to check existing pricing')
     }
 
@@ -176,14 +177,14 @@ export async function PUT(request: NextRequest) {
     }
 
     if (result.error) {
-      console.error('Error updating/inserting pricing:', result.error)
+      logger.error('Error updating/inserting pricing:', result.error)
       return ApiResponseHandler.serverError(`Failed to update pricing: ${result.error.message}`)
     }
 
     return ApiResponseHandler.success({ message: 'Pricing updated successfully' })
 
   } catch (error) {
-    console.error('Pricing update error:', error)
+    logger.error('Pricing update error:', error instanceof Error ? error : undefined)
     return ApiResponseHandler.serverError(`Failed to update pricing data: ${error instanceof Error ? error.message : 'Unknown error'}`)  
   }
 }

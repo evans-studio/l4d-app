@@ -3,6 +3,7 @@ import { authenticateAdmin } from '@/lib/api/auth-handler'
 import { ApiResponseHandler } from '@/lib/api/response'
 import { revalidatePath, revalidateTag } from 'next/cache'
 import { supabaseAdmin } from '@/lib/supabase/direct'
+import { logger } from '@/lib/utils/logger'
 
 export async function POST(request: NextRequest) {
   try {
@@ -34,8 +35,8 @@ export async function POST(request: NextRequest) {
     // Simple per-user rate limit in-memory (per process)
     const windowMs = 60 * 1000
     const maxRequests = 20
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const store: any = (globalThis as any).__adminSystemRateLimit || ((globalThis as any).__adminSystemRateLimit = new Map<string, { count: number, reset: number }>())
+    const g = globalThis as unknown as { __adminSystemRateLimit?: Map<string, { count: number; reset: number }> }
+    const store = g.__adminSystemRateLimit ?? (g.__adminSystemRateLimit = new Map<string, { count: number, reset: number }>())
     const key = `clear_cache:${user.id}`
     const now = Date.now()
     const entry = store.get(key) as { count: number; reset: number } | undefined
@@ -84,7 +85,7 @@ export async function POST(request: NextRequest) {
 
     return ApiResponseHandler.success({ revalidated: { paths, tags } }, 'Cache cleared')
   } catch (error) {
-    console.error('Clear cache error:', error)
+    logger.error('Clear cache error:', error instanceof Error ? error : undefined)
     return ApiResponseHandler.serverError('Failed to clear cache')
   }
 }

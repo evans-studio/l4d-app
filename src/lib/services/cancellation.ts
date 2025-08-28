@@ -6,6 +6,7 @@
 import { BaseService, ServiceResponse } from './base'
 import { EmailService } from './email'
 import { supabaseAdmin } from '@/lib/supabase/direct'
+import { logger } from '@/lib/utils/logger'
 
 export interface CancellationPolicyCheck {
   canCancel: boolean
@@ -23,7 +24,13 @@ export interface CancellationRequest {
 }
 
 export interface CancellationResult {
-  booking: any
+  booking: {
+    id: string
+    booking_reference: string
+    status: string
+    cancelled_at?: string | null
+    cancellation_reason?: string | null
+  }
   policyInfo: CancellationPolicyCheck
   timeSlotFreed: boolean
   emailSent: boolean
@@ -261,7 +268,7 @@ export class CancellationService extends BaseService {
               scheduled_start_time: originalBooking.scheduled_start_time,
               total_price: originalBooking.total_price,
               status: 'cancelled'
-            } as any,
+            } as import('@/lib/utils/booking-types').Booking,
             originalBooking.status,
             request.reason
           )
@@ -269,7 +276,7 @@ export class CancellationService extends BaseService {
           emailSent = emailResult.success
         }
       } catch (emailError) {
-        console.error('Failed to send cancellation email:', emailError)
+        logger.error('Failed to send cancellation email:', emailError)
       }
 
       // 6. Calculate refund amount (if eligible)
@@ -303,7 +310,7 @@ export class CancellationService extends BaseService {
     adminId: string,
     reason: string,
     refundAmount?: number
-  ): Promise<ServiceResponse<any>> {
+  ): Promise<ServiceResponse<unknown>> {
     try {
       const now = new Date().toISOString()
 
@@ -388,13 +395,13 @@ export class CancellationService extends BaseService {
               scheduled_start_time: booking.scheduled_start_time,
               total_price: booking.total_price,
               status: 'cancelled'
-            } as any,
+            } as Partial<import('@/lib/utils/booking-types').Booking>,
             userProfile.email,
             customerName
           )
         }
       } catch (emailError) {
-        console.error('Failed to send admin cancellation email:', emailError)
+        logger.error('Failed to send admin cancellation email:', emailError)
       }
 
       return {
@@ -418,7 +425,7 @@ export class CancellationService extends BaseService {
   /**
    * Get cancellation statistics for admin dashboard
    */
-  async getCancellationStats(dateFrom?: string, dateTo?: string): Promise<ServiceResponse<any>> {
+  async getCancellationStats(dateFrom?: string, dateTo?: string): Promise<ServiceResponse<unknown>> {
     try {
       let query = supabaseAdmin
         .from('bookings')

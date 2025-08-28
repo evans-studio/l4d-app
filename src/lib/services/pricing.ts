@@ -1,4 +1,5 @@
 import { BaseService, ServiceResponse } from './base'
+import { logger } from '@/lib/utils/logger'
 
 export interface PricingCalculationRequest {
   serviceId: string
@@ -33,10 +34,13 @@ export interface DistanceCalculationResult {
 }
 
 export class PricingService extends BaseService {
-  
-  private readonly FREE_DELIVERY_RADIUS_KM = 5
-  private readonly DISTANCE_SURCHARGE_PER_KM = 1.50
-  private readonly BUSINESS_POSTCODE = 'NG5 1FB' // Nottingham base
+  // Business rules (configurable)
+  private readonly FREE_DELIVERY_RADIUS_MI = 17.5
+  private readonly FREE_DELIVERY_RADIUS_KM = this.FREE_DELIVERY_RADIUS_MI * 1.60934
+  // £0.50 per mile → per km
+  private readonly DISTANCE_SURCHARGE_PER_KM = 0.5 / 1.60934
+  // Prefer env override, fallback to SW9 0AA
+  private readonly BUSINESS_POSTCODE = process.env.BUSINESS_POSTCODE || process.env.NEXT_PUBLIC_BUSINESS_POSTCODE || 'SW9'
 
   async calculateServicePrice(request: PricingCalculationRequest): Promise<ServiceResponse<PricingCalculation>> {
     return this.executeQuery(async () => {
@@ -60,7 +64,7 @@ export class PricingService extends BaseService {
         .single()
 
       if (pricingError) {
-        console.error('Service pricing not found:', pricingError)
+        logger.error('Service pricing not found:', pricingError)
         return { data: null, error: new Error('Service pricing not configured') }
       }
 
@@ -148,22 +152,35 @@ export class PricingService extends BaseService {
 
   async calculateDistance(postcode: string): Promise<ServiceResponse<DistanceCalculationResult>> {
     return this.executeQuery(async () => {
-      // For now, we'll use a simple mock distance calculation
-      // In production, you would integrate with a real geocoding/distance API
-      // like Google Maps API, Mapbox, or UK Postcode API
-      
-      const mockDistanceKm = this.mockCalculateDistance(postcode)
-      const surcharge = this.calculateDistanceSurcharge(mockDistanceKm)
+      try {
+        const business = await this.fetchPostcodeCoords(this.BUSINESS_POSTCODE)
+        const destination = await this.fetchPostcodeCoords(postcode)
 
-      const result: DistanceCalculationResult = {
-        distanceKm: mockDistanceKm,
-        surcharge,
-        freeDeliveryRadius: this.FREE_DELIVERY_RADIUS_KM,
-        surchargePerKm: this.DISTANCE_SURCHARGE_PER_KM,
+        if (!business || !destination) {
+          // Fallback to mock if lookup fails
+          const mockKm = this.mockCalculateDistance(postcode)
+          return this.buildDistanceResult(mockKm)
+        }
+
+        const distanceKm = this.haversineKm(business.lat, business.lon, destination.lat, destination.lon)
+        return this.buildDistanceResult(distanceKm)
+      } catch (err) {
+        // Fallback to mock on any failure
+        const mockKm = this.mockCalculateDistance(postcode)
+        return this.buildDistanceResult(mockKm)
       }
-
-      return { data: result, error: null }
     }, 'Failed to calculate distance')
+  }
+
+  private buildDistanceResult(distanceKm: number): { data: DistanceCalculationResult | null, error: Error | null } {
+    const surcharge = this.calculateDistanceSurcharge(distanceKm)
+    const result: DistanceCalculationResult = {
+      distanceKm,
+      surcharge,
+      freeDeliveryRadius: this.FREE_DELIVERY_RADIUS_KM,
+      surchargePerKm: this.DISTANCE_SURCHARGE_PER_KM,
+    }
+    return { data: result, error: null }
   }
 
   private calculateDistanceSurcharge(distanceKm: number): number {
@@ -182,18 +199,18 @@ export class PricingService extends BaseService {
     
     // Mock distances based on common UK postcode areas around Nottingham
     const postcodeDistances: Record<string, number> = {
-      'NG1': 3,
-      'NG2': 4,
-      'NG3': 6,
-      'NG4': 8,
-      'NG5': 2, // Business location
-      'NG6': 7,
-      'NG7': 5,
-      'NG8': 9,
-      'DE1': 15, // Derby
-      'LE1': 25, // Leicester
-      'S1': 35,  // Sheffield
-      'M1': 45,  // Manchester
+      // London SW base defaults
+      'SW9': 0,
+      'SW': 5,
+      'SE': 8,
+      'W1': 4,
+      'NW': 10,
+      // Some regional examples
+      'TA': 80,
+      'BS': 120,
+      'NG': 200,
+      'LE': 110,
+      'M': 220,
     }
 
     // Extract area code (first 2-3 characters)
@@ -257,7 +274,7 @@ export class PricingService extends BaseService {
         .single()
 
       if (pricingError) {
-        console.error('Service pricing not found:', pricingError)
+        logger.error('Service pricing not found:', pricingError)
         return { data: null, error: new Error('Service pricing not configured') }
       }
 
@@ -291,5 +308,30 @@ export class PricingService extends BaseService {
 
       return { data: result, error: null }
     }, 'Failed to get service price range')
+  }
+
+  // External postcode lookup via postcodes.io
+  private async fetchPostcodeCoords(postcode: string): Promise<{ lat: number, lon: number } | null> {
+    try {
+      const res = await fetch(`https://api.postcodes.io/postcodes/${encodeURIComponent(postcode)}`)
+      if (!res.ok) return null
+      const json = await res.json()
+      const result = json?.result
+      if (!result) return null
+      return { lat: result.latitude, lon: result.longitude }
+    } catch (_) {
+      return null
+    }
+  }
+
+  // Haversine distance (km)
+  private haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+    const toRad = (v: number) => (v * Math.PI) / 180
+    const R = 6371 // km
+    const dLat = toRad(lat2 - lat1)
+    const dLon = toRad(lon2 - lon1)
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+    return R * c
   }
 }

@@ -1,8 +1,8 @@
 export interface OverlayConfig {
   type: OverlayType
-  data?: any
+  data?: unknown
   onClose?: () => void
-  onConfirm?: (result?: any) => void | Promise<void>
+  onConfirm?: (result?: unknown) => void | Promise<void>
   size?: 'sm' | 'md' | 'lg' | 'xl'
   closable?: boolean
 }
@@ -11,6 +11,7 @@ export type OverlayType =
   // Booking overlays
   | 'booking-view'
   | 'booking-reschedule'
+  | 'booking-reschedule-admin'
   | 'booking-cancel'
   | 'booking-confirm'
   | 'booking-decline'
@@ -51,6 +52,6 @@ export interface OverlayContextValue {
 export interface BaseOverlayProps {
   isOpen: boolean
   onClose: () => void
-  data?: any
-  onConfirm?: (result?: any) => void | Promise<void>
+  data?: unknown
+  onConfirm?: (result?: unknown) => void | Promise<void>
 }

@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { ApiResponseHandler } from '@/lib/api/response'
 import { z } from 'zod'
+import { logger } from '@/lib/utils/logger'
 
 // Force Node.js runtime for email service compatibility
 export const runtime = 'nodejs'
@@ -15,7 +16,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { email } = resendVerificationSchema.parse(body)
 
-    console.log('Resend verification request for:', email.toLowerCase())
+    logger.debug('Resend verification request for', { email: email.toLowerCase() })
     
     // Check if user exists in our database
     const { data: existingUser, error: userError } = await supabase
@@ -25,7 +26,7 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (userError || !existingUser) {
-      console.log('User not found in database')
+      logger.debug('User not found in database')
       // Return success anyway for security (don't reveal if email exists)
       return ApiResponseHandler.success({
         message: 'If an account with this email exists, we\'ve sent a verification email.'
@@ -42,7 +43,7 @@ export async function POST(request: NextRequest) {
     })
 
     if (resendError) {
-      console.error('Supabase resend error:', resendError)
+      logger.error('Supabase resend error', resendError instanceof Error ? resendError : undefined)
       
       // Handle specific error cases
       if (resendError.message.includes('Email not confirmed') || 
@@ -67,14 +68,14 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log('Verification email resent successfully to:', email)
+    logger.debug('Verification email resent successfully', { email })
 
     return ApiResponseHandler.success({
       message: 'If an account with this email exists, we\'ve sent a verification email.'
     })
 
   } catch (error) {
-    console.error('Resend verification error:', error)
+    logger.error('Resend verification error', error instanceof Error ? error : undefined)
     
     if (error instanceof z.ZodError) {
       return ApiResponseHandler.validationError('Invalid email address')

@@ -19,12 +19,14 @@ import { CustomerDetailsModal } from './modals/CustomerDetailsModal'
 import { ServiceEditModal } from './modals/ServiceEditModal'
 import { ConfirmDeleteModal } from './modals/ConfirmDeleteModal'
 import { RescheduleActionModal } from './modals/RescheduleActionModal'
+import { logger } from '@/lib/utils/logger'
 
 // Registry of all overlay components
 const overlayComponents: Record<OverlayType, React.ComponentType<any>> = {
   // Booking overlays
   'booking-view': BookingDetailsModal,
   'booking-reschedule': RescheduleModal,
+  'booking-reschedule-admin': RescheduleModal,
   'booking-cancel': CancelModal,
   'booking-confirm': ConfirmBookingModal,
   'booking-decline': DeclineBookingModal,
@@ -65,7 +67,7 @@ export const OverlayManager: React.FC = () => {
         const OverlayComponent = overlayComponents[overlay.type]
         
         if (!OverlayComponent) {
-          console.warn(`No component found for overlay type: ${overlay.type}`)
+          logger.warn(`No component found for overlay type: ${overlay.type}`)
           return null
         }
 

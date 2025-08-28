@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClientFromRequest } from '@/lib/supabase/server'
 import { getVehicleSize, getSizeInfo } from '@/lib/utils/vehicle-size'
+import { logger } from '@/lib/utils/logger'
 
 export async function GET(request: NextRequest) {
   try {
@@ -52,7 +53,7 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: false })
 
     if (vehiclesError) {
-      console.error('Vehicles fetch error:', vehiclesError)
+      logger.error('Vehicles fetch error:', vehiclesError)
       return NextResponse.json({
         success: false,
         error: { message: 'Failed to fetch vehicles', code: 'DATABASE_ERROR' }
@@ -108,8 +109,8 @@ export async function GET(request: NextRequest) {
           model: vehicle.model,
           year: vehicle.year,
           color: vehicle.color,
-          license_plate: vehicle.license_plate || vehicle.registration,
-          registration: vehicle.registration || vehicle.license_plate,
+          license_plate: vehicle.license_plate,
+          registration: vehicle.registration,
           is_primary: vehicle.is_primary,
           is_default: vehicle.is_default,
           last_used: vehicleStats[vehicle.id]?.last_used || null,
@@ -133,7 +134,7 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Customer vehicles API error:', error)
+    logger.error('Customer vehicles API error', error instanceof Error ? error : undefined)
     return NextResponse.json({
       success: false,
       error: { message: 'Internal server error', code: 'SERVER_ERROR' }
@@ -172,7 +173,7 @@ export async function POST(request: NextRequest) {
     const vehicleData = await request.json()
     
     // Debug logging to understand what data is being sent
-    console.log('🔍 [Backend] Received vehicle data:', {
+    logger.debug('🔍 [Backend] Received vehicle data:', {
       make: vehicleData.make,
       model: vehicleData.model,
       license_plate: vehicleData.license_plate,
@@ -183,22 +184,25 @@ export async function POST(request: NextRequest) {
       set_as_default: vehicleData.set_as_default
     })
 
-    // Validate required fields - only make, model, and license_plate are required
-    // Color and year are optional, vehicle_size_id should be provided for pricing
-    if (!vehicleData.make || !vehicleData.model || !vehicleData.license_plate) {
+    // Normalize plate fields: prefer registration if provided
+    const normalizedPlate: string | null = (vehicleData.registration?.trim() || vehicleData.license_plate?.trim() || null)
+
+    // Validate required fields - only make, model, and a plate value are required
+    // Color and year are optional
+    if (!vehicleData.make || !vehicleData.model || !normalizedPlate) {
       const missingFields = []
       if (!vehicleData.make) missingFields.push('make')
       if (!vehicleData.model) missingFields.push('model') 
-      if (!vehicleData.license_plate) missingFields.push('license_plate')
+      if (!normalizedPlate) missingFields.push('registration/license_plate')
       
-      console.error('❌ [Backend] Validation failed - missing fields:', missingFields)
+      logger.error('❌ [Backend] Validation failed - missing fields', undefined, { missingFields })
       return NextResponse.json({
         success: false,
         error: { message: `Missing required fields: ${missingFields.join(', ')}`, code: 'VALIDATION_ERROR' }
       }, { status: 400 })
     }
     
-    console.log('✅ [Backend] Validation passed')
+    logger.debug('✅ [Backend] Validation passed')
 
     // Check if this is the user's first vehicle (make it default)
     const { data: existingVehicles, error: countError } = await supabase
@@ -207,7 +211,7 @@ export async function POST(request: NextRequest) {
       .eq('user_id', profile.id)
 
     if (countError) {
-      console.error('Count vehicles error:', countError)
+      logger.error('Count vehicles error:', countError)
       return NextResponse.json({
         success: false,
         error: { message: 'Failed to check existing vehicles', code: 'DATABASE_ERROR' }
@@ -225,8 +229,9 @@ export async function POST(request: NextRequest) {
         model: vehicleData.model.trim(),
         year: vehicleData.year ? parseInt(vehicleData.year) : new Date().getFullYear(),
         color: vehicleData.color?.trim() || null,
-        license_plate: vehicleData.license_plate?.trim() || null,
-        registration: vehicleData.registration?.trim() || vehicleData.license_plate?.trim() || null,
+        // Keep both columns in sync using the normalized value
+        license_plate: normalizedPlate,
+        registration: normalizedPlate,
         vehicle_size_id: null, // No vehicle_sizes table exists - denormalized structure
         is_primary: isFirstVehicle,
         is_default: isFirstVehicle || vehicleData.set_as_default === true,
@@ -245,14 +250,14 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (insertError) {
-      console.error('❌ [Backend] Vehicle insert error:', insertError)
+      logger.error('❌ [Backend] Vehicle insert error:', insertError)
       return NextResponse.json({
         success: false,
         error: { message: 'Failed to create vehicle', code: 'DATABASE_ERROR' }
       }, { status: 500 })
     }
     
-    console.log('✅ [Backend] Vehicle created successfully:', newVehicle.id)
+    logger.debug('✅ [Backend] Vehicle created successfully:', newVehicle.id)
 
     // If setting as default, unset other defaults
     if (vehicleData.set_as_default === true && !isFirstVehicle) {
@@ -294,7 +299,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Create vehicle API error:', error)
+    logger.error('Create vehicle API error', error instanceof Error ? error : undefined)
     return NextResponse.json({
       success: false,
       error: { message: 'Internal server error', code: 'SERVER_ERROR' }

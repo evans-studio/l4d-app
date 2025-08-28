@@ -3,12 +3,13 @@
 import { useEffect } from 'react'
 import { useAuthStore as useStore } from '@/stores/authStore'
 import { supabase } from '@/lib/supabase/client'
+import { logger } from '@/lib/utils/logger'
 
 export function ZustandAuthInitializer({ children }: { children: React.ReactNode }) {
   const initializeAuth = useStore((state) => state.initializeAuth)
   
   useEffect(() => {
-    let subscription: any = null
+    let subscription: { unsubscribe: () => void } | null = null
     
     // Wait for hydration to complete
     const initAuth = async () => {
@@ -21,7 +22,7 @@ export function ZustandAuthInitializer({ children }: { children: React.ReactNode
         const store = useStore.getState()
         
         if (session?.user) {
-          console.log('🔍 Auth Debug - Full User Session Details:', {
+          logger.debug('🔍 Auth Debug - Full User Session Details:', {
             event: event,
             userId: session.user.id,
             email: session.user.email,
@@ -72,12 +73,12 @@ export function ZustandAuthInitializer({ children }: { children: React.ReactNode
                 
                 
               } else if (profile) {
-                console.log('✅ Existing profile found for verified user:', profile.id)
+                logger.debug('✅ Existing profile found for verified user', { profileId: profile.id })
               }
               
               const finalState = useStore.getState()
             } catch (profileError) {
-              console.error('❌ Profile operations failed for verified user:', profileError)
+              logger.error('❌ Profile operations failed for verified user:', profileError)
               // Don't clear user state if profile operations fail
               // User is still authenticated, profile can be retried later
             }

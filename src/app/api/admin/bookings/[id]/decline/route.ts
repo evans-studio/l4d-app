@@ -3,6 +3,8 @@ import { supabaseAdmin } from '@/lib/supabase/direct'
 import { ApiResponseHandler } from '@/lib/api/response'
 import { EmailService } from '@/lib/services/email'
 import { authenticateAdmin } from '@/lib/api/auth-handler'
+import { logger } from '@/lib/utils/logger'
+import { Booking } from '@/lib/utils/booking-types'
 
 export async function POST(
   request: NextRequest,
@@ -71,7 +73,7 @@ export async function POST(
       .eq('id', id)
 
     if (updateError) {
-      console.error('Error declining booking:', updateError)
+      logger.error('Error declining booking:', updateError)
       return ApiResponseHandler.serverError('Failed to decline booking')
     }
 
@@ -86,7 +88,7 @@ export async function POST(
         .eq('id', booking.time_slot_id)
 
       if (slotError) {
-        console.error('Error freeing time slot:', slotError)
+        logger.error('Error freeing time slot:', slotError)
         // Don't fail the request, but log the error
       }
     }
@@ -105,7 +107,7 @@ export async function POST(
       })
 
     if (historyError) {
-      console.error('Error adding to booking history:', historyError)
+      logger.error('Error adding to booking history:', historyError)
       // Don't fail the request for history error, just log it
     }
 
@@ -123,13 +125,13 @@ export async function POST(
       const emailResult = await emailService.sendBookingDeclineNotification(
         customer.email,
         customerName,
-        { ...booking, status: 'declined' } as any,
+        { ...booking, status: 'declined' } as Booking,
         reason,
         notes
       )
       
       if (!emailResult.success) {
-        console.error('Failed to send decline notification email:', emailResult.error)
+        logger.error('Failed to send decline notification email:', emailResult.error ? new Error(emailResult.error) : undefined)
         // Don't fail the request if email fails
       }
     }
@@ -143,7 +145,7 @@ export async function POST(
     })
 
   } catch (error) {
-    console.error('Decline booking error:', error)
+    logger.error('Decline booking error:', error instanceof Error ? error : undefined)
     return ApiResponseHandler.serverError('Failed to decline booking')
   }
 }

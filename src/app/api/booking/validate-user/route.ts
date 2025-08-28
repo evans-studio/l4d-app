@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase/direct'
+import { logger } from '@/lib/utils/logger'
 
 export async function POST(request: NextRequest) {
   try {
@@ -32,7 +33,7 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (userError && userError.code !== 'PGRST116') {
-      console.error('Database error:', userError)
+      logger.error('Database error', userError instanceof Error ? userError : undefined)
       return NextResponse.json({
         success: false,
         error: { 
@@ -87,7 +88,7 @@ export async function POST(request: NextRequest) {
       .order('created_at', { ascending: false })
 
     if (vehiclesError) {
-      console.error('Vehicles fetch error:', vehiclesError)
+      logger.error('Vehicles fetch error', vehiclesError instanceof Error ? vehiclesError : undefined)
     }
 
     // Load user's saved addresses
@@ -112,7 +113,7 @@ export async function POST(request: NextRequest) {
       .order('created_at', { ascending: false })
 
     if (addressesError) {
-      console.error('Addresses fetch error:', addressesError)
+      logger.error('Addresses fetch error', addressesError instanceof Error ? addressesError : undefined)
     }
 
     // Load recent booking history (last 5 bookings for quick rebooking)
@@ -142,7 +143,7 @@ export async function POST(request: NextRequest) {
       .limit(5)
 
     if (bookingsError) {
-      console.error('Bookings fetch error:', bookingsError)
+      logger.error('Bookings fetch error', bookingsError instanceof Error ? bookingsError : undefined)
     }
 
     // Transform vehicles to include vehicle_size objects (since vehicle_sizes table was removed)
@@ -199,7 +200,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('User validation error:', error)
+    logger.error('User validation error', error instanceof Error ? error : undefined)
     return NextResponse.json({
       success: false,
       error: { 

@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { Card, CardHeader, CardContent } from '@/components/ui/composites/Card'
 import { Button } from '@/components/ui/primitives/Button'
 import { PricingBreakdown } from '@/components/ui/patterns/PricingBreakdown'
-import { StatusBadge } from '@/components/ui/patterns/StatusBadge'
+import { Badge } from '@/components/ui/badge'
 import { 
   CheckCircle, 
   Calendar, 
@@ -28,7 +28,11 @@ interface BookingDetails {
   scheduled_end_time: string
   status: string
   total_price: number
-  pricing_breakdown: any
+  pricing_breakdown: {
+    basePrice?: number
+    totalPrice?: number
+    distanceSurcharge?: number
+  }
   payment_status?: string
   service: {
     name: string
@@ -207,8 +211,8 @@ function BookingSuccessContent() {
       <div className="max-w-4xl mx-auto px-4 py-8">
         {/* Success Header */}
         <div className="text-center mb-8">
-          <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <CheckCircle className="w-10 h-10 text-green-600" />
+          <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 bg-[var(--primary-bg)]">
+            <CheckCircle className="w-10 h-10 text-[var(--primary)]" />
           </div>
           <h1 className="text-3xl font-bold text-text-primary mb-2">
             Booking Confirmed!
@@ -242,14 +246,14 @@ function BookingSuccessContent() {
           
           {/* Email Verification for Existing Users */}
           {needsVerification && !isNewCustomer && (
-            <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg max-w-2xl mx-auto">
+            <div className="mt-6 p-4 rounded-lg max-w-2xl mx-auto bg-[var(--primary-bg)] border border-[var(--border-secondary)]">
               <div className="flex items-start gap-3">
-                <Mail className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                <Mail className="w-5 h-5 text-[var(--primary)] mt-0.5 flex-shrink-0" />
                 <div className="text-left">
-                  <h3 className="font-semibold text-blue-800 mb-1">
+                  <h3 className="font-semibold text-text-primary mb-1">
                     Email verification sent
                   </h3>
-                  <p className="text-sm text-blue-700">
+                  <p className="text-sm text-text-secondary">
                     We've sent you a verification email with your booking confirmation. 
                     Please check your inbox to verify your email address.
                   </p>
@@ -263,7 +267,7 @@ function BookingSuccessContent() {
           {/* Main Booking Details */}
           <div className="lg:col-span-2 space-y-6">
             {/* Booking Reference */}
-            <Card>
+            <Card className="bg-[var(--surface-secondary)] border-[var(--border-secondary)]">
               <CardHeader>
                 <h2 className="text-xl font-semibold text-text-primary">
                   Booking Details
@@ -277,7 +281,9 @@ function BookingSuccessContent() {
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <StatusBadge status={booking.status as any} />
+                  <Badge variant="outline" className="bg-[var(--surface-tertiary)] border-[var(--border-secondary)] capitalize">
+                    {booking.status}
+                  </Badge>
                   {booking.confirmation_sent_at && (
                     <span className="text-xs text-text-tertiary">
                       Confirmation sent
@@ -288,7 +294,7 @@ function BookingSuccessContent() {
             </Card>
 
             {/* Service & Vehicle Details */}
-            <Card>
+            <Card className="bg-[var(--surface-secondary)] border-[var(--border-secondary)]">
               <CardHeader>
                 <h3 className="text-lg font-semibold text-text-primary">
                   Service & Vehicle
@@ -311,19 +317,19 @@ function BookingSuccessContent() {
                       <Car className="w-4 h-4 text-text-tertiary" />
                       <span className="text-text-secondary text-sm">
                         {(() => {
-                          const veh: any = booking.vehicle || (booking as any).vehicle_details
+                          const veh = ((booking as unknown as { vehicle?: { color?: string; year?: number; make?: string; model?: string; vehicle_size?: { name?: string } }; vehicle_details?: { color?: string; year?: number; make?: string; model?: string } }).vehicle) || (booking as unknown as { vehicle_details?: { color?: string; year?: number; make?: string; model?: string } }).vehicle_details
                           if (!veh) return 'Vehicle details not provided'
-                          const color = veh.color || ''
-                          const year = veh.year || ''
-                          const make = veh.make || ''
-                          const model = veh.model || ''
+                          const color = veh?.color || ''
+                          const year = veh?.year || ''
+                          const make = veh?.make || ''
+                          const model = veh?.model || ''
                           return `${color ? color + ' ' : ''}${year ? year + ' ' : ''}${make} ${model}`.trim()
                         })()}
                       </span>
                     </div>
-                    {booking.vehicle && (booking as any).vehicle?.vehicle_size?.name && (
+                    {booking.vehicle && (booking as unknown as { vehicle?: { vehicle_size?: { name?: string } } }).vehicle?.vehicle_size?.name && (
                       <p className="text-text-tertiary text-xs">
-                        {(booking as any).vehicle.vehicle_size.name} vehicle
+                        {((booking as unknown as { vehicle?: { vehicle_size?: { name?: string } } }).vehicle?.vehicle_size?.name) as string} vehicle
                       </p>
                     )}
                   </div>
@@ -332,7 +338,7 @@ function BookingSuccessContent() {
             </Card>
 
             {/* Date & Time */}
-            <Card>
+            <Card className="bg-[var(--surface-secondary)] border-[var(--border-secondary)]">
               <CardHeader>
                 <h3 className="text-lg font-semibold text-text-primary">
                   Appointment Details
@@ -364,7 +370,7 @@ function BookingSuccessContent() {
                   <MapPin className="w-5 h-5 text-brand-600 mt-0.5" />
                   <div>
                     {(() => {
-                      const addr = booking.address || (booking as any).service_address
+                      const addr = booking.address || (booking as unknown as { service_address?: { address_line_1?: string; address_line_2?: string; city?: string; postal_code?: string } }).service_address
                       if (!addr) return <p className="text-text-secondary text-sm">Address not provided</p>
                       return (
                         <>
@@ -385,7 +391,7 @@ function BookingSuccessContent() {
           {/* Sidebar */}
           <div className="space-y-6">
             {/* Compact Pricing Summary */}
-            <Card>
+            <Card className="bg-[var(--surface-secondary)] border-[var(--border-secondary)]">
               <CardHeader>
                 <h3 className="text-lg font-semibold text-text-primary">
                   Pricing Summary
@@ -411,7 +417,7 @@ function BookingSuccessContent() {
             </Card>
 
             {/* Quick Actions */}
-            <Card>
+            <Card className="bg-[var(--surface-secondary)] border-[var(--border-secondary)]">
               <CardHeader>
                 <h3 className="text-lg font-semibold text-text-primary">
                   Quick Actions
@@ -420,7 +426,7 @@ function BookingSuccessContent() {
               <CardContent className="space-y-3">
                 {booking.payment_status !== 'paid' && paymentLink && (
                   <a href={paymentLink} target="_blank" rel="noopener noreferrer">
-                    <Button className="w-full justify-center">
+                    <Button className="w-full justify-start">
                       Pay Now via PayPal
                     </Button>
                   </a>
@@ -441,7 +447,7 @@ function BookingSuccessContent() {
             </Card>
 
             {/* Contact Info */}
-            <Card>
+            <Card className="bg-[var(--surface-secondary)] border-[var(--border-secondary)]">
               <CardHeader>
                 <h3 className="text-lg font-semibold text-text-primary">
                   Need Help?

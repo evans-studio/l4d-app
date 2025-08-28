@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { createClientFromRequest } from '@/lib/supabase/server'
 import { ApiResponseHandler } from '@/lib/api/response'
+import { logger } from '@/lib/utils/logger'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -39,7 +40,7 @@ export async function GET(request: NextRequest) {
     const start = searchParams.get('start')
     const end = searchParams.get('end')
 
-    console.log(`Admin API: Fetching time slots with date range: start=${start}, end=${end}`)
+    logger.debug(`Admin API: Fetching time slots with date range: start=${start}, end=${end}`)
     
     // Get current date and time for filtering
     const now = new Date()
@@ -85,11 +86,11 @@ export async function GET(request: NextRequest) {
     const { data: timeSlots, error } = await query
 
     if (error) {
-      console.error('Database error:', error)
+      logger.error('Database error:', error)
       return ApiResponseHandler.serverError('Failed to fetch time slots')
     }
 
-    console.log(`Admin API: Database returned ${timeSlots?.length || 0} time slots`)
+    logger.debug(`Admin API: Database returned ${timeSlots?.length || 0} time slots`)
     
     // Simplified transformation to avoid complex nested object issues
     const transformedSlots = timeSlots?.map(slot => {
@@ -97,7 +98,7 @@ export async function GET(request: NextRequest) {
       
       // Debug log for first few slots
       if (timeSlots.indexOf(slot) < 3) {
-        console.log(`Admin API: Slot ${slot.id} - Date: ${slot.slot_date}, Time: ${slot.start_time}, Available: ${slot.is_available}, Booking: ${booking ? 'Yes' : 'No'}`)
+        logger.debug(`Admin API: Slot ${slot.id} - Date: ${slot.slot_date}, Time: ${slot.start_time}, Available: ${slot.is_available}, Booking: ${booking ? 'Yes' : 'No'}`)
       }
       
       return {
@@ -113,7 +114,7 @@ export async function GET(request: NextRequest) {
           status: booking.status,
           total_price: booking.total_price,
           special_instructions: booking.special_instructions,
-          services: booking.booking_services?.map((bs: any) => ({
+          services: (booking.booking_services as Array<{ service?: { name?: string; short_description?: string } }> | undefined)?.map((bs) => ({
             name: bs.service?.name || 'Unknown Service',
             description: bs.service?.short_description || null
           })) || []
@@ -121,12 +122,12 @@ export async function GET(request: NextRequest) {
       }
     }) || []
 
-    console.log(`Admin API: Returning ${transformedSlots.length} time slots for date range ${start || 'no-start'} to ${end || 'no-end'}`)
+    logger.debug(`Admin API: Returning ${transformedSlots.length} time slots for date range ${start || 'no-start'} to ${end || 'no-end'}`)
 
     return ApiResponseHandler.success(transformedSlots)
 
   } catch (error) {
-    console.error('API error:', error)
+    logger.error('API error:', error instanceof Error ? error : undefined)
     return ApiResponseHandler.serverError('Internal server error')
   }
 }
@@ -181,7 +182,7 @@ export async function POST(request: NextRequest) {
     const now = new Date()
     
     if (slotDateTime <= now) {
-      console.log(`Admin API POST: Rejecting past slot - ${slot_date}T${start_time} is before ${now.toISOString()}`)
+      logger.debug(`Admin API POST: Rejecting past slot - ${slot_date}T${start_time} is before ${now.toISOString()}`)
       return ApiResponseHandler.badRequest('Cannot create time slots for past dates and times')
     }
 
@@ -195,7 +196,7 @@ export async function POST(request: NextRequest) {
     }]
 
     // Check for existing slots to avoid duplicates
-    console.log(`Admin API POST: Checking for existing slots on ${slot_date} at time ${start_time}`)
+    logger.debug(`Admin API POST: Checking for existing slots on ${slot_date} at time ${start_time}`)
     
     const { data: existingSlots, error: checkError } = await supabaseAdmin
       .from('time_slots')
@@ -204,14 +205,14 @@ export async function POST(request: NextRequest) {
       .in('start_time', slotsToCreate.map(s => s.start_time))
 
     if (checkError) {
-      console.error('Error checking existing slots:', checkError)
+      logger.error('Error checking existing slots:', checkError)
     } else {
-      console.log(`Admin API POST: Found ${existingSlots?.length || 0} existing slots`)
+      logger.debug(`Admin API POST: Found ${existingSlots?.length || 0} existing slots`)
     }
 
     if (existingSlots && existingSlots.length > 0) {
       const duplicates = existingSlots.map(s => s.start_time).join(', ')
-      console.log(`Admin API POST: Duplicate slots found for times: ${duplicates}`)
+      logger.debug(`Admin API POST: Duplicate slots found for times: ${duplicates}`)
       return ApiResponseHandler.conflict(`Time slots already exist for: ${duplicates}`)
     }
 
@@ -222,7 +223,7 @@ export async function POST(request: NextRequest) {
       .select()
 
     if (error) {
-      console.error('Database error:', error)
+      logger.error('Database error:', error)
       return ApiResponseHandler.serverError('Failed to create time slots')
     }
 
@@ -234,7 +235,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('API error:', error)
+    logger.error('API error:', error instanceof Error ? error : undefined)
     return ApiResponseHandler.serverError('Internal server error')
   }
 }
@@ -270,7 +271,7 @@ export async function DELETE(request: NextRequest) {
     const action = searchParams.get('action')
 
     if (action === 'clear-unbooked') {
-      console.log('Admin API DELETE: Clearing all unbooked time slots')
+      logger.debug('Admin API DELETE: Clearing all unbooked time slots')
       
       // First, get all time slot IDs that have bookings
       const { data: bookedSlots, error: bookedError } = await supabaseAdmin
@@ -279,12 +280,12 @@ export async function DELETE(request: NextRequest) {
         .not('time_slot_id', 'is', null)
 
       if (bookedError) {
-        console.error('Database error fetching booked slots:', bookedError)
+        logger.error('Database error fetching booked slots:', bookedError)
         return ApiResponseHandler.serverError('Failed to identify booked time slots')
       }
 
       const bookedSlotIds = bookedSlots?.map(b => b.time_slot_id).filter(Boolean) || []
-      console.log(`Admin API DELETE: Found ${bookedSlotIds.length} booked time slots to preserve`)
+      logger.debug(`Admin API DELETE: Found ${bookedSlotIds.length} booked time slots to preserve`)
 
       // Delete all time slots that are not in the booked list
       const { data: deletedSlots, error } = await supabaseAdmin
@@ -294,11 +295,11 @@ export async function DELETE(request: NextRequest) {
         .select()
 
       if (error) {
-        console.error('Database error:', error)
+        logger.error('Database error:', error)
         return ApiResponseHandler.serverError('Failed to delete unbooked time slots')
       }
 
-      console.log(`Admin API DELETE: Removed ${deletedSlots?.length || 0} unbooked time slots`)
+      logger.debug(`Admin API DELETE: Removed ${deletedSlots?.length || 0} unbooked time slots`)
 
       return ApiResponseHandler.success({
         deleted_count: deletedSlots?.length || 0,
@@ -310,7 +311,7 @@ export async function DELETE(request: NextRequest) {
     return ApiResponseHandler.badRequest('Invalid action. Use ?action=clear-unbooked')
 
   } catch (error) {
-    console.error('API error:', error)
+    logger.error('API error:', error instanceof Error ? error : undefined)
     return ApiResponseHandler.serverError('Internal server error')
   }
 }

@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { createClientFromRequest } from '@/lib/supabase/server'
 import { ApiResponseHandler } from '@/lib/api/response'
 import { authenticateAdmin } from '@/lib/api/auth-handler'
+import { logger } from '@/lib/utils/logger'
 
 export async function GET(request: NextRequest) {
   try {
@@ -52,7 +53,7 @@ export async function GET(request: NextRequest) {
     const { data: bookings, error: bookingsError } = await query
 
     if (bookingsError) {
-      console.error('Admin bookings database error:', bookingsError)
+      logger.error('Admin bookings database error:', bookingsError)
       return ApiResponseHandler.serverError('Failed to fetch bookings: ' + bookingsError.message)
     }
 
@@ -108,12 +109,31 @@ export async function GET(request: NextRequest) {
     const rescheduleMap = new Map(rescheduleRequests?.map(r => [r.booking_id, r]) || [])
 
     // Transform the data for frontend consumption
-    const adminBookings = bookings.map((booking: any) => {
-      const customer = customerMap.get(booking.customer_id) || { first_name: '', last_name: '', email: '', phone: '' }
-      const service = serviceMap.get(booking.service_id) || { name: '', short_description: '' }
-      const vehicle = vehicleMap.get(booking.vehicle_id) || { make: '', model: '', year: null, color: '' }
-      const address = addressMap.get(booking.address_id) || { address_line_1: '', city: '', postal_code: '' }
-      const rescheduleRequest = rescheduleMap.get(booking.id)
+    type CustomerLite = { id: string; first_name?: string; last_name?: string; email?: string; phone?: string }
+    type ServiceLite = { id: string; name?: string; short_description?: string }
+    type VehicleLite = { id: string; make?: string; model?: string; year?: number | null; color?: string }
+    type AddressLite = { id: string; address_line_1?: string; city?: string; postal_code?: string }
+    type RescheduleLite = { id: string; booking_id: string; requested_date: string; requested_time: string; reason?: string; created_at: string }
+
+    const adminBookings = bookings.map((booking: { 
+      id: string,
+      customer_id: string, 
+      service_id: string, 
+      vehicle_id: string, 
+      address_id: string, 
+      booking_reference: string,
+      scheduled_date: string,
+      scheduled_start_time: string,
+      status: string,
+      total_price: number,
+      special_instructions?: string,
+      created_at: string
+    }) => {
+      const customer = (customerMap.get(booking.customer_id) as CustomerLite) || { id: booking.customer_id, first_name: '', last_name: '', email: '', phone: '' }
+      const service = (serviceMap.get(booking.service_id) as ServiceLite) || { id: booking.service_id, name: '', short_description: '' }
+      const vehicle = (vehicleMap.get(booking.vehicle_id) as VehicleLite) || { id: booking.vehicle_id, make: '', model: '', year: null, color: '' }
+      const address = (addressMap.get(booking.address_id) as AddressLite) || { id: booking.address_id, address_line_1: '', city: '', postal_code: '' }
+      const rescheduleRequest = rescheduleMap.get(booking.id) as RescheduleLite | undefined
       
       const customerName = [customer.first_name, customer.last_name]
         .filter(Boolean)
@@ -162,7 +182,7 @@ export async function GET(request: NextRequest) {
     return ApiResponseHandler.success(adminBookings)
 
   } catch (error) {
-    console.error('Admin bookings error:', error)
+    logger.error('Admin bookings error:', error instanceof Error ? error : undefined)
     return ApiResponseHandler.serverError('Failed to fetch bookings')
   }
 }

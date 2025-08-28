@@ -1,6 +1,7 @@
 'use client'
 
 import { Card, CardHeader, CardContent } from '@/components/ui/composites/Card'
+import { isNewUIEnabled } from '@/lib/config/feature-flags'
 import { 
   TrendingUp, 
   Calendar, 
@@ -38,9 +39,9 @@ export function BookingStatsWidget({ stats }: BookingStatsWidgetProps) {
   }
 
   return (
-    <Card className="h-full">
+    <Card className="h-full" data-ui={isNewUIEnabled() ? 'new' : 'old'}>
       <CardHeader>
-        <h3 className="text-lg font-semibold text-text-primary flex items-center gap-2">
+        <h3 className="text-lg font-semibold text-text-primary flex items-center gap-2 tracking-tight">
           <TrendingUp className="w-5 h-5 text-brand-400" />
           Your Stats
         </h3>
@@ -48,11 +49,11 @@ export function BookingStatsWidget({ stats }: BookingStatsWidgetProps) {
       <CardContent className="space-y-5">
         {/* Key Stats Grid */}
         <div className="grid grid-cols-2 gap-4">
-          <div className="text-center p-3 bg-surface-tertiary rounded-lg">
+          <div className="text-center p-3 bg-surface-tertiary rounded-lg border border-border-secondary">
             <div className="text-2xl font-bold text-brand-600 mb-1">{stats.totalBookings}</div>
             <div className="text-xs text-text-secondary uppercase tracking-wide">Total Bookings</div>
           </div>
-          <div className="text-center p-3 bg-surface-tertiary rounded-lg">
+          <div className="text-center p-3 bg-surface-tertiary rounded-lg border border-border-secondary">
             <div className="text-lg font-bold text-text-primary mb-1">
               {formatCurrency(stats.totalSpent)}
             </div>
@@ -61,7 +62,7 @@ export function BookingStatsWidget({ stats }: BookingStatsWidgetProps) {
         </div>
 
         {/* Member Since */}
-        <div className="flex items-center gap-3 p-3 bg-brand-600/5 rounded-lg border border-brand-600/10">
+        <div className="flex items-center gap-3 p-3 bg-brand-600/10 rounded-lg border border-brand-600/20">
           <Clock className="w-5 h-5 text-brand-400" />
           <div>
             <p className="text-sm font-medium text-text-primary">Member since {formatDate(stats.memberSince)}</p>
@@ -70,7 +71,7 @@ export function BookingStatsWidget({ stats }: BookingStatsWidgetProps) {
 
         {/* Favorite Service */}
         {stats.favoriteService && (
-          <div className="bg-surface-tertiary rounded-lg p-3">
+          <div className="bg-surface-tertiary rounded-lg p-3 border border-border-secondary">
             <div className="flex items-center gap-2 mb-1">
               <Star className="w-4 h-4 text-warning-400" />
               <span className="text-xs font-medium text-text-secondary uppercase tracking-wide">

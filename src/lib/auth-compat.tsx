@@ -7,7 +7,14 @@ import { User } from '@supabase/supabase-js'
 // Backward compatibility interface matching the old auth context
 interface LegacyAuthContextType {
   user: User | null
-  profile: any | null
+  profile: { 
+    role?: 'admin' | 'super_admin' | 'customer'; 
+    first_name?: string; 
+    last_name?: string; 
+    email?: string;
+    phone?: string | null;
+    created_at?: string 
+  } | null
   isLoading: boolean
   isAuthenticated: boolean
   isAdmin: boolean

@@ -4,7 +4,8 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/primitives/Button'
 import { Badge } from '@/components/ui/primitives/Badge'
 import { Card, CardContent } from '@/components/ui/composites/Card'
-import { 
+import { logger } from '@/lib/utils/logger'
+import {
   MapPin, 
   Edit,
   Trash2,
@@ -31,7 +32,9 @@ interface AddressCardProps {
   }
   variant?: 'compact' | 'detailed'
   showActions?: boolean
-  onEdit?: (address: any) => void
+  onEdit?: {
+    bivarianceHack(address: AddressCardProps['address']): void
+  }['bivarianceHack']
   onDelete?: (addressId: string) => void
   onSetDefault?: (addressId: string) => void
 }
@@ -67,7 +70,8 @@ export function AddressCard({
   }
 
   const formatDistance = (distance?: number) => {
-    if (!distance) return null
+    // Allow 0 miles as a valid value; only treat undefined/null as missing
+    if (distance === undefined || distance === null) return null
     
     const roundedDistance = Math.round(distance * 10) / 10
     const isFree = distance <= 17.5
@@ -86,7 +90,7 @@ export function AddressCard({
     try {
       await onDelete(address.id)
     } catch (error) {
-      console.error('Delete failed:', error)
+      logger.error('Delete failed:', error)
     } finally {
       setIsDeleting(false)
     }
@@ -98,13 +102,14 @@ export function AddressCard({
     try {
       await onSetDefault(address.id)
     } catch (error) {
-      console.error('Set default failed:', error)
+      logger.error('Set default failed:', error)
     } finally {
       setIsSettingDefault(false)
     }
   }
 
   const distanceInfo = formatDistance(address.distance_from_business)
+  const hasUsage = Boolean(address.last_used) || ((address.booking_count ?? 0) > 0)
 
   if (variant === 'compact') {
     return (
@@ -220,7 +225,7 @@ export function AddressCard({
               )}
 
               {/* Usage Stats */}
-              {(address.last_used || address.booking_count) && (
+              {hasUsage && (
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-lg bg-surface-tertiary flex items-center justify-center">
                     <Calendar className="w-5 h-5 text-text-secondary" />
@@ -229,9 +234,9 @@ export function AddressCard({
                     <p className="font-medium text-text-primary">
                       {formatLastUsed(address.last_used)}
                     </p>
-                    {address.booking_count && (
+                    {(address.booking_count ?? 0) > 0 && (
                       <p className="text-sm text-text-secondary">
-                        Used in {address.booking_count} booking{address.booking_count > 1 ? 's' : ''}
+                        Used in {(address.booking_count ?? 0)} booking{(address.booking_count ?? 0) > 1 ? 's' : ''}
                       </p>
                     )}
                   </div>

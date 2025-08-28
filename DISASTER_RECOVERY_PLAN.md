@@ -386,8 +386,9 @@ ADMIN_EMAIL=zell@love4detailing.com
 EMAIL_REPLY_TO=zell@love4detailing.com
 
 # Payment
-PAYPAL_ME_USERNAME=love4detailing
-PAYPAL_BUSINESS_EMAIL=zell@love4detailing.com
+# Example placeholders; configure real secrets in CI/CD, not in code/docs
+PAYPAL_ME_USERNAME=mock
+PAYPAL_BUSINESS_EMAIL=merchant@example.com
 
 # Monitoring
 SENTRY_DSN=[REDACTED]

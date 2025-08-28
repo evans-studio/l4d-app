@@ -2,9 +2,10 @@
 
 import React, { useState, useEffect } from 'react'
 import { Calendar, Clock, MapPin, Car, User, Phone, Mail, CheckCircle, AlertCircle, XCircle, Clock as PendingIcon, FileText, RefreshCw, DollarSign, UserX } from 'lucide-react'
-import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from '@/components/ui/composites/Modal'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { BaseOverlayProps } from '@/lib/overlay/types'
 import { Button } from '@/components/ui/primitives/Button'
+import { AdminReschedulePanel } from '@/components/ui/overlays/modals/RescheduleAdminPanel'
 import { Badge } from '@/components/ui/primitives/Badge'
 
 interface BookingDetails {
@@ -111,10 +112,13 @@ export const BookingDetailsModal: React.FC<BaseOverlayProps> = ({
   onClose,
   data
 }) => {
-  const [booking, setBooking] = useState<BookingDetails | null>(data?.booking || null)
+  const dataObj: Record<string, unknown> = data && typeof data === 'object' ? (data as Record<string, unknown>) : {}
+  const initialBooking = (dataObj.booking as Partial<BookingDetails> | undefined) || null
+  const [booking, setBooking] = useState<BookingDetails | null>(initialBooking as BookingDetails | null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
   const [actionLoading, setActionLoading] = useState<string | null>(null)
+  const [showReschedule, setShowReschedule] = useState(false)
   const [showCancelPrompt, setShowCancelPrompt] = useState(false)
   const [cancelReason, setCancelReason] = useState('')
 
@@ -152,7 +156,7 @@ export const BookingDetailsModal: React.FC<BaseOverlayProps> = ({
   }
 
   // Admin action helpers (status transitions)
-  const updateStatus = async (newStatus: string, body: Record<string, any> = {}) => {
+  const updateStatus = async (newStatus: string, body: Record<string, unknown> = {}) => {
     if (!booking?.id) return
     setActionLoading(newStatus)
     try {
@@ -175,53 +179,56 @@ export const BookingDetailsModal: React.FC<BaseOverlayProps> = ({
     }
   }
 
-  const confirmBooking = async () => {
-    if (!booking?.id) return
-    setActionLoading('confirmed')
+  // Mark-as-paid is disabled in this dialog; only available from booking card
+
+  const submitCancellation = async () => {
+    const finalReason = (cancelReason || '').trim() || 'Cancelled by admin'
     try {
-      const response = await fetch(`/api/admin/bookings/${booking.id}/confirm`, { method: 'POST' })
+      setActionLoading('cancelled')
+      const response = await fetch(`/api/admin/bookings/${booking!.id}/cancel`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: finalReason })
+      })
       const result = await response.json()
-      if (result?.success && result?.data) {
-        setBooking({ ...booking, status: 'confirmed' })
+      if (response.ok && result?.success) {
         setError('')
-      } else {
-        setError(result?.error?.message || 'Failed to confirm booking')
+        setShowCancelPrompt(false)
+        setCancelReason('')
+        // Refresh booking view state
+        await loadBookingDetails()
+        return
       }
-    } catch (e) {
+      setError(result?.error?.message || 'Failed to cancel booking')
+    } catch (_) {
       setError('Network error occurred')
     } finally {
       setActionLoading(null)
     }
   }
 
-  const submitCancellation = async () => {
-    if (!cancelReason.trim()) return
-    await updateStatus('cancelled', { reason: cancelReason })
-    setShowCancelPrompt(false)
-    setCancelReason('')
-  }
-
   useEffect(() => {
-    if (!isOpen || !data?.bookingId) {
+    const bookingId = dataObj.bookingId as string | undefined
+    if (!isOpen || !bookingId) {
       setIsLoading(false)
       return
     }
-    const minimal = data?.booking as any | undefined
-    const needsHydration = !minimal || !minimal.address || !minimal.address.address_line_1 || !minimal.customer_phone
+    const minimal = dataObj.booking as Partial<BookingDetails> | undefined
+    const needsHydration = !minimal || !minimal.address || !minimal.address?.address_line_1 || !minimal.customer_phone
     if (needsHydration) {
       loadBookingDetails()
     } else {
       setBooking(minimal as BookingDetails)
       setIsLoading(false)
     }
-  }, [isOpen, data?.bookingId])
+  }, [isOpen, dataObj.bookingId])
 
   const loadBookingDetails = async () => {
     try {
       setIsLoading(true)
       setError('')
       
-      const response = await fetch(`/api/bookings/${data.bookingId}`)
+      const response = await fetch(`/api/bookings/${String(dataObj.bookingId || '')}`)
       const result = await response.json()
 
       if (result.success) {
@@ -283,37 +290,37 @@ export const BookingDetailsModal: React.FC<BaseOverlayProps> = ({
 
   if (isLoading) {
     return (
-      <Modal open={isOpen} onClose={onClose}>
-        <ModalContent size="lg" position="center" mobile="fullscreen" onClose={onClose}>
-          <ModalHeader title="Booking Details" />
-          <ModalBody>
-            <div className="flex items-center justify-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600"></div>
-            </div>
-          </ModalBody>
-        </ModalContent>
-      </Modal>
+      <Dialog open={isOpen} onOpenChange={(o) => { if (!o) onClose?.() }}>
+        <DialogContent className="sm:max-w-[720px]">
+          <DialogHeader>
+            <DialogTitle>Booking Details</DialogTitle>
+          </DialogHeader>
+          <div className="flex items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600"></div>
+          </div>
+        </DialogContent>
+      </Dialog>
     )
   }
 
   if (error || !booking) {
     return (
-      <Modal open={isOpen} onClose={onClose}>
-        <ModalContent size="lg" position="center" mobile="fullscreen" onClose={onClose}>
-          <ModalHeader title="Booking Details" />
-          <ModalBody>
-            <div className="text-center py-12">
-              <XCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-              <p className="text-red-600 mb-4">{error || 'Booking not found'}</p>
-              {data?.bookingId && (
-                <Button onClick={loadBookingDetails} variant="outline">
-                  Try Again
-                </Button>
-              )}
-            </div>
-          </ModalBody>
-        </ModalContent>
-      </Modal>
+      <Dialog open={isOpen} onOpenChange={(o) => { if (!o) onClose?.() }}>
+        <DialogContent className="sm:max-w-[720px]">
+          <DialogHeader>
+            <DialogTitle>Booking Details</DialogTitle>
+          </DialogHeader>
+          <div className="text-center py-12">
+            <XCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+            <p className="text-red-600 mb-4">{error || 'Booking not found'}</p>
+            {Boolean(dataObj.bookingId) && (
+              <Button onClick={loadBookingDetails} variant="outline">
+                Try Again
+              </Button>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     )
   }
 
@@ -323,10 +330,12 @@ export const BookingDetailsModal: React.FC<BaseOverlayProps> = ({
 
   return (
     <>
-    <Modal open={isOpen} onClose={onClose}>
-      <ModalContent size="lg" position="center" mobile="fullscreen" onClose={onClose}>
-        <ModalHeader title="Booking Details" />
-        <ModalBody scrollable>
+    <Dialog open={isOpen} onOpenChange={(o) => { if (!o) onClose?.() }}>
+      <DialogContent className="sm:max-w-[720px]">
+        <DialogHeader>
+          <DialogTitle>Booking Details</DialogTitle>
+        </DialogHeader>
+        <div className="max-h-[75vh] overflow-y-auto pr-1">
           <div className="space-y-6">
             {/* Header */}
             <div className="pb-6 border-b border-border-secondary">
@@ -510,10 +519,18 @@ export const BookingDetailsModal: React.FC<BaseOverlayProps> = ({
               </div>
             )}
           </div>
-        </ModalBody>
-        <ModalFooter className="sticky bottom-0 bg-surface-primary">
-          {booking.status === 'pending' && (
+        </div>
+        <div className="sticky bottom-0 bg-surface-primary mt-4 pt-4 border-t border-border-secondary flex flex-wrap gap-3">
+          {['pending', 'confirmed', 'rescheduled'].includes(booking.status) && (
             <>
+              <Button
+                onClick={() => setShowReschedule(true)}
+                variant="primary"
+                size="lg"
+                className="flex-1 min-h-[48px] touch-manipulation"
+              >
+                Reschedule
+              </Button>
               <Button
                 onClick={() => setShowCancelPrompt(true)}
                 variant="outline"
@@ -522,37 +539,18 @@ export const BookingDetailsModal: React.FC<BaseOverlayProps> = ({
                 loading={actionLoading === 'cancelled'}
               >
                 Cancel Booking
-              </Button>
-              <Button
-                onClick={confirmBooking}
-                size="lg"
-                className="flex-1 min-h-[48px] touch-manipulation bg-blue-600 hover:bg-blue-700 text-white"
-                loading={actionLoading === 'confirmed'}
-              >
-                Mark as Paid / Confirm
               </Button>
             </>
           )}
           {booking.status === 'confirmed' && (
-            <>
-              <Button
-                onClick={() => setShowCancelPrompt(true)}
-                variant="outline"
-                size="lg"
-                className="flex-1 min-h-[48px] touch-manipulation"
-                loading={actionLoading === 'cancelled'}
-              >
-                Cancel Booking
-              </Button>
-              <Button
-                onClick={() => updateStatus('in_progress')}
-                size="lg"
-                className="flex-1 min-h-[48px] touch-manipulation bg-blue-600 hover:bg-blue-700 text-white"
-                loading={actionLoading === 'in_progress'}
-              >
-                Start Service
-              </Button>
-            </>
+            <Button
+              onClick={() => updateStatus('in_progress')}
+              size="lg"
+              className="flex-1 min-h-[48px] touch-manipulation bg-blue-600 hover:bg-blue-700 text-white"
+              loading={actionLoading === 'in_progress'}
+            >
+              Start Service
+            </Button>
           )}
           {booking.status === 'in_progress' && (
             <>
@@ -585,15 +583,19 @@ export const BookingDetailsModal: React.FC<BaseOverlayProps> = ({
               Close
             </Button>
           )}
-        </ModalFooter>
-      </ModalContent>
-    </Modal>
+        </div>
+      </DialogContent>
+    </Dialog>
+
+    {/* Mark as Paid intentionally disabled in this dialog. Use booking card Confirm action. */}
 
     {/* Cancel Prompt */}
-    <Modal open={showCancelPrompt} onClose={() => setShowCancelPrompt(false)}>
-      <ModalContent size="md" position="center" mobile="fullscreen" onClose={() => setShowCancelPrompt(false)}>
-        <ModalHeader title="Cancel Booking" />
-        <ModalBody>
+    <Dialog open={showCancelPrompt} onOpenChange={(o) => { if (!o) setShowCancelPrompt(false) }}>
+      <DialogContent className="sm:max-w-[520px]">
+        <DialogHeader>
+          <DialogTitle>Cancel Booking</DialogTitle>
+        </DialogHeader>
+        <div>
           <div className="space-y-4">
             <p className="text-text-secondary text-sm">Please provide a reason for cancelling this booking. The reason may be included in customer notifications.</p>
             <textarea
@@ -603,13 +605,34 @@ export const BookingDetailsModal: React.FC<BaseOverlayProps> = ({
               className="w-full min-h-[100px] rounded-md border border-border-secondary bg-surface-secondary p-3 text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand-600"
             />
           </div>
-        </ModalBody>
-        <ModalFooter>
+        </div>
+        <div className="mt-4 flex justify-end gap-2">
           <Button variant="outline" onClick={() => setShowCancelPrompt(false)} className="min-h-[44px]">Back</Button>
           <Button onClick={submitCancellation} disabled={!cancelReason.trim()} className="min-h-[44px] bg-red-600 hover:bg-red-700 text-white">Confirm Cancel</Button>
-        </ModalFooter>
-      </ModalContent>
-    </Modal>
+        </div>
+      </DialogContent>
+    </Dialog>
+
+    {/* Admin Reschedule */}
+    <Dialog open={showReschedule} onOpenChange={(o) => { if (!o) setShowReschedule(false) }}>
+      <DialogContent className="sm:max-w-[720px]">
+        <DialogHeader>
+          <DialogTitle>Reschedule Booking (Admin)</DialogTitle>
+        </DialogHeader>
+        <div className="py-2">
+          <p className="text-sm text-text-secondary mb-4">Choose a new slot for this booking. Customer will be notified.</p>
+          <AdminReschedulePanel
+            bookingId={booking.id}
+            currentDate={booking.scheduled_date}
+            currentTime={(booking.start_time || booking.scheduled_start_time) as string}
+            onDone={async () => {
+              setShowReschedule(false)
+              await loadBookingDetails()
+            }}
+          />
+        </div>
+      </DialogContent>
+    </Dialog>
     </>
   )
 }

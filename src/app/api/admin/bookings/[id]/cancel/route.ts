@@ -3,6 +3,8 @@ import { supabaseAdmin } from '@/lib/supabase/direct'
 import { ApiResponseHandler } from '@/lib/api/response'
 import { EmailService } from '@/lib/services/email'
 import { authenticateAdmin } from '@/lib/api/auth-handler'
+import { logger } from '@/lib/utils/logger'
+import { Booking } from '@/lib/utils/booking-types'
 
 export async function POST(
   request: NextRequest,
@@ -63,16 +65,16 @@ export async function POST(
       .update({
         status: 'cancelled',
         cancelled_at: new Date().toISOString(),
+        cancelled_by: authResult.user!.id,
         cancellation_reason: reason,
-        refund_amount: refundAmount || null,
-        internal_notes: cancellationNotes,
+        admin_notes: cancellationNotes,
         time_slot_id: null, // Unlink from time slot
         updated_at: new Date().toISOString()
       })
       .eq('id', id)
 
     if (updateError) {
-      console.error('Error cancelling booking:', updateError)
+      logger.error('Error cancelling booking:', updateError)
       return ApiResponseHandler.serverError('Failed to cancel booking')
     }
 
@@ -86,7 +88,7 @@ export async function POST(
         .eq('id', booking.time_slot_id)
 
       if (slotError) {
-        console.error('Error freeing time slot:', slotError)
+        logger.error('Error freeing time slot:', slotError)
         // Don't fail the request, but log the error
       }
     }
@@ -105,7 +107,7 @@ export async function POST(
       })
 
     if (historyError) {
-      console.error('Error adding to booking history:', historyError)
+      logger.error('Error adding to booking history:', historyError)
       // Don't fail the request for history error, just log it
     }
 
@@ -130,13 +132,13 @@ export async function POST(
       const emailResult = await emailService.sendBookingStatusUpdate(
         customer.email,
         customerName,
-        { ...booking, status: 'cancelled' } as any,
+        { ...booking, status: 'cancelled' } as Booking,
         booking.status,
         emailUpdateReason
       )
       
       if (!emailResult.success) {
-        console.error('Failed to send cancellation notification email:', emailResult.error)
+        logger.error('Failed to send cancellation notification email:', emailResult.error ? new Error(emailResult.error) : undefined)
         // Don't fail the request if email fails
       }
     }
@@ -151,7 +153,7 @@ export async function POST(
     })
 
   } catch (error) {
-    console.error('Cancel booking error:', error)
+    logger.error('Cancel booking error:', error instanceof Error ? error : undefined)
     return ApiResponseHandler.serverError('Failed to cancel booking')
   }
 }

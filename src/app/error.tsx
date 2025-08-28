@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/primitives/Button'
 import { Card, CardContent, CardHeader } from '@/components/ui/composites/Card'
 import { Heading, Text } from '@/components/ui/primitives/Typography'
 import { AlertTriangle, RefreshCw, Home, MessageCircle } from 'lucide-react'
+import { logger } from '@/lib/utils/logger'
 
 interface ErrorPageProps {
   error: Error & { digest?: string }
@@ -34,10 +35,12 @@ export default function ErrorPage({ error, reset }: ErrorPageProps) {
 
     // Log error in development
     if (process.env.NODE_ENV === 'development') {
+      // eslint-disable-next-line no-console
       console.group('🚨 Next.js Error Page')
-      console.error('Error:', error)
-      console.error('Error Digest:', error.digest)
-      console.error('Error ID:', errorId)
+      logger.error('Error:', error)
+      logger.error('Error Digest:', error.digest)
+      logger.error('Error ID:', errorId)
+      // eslint-disable-next-line no-console
       console.groupEnd()
     }
   }, [error, errorId])
@@ -60,7 +63,8 @@ Please let me know if you need any additional information to help resolve this i
 Best regards`
     )
     
-    window.open(`mailto:zell@love4detailing.com?subject=${subject}&body=${body}`)
+    const to = process.env.NEXT_PUBLIC_COMPANY_EMAIL || 'zell@love4detailing.com'
+    window.open(`mailto:${to}?subject=${subject}&body=${body}`)
   }
 
   const handleGoHome = () => {
@@ -180,7 +184,7 @@ Best regards`
                 📞 Call: +44 7908 625581
               </Text>
               <Text size="xs" color="secondary" className="flex-1">
-                📧 Email: zell@love4detailing.com
+                📧 Email: {process.env.NEXT_PUBLIC_COMPANY_EMAIL || 'zell@love4detailing.com'}
               </Text>
             </div>
           </div>

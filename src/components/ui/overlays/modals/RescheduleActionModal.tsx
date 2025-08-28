@@ -2,14 +2,18 @@
 
 import React, { useState } from 'react'
 import { CalendarCheckIcon, CalendarXIcon, ClockIcon, CalendarIcon } from 'lucide-react'
-import { BaseModal } from '../BaseModal'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { BaseOverlayProps } from '@/lib/overlay/types'
 import { Button } from '@/components/ui/primitives/Button'
 
 interface RescheduleActionModalProps extends BaseOverlayProps {
   data?: {
     bookingId: string
-    booking: any
+    booking: {
+      booking_reference?: string
+      scheduled_date?: string
+      start_time?: string
+    }
     rescheduleRequest: {
       id: string
       requested_date: string
@@ -33,8 +37,9 @@ export const RescheduleActionModal: React.FC<RescheduleActionModalProps> = ({
   const [declineNotes, setDeclineNotes] = useState('')
 
   const isApprove = overlayType === 'reschedule-approve'
-  const booking = data?.booking
-  const rescheduleRequest = data?.rescheduleRequest
+  const dataObj: Record<string, unknown> = data && typeof data === 'object' ? (data as Record<string, unknown>) : {}
+  const booking = (dataObj.booking as RescheduleActionModalProps['data'] extends infer D ? D extends { booking: any } ? D['booking'] : undefined : undefined) as { booking_reference?: string; scheduled_date?: string; start_time?: string } | undefined
+  const rescheduleRequest = (dataObj.rescheduleRequest as { id: string; requested_date: string; requested_time: string; reason: string; created_at: string } | undefined)
 
   const formatTime = (time: string) => {
     if (!time) return ''
@@ -56,25 +61,26 @@ export const RescheduleActionModal: React.FC<RescheduleActionModalProps> = ({
   }
 
   const handleAction = async () => {
-    if (!data?.bookingId || !rescheduleRequest?.id) return
+    const bookingId = dataObj.bookingId as string | undefined
+    if (!bookingId || !rescheduleRequest?.id) return
 
     try {
       setIsSubmitting(true)
       setError('')
 
-      const endpoint = isApprove 
-        ? `/api/admin/bookings/${data.bookingId}/reschedule/approve`
-        : `/api/admin/bookings/${data.bookingId}/reschedule/decline`
+      // Use canonical respond endpoint so request state updates atomically
+      const endpoint = `/api/admin/reschedule-requests/${rescheduleRequest.id}/respond`
 
       const payload = isApprove
         ? {
-            reschedule_request_id: rescheduleRequest.id,
-            new_date: rescheduleRequest.requested_date,
-            new_time: rescheduleRequest.requested_time
+            action: 'approve',
+            adminResponse: '',
+            adminNotes: ''
           }
         : {
-            reschedule_request_id: rescheduleRequest.id,
-            decline_reason: declineNotes
+            action: 'reject',
+            adminResponse: declineNotes || '',
+            adminNotes: ''
           }
 
       const response = await fetch(endpoint, {
@@ -91,6 +97,32 @@ export const RescheduleActionModal: React.FC<RescheduleActionModalProps> = ({
         }
         onClose()
       } else {
+        // Fallback: if request not found (stale), try booking endpoint directly with the requested date/time
+        if (isApprove && result?.error?.code === 'NOT_FOUND') {
+          const fallback = await fetch(`/api/admin/bookings/${bookingId}/reschedule`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              newDate: rescheduleRequest.requested_date,
+              newTime: rescheduleRequest.requested_time,
+              reason: rescheduleRequest.reason
+            })
+          })
+          const fbJson = await fallback.json()
+          if (fbJson?.success) {
+            // Best-effort: mark the request as approved for record-keeping
+            try {
+              await fetch(`/api/admin/reschedule-requests/${rescheduleRequest.id}/respond`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'approve', adminResponse: '', adminNotes: '' })
+              })
+            } catch (_) {}
+            if (onConfirm) await onConfirm(fbJson.data)
+            onClose()
+            return
+          }
+        }
         setError(result.error?.message || `Failed to ${isApprove ? 'approve' : 'decline'} reschedule request`)
       }
     } catch (error) {
@@ -105,13 +137,12 @@ export const RescheduleActionModal: React.FC<RescheduleActionModalProps> = ({
   }
 
   return (
-    <BaseModal
-      isOpen={isOpen}
-      onClose={onClose}
-      title={isApprove ? 'Approve Reschedule Request' : 'Decline Reschedule Request'}
-      size="lg"
-    >
-      <div className="space-y-6">
+    <Dialog open={isOpen} onOpenChange={(o) => { if (!o) onClose() }}>
+      <DialogContent className="sm:max-w-[640px]">
+        <DialogHeader>
+          <DialogTitle>{isApprove ? 'Approve Reschedule Request' : 'Decline Reschedule Request'}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-6">
         {/* Action Header */}
         <div className="flex items-start gap-3">
           <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
@@ -147,13 +178,13 @@ export const RescheduleActionModal: React.FC<RescheduleActionModalProps> = ({
               <div className="flex items-center gap-2 text-sm">
                 <CalendarIcon className="w-4 h-4 text-text-secondary" />
                 <span className="text-text-primary">
-                  {formatDate(booking.scheduled_date)}
+                  {formatDate(String(booking.scheduled_date || ''))}
                 </span>
               </div>
               <div className="flex items-center gap-2 text-sm">
                 <ClockIcon className="w-4 h-4 text-text-secondary" />
                 <span className="text-text-primary">
-                  {formatTime(booking.start_time)}
+                  {formatTime(String(booking.start_time || ''))}
                 </span>
               </div>
             </div>
@@ -251,6 +282,7 @@ export const RescheduleActionModal: React.FC<RescheduleActionModalProps> = ({
           </Button>
         </div>
       </div>
-    </BaseModal>
+      </DialogContent>
+    </Dialog>
   )
 }

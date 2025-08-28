@@ -3,6 +3,7 @@ import { createClientFromRequest } from '@/lib/supabase/server'
 import { ApiResponseHandler } from '@/lib/api/response'
 import { BookingService } from '@/lib/services/booking'
 import { z } from 'zod'
+import { logger } from '@/lib/utils/logger'
 
 const statusUpdateSchema = z.object({
   status: z.enum(['pending', 'processing', 'payment_failed', 'confirmed', 'rescheduled', 'in_progress', 'completed', 'declined', 'cancelled', 'no_show'])
@@ -78,7 +79,7 @@ export async function PUT(
     })
 
   } catch (error) {
-    console.error('Booking status update error:', error)
+    logger.error('Booking status update error:', error instanceof Error ? error : undefined)
     
     if (error instanceof z.ZodError) {
       const firstError = error.issues[0]

@@ -2,6 +2,7 @@ import React from 'react'
 import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '@/lib/utils'
 import { LucideIcon, Loader2 } from 'lucide-react'
+import { isNewUIEnabled } from '@/lib/config/feature-flags'
 
 // Proper icon component type definition
 type IconComponent = LucideIcon | React.ComponentType<React.SVGAttributes<SVGElement>>
@@ -61,6 +62,7 @@ const Icon = React.forwardRef<SVGSVGElement, IconProps>(
       <IconComponent
         ref={ref}
         className={cn(iconVariants({ size, color, className }))}
+        data-ui={isNewUIEnabled() ? 'new' : 'old'}
         aria-hidden={decorative ? true : ariaHidden}
         aria-label={decorative ? undefined : ariaLabel}
         role={decorative ? 'presentation' : undefined}
@@ -145,6 +147,7 @@ const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(
         aria-label={ariaLabel}
         title={tooltip || ariaLabel}
         aria-busy={loading}
+        data-ui={isNewUIEnabled() ? 'new' : 'old'}
         {...props}
       >
         {loading ? (

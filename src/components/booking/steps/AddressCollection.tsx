@@ -16,6 +16,7 @@ import {
   Clock
 } from 'lucide-react'
 import { validateUKPostcode, formatUKPostcode } from '@/lib/utils/postcode-distance'
+import { isNewUIEnabled } from '@/lib/config/feature-flags'
 
 export function AddressCollection() {
   const {
@@ -118,7 +119,7 @@ export function AddressCollection() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8" data-ui={isNewUIEnabled() ? 'new' : 'old'}>
       {/* Header */}
       <div className="text-center">
         <h2 className="text-3xl font-bold text-text-primary mb-2">
@@ -200,10 +201,9 @@ export function AddressCollection() {
             <div>
               <Input
                 label="Street Address *"
-                floating
                 value={addressForm.addressLine1}
                 onChange={(e) => handleFormChange('addressLine1', e.target.value)}
-                placeholder="e.g., 123 Main Street"
+                helperText="e.g., 123 Main Street"
                 required
               />
             </div>
@@ -212,10 +212,9 @@ export function AddressCollection() {
               <div>
                 <Input
                   label="City *"
-                  floating
                   value={addressForm.city}
                   onChange={(e) => handleFormChange('city', e.target.value)}
-                  placeholder="e.g., London"
+                  helperText="e.g., London"
                   required
                 />
               </div>
@@ -223,10 +222,9 @@ export function AddressCollection() {
               <div>
                 <Input
                   label="Postcode *"
-                  floating
                   value={addressForm.postcode}
                   onChange={(e) => handleFormChange('postcode', e.target.value.toUpperCase())}
-                  placeholder="e.g., SW1A 1AA"
+                  helperText="e.g., SW1A 1AA"
                   required
                 />
               </div>

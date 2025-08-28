@@ -3,6 +3,8 @@ import { supabaseAdmin } from '@/lib/supabase/direct'
 import { ApiResponseHandler } from '@/lib/api/response'
 import { authenticateAdmin } from '@/lib/api/auth-handler'
 import { z } from 'zod'
+import { logger } from '@/lib/utils/logger'
+import { Booking } from '@/lib/utils/booking-types'
 
 const markPaidSchema = z.object({
   paymentMethod: z.enum(['paypal', 'cash', 'card', 'bank_transfer']).default('paypal'),
@@ -31,7 +33,7 @@ export async function PUT(
     const body = await request.json()
     const { paymentMethod, paymentReference, adminNotes, sendConfirmationEmail } = markPaidSchema.parse(body)
 
-    console.log('🔍 Mark Paid - Looking for booking with ID:', id)
+    logger.debug('🔍 Mark Paid - Looking for booking with ID:', { bookingId: id })
     
     // First get the booking to verify it exists (using admin client to bypass RLS)
     const { data: booking, error: bookingError } = await supabase
@@ -41,16 +43,16 @@ export async function PUT(
       .single()
 
     if (bookingError) {
-      console.error('❌ Mark Paid - Booking query error:', bookingError)
+      logger.error('❌ Mark Paid - Booking query error:', bookingError)
       return ApiResponseHandler.notFound(`Booking not found: ${bookingError.message}`)
     }
 
     if (!booking) {
-      console.error('❌ Mark Paid - No booking data returned for ID:', id)
+      logger.error('❌ Mark Paid - No booking data returned for ID:', new Error(`No booking data for ID: ${id}`))
       return ApiResponseHandler.notFound('Booking not found - no data returned')
     }
 
-    console.log('✅ Mark Paid - Found booking:', {
+    logger.debug('✅ Mark Paid - Found booking:', {
       id: booking.id,
       reference: booking.booking_reference,
       status: booking.status,
@@ -68,18 +70,18 @@ export async function PUT(
         .single()
 
       if (profileError) {
-        console.error('❌ Mark Paid - Customer profile query error:', profileError)
+        logger.error('❌ Mark Paid - Customer profile query error:', profileError)
         return ApiResponseHandler.notFound(`Customer profile not found: ${profileError.message}`)
       }
 
       userProfile = profile
-      console.log('✅ Mark Paid - Found customer profile:', {
+      logger.debug('✅ Mark Paid - Found customer profile:', {
         id: profile.id,
         email: profile.email,
         name: `${profile.first_name} ${profile.last_name}`
       })
     } else {
-      console.error('❌ Mark Paid - No customer_id in booking')
+      logger.error('❌ Mark Paid - No customer_id in booking')
       return ApiResponseHandler.validationError('Booking has no associated customer')
     }
 
@@ -111,7 +113,7 @@ export async function PUT(
       .single()
 
     if (updateError) {
-      console.error('Payment status update error:', updateError)
+      logger.error('Payment status update error:', updateError)
       return ApiResponseHandler.serverError('Failed to update payment status')
     }
 
@@ -144,12 +146,12 @@ export async function PUT(
             payment_status: 'paid',
             payment_method: paymentMethod,
             status: 'confirmed'
-          } as any,
+          } as Booking,
           paymentMethod,
           paymentReference || booking.booking_reference
         )
       } catch (emailError) {
-        console.error('Payment confirmation email error:', emailError)
+        logger.error('Payment confirmation email error:', emailError instanceof Error ? emailError : undefined)
         // Don't fail the whole operation if email fails
       }
     }
@@ -167,7 +169,7 @@ export async function PUT(
         paymentReference || booking.booking_reference
       )
     } catch (emailError) {
-      console.error('Admin payment notification error:', emailError)
+      logger.error('Admin payment notification error:', emailError instanceof Error ? emailError : undefined)
     }
 
     return ApiResponseHandler.success({
@@ -179,7 +181,7 @@ export async function PUT(
     })
 
   } catch (error) {
-    console.error('Mark paid error:', error)
+    logger.error('Mark paid error:', error instanceof Error ? error : undefined)
     
     if (error instanceof z.ZodError) {
       const firstError = error.issues[0]

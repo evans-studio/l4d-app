@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { logger } from '@/lib/utils/logger'
 
 export async function GET() {
   try {
@@ -12,7 +13,7 @@ export async function GET() {
       .limit(1)
 
     if (error) {
-      console.error('Database error:', error)
+      logger.error('Database error:', error)
       throw error
     }
 
@@ -25,7 +26,7 @@ export async function GET() {
       },
     })
   } catch (error) {
-    console.error('Health check failed:', error)
+    logger.error('Health check failed', error instanceof Error ? error : undefined)
     
     return NextResponse.json({
       success: false,

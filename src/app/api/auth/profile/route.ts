@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { parseUserProfile } from '@/schemas/auth.schema'
+import { logger } from '@/lib/utils/logger'
+import { env } from '@/lib/config/environment'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -13,7 +15,7 @@ const supabaseService = createClient(supabaseUrl, supabaseServiceKey, {
   }
 })
 
-const ADMIN_EMAILS = ['zell@love4detailing.com', 'paul@evans-studio.co.uk']
+const ADMIN_EMAILS = env.auth.adminEmails
 
 export async function GET(request: NextRequest) {
   try {
@@ -27,7 +29,7 @@ export async function GET(request: NextRequest) {
       }, { status: 400 })
     }
 
-    console.log('API: Fetching profile for user:', userId)
+    logger.debug('API: Fetching profile for user', { userId })
 
     // Use service role to bypass RLS
     const { data, error } = await supabaseService
@@ -38,7 +40,7 @@ export async function GET(request: NextRequest) {
       .single()
 
     if (error) {
-      console.error('API: Profile fetch error:', error)
+      logger.error('API: Profile fetch error', error instanceof Error ? error : undefined)
       
       if (error.code === 'PGRST116') {
         return NextResponse.json({
@@ -61,7 +63,7 @@ export async function GET(request: NextRequest) {
       }, { status: 500 })
     }
 
-    console.log('API: Profile fetched successfully:', profile)
+    logger.debug('API: Profile fetched successfully', { profile })
 
     return NextResponse.json({
       success: true,
@@ -69,7 +71,7 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('API: Profile fetch exception:', error)
+    logger.error('API: Profile fetch exception', error instanceof Error ? error : undefined)
     return NextResponse.json({
       success: false,
       error: { message: 'Internal server error' }
@@ -91,7 +93,7 @@ export async function POST(request: NextRequest) {
 
     const role = ADMIN_EMAILS.includes(email.toLowerCase()) ? 'admin' : 'customer'
 
-    console.log('API: Creating profile:', { userId, email, firstName, lastName, phone, role })
+    logger.debug('API: Creating profile', { userId, email, firstName, lastName, phone, role })
 
     const profileData = {
       id: userId,
@@ -111,7 +113,7 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (error) {
-      console.error('API: Profile creation error:', error)
+      logger.error('API: Profile creation error', error instanceof Error ? error : undefined)
       return NextResponse.json({
         success: false,
         error: { message: error.message, code: error.code }
@@ -126,7 +128,7 @@ export async function POST(request: NextRequest) {
       }, { status: 500 })
     }
 
-    console.log('API: Profile created successfully:', profile)
+    logger.debug('API: Profile created successfully', { profile })
 
     return NextResponse.json({
       success: true,
@@ -134,7 +136,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('API: Profile creation exception:', error)
+    logger.error('API: Profile creation exception', error instanceof Error ? error : undefined)
     return NextResponse.json({
       success: false,
       error: { message: 'Internal server error' }

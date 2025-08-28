@@ -2,6 +2,7 @@
 // Handles service pricing, vehicle size multipliers, and travel surcharges
 
 import { calculatePostcodeDistance } from '@/lib/utils/postcode-distance'
+import { logger } from '@/lib/utils/logger'
 
 export type VehicleSize = 'S' | 'M' | 'L' | 'XL'
 
@@ -70,7 +71,7 @@ export interface BookingCalculation {
  */
 export async function getServicePricing(serviceId: string, vehicleSize: VehicleSize): Promise<number | null> {
   try {
-    console.log(`🔍 Fetching service pricing for: serviceId=${serviceId}, vehicleSize=${vehicleSize}`)
+    logger.debug(`🔍 Fetching service pricing for: serviceId=${serviceId}, vehicleSize=${vehicleSize}`)
     
     // Map vehicle size to service_pricing column
     const sizeColumnMap: Record<VehicleSize, string> = {
@@ -82,44 +83,44 @@ export async function getServicePricing(serviceId: string, vehicleSize: VehicleS
     
     const sizeColumn = sizeColumnMap[vehicleSize]
     if (!sizeColumn) {
-      console.error('❌ Invalid vehicle size for pricing:', vehicleSize)
+      logger.error('❌ Invalid vehicle size for pricing:', vehicleSize)
       return null
     }
     
     // Get pricing directly from service_pricing table
     const apiUrl = `/api/pricing/service-pricing?service_id=${serviceId}&size=${sizeColumn}`
-    console.log(`🌐 Making API call to: ${apiUrl}`)
+    logger.debug(`🌐 Making API call to: ${apiUrl}`)
     
     const pricingResponse = await fetch(apiUrl)
     if (!pricingResponse.ok) {
-      console.error(`❌ Pricing API returned ${pricingResponse.status} for service ${serviceId}`)
+      logger.error(`❌ Pricing API returned ${pricingResponse.status} for service ${serviceId}`)
       const errorText = await pricingResponse.text()
-      console.error('❌ Error response:', errorText)
+      logger.error('❌ Error response:', errorText)
       return null
     }
     
     const pricingData = await pricingResponse.json()
-    console.log('📊 Pricing API response:', pricingData)
+    logger.debug('📊 Pricing API response:', pricingData)
     
     if (!pricingData.success || !pricingData.data) {
-      console.error(`❌ No pricing data returned for service ${serviceId} size ${sizeColumn}`)
-      console.error('❌ Full response:', pricingData)
+      logger.error(`❌ No pricing data returned for service ${serviceId} size ${sizeColumn}`)
+      logger.error('❌ Full response:', pricingData)
       return null
     }
     
     // Return the price for the specific vehicle size
     const price = pricingData.data[sizeColumn] as number
-    console.log(`💰 Extracted price: ${price} for size ${sizeColumn}`)
+    logger.debug(`💰 Extracted price: ${price} for size ${sizeColumn}`)
     
     if (price && price > 0) {
-      console.log(`✅ Valid price found: £${price}`)
+      logger.debug(`✅ Valid price found: £${price}`)
       return price
     } else {
-      console.error(`❌ Invalid price: ${price} for service ${serviceId} size ${vehicleSize}`)
+      logger.error(`❌ Invalid price: ${price} for service ${serviceId} size ${vehicleSize}`)
       return null
     }
   } catch (error) {
-    console.error('❌ Error fetching service pricing:', error)
+    logger.error('❌ Error fetching service pricing:', error instanceof Error ? error : undefined)
     return null
   }
 }
@@ -137,7 +138,7 @@ export async function calculateServicePrice(serviceId: string, basePrice: number
   }
   
   // If no database pricing found, use base price as fallback (this is expected for some services)
-  console.warn(`No pricing found for service ${serviceId} with vehicle size ${vehicleSize}, using base price: £${basePrice}`)
+  logger.warn(`No pricing found for service ${serviceId} with vehicle size ${vehicleSize}, using base price: £${basePrice}`)
   return basePrice
 }
 
@@ -150,19 +151,19 @@ export async function calculateBookingPrice(
   address: AddressDetails
 ): Promise<PriceBreakdown> {
   try {
-    console.log('💰 calculateBookingPrice called with:', { service, vehicle, address })
+    logger.debug('💰 calculateBookingPrice called with:', { service, vehicle, address })
     
     // Calculate service price from service_pricing table
     const servicePrice = await calculateServicePrice(service.id, service.basePrice, vehicle.size)
-    console.log('💰 Service price calculated:', servicePrice)
+    logger.debug('💰 Service price calculated', { servicePrice })
     
     // Calculate travel surcharge based on postcode
     const distanceResult = await calculatePostcodeDistance(address.postcode)
-    console.log('💰 Distance result:', distanceResult)
+    logger.debug('💰 Distance result', { distanceResult })
     
     // Calculate total price
     const totalPrice = servicePrice + distanceResult.surchargeAmount
-    console.log('💰 Total price calculation:', {
+    logger.debug('💰 Total price calculation', {
       servicePrice,
       surchargeAmount: distanceResult.surchargeAmount,
       totalPrice: `${servicePrice} + ${distanceResult.surchargeAmount} = ${totalPrice}`
@@ -196,10 +197,10 @@ export async function calculateBookingPrice(
       }
     }
     
-    console.log('💰 Final PriceBreakdown object:', priceBreakdown)
+    logger.debug('💰 Final PriceBreakdown object', { priceBreakdown })
     return priceBreakdown
   } catch (error) {
-    console.error('Error calculating booking price:', error)
+    logger.error('Error calculating booking price:', error instanceof Error ? error : undefined)
     
     // Fallback - return base price without travel surcharge
     return {

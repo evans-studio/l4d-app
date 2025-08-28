@@ -1,3 +1,4 @@
+import { logger } from '@/lib/utils/logger'
 /**
  * Environment Configuration & Validation for Love4Detailing
  * 
@@ -20,6 +21,7 @@ interface EnvironmentConfig {
     accessTokenSecret: string
     refreshTokenSecret: string
     cookieDomain?: string
+    adminEmails: string[]
   }
   business: {
     name: string
@@ -154,15 +156,28 @@ function getOptionalEnvVar(key: string, defaultValue?: string): string | undefin
   return process.env[key] || defaultValue
 }
 
+function parseAdminEmails(emailsString: string): string[] {
+  return emailsString
+    .split(',')
+    .map(email => email.trim().toLowerCase())
+    .filter(email => {
+      // Basic email validation
+      return email.includes('@') && email.includes('.')
+    })
+}
+
 /**
  * Validate environment and create configuration
  */
 function createEnvironmentConfig(): EnvironmentConfig {
   const nodeEnv = process.env.NODE_ENV || 'development'
   const isProduction = nodeEnv === 'production'
+  const skipValidation = process.env.ALLOW_SKIP_ENV_VALIDATION === 'true'
   
   // Determine required variables based on environment
-  const requiredVars = isProduction ? REQUIRED_PRODUCTION_VARS : REQUIRED_DEVELOPMENT_VARS
+  const requiredVars = skipValidation
+    ? REQUIRED_DEVELOPMENT_VARS
+    : (isProduction ? REQUIRED_PRODUCTION_VARS : REQUIRED_DEVELOPMENT_VARS)
   
   const missingVars: string[] = []
   const invalidVars: Array<{ name: string; reason: string }> = []
@@ -172,8 +187,8 @@ function createEnvironmentConfig(): EnvironmentConfig {
     const value = process.env[varName]
     if (!value) {
       missingVars.push(varName)
-    } else {
-      // Validate the format of existing variables
+    } else if (isProduction) {
+      // Only validate formats strictly in production
       const validationError = validateEnvironmentValue(varName, value)
       if (validationError) {
         invalidVars.push({ name: varName, reason: validationError })
@@ -182,7 +197,7 @@ function createEnvironmentConfig(): EnvironmentConfig {
   }
 
   // If there are validation errors, throw an error
-  if (missingVars.length > 0 || invalidVars.length > 0) {
+  if (!skipValidation && (missingVars.length > 0 || invalidVars.length > 0)) {
     throw new EnvironmentValidationError(missingVars, invalidVars)
   }
 
@@ -193,14 +208,15 @@ function createEnvironmentConfig(): EnvironmentConfig {
       name: getOptionalEnvVar('NEXT_PUBLIC_COMPANY_NAME', 'Love 4 Detailing')!,
     },
     supabase: {
-      url: getRequiredEnvVar('NEXT_PUBLIC_SUPABASE_URL', isProduction),
-      anonKey: getRequiredEnvVar('NEXT_PUBLIC_SUPABASE_ANON_KEY', isProduction),
-      serviceRoleKey: getRequiredEnvVar('SUPABASE_SERVICE_ROLE_KEY', isProduction),
+      url: getRequiredEnvVar('NEXT_PUBLIC_SUPABASE_URL', isProduction && !skipValidation),
+      anonKey: getRequiredEnvVar('NEXT_PUBLIC_SUPABASE_ANON_KEY', isProduction && !skipValidation),
+      serviceRoleKey: getRequiredEnvVar('SUPABASE_SERVICE_ROLE_KEY', isProduction && !skipValidation),
     },
     auth: {
-      accessTokenSecret: getRequiredEnvVar('ACCESS_TOKEN_SECRET', isProduction),
-      refreshTokenSecret: getRequiredEnvVar('REFRESH_TOKEN_SECRET', isProduction),
+      accessTokenSecret: getRequiredEnvVar('ACCESS_TOKEN_SECRET', isProduction && !skipValidation),
+      refreshTokenSecret: getRequiredEnvVar('REFRESH_TOKEN_SECRET', isProduction && !skipValidation),
       cookieDomain: getOptionalEnvVar('COOKIE_DOMAIN'),
+      adminEmails: parseAdminEmails(getOptionalEnvVar('ADMIN_EMAILS', 'zell@love4detailing.com,paul@evans-studio.co.uk')!),
     },
     business: {
       name: getOptionalEnvVar('NEXT_PUBLIC_COMPANY_NAME', 'Love 4 Detailing')!,
@@ -209,14 +225,14 @@ function createEnvironmentConfig(): EnvironmentConfig {
       serviceRadiusMiles: parseFloat(getOptionalEnvVar('NEXT_PUBLIC_SERVICE_RADIUS_MILES', '17.5')!),
     },
     email: {
-      fromEmail: isProduction ? getRequiredEnvVar('NEXT_PUBLIC_FROM_EMAIL', true) : getOptionalEnvVar('NEXT_PUBLIC_FROM_EMAIL', 'zell@love4detailing.com')!,
-      adminEmail: isProduction ? getRequiredEnvVar('ADMIN_EMAIL', true) : getOptionalEnvVar('ADMIN_EMAIL', 'zell@love4detailing.com')!,
-      replyTo: isProduction ? getRequiredEnvVar('EMAIL_REPLY_TO', true) : getOptionalEnvVar('EMAIL_REPLY_TO', 'zell@love4detailing.com')!,
-      resendApiKey: isProduction ? getRequiredEnvVar('RESEND_API_KEY', true) : getOptionalEnvVar('RESEND_API_KEY', '')!,
+      fromEmail: (isProduction && !skipValidation) ? getRequiredEnvVar('NEXT_PUBLIC_FROM_EMAIL', true) : getOptionalEnvVar('NEXT_PUBLIC_FROM_EMAIL', 'zell@love4detailing.com')!,
+      adminEmail: (isProduction && !skipValidation) ? getRequiredEnvVar('ADMIN_EMAIL', true) : getOptionalEnvVar('ADMIN_EMAIL', 'zell@love4detailing.com')!,
+      replyTo: (isProduction && !skipValidation) ? getRequiredEnvVar('EMAIL_REPLY_TO', true) : getOptionalEnvVar('EMAIL_REPLY_TO', 'zell@love4detailing.com')!,
+      resendApiKey: (isProduction && !skipValidation) ? getRequiredEnvVar('RESEND_API_KEY', true) : getOptionalEnvVar('RESEND_API_KEY', '')!,
     },
     payment: {
-      paypalUsername: isProduction ? getRequiredEnvVar('PAYPAL_ME_USERNAME', true) : getOptionalEnvVar('PAYPAL_ME_USERNAME', 'love4detailing')!,
-      paypalBusinessEmail: isProduction ? getRequiredEnvVar('PAYPAL_BUSINESS_EMAIL', true) : getOptionalEnvVar('PAYPAL_BUSINESS_EMAIL', 'zell@love4detailing.com')!,
+      paypalUsername: (isProduction && !skipValidation) ? getRequiredEnvVar('PAYPAL_ME_USERNAME', true) : getOptionalEnvVar('PAYPAL_ME_USERNAME', 'love4detailing')!,
+      paypalBusinessEmail: (isProduction && !skipValidation) ? getRequiredEnvVar('PAYPAL_BUSINESS_EMAIL', true) : getOptionalEnvVar('PAYPAL_BUSINESS_EMAIL', 'zell@love4detailing.com')!,
     },
     monitoring: {
       sentryDsn: getOptionalEnvVar('SENTRY_DSN'),
@@ -229,6 +245,8 @@ function createEnvironmentConfig(): EnvironmentConfig {
  * Validated environment configuration
  */
 export const env: EnvironmentConfig = createEnvironmentConfig()
+// Backwards-compatible alias for modules importing { environment }
+export const environment = env
 
 // Helper environment checks
 export const isDevelopment = env.app.env === 'development'
@@ -286,10 +304,10 @@ if (typeof window === 'undefined' && process.env.NODE_ENV !== 'test') {
   try {
     // Environment validation happens during config creation above
     if (process.env.NODE_ENV !== 'production') {
-      console.log('✅ Environment validation successful')
+      logger.debug('✅ Environment validation successful')
     }
   } catch (error) {
-    console.error('❌ Environment validation failed:', error)
+    logger.error('❌ Environment validation failed:', error)
     if (process.env.NODE_ENV === 'production') {
       // Don't use process.exit in edge runtime - just throw the error
       throw new Error(`Environment validation failed: ${error}`)

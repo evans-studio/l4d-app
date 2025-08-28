@@ -2,6 +2,7 @@
 
 import React, { forwardRef, createContext, useContext } from 'react'
 import { cva, type VariantProps } from 'class-variance-authority'
+import { isNewUIEnabled } from '@/lib/config/feature-flags'
 
 const radioVariants = cva(
   'h-4 w-4 rounded-full border border-gray-300 text-brand-600 focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 focus:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer touch-manipulation',
@@ -79,7 +80,7 @@ export const Radio = forwardRef<HTMLInputElement, RadioProps>(
     }
 
     return (
-      <div className="flex items-start space-x-3">
+      <div className="flex items-start space-x-3" data-ui={isNewUIEnabled() ? 'new' : 'old'}>
         <div className="flex-shrink-0 flex items-center justify-center pt-0.5">
           <div className="relative">
             <input
@@ -99,6 +100,8 @@ export const Radio = forwardRef<HTMLInputElement, RadioProps>(
                 checked: !!checked, 
                 className 
               })}
+              data-size={contextSize}
+              data-state={checked ? 'checked' : 'unchecked'}
               onClick={handleChange}
             >
               <div className="flex items-center justify-center h-full w-full">

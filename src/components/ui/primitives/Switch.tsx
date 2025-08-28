@@ -2,6 +2,7 @@
 
 import React, { forwardRef } from 'react'
 import { cva, type VariantProps } from 'class-variance-authority'
+import { isNewUIEnabled } from '@/lib/config/feature-flags'
 
 const switchVariants = cva(
   'relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 focus:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 touch-manipulation',
@@ -95,9 +96,9 @@ export const Switch = forwardRef<HTMLInputElement, SwitchProps>(
     }
 
     return (
-      <div className="flex items-start space-x-3">
+      <div className="flex items-start space-x-3" data-ui={isNewUIEnabled() ? 'new' : 'old'}>
         <div className="flex-shrink-0">
-          <label className={switchVariants({ checked: !!checked, size, className })}>
+          <label className={switchVariants({ checked: !!checked, size, className })} data-size={size} data-state={checked ? 'checked' : 'unchecked'}>
             <input
               type="checkbox"
               className="sr-only"

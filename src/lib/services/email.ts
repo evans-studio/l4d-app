@@ -2,8 +2,21 @@ import { Resend } from 'resend'
 import { Booking } from '@/lib/utils/booking-types'
 import { formatDateForEmail, formatTimeForEmail } from '@/lib/utils/date-formatting'
 import { paypalService } from '@/lib/services/paypal'
+import { logger } from '@/lib/utils/logger'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+// Initialize Resend safely: in CI or local builds without a key, provide a no-op stub
+const resend: Resend = (() => {
+  const key = process.env.RESEND_API_KEY
+  if (!key) {
+    return {
+      emails: {
+        // No-op sender for environments without RESEND_API_KEY
+        send: async () => ({ data: null as unknown as any, error: null })
+      }
+    } as unknown as Resend
+  }
+  return new Resend(key)
+})()
 
 export interface EmailServiceConfig {
   fromEmail: string
@@ -13,10 +26,10 @@ export interface EmailServiceConfig {
 }
 
 const defaultConfig: EmailServiceConfig = {
-  fromEmail: process.env.EMAIL_FROM || 'zell@love4detailing.com',
+  fromEmail: process.env.NEXT_PUBLIC_FROM_EMAIL || process.env.EMAIL_FROM || 'zell@love4detailing.com',
   fromName: 'Love 4 Detailing - Zell',
   adminEmail: process.env.ADMIN_EMAIL || 'zell@love4detailing.com',
-  replyToEmail: process.env.EMAIL_REPLY_TO
+  replyToEmail: process.env.EMAIL_REPLY_TO || process.env.NEXT_PUBLIC_COMPANY_EMAIL
 }
 
 export class EmailService {
@@ -26,12 +39,23 @@ export class EmailService {
     this.config = { ...defaultConfig, ...config }
   }
 
+  // Public wrapper for unified template generation
+  public createUnifiedEmail(args: {
+    title: string,
+    header: { title: string, subtitle?: string, type?: 'default' | 'success' | 'warning' | 'error' },
+    content: string,
+    footer?: string
+  }): string {
+    // Delegate to the private generator to keep a single source of truth
+    return this.generateUnifiedEmailHTML(args)
+  }
+
   /**
    * Format price with proper validation and fallback
    */
   private formatPrice(price: number | string | null | undefined): string {
     if (!price || isNaN(Number(price))) {
-      console.warn('EmailService: Missing or invalid price data, using £0.00 fallback')
+      logger.warn('EmailService: Missing or invalid price data, using £0.00 fallback')
       return '£0.00'
     }
     return `£${Number(price).toFixed(2)}`
@@ -64,8 +88,12 @@ export class EmailService {
    * Get logo URL with proper fallback
    */
   private getLogoUrl(): string {
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || 'https://love4detailing.com'
-    return `${baseUrl}/logo.png`
+    let baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || ''
+    // Ensure absolute URL; fallback to production domain
+    if (!baseUrl || !/^https?:\/\//i.test(baseUrl)) {
+      baseUrl = 'https://love4detailing.com'
+    }
+    return `${baseUrl.replace(/\/$/, '')}/logo.png`
   }
 
   /**
@@ -92,7 +120,7 @@ export class EmailService {
   async sendBookingConfirmation(
     customerEmail: string,
     customerName: string,
-    booking: Booking
+    booking: Partial<Booking>
   ): Promise<{ success: boolean; error?: string }> {
     try {
       const { error } = await resend.emails.send({
@@ -100,18 +128,18 @@ export class EmailService {
         to: [customerEmail],
         replyTo: this.config.replyToEmail,
         subject: `Booking Confirmation - ${booking.booking_reference}`,
-        html: this.generateBookingConfirmationHTML(customerName, booking),
-        text: this.generateBookingConfirmationText(customerName, booking)
+        html: this.generateBookingConfirmationHTML(customerName, booking as Booking),
+        text: this.generateBookingConfirmationText(customerName, booking as Booking)
       })
 
       if (error) {
-        console.error('Email send error:', error)
+        logger.error('Email send error:', error)
         return { success: false, error: error.message }
       }
 
       return { success: true }
     } catch (error) {
-      console.error('Email service error:', error)
+      logger.error('Email service error:', error)
       return { 
         success: false, 
         error: error instanceof Error ? error.message : 'Unknown email error' 
@@ -123,7 +151,7 @@ export class EmailService {
   async sendWelcomeBookingConfirmation(
     customerEmail: string,
     customerName: string,
-    booking: Booking,
+    booking: Partial<Booking>,
     requiresEmailVerification: boolean = false
   ): Promise<{ success: boolean; error?: string }> {
     try {
@@ -132,18 +160,18 @@ export class EmailService {
         to: [customerEmail],
         replyTo: this.config.replyToEmail,
         subject: `Welcome to Love 4 Detailing! Booking Confirmation - ${booking.booking_reference}`,
-        html: this.generateWelcomeBookingHTML(customerName, booking, requiresEmailVerification),
-        text: this.generateWelcomeBookingText(customerName, booking, requiresEmailVerification)
+        html: this.generateWelcomeBookingHTML(customerName, booking as Booking, requiresEmailVerification),
+        text: this.generateWelcomeBookingText(customerName, booking as Booking, requiresEmailVerification)
       })
 
       if (error) {
-        console.error('Welcome booking email send error:', error)
+        logger.error('Welcome booking email send error:', error)
         return { success: false, error: error.message }
       }
 
       return { success: true }
     } catch (error) {
-      console.error('Welcome booking email service error:', error)
+      logger.error('Welcome booking email service error:', error)
       return { 
         success: false, 
         error: error instanceof Error ? error.message : 'Unknown email error' 
@@ -153,7 +181,7 @@ export class EmailService {
 
   // Send new booking notification to admin
   async sendAdminBookingNotification(
-    booking: Booking,
+    booking: Partial<Booking>,
     customerEmail: string,
     customerName: string
   ): Promise<{ success: boolean; error?: string }> {
@@ -163,18 +191,18 @@ export class EmailService {
         to: [this.config.adminEmail],
         replyTo: customerEmail,
         subject: `New Booking Received - ${booking.booking_reference}`,
-        html: this.generateAdminNotificationHTML(booking, customerEmail, customerName),
-        text: this.generateAdminNotificationText(booking, customerEmail, customerName)
+        html: this.generateAdminNotificationHTML(booking as Booking, customerEmail, customerName),
+        text: this.generateAdminNotificationText(booking as Booking, customerEmail, customerName)
       })
 
       if (error) {
-        console.error('Admin notification email error:', error)
+        logger.error('Admin notification email error:', error)
         return { success: false, error: error.message }
       }
 
       return { success: true }
     } catch (error) {
-      console.error('Admin email service error:', error)
+      logger.error('Admin email service error:', error)
       return { 
         success: false, 
         error: error instanceof Error ? error.message : 'Unknown email error' 
@@ -201,13 +229,13 @@ export class EmailService {
       })
 
       if (error) {
-        console.error('Password setup email error:', error)
+        logger.error('Password setup email error:', error)
         return { success: false, error: error.message }
       }
 
       return { success: true }
     } catch (error) {
-      console.error('Password setup email service error:', error)
+      logger.error('Password setup email service error:', error)
       return { 
         success: false, 
         error: error instanceof Error ? error.message : 'Unknown email error' 
@@ -234,13 +262,13 @@ export class EmailService {
       })
 
       if (error) {
-        console.error('Booking decline email error:', error)
+        logger.error('Booking decline email error:', error)
         return { success: false, error: error.message }
       }
 
       return { success: true }
     } catch (error) {
-      console.error('Booking decline email service error:', error)
+      logger.error('Booking decline email service error:', error)
       return { 
         success: false, 
         error: error instanceof Error ? error.message : 'Unknown email error' 
@@ -252,7 +280,7 @@ export class EmailService {
   async sendBookingStatusUpdate(
     customerEmail: string,
     customerName: string,
-    booking: Booking,
+    booking: Partial<Booking>,
     previousStatus: string,
     updateReason?: string
   ): Promise<{ success: boolean; error?: string }> {
@@ -276,13 +304,13 @@ export class EmailService {
       })
 
       if (error) {
-        console.error('Status update email error:', error)
+        logger.error('Status update email error:', error)
         return { success: false, error: error.message }
       }
 
       return { success: true }
     } catch (error) {
-      console.error('Status update email service error:', error)
+      logger.error('Status update email service error:', error)
       return { 
         success: false, 
         error: error instanceof Error ? error.message : 'Unknown email error' 
@@ -292,7 +320,7 @@ export class EmailService {
 
   // Send admin notification about customer reschedule request
   async sendAdminRescheduleRequestNotification(
-    booking: any,
+    booking: Partial<Booking>,
     customerName: string,
     customerEmail: string,
     requestedDate: string,
@@ -305,18 +333,18 @@ export class EmailService {
         to: [this.config.adminEmail],
         replyTo: customerEmail,
         subject: `Reschedule Request - ${booking.booking_reference}`,
-        html: this.generateAdminRescheduleRequestHTML(booking, customerName, customerEmail, requestedDate, requestedTime, reason),
-        text: this.generateAdminRescheduleRequestText(booking, customerName, customerEmail, requestedDate, requestedTime, reason)
+        html: this.generateAdminRescheduleRequestHTML(booking as Booking, customerName, customerEmail, requestedDate, requestedTime, reason),
+        text: this.generateAdminRescheduleRequestText(booking as Booking, customerName, customerEmail, requestedDate, requestedTime, reason)
       })
 
       if (error) {
-        console.error('Admin reschedule request notification error:', error)
+        logger.error('Admin reschedule request notification error:', error)
         return { success: false, error: error.message }
       }
 
       return { success: true }
     } catch (error) {
-      console.error('Admin reschedule request email service error:', error)
+      logger.error('Admin reschedule request email service error:', error)
       return { 
         success: false, 
         error: error instanceof Error ? error.message : 'Unknown email error' 
@@ -328,8 +356,8 @@ export class EmailService {
   async sendRescheduleRequestResponse(
     customerEmail: string,
     customerName: string,
-    booking: any,
-    rescheduleRequest: any,
+    booking: Partial<Booking>,
+    rescheduleRequest: { id: string; requested_date?: string; requested_time?: string; responded_at?: string; status?: string; reason?: string | null },
     action: string,
     adminResponse?: string,
     proposedDate?: string,
@@ -354,13 +382,13 @@ export class EmailService {
       })
 
       if (error) {
-        console.error('Reschedule response email error:', error)
+        logger.error('Reschedule response email error:', error)
         return { success: false, error: error.message }
       }
 
       return { success: true }
     } catch (error) {
-      console.error('Reschedule response email service error:', error)
+      logger.error('Reschedule response email service error:', error)
       return { 
         success: false, 
         error: error instanceof Error ? error.message : 'Unknown email error' 
@@ -378,40 +406,17 @@ export class EmailService {
     )
 
     const content = `
-      <div style="text-align: center; margin-bottom: 32px;">
-        <p style="color: rgba(255, 255, 255, 0.8); font-size: 16px; margin: 0;">Dear ${customerName},</p>
-        <p style="color: #ffffff; font-size: 18px; margin: 16px 0 0 0; font-weight: 500;">Thank you for choosing Love 4 Detailing! Your booking has been confirmed and is ready for service.</p>
+      <div style="text-align: center; margin-bottom: 24px;">
+        <p style="color: rgba(255, 255, 255, 0.85); font-size: 16px; margin: 0;">Dear ${customerName},</p>
+        <p style="color: #ffffff; font-size: 18px; margin: 12px 0 0 0; font-weight: 600;">Thank you for your booking!</p>
       </div>
-      
       ${this.generateBookingDetailsCard(booking)}
-      
-      <!-- PayPal Payment Section (minimal) -->
       <div class="content-card">
         <div class="card-content" style="text-align: center;">
-          <a href="${paypalPayment.paymentLink}" style="display: inline-block; background: #ffffff; color: #0070ba; padding: 12px 22px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 15px; border: 1px solid #cbd5e1;">
+          <a href="${paypalPayment.paymentLink}" style="display: inline-block; background: #fff; color: #0070ba; padding: 12px 22px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 15px; border: 1px solid #cbd5e1;">
             Pay £${booking.total_price.toFixed(2)} via PayPal
           </a>
-          <p style="margin-top: 12px; font-size: 12px; color: #6b7280;">Ref: ${booking.booking_reference} • Deadline: ${paypalPayment.deadline}</p>
-        </div>
-      </div>
-      
-      <div class="content-card">
-        <div class="card-content">
-          <h4> Next steps</h4>
-          <ul style="margin: 8px 0 0 18px; color: #374151;">
-            <li>Complete payment within 48h to secure your slot</li>
-            <li>We’ll see you at the scheduled time</li>
-          </ul>
-        </div>
-      </div>
-      
-      <!-- Minimal reassurance note removed for cleaner layout -->
-      
-      <div class="content-card" style="text-align: center;">
-        <div class="card-content">
-          <h4 style="color: #B269FF; margin-bottom: 16px;">Need assistance?</h4>
-          <p style="margin-bottom: 12px;"> <a href="mailto:${this.config.adminEmail}" class="footer-link">${this.config.adminEmail}</a></p>
-          <p style="margin-bottom: 0; color: rgba(255, 255, 255, 0.7); font-size: 14px;">We're here to make your experience exceptional!</p>
+          <p style="margin-top: 10px; font-size: 12px; color: rgba(255,255,255,0.7);">Ref: ${booking.booking_reference} • Deadline: ${paypalPayment.deadline}</p>
         </div>
       </div>
     `
@@ -479,22 +484,22 @@ This is an automated email. Please do not reply directly to this email.
 
       ${requiresEmailVerification ? `
       <!-- Email Verification Reminder -->
-      <div class="content-card" style="border: 1px solid #f59e0b; background: #fffbeb;">
+      <div class="content-card" style="border: 1px solid rgba(245, 158, 11, 0.4); background: rgba(245, 158, 11, 0.08);">
         <div class="card-content">
-          <h4 style="color: #92400e;"> Email verification required</h4>
-          <p style="color: #92400e; margin-top: 8px;">Check your inbox and click the verification link to access your dashboard.</p>
+          <h4 style="color: #fbbf24;"> Email verification required</h4>
+          <p style="color: #fde68a; margin-top: 8px;">Check your inbox and click the verification link to access your dashboard.</p>
         </div>
         
-        <p style="margin: 8px 0 0 0; font-size: 12px; color: #92400e;">If you don’t see it, check your spam folder.</p>
+        <p style="margin: 8px 0 0 0; font-size: 12px; color: #fde68a;">If you don’t see it, check your spam folder.</p>
       </div>
       ` : ''}
       
       ${this.generateBookingDetailsCard(booking)}
       
       <!-- PayPal Payment Section -->
-      <div class="highlight-card" style="background: linear-gradient(135deg, #0070ba 0%, #003d7a 100%); border: 2px solid #0070ba;">
-        <h4 style="color: #ffffff; margin-bottom: 16px;"> Secure Your Booking with Payment</h4>
-        <p style="color: rgba(255, 255, 255, 0.9); margin-bottom: 16px; font-size: 16px;">Complete your payment securely through PayPal to guarantee your service slot.</p>
+      <div class="highlight-card" style="background: linear-gradient(135deg, #1f2937 0%, #111827 100%); border: 1px solid rgba(255,255,255,0.1);">
+        <h4 style="color: #B269FF; margin-bottom: 12px;"> Secure Your Booking with Payment</h4>
+        <p style="color: rgba(255, 255, 255, 0.85); margin-bottom: 12px; font-size: 15px;">Complete your payment securely through PayPal to guarantee your service slot.</p>
         
         <div style="text-align: center; margin: 24px 0;">
           <a href="${paypalPayment.paymentLink}" style="display: inline-block; background: #ffffff; color: #0070ba; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);">
@@ -632,13 +637,13 @@ Love 4 Detailing - Premium Mobile Detailing Services
       })
 
       if (error) {
-        console.error('Payment confirmation email error:', error)
+        logger.error('Payment confirmation email error:', error)
         return { success: false, error: error.message }
       }
 
       return { success: true }
     } catch (error) {
-      console.error('Payment confirmation email service error:', error)
+      logger.error('Payment confirmation email service error:', error)
       return { 
         success: false, 
         error: error instanceof Error ? error.message : 'Unknown email error' 
@@ -665,13 +670,13 @@ Love 4 Detailing - Premium Mobile Detailing Services
       })
 
       if (error) {
-        console.error('Admin payment notification email error:', error)
+        logger.error('Admin payment notification email error:', error)
         return { success: false, error: error.message }
       }
 
       return { success: true }
     } catch (error) {
-      console.error('Admin payment notification email service error:', error)
+      logger.error('Admin payment notification email service error:', error)
       return { 
         success: false, 
         error: error instanceof Error ? error.message : 'Unknown email error' 
@@ -927,7 +932,7 @@ Professional Vehicle Detailing Services
     `
   }
 
-  private generateStatusUpdateHTML(customerName: string, booking: Booking, previousStatus: string, updateReason?: string): string {
+  private generateStatusUpdateHTML(customerName: string, booking: Partial<Booking>, previousStatus: string, updateReason?: string): string {
     const statusMessages = {
       confirmed: 'Booking Confirmed',
       cancelled: 'Booking Cancelled',
@@ -953,9 +958,10 @@ Professional Vehicle Detailing Services
     }
 
     const headerType = (() => {
-      if (['confirmed', 'completed'].includes(booking.status)) return 'success'
-      if (['cancelled', 'declined', 'payment_failed', 'no_show'].includes(booking.status)) return 'error'
-      if (['processing', 'in_progress'].includes(booking.status)) return 'warning'
+      const st = booking.status || 'confirmed'
+      if (['confirmed', 'completed'].includes(st)) return 'success'
+      if (['cancelled', 'declined', 'payment_failed', 'no_show'].includes(st)) return 'error'
+      if (['processing', 'in_progress'].includes(st)) return 'warning'
       return 'default'
     })()
 
@@ -977,7 +983,7 @@ Professional Vehicle Detailing Services
               <div class="detail-value">
                 <strong>${this.getStatusDisplayName(previousStatus)}</strong> 
                 <span style="color: rgba(255, 255, 255, 0.6); margin: 0 12px;">- </span>
-                <strong style="color: #9747FF;">${this.getStatusDisplayName(booking.status)}</strong>
+                <strong style="color: #9747FF;">${this.getStatusDisplayName((booking.status || 'confirmed') as string)}</strong>
               </div>
               ${updateReason ? `
                 <div style="margin-top: 12px; padding: 12px; background: rgba(151, 71, 255, 0.05); border-radius: 8px; border-left: 3px solid #9747FF;">
@@ -992,7 +998,7 @@ Professional Vehicle Detailing Services
       
       ${this.generateBookingDetailsCard(booking)}
       
-      ${this.getStatusSpecificContent(booking.status)}
+      ${this.getStatusSpecificContent((booking.status || 'confirmed') as string)}
       
       <div class="content-card" style="text-align: center;">
         <div class="card-content">
@@ -1073,7 +1079,7 @@ Professional Vehicle Detailing Services
     }
   }
 
-  private generateStatusUpdateText(customerName: string, booking: Booking, previousStatus: string, updateReason?: string): string {
+  private generateStatusUpdateText(customerName: string, booking: Partial<Booking>, previousStatus: string, updateReason?: string): string {
     const statusMessages = {
       confirmed: 'Your booking has been confirmed!',
       cancelled: 'Your booking has been cancelled',
@@ -1249,18 +1255,28 @@ ${setupUrl}
   }
 
   private generateBookingDeclineHTML(customerName: string, booking: Booking, declineReason: string, additionalNotes?: string): string {
-    // Format booking details for display (using any type for database objects with relations)
-    const bookingAny = booking as any;
+    // Narrow booking shape for email formatting
+    type VehicleInfo = { year?: string | number; make?: string; model?: string }
+    type AddressInfo = { address_line_1?: string; city?: string; postal_code?: string }
+    type ServiceItem = { name?: string } | string
+    type EmailBookingShape = Partial<Booking> & {
+      services?: ServiceItem[]
+      service?: { name?: string }
+      vehicle_details?: VehicleInfo
+      vehicle?: VehicleInfo
+      address?: AddressInfo
+    }
+    const eb = booking as EmailBookingShape
     const bookingDetails = {
       reference: booking.booking_reference || 'N/A',
-      services: Array.isArray(bookingAny.services) 
-        ? bookingAny.services.map((s: any) => s.name || s).join(', ')
-        : bookingAny.service?.name || 'Vehicle Detailing Service',
-      vehicle: bookingAny.vehicle_details || bookingAny.vehicle
-        ? `${bookingAny.vehicle_details?.year || bookingAny.vehicle?.year || ''} ${bookingAny.vehicle_details?.make || bookingAny.vehicle?.make || ''} ${bookingAny.vehicle_details?.model || bookingAny.vehicle?.model || ''}`.trim()
+      services: Array.isArray(eb.services)
+        ? eb.services.map((s) => (typeof s === 'string' ? s : (s?.name || ''))).filter(Boolean).join(', ')
+        : eb.service?.name || 'Vehicle Detailing Service',
+      vehicle: eb.vehicle_details || eb.vehicle
+        ? `${eb.vehicle_details?.year || eb.vehicle?.year || ''} ${eb.vehicle_details?.make || eb.vehicle?.make || ''} ${eb.vehicle_details?.model || eb.vehicle?.model || ''}`.trim()
         : 'Vehicle not specified',
-      address: bookingAny.address
-        ? `${bookingAny.address.address_line_1}, ${bookingAny.address.city} ${bookingAny.address.postal_code}`
+      address: eb.address
+        ? `${eb.address.address_line_1 || ''}, ${eb.address.city || ''} ${eb.address.postal_code || ''}`.trim()
         : 'Address not specified',
       totalPrice: booking.total_price ? `£${Number(booking.total_price).toFixed(2)}` : null
     }
@@ -1381,7 +1397,7 @@ ${setupUrl}
                <strong>Ready to get started?</strong>
             </p>
             <p style="color: #6b7280; margin: 0; font-size: 14px;">
-              Reply to this email or contact us at <a href="mailto:zell@love4detailing.com" style="color: #9747FF; text-decoration: none; font-weight: 600;">zell@love4detailing.com</a>
+              Reply to this email or contact us at <a href="mailto:${process.env.NEXT_PUBLIC_COMPANY_EMAIL || 'zell@love4detailing.com'}" style="color: #9747FF; text-decoration: none; font-weight: 600;">${process.env.NEXT_PUBLIC_COMPANY_EMAIL || 'zell@love4detailing.com'}</a>
             </p>
           </div>
         </div>
@@ -1401,7 +1417,7 @@ ${setupUrl}
           <h4 style="color: #111827; margin: 0 0 16px 0; font-size: 16px; font-weight: 600;">💬 Get In Touch</h4>
           <p style="color: #6b7280; font-size: 14px; margin: 0; line-height: 1.6;">
             Our team is standing by to help you reschedule:<br>
-            <strong style="color: #374151;"> Email:</strong> <a href="mailto:zell@love4detailing.com" style="color: #9747FF; text-decoration: none;">zell@love4detailing.com</a><br>
+            <strong style="color: #374151;"> Email:</strong> <a href="mailto:${process.env.NEXT_PUBLIC_COMPANY_EMAIL || 'zell@love4detailing.com'}" style="color: #9747FF; text-decoration: none;">${process.env.NEXT_PUBLIC_COMPANY_EMAIL || 'zell@love4detailing.com'}</a><br>
             <strong style="color: #374151;">Response Time:</strong> Within 24 hours<br>
             <strong style="color: #374151;">🌐 Website:</strong> <a href="https://love4detailing.com" style="color: #9747FF; text-decoration: none;">love4detailing.com</a>
           </p>
@@ -1416,18 +1432,27 @@ ${setupUrl}
   }
 
   private generateBookingDeclineText(customerName: string, booking: Booking, declineReason: string, additionalNotes?: string): string {
-    // Format booking details (using any type for database objects with relations)
-    const bookingAny = booking as any;
+    type VehicleInfo = { year?: string | number; make?: string; model?: string }
+    type AddressInfo = { address_line_1?: string; city?: string; postal_code?: string }
+    type ServiceItem = { name?: string } | string
+    type EmailBookingShape = Partial<Booking> & {
+      services?: ServiceItem[]
+      service?: { name?: string }
+      vehicle_details?: VehicleInfo
+      vehicle?: VehicleInfo
+      address?: AddressInfo
+    }
+    const eb = booking as EmailBookingShape
     const bookingDetails = {
       reference: booking.booking_reference || 'N/A',
-      services: Array.isArray(bookingAny.services) 
-        ? bookingAny.services.map((s: any) => s.name || s).join(', ')
-        : bookingAny.service?.name || 'Vehicle Detailing Service',
-      vehicle: bookingAny.vehicle_details || bookingAny.vehicle
-        ? `${bookingAny.vehicle_details?.year || bookingAny.vehicle?.year || ''} ${bookingAny.vehicle_details?.make || bookingAny.vehicle?.make || ''} ${bookingAny.vehicle_details?.model || bookingAny.vehicle?.model || ''}`.trim()
+      services: Array.isArray(eb.services)
+        ? eb.services.map((s) => (typeof s === 'string' ? s : (s?.name || ''))).filter(Boolean).join(', ')
+        : eb.service?.name || 'Vehicle Detailing Service',
+      vehicle: eb.vehicle_details || eb.vehicle
+        ? `${eb.vehicle_details?.year || eb.vehicle?.year || ''} ${eb.vehicle_details?.make || eb.vehicle?.make || ''} ${eb.vehicle_details?.model || eb.vehicle?.model || ''}`.trim()
         : 'Vehicle not specified',
-      address: bookingAny.address
-        ? `${bookingAny.address.address_line_1}, ${bookingAny.address.city} ${bookingAny.address.postal_code}`
+      address: eb.address
+        ? `${eb.address.address_line_1 || ''}, ${eb.address.city || ''} ${eb.address.postal_code || ''}`.trim()
         : 'Address not specified',
       totalPrice: booking.total_price ? `£${Number(booking.total_price).toFixed(2)}` : null
     }
@@ -1468,13 +1493,13 @@ We're committed to providing you with exceptional service. Here are the best way
    We'll notify you first when slots open up that match your original preferences.
 
  READY TO GET STARTED?
-Reply to this email or contact us at zell@love4detailing.com
+Reply to this email or contact us at ${process.env.NEXT_PUBLIC_COMPANY_EMAIL || 'zell@love4detailing.com'}
 
 PERSONAL MESSAGE FROM OUR TEAM:
 We genuinely appreciate you choosing Love 4 Detailing for your vehicle care needs. While we couldn't make this particular booking work, we're dedicated to finding a way to serve you. Your satisfaction is our priority, and we're confident we can find an arrangement that works perfectly for both of us.
 
 💬 GET IN TOUCH:
- Email: zell@love4detailing.com
+ Email: ${process.env.NEXT_PUBLIC_COMPANY_EMAIL || 'zell@love4detailing.com'}
 Response Time: Within 24 hours
 🌐 Website: love4detailing.com
 
@@ -1552,7 +1577,7 @@ Love 4 Detailing - Premium Mobile Detailing Services
               <h3>Booking Details</h3>
               <div class="detail-row">
                 <span class="detail-label">Booking Reference:</span>
-                <span class="detail-value">${booking.booking_reference}</span>
+                <span class="detail-value">${String((booking as Partial<Booking>).booking_reference ?? '')}</span>
               </div>
               <div class="detail-row">
                 <span class="detail-label">Customer:</span>
@@ -1564,7 +1589,7 @@ Love 4 Detailing - Premium Mobile Detailing Services
               </div>
               <div class="detail-row">
                 <span class="detail-label">Current Date:</span>
-                <span class="detail-value">${formatDate(booking.scheduled_date)} at ${formatTime(booking.scheduled_start_time)}</span>
+                <span class="detail-value">${formatDate((booking as Partial<Booking>).scheduled_date as string)} at ${formatTime((booking as Partial<Booking>).scheduled_start_time as string)}</span>
               </div>
               <div class="detail-row">
                 <span class="detail-label">Requested Date:</span>
@@ -1605,10 +1630,10 @@ RESCHEDULE REQUEST - ACTION REQUIRED
 A customer has requested to reschedule their booking.
 
 BOOKING DETAILS:
-Booking Reference: ${booking.booking_reference}
+Booking Reference: ${String((booking as Partial<Booking>).booking_reference ?? '')}
 Customer: ${customerName}
 Email: ${customerEmail}
-Current Date: ${booking.scheduled_date} at ${booking.scheduled_start_time}
+Current Date: ${String((booking as Partial<Booking>).scheduled_date ?? '')} at ${String((booking as Partial<Booking>).scheduled_start_time ?? '')}
 Requested Date: ${requestedDate} at ${requestedTime}
 ${reason ? `Reason: ${reason}` : ''}
 
@@ -1637,13 +1662,13 @@ Love 4 Detailing - Admin Notifications
       })
 
       if (error) {
-        console.error('Custom email send error:', error)
+        logger.error('Custom email send error:', error)
         return { success: false, error: error.message }
       }
 
       return { success: true }
     } catch (error) {
-      console.error('Custom email service error:', error)
+      logger.error('Custom email service error:', error)
       return { 
         success: false, 
         error: error instanceof Error ? error.message : 'Unknown email error' 
@@ -2089,45 +2114,45 @@ Love 4 Detailing - Admin Notifications
     return `£${numericPrice.toFixed(2)}`
   }
 
-  private formatVehicleDetails(vehicle: any): string {
+  private formatVehicleDetails(vehicle: { make?: string; model?: string; year?: number; color?: string } | null | undefined): string {
     if (!vehicle) return 'Vehicle details not specified'
     
     const parts: string[] = []
     
-    if (vehicle.make) parts.push(vehicle.make)
-    if (vehicle.model) parts.push(vehicle.model)
-    if (vehicle.year) parts.push(`(${vehicle.year})`)
-    if (vehicle.color) parts.push(`- ${vehicle.color}`)
+    if (vehicle?.make) parts.push(vehicle.make)
+    if (vehicle?.model) parts.push(vehicle.model)
+    if (vehicle?.year) parts.push(`(${vehicle.year})`)
+    if (vehicle?.color) parts.push(`- ${vehicle.color}`)
     
     return parts.length > 0 ? parts.join(' ') : 'Vehicle details not specified'
   }
 
-  private formatAddress(address: any): string {
+  private formatAddress(address: { address_line_1?: string; address_line_2?: string | null; city?: string; postcode?: string } | null | undefined): string {
     if (!address) return 'Address not specified'
     
     const parts: string[] = []
     
-    if (address.address_line_1) parts.push(address.address_line_1)
-    if (address.address_line_2) parts.push(address.address_line_2)
-    if (address.city && address.postcode) {
+    if (address?.address_line_1) parts.push(address.address_line_1)
+    if (address?.address_line_2) parts.push(address.address_line_2)
+    if (address?.city && address?.postcode) {
       parts.push(`${address.city}, ${address.postcode}`)
-    } else if (address.city) {
+    } else if (address?.city) {
       parts.push(address.city)
-    } else if (address.postcode) {
+    } else if (address?.postcode) {
       parts.push(address.postcode)
     }
     
     return parts.length > 0 ? parts.join('<br>') : 'Address not specified'
   }
 
-  private formatServices(services: any[]): string {
+  private formatServices(services: Array<string | { name?: string; base_price?: number; price?: number }> | null | undefined): string {
     if (!services || services.length === 0) return 'No services specified'
     
     return services
-      .map(service => {
+      .map((service) => {
         if (typeof service === 'string') return service
-        if (service.name) {
-          const price = service.base_price || service.price
+        if (service?.name) {
+          const price = service?.base_price || service?.price
           return price ? `${service.name} (${this.formatEmailPrice(price)})` : service.name
         }
         return 'Service not specified'
@@ -2152,12 +2177,12 @@ Love 4 Detailing - Admin Notifications
     return statusMap[status] || status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' ')
   }
 
-  private generateBookingDetailsCard(booking: any): string {
+  private generateBookingDetailsCard(booking: Partial<Booking>): string {
     return `
       <div class="content-card">
         <div class="card-header">
           <h3 style="color: #9747FF; font-size: 20px; margin: 0 0 8px 0;">${booking.booking_reference || 'Reference not available'}</h3>
-          <div class="status-badge">${this.getStatusDisplayName(booking.status || 'unknown')}</div>
+          <div class="status-badge">${this.getStatusDisplayName((booking.status || 'unknown') as string)}</div>
         </div>
         
         <div class="card-content">
@@ -2165,7 +2190,7 @@ Love 4 Detailing - Admin Notifications
             <div class="detail-icon"></div>
             <div class="detail-content">
               <div class="detail-label">Date</div>
-              <div class="detail-value">${this.formatEmailDate(booking.scheduled_date)}</div>
+              <div class="detail-value">${this.formatEmailDate(booking.scheduled_date as string)}</div>
             </div>
           </div>
           
@@ -2173,7 +2198,7 @@ Love 4 Detailing - Admin Notifications
             <div class="detail-icon">Time</div>
             <div class="detail-content">
               <div class="detail-label">Time</div>
-              <div class="detail-value">${this.formatEmailTime(booking.scheduled_start_time)}</div>
+              <div class="detail-value">${this.formatEmailTime(booking.scheduled_start_time as string)}</div>
             </div>
           </div>
           
@@ -2181,7 +2206,7 @@ Love 4 Detailing - Admin Notifications
             <div class="detail-icon"></div>
             <div class="detail-content">
               <div class="detail-label">Vehicle</div>
-              <div class="detail-value">${this.formatVehicleDetails(booking.vehicle_details)}</div>
+              <div class="detail-value">${this.formatVehicleDetails(booking.vehicle_details as unknown as { make?: string; model?: string; year?: number; color?: string; registration?: string })}</div>
             </div>
           </div>
           
@@ -2189,16 +2214,16 @@ Love 4 Detailing - Admin Notifications
             <div class="detail-icon">📍</div>
             <div class="detail-content">
               <div class="detail-label">Location</div>
-              <div class="detail-value">${this.formatAddress(booking.service_address)}</div>
+              <div class="detail-value">${this.formatAddress(booking.service_address as unknown as { address_line_1?: string; address_line_2?: string | null; city?: string; county?: string | null; postal_code?: string; country?: string | null })}</div>
             </div>
           </div>
           
-          ${booking.services ? `
+          ${(booking as unknown as { services?: unknown })?.services ? `
             <div class="detail-row">
               <div class="detail-icon"></div>
               <div class="detail-content">
                 <div class="detail-label">Services</div>
-                <div class="detail-value">${this.formatServices(booking.services)}</div>
+                <div class="detail-value">${this.formatServices((booking as unknown as { services?: Array<{ name?: string } | string> }).services as Array<{ name?: string } | string>)}</div>
               </div>
             </div>
           ` : ''}
@@ -2207,16 +2232,16 @@ Love 4 Detailing - Admin Notifications
             <div class="detail-icon"></div>
             <div class="detail-content">
               <div class="detail-label">Total Investment</div>
-              <div class="detail-value price-highlight">${this.formatEmailPrice(booking.total_price)}</div>
+              <div class="detail-value price-highlight">${this.formatEmailPrice(booking.total_price as number)}</div>
             </div>
           </div>
           
-          ${booking.special_instructions ? `
+          ${(booking as unknown as { special_instructions?: string })?.special_instructions ? `
             <div class="detail-row" style="border-bottom: none;">
               <div class="detail-icon">Instructions:</div>
               <div class="detail-content">
                 <div class="detail-label">Special Instructions</div>
-                <div class="detail-value" style="font-style: italic; opacity: 0.9;">${booking.special_instructions}</div>
+                <div class="detail-value" style="font-style: italic; opacity: 0.9;">${(booking as unknown as { special_instructions?: string }).special_instructions}</div>
               </div>
             </div>
           ` : ''}
@@ -2228,8 +2253,8 @@ Love 4 Detailing - Admin Notifications
   // Customer reschedule response templates using unified Love4Detailing branding
   private generateRescheduleResponseHTML(
     customerName: string,
-    booking: any,
-    rescheduleRequest: any,
+    booking: Partial<Booking>,
+    rescheduleRequest: { id: string; original_date?: string; original_time?: string; requested_date?: string; requested_time?: string; status?: string; reason?: string | null },
     action: string,
     adminResponse?: string,
     proposedDate?: string,
@@ -2258,16 +2283,26 @@ Love 4 Detailing - Admin Notifications
     const headerEmoji = statusEmojis[action as keyof typeof statusEmojis] || ''
 
     // Format booking details for display
+    type ServiceItem = { name?: string } | string
+    type AddressInfo = { address_line_1?: string; address_line_2?: string | null; addressLine1?: string; addressLine2?: string | null; city?: string; postal_code?: string; postalCode?: string; postcode?: string }
+    const bb = booking as Partial<Booking> & { services?: ServiceItem[]; service?: { name?: string }; vehicle?: { year?: string | number; make?: string; model?: string }; service_address?: AddressInfo; address?: AddressInfo }
     const bookingDetails = {
-      reference: booking.booking_reference || 'N/A',
-      services: Array.isArray(booking.services) 
-        ? booking.services.map((s: any) => s.name || s).join(', ')
-        : 'Vehicle Detailing Service',
-      vehicle: booking.vehicle 
-        ? `${booking.vehicle.year || ''} ${booking.vehicle.make || ''} ${booking.vehicle.model || ''}`.trim()
+      reference: bb?.booking_reference || 'N/A',
+      services: (Array.isArray(bb?.services) 
+        ? (bb.services as ServiceItem[]).map((s) => (typeof s === 'string' ? s : (s?.name || ''))).filter(Boolean).join(', ')
+        : (bb?.service?.name)) || 'Vehicle Detailing Service',
+      vehicle: bb?.vehicle 
+        ? `${bb.vehicle?.year || ''} ${bb.vehicle?.make || ''} ${bb.vehicle?.model || ''}`.trim()
         : 'Vehicle not specified',
-      totalPrice: booking.total_price ? `£${Number(booking.total_price).toFixed(2)}` : null
+      totalPrice: bb?.total_price ? `£${Number(bb.total_price).toFixed(2)}` : null
     }
+
+    // Extract address/location details (supports both shapes)
+    const svcAddress = (bb?.service_address || bb?.address || {}) as AddressInfo
+    const addressLine1 = svcAddress.address_line_1 || svcAddress.addressLine1 || ''
+    const addressLine2 = svcAddress.address_line_2 || svcAddress.addressLine2 || ''
+    const city = svcAddress.city || ''
+    const postalCode = svcAddress.postal_code || svcAddress.postalCode || svcAddress.postcode || ''
 
     return this.generateUnifiedEmailHTML({
       title: `${headerEmoji} ${headerMessage}`,
@@ -2278,13 +2313,13 @@ Love 4 Detailing - Admin Notifications
       },
       content: `
         <!-- Greeting -->
-        <p style="font-size: 16px; margin: 0 0 24px 0; color: #374151; font-weight: 400;">Dear ${customerName},</p>
+        <p style="font-size: 16px; margin: 0 0 24px 0; color: #e5e7eb; font-weight: 400;">Dear ${customerName},</p>
         
         <!-- Status Message -->
-        <div style="background: ${action === 'approve' ? '#f0f9f4' : action === 'reject' ? '#fef2f2' : '#f8f4ff'}; border: 2px solid ${actionColor}; border-radius: 12px; padding: 24px; margin: 24px 0; text-align: center;">
+        <div style="background: rgba(255,255,255,0.04); border: 1px solid ${actionColor}33; border-radius: 12px; padding: 20px; margin: 24px 0; text-align: center;">
           <div style="font-size: 48px; margin: 0 0 16px 0;">${headerEmoji}</div>
           <h2 style="color: ${actionColor}; margin: 0 0 12px 0; font-size: 20px; font-weight: 600;">${headerMessage}</h2>
-          <p style="color: #374151; margin: 0; font-size: 16px;">
+          <p style="color: #cbd5e1; margin: 0; font-size: 16px;">
             ${action === 'approve' ? 
               'Great news! Your reschedule request has been approved and your booking has been updated.' :
               action === 'reject' ?
@@ -2295,50 +2330,58 @@ Love 4 Detailing - Admin Notifications
         </div>
 
         <!-- Booking Details Card -->
-        <div style="background: #f8fafc; border: 2px solid #e5e7eb; border-radius: 12px; padding: 24px; margin: 32px 0;">
-          <h3 style="color: #111827; margin: 0 0 20px 0; font-size: 18px; font-weight: 600;">
+        <div style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.10); border-radius: 12px; padding: 20px; margin: 28px 0;">
+          <h3 style="color: #ffffff; margin: 0 0 16px 0; font-size: 18px; font-weight: 700;">
             ${action === 'approve' ? 'Updated Booking Details' : 'Booking Information'}
           </h3>
           <div style="space-y: 16px;">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid #e5e7eb;">
-              <span style="font-weight: 500; color: #374151;">Booking Reference</span>
-              <span style="font-weight: 600; color: #111827; font-family: monospace; text-align: right;">${bookingDetails.reference}</span>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px solid rgba(255,255,255,0.10);">
+              <span style="font-weight: 500; color: #cbd5e1;">Booking Reference</span>
+              <span style="font-weight: 700; color: #ffffff; font-family: monospace; text-align: right;">${bookingDetails.reference}</span>
             </div>
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid #e5e7eb;">
-              <span style="font-weight: 500; color: #374151;">Service</span>
-              <span style="color: #111827; font-weight: 500; text-align: right; max-width: 200px;">${bookingDetails.services}</span>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px solid rgba(255,255,255,0.10);">
+              <span style="font-weight: 500; color: #cbd5e1;">Service</span>
+              <span style="color: #e5e7eb; font-weight: 500; text-align: right; max-width: 260px;">${bookingDetails.services}</span>
             </div>
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid #e5e7eb;">
-              <span style="font-weight: 500; color: #374151;">Vehicle</span>
-              <span style="color: #111827; font-weight: 500; text-align: right; max-width: 200px;">${bookingDetails.vehicle}</span>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px solid rgba(255,255,255,0.10);">
+              <span style="font-weight: 500; color: #cbd5e1;">Vehicle</span>
+              <span style="color: #e5e7eb; font-weight: 500; text-align: right; max-width: 260px;">${bookingDetails.vehicle}</span>
             </div>
             ${bookingDetails.totalPrice ? `
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid #e5e7eb;">
-              <span style="font-weight: 500; color: #374151;">Total Price</span>
-              <span style="color: #9747FF; font-weight: 700; font-size: 18px; text-align: right;">${bookingDetails.totalPrice}</span>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px solid rgba(255,255,255,0.10);">
+              <span style="font-weight: 500; color: #cbd5e1;">Total Price</span>
+              <span style="color: #B269FF; font-weight: 700; font-size: 18px; text-align: right;">${bookingDetails.totalPrice}</span>
             </div>
             ` : ''}
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid #e5e7eb;">
-              <span style="font-weight: 500; color: #374151;">Original Date & Time</span>
-              <span style="color: #6b7280; text-align: right; max-width: 200px;">
-                ${this.formatEmailDate(rescheduleRequest.original_date)}<br>
-                <strong>${this.formatEmailTime(rescheduleRequest.original_time)}</strong>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px solid rgba(255,255,255,0.10);">
+              <span style="font-weight: 500; color: #cbd5e1;">Original Date & Time</span>
+              <span style="color: #94a3b8; text-align: right; max-width: 260px;">
+                ${this.formatEmailDate((rescheduleRequest as { original_date?: string } | undefined)?.original_date as string)}<br>
+                <strong>${this.formatEmailTime((rescheduleRequest as { original_time?: string } | undefined)?.original_time as string)}</strong>
               </span>
             </div>
             ${action === 'approve' ? `
             <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-              <span style="font-weight: 500; color: #374151;">New Date & Time</span>
-              <span style="color: #10b981; font-weight: 700; text-align: right; max-width: 200px;">
-                ${this.formatEmailDate(rescheduleRequest.requested_date)}<br>
-                <strong>${this.formatEmailTime(rescheduleRequest.requested_time)}</strong>
+              <span style="font-weight: 500; color: #cbd5e1;">New Date & Time</span>
+              <span style="color: #34d399; font-weight: 700; text-align: right; max-width: 260px;">
+                ${this.formatEmailDate((rescheduleRequest as { requested_date?: string } | undefined)?.requested_date as string)}<br>
+                <strong>${this.formatEmailTime((rescheduleRequest as { requested_time?: string } | undefined)?.requested_time as string)}</strong>
               </span>
             </div>
             ` : action === 'propose' && proposedDate && proposedTime ? `
             <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-              <span style="font-weight: 500; color: #374151;">Proposed Date & Time</span>
-              <span style="color: #9747FF; font-weight: 700; text-align: right; max-width: 200px;">
+              <span style="font-weight: 500; color: #cbd5e1;">Proposed Date & Time</span>
+              <span style="color: #B269FF; font-weight: 700; text-align: right; max-width: 260px;">
                 ${this.formatEmailDate(proposedDate)}<br>
                 <strong>${this.formatEmailTime(proposedTime)}</strong>
+              </span>
+            </div>
+            ` : ''}
+            ${(addressLine1 || city || postalCode) ? `
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-top: 14px;">
+              <span style="font-weight: 500; color: #cbd5e1;">Service Address</span>
+              <span style="color: #e5e7eb; text-align: right; max-width: 260px;">
+                ${addressLine1 || ''}${addressLine2 ? `<br>${addressLine2}` : ''}${(city || postalCode) ? `<br>${city}${city && postalCode ? ', ' : ''}${postalCode}` : ''}
               </span>
             </div>
             ` : ''}
@@ -2381,28 +2424,15 @@ Love 4 Detailing - Admin Notifications
           `}
         </div>
 
-        <!-- Contact Information -->
-        <div style="border-top: 2px solid #e5e7eb; padding-top: 24px; margin-top: 40px;">
-          <h4 style="color: #111827; margin: 0 0 16px 0; font-size: 16px; font-weight: 600;">Questions or Need Help?</h4>
-          <p style="color: #6b7280; font-size: 14px; margin: 0; line-height: 1.6;">
-            Our team is here to help with any questions about your reschedule request:<br>
-            <strong style="color: #374151;"> Email:</strong> <a href="mailto:zell@love4detailing.com" style="color: #9747FF; text-decoration: none;">zell@love4detailing.com</a><br>
-            <strong style="color: #374151;">Response Time:</strong> Within 24 hours
-          </p>
-        </div>
         
-        <p style="color: #374151; margin: 32px 0 0 0; font-size: 16px;">
-          Thank you for choosing Love 4 Detailing!<br>
-          <strong>The Love 4 Detailing Team</strong>
-        </p>
       `
     })
   }
 
   private generateRescheduleResponseText(
     customerName: string,
-    booking: any,
-    rescheduleRequest: any,
+    booking: unknown,
+    rescheduleRequest: unknown,
     action: string,
     adminResponse?: string,
     proposedDate?: string,
@@ -2417,15 +2447,17 @@ Love 4 Detailing - Admin Notifications
     const message = statusMessages[action as keyof typeof statusMessages] || ' REQUEST UPDATED'
 
     // Format booking details
+    type ServiceItem = { name?: string } | string
+    const b2 = booking as Partial<Booking> & { services?: ServiceItem[]; service?: { name?: string }; vehicle?: { year?: string | number; make?: string; model?: string } }
     const bookingDetails = {
-      reference: booking.booking_reference || 'N/A',
-      services: Array.isArray(booking.services) 
-        ? booking.services.map((s: any) => s.name || s).join(', ')
-        : 'Vehicle Detailing Service',
-      vehicle: booking.vehicle 
-        ? `${booking.vehicle.year || ''} ${booking.vehicle.make || ''} ${booking.vehicle.model || ''}`.trim()
+      reference: b2?.booking_reference || 'N/A',
+      services: Array.isArray(b2?.services) 
+        ? (b2.services as ServiceItem[]).map((s) => (typeof s === 'string' ? s : (s?.name || ''))).filter(Boolean).join(', ')
+        : b2?.service?.name || 'Vehicle Detailing Service',
+      vehicle: b2?.vehicle 
+        ? `${b2.vehicle?.year || ''} ${b2.vehicle?.make || ''} ${b2.vehicle?.model || ''}`.trim()
         : 'Vehicle not specified',
-      totalPrice: booking.total_price ? `£${Number(booking.total_price).toFixed(2)}` : null
+      totalPrice: b2?.total_price ? `£${Number(b2.total_price).toFixed(2)}` : null
     }
 
     return `
@@ -2447,8 +2479,8 @@ BOOKING DETAILS:
 ${bookingDetails.totalPrice ? `- Total Price: ${bookingDetails.totalPrice}` : ''}
 
 SCHEDULING:
-- Original: ${this.formatEmailDate(rescheduleRequest.original_date)} at ${this.formatEmailTime(rescheduleRequest.original_time)}
-${action === 'approve' ? `- New Time: ${this.formatEmailDate(rescheduleRequest.requested_date)} at ${this.formatEmailTime(rescheduleRequest.requested_time)}` : ''}
+ - Original: ${this.formatEmailDate((rescheduleRequest as any)?.original_date)} at ${this.formatEmailTime((rescheduleRequest as any)?.original_time)}
+${action === 'approve' ? `- New Time: ${this.formatEmailDate((rescheduleRequest as any)?.requested_date)} at ${this.formatEmailTime((rescheduleRequest as any)?.requested_time)}` : ''}
 ${action === 'propose' && proposedDate && proposedTime ? `- Proposed: ${this.formatEmailDate(proposedDate)} at ${this.formatEmailTime(proposedTime)}` : ''}
 
 ${adminResponse ? `MESSAGE FROM LOVE 4 DETAILING:\n"${adminResponse}"\n` : ''}
@@ -2483,22 +2515,33 @@ Love 4 Detailing - Premium Mobile Detailing Services
     paymentMethod: string,
     paymentReference: string
   ): string {
-    // Format booking details (using any type for database objects with relations)
-    const bookingAny = booking as any;
+    type VehicleInfo = { year?: string | number; make?: string; model?: string }
+    type AddressInfo = { address_line_1?: string; city?: string; postal_code?: string }
+    type ServiceItem = { name?: string } | string
+    type EmailBookingShape = Partial<Booking> & {
+      services?: ServiceItem[]
+      service?: { name?: string }
+      vehicle_details?: VehicleInfo
+      vehicle?: VehicleInfo
+      address?: AddressInfo
+      service_address?: AddressInfo
+      time_slots?: { start_time?: string }
+    }
+    const eb = booking as EmailBookingShape
     const bookingDetails = {
       reference: booking.booking_reference || 'N/A',
-      services: Array.isArray(bookingAny.services) 
-        ? bookingAny.services.map((s: any) => s.name || s).join(', ')
-        : bookingAny.service?.name || 'Vehicle Detailing Service',
-      vehicle: bookingAny.vehicle_details || bookingAny.vehicle
-        ? `${bookingAny.vehicle_details?.year || bookingAny.vehicle?.year || ''} ${bookingAny.vehicle_details?.make || bookingAny.vehicle?.make || ''} ${bookingAny.vehicle_details?.model || bookingAny.vehicle?.model || ''}`.trim()
+      services: Array.isArray(eb.services)
+        ? eb.services.map((s) => (typeof s === 'string' ? s : (s?.name || ''))).filter(Boolean).join(', ')
+        : eb.service?.name || 'Vehicle Detailing Service',
+      vehicle: eb.vehicle_details || eb.vehicle
+        ? `${eb.vehicle_details?.year || eb.vehicle?.year || ''} ${eb.vehicle_details?.make || eb.vehicle?.make || ''} ${eb.vehicle_details?.model || eb.vehicle?.model || ''}`.trim()
         : 'Vehicle not specified',
       date: booking.scheduled_date ? this.formatEmailDate(booking.scheduled_date) : 'Date TBC',
-      time: bookingAny.time_slots?.start_time || booking.scheduled_start_time 
-        ? this.formatEmailTime(bookingAny.time_slots?.start_time || booking.scheduled_start_time)
+      time: eb.time_slots?.start_time || booking.scheduled_start_time 
+        ? this.formatEmailTime(eb.time_slots?.start_time || booking.scheduled_start_time)
         : 'Time TBC',
-      address: bookingAny.address || bookingAny.service_address
-        ? `${(bookingAny.address || bookingAny.service_address).address_line_1}, ${(bookingAny.address || bookingAny.service_address).city} ${(bookingAny.address || bookingAny.service_address).postal_code}`
+      address: eb.address || eb.service_address
+        ? `${(eb.address || eb.service_address)?.address_line_1 || ''}, ${(eb.address || eb.service_address)?.city || ''} ${(eb.address || eb.service_address)?.postal_code || ''}`.trim()
         : 'Address not specified',
       totalPrice: this.formatPrice(booking.total_price)
     }
@@ -2616,22 +2659,33 @@ Love 4 Detailing - Premium Mobile Detailing Services
     paymentMethod: string,
     paymentReference: string
   ): string {
-    // Format booking details (using any type for database objects with relations)
-    const bookingAny = booking as any;
+    type VehicleInfo = { year?: string | number; make?: string; model?: string }
+    type AddressInfo = { address_line_1?: string; city?: string; postal_code?: string }
+    type ServiceItem = { name?: string } | string
+    type EmailBookingShape = Partial<Booking> & {
+      services?: ServiceItem[]
+      service?: { name?: string }
+      vehicle_details?: VehicleInfo
+      vehicle?: VehicleInfo
+      address?: AddressInfo
+      service_address?: AddressInfo
+      time_slots?: { start_time?: string }
+    }
+    const eb = booking as EmailBookingShape
     const bookingDetails = {
       reference: booking.booking_reference || 'N/A',
-      services: Array.isArray(bookingAny.services) 
-        ? bookingAny.services.map((s: any) => s.name || s).join(', ')
-        : bookingAny.service?.name || 'Vehicle Detailing Service',
-      vehicle: bookingAny.vehicle_details || bookingAny.vehicle
-        ? `${bookingAny.vehicle_details?.year || bookingAny.vehicle?.year || ''} ${bookingAny.vehicle_details?.make || bookingAny.vehicle?.make || ''} ${bookingAny.vehicle_details?.model || bookingAny.vehicle?.model || ''}`.trim()
+      services: Array.isArray(eb.services)
+        ? eb.services.map((s) => (typeof s === 'string' ? s : (s?.name || ''))).filter(Boolean).join(', ')
+        : eb.service?.name || 'Vehicle Detailing Service',
+      vehicle: eb.vehicle_details || eb.vehicle
+        ? `${eb.vehicle_details?.year || eb.vehicle?.year || ''} ${eb.vehicle_details?.make || eb.vehicle?.make || ''} ${eb.vehicle_details?.model || eb.vehicle?.model || ''}`.trim()
         : 'Vehicle not specified',
       date: booking.scheduled_date ? this.formatEmailDate(booking.scheduled_date) : 'Date TBC',
-      time: bookingAny.time_slots?.start_time || booking.scheduled_start_time 
-        ? this.formatEmailTime(bookingAny.time_slots?.start_time || booking.scheduled_start_time)
+      time: eb.time_slots?.start_time || booking.scheduled_start_time 
+        ? this.formatEmailTime(eb.time_slots?.start_time || booking.scheduled_start_time)
         : 'Time TBC',
-      address: bookingAny.address || bookingAny.service_address
-        ? `${(bookingAny.address || bookingAny.service_address).address_line_1}, ${(bookingAny.address || bookingAny.service_address).city} ${(bookingAny.address || bookingAny.service_address).postal_code}`
+      address: eb.address || eb.service_address
+        ? `${(eb.address || eb.service_address)?.address_line_1 || ''}, ${(eb.address || eb.service_address)?.city || ''} ${(eb.address || eb.service_address)?.postal_code || ''}`.trim()
         : 'Address not specified',
       totalPrice: this.formatPrice(booking.total_price)
     }
@@ -2690,28 +2744,39 @@ Love 4 Detailing - Premium Mobile Detailing Services
    * Generate HTML template for admin payment notification email
    */
   private generateAdminPaymentNotificationHTML(
-    booking: Booking,
+    booking: Partial<Booking>,
     customerEmail: string,
     customerName: string,
     paymentMethod: string,
     paymentReference: string
   ): string {
-    // Format booking details (using any type for database objects with relations)
-    const bookingAny = booking as any;
+    type VehicleInfo = { year?: string | number; make?: string; model?: string }
+    type AddressInfo = { address_line_1?: string; city?: string; postal_code?: string }
+    type ServiceItem = { name?: string } | string
+    type EmailBookingShape = Partial<Booking> & {
+      services?: ServiceItem[]
+      service?: { name?: string }
+      vehicle_details?: VehicleInfo
+      vehicle?: VehicleInfo
+      address?: AddressInfo
+      service_address?: AddressInfo
+      time_slots?: { start_time?: string }
+    }
+    const eb = booking as EmailBookingShape;
     const bookingDetails = {
       reference: booking.booking_reference || 'N/A',
-      services: Array.isArray(bookingAny.services) 
-        ? bookingAny.services.map((s: any) => s.name || s).join(', ')
-        : bookingAny.service?.name || 'Vehicle Detailing Service',
-      vehicle: bookingAny.vehicle_details || bookingAny.vehicle
-        ? `${bookingAny.vehicle_details?.year || bookingAny.vehicle?.year || ''} ${bookingAny.vehicle_details?.make || bookingAny.vehicle?.make || ''} ${bookingAny.vehicle_details?.model || bookingAny.vehicle?.model || ''}`.trim()
+      services: Array.isArray(eb.services) 
+        ? eb.services.map((s) => (typeof s === 'string' ? s : (s?.name || ''))).filter(Boolean).join(', ')
+        : eb.service?.name || 'Vehicle Detailing Service',
+      vehicle: eb.vehicle_details || eb.vehicle
+        ? `${eb.vehicle_details?.year || eb.vehicle?.year || ''} ${eb.vehicle_details?.make || eb.vehicle?.make || ''} ${eb.vehicle_details?.model || eb.vehicle?.model || ''}`.trim()
         : 'Vehicle not specified',
       date: booking.scheduled_date ? this.formatEmailDate(booking.scheduled_date) : 'Date TBC',
-      time: bookingAny.time_slots?.start_time || booking.scheduled_start_time 
-        ? this.formatEmailTime(bookingAny.time_slots?.start_time || booking.scheduled_start_time)
+      time: eb.time_slots?.start_time || booking.scheduled_start_time 
+        ? this.formatEmailTime(eb.time_slots?.start_time || booking.scheduled_start_time)
         : 'Time TBC',
-      address: bookingAny.address || bookingAny.service_address
-        ? `${(bookingAny.address || bookingAny.service_address).address_line_1}, ${(bookingAny.address || bookingAny.service_address).city} ${(bookingAny.address || bookingAny.service_address).postal_code}`
+      address: eb.address || eb.service_address
+        ? `${(eb.address || eb.service_address)?.address_line_1 || ''}, ${(eb.address || eb.service_address)?.city || ''} ${(eb.address || eb.service_address)?.postal_code || ''}`.trim()
         : 'Address not specified',
       totalPrice: this.formatPrice(booking.total_price)
     }
@@ -2828,7 +2893,7 @@ Love 4 Detailing - Premium Mobile Detailing Services
     const bookingDetails = {
       reference: booking.booking_reference || 'N/A',
       services: Array.isArray(bookingAny.services) 
-        ? bookingAny.services.map((s: any) => s.name || s).join(', ')
+        ? bookingAny.services.map((s: any) => s?.name || s).join(', ')
         : bookingAny.service?.name || 'Vehicle Detailing Service',
       vehicle: bookingAny.vehicle_details || bookingAny.vehicle
         ? `${bookingAny.vehicle_details?.year || bookingAny.vehicle?.year || ''} ${bookingAny.vehicle_details?.make || bookingAny.vehicle?.make || ''} ${bookingAny.vehicle_details?.model || bookingAny.vehicle?.model || ''}`.trim()
@@ -2890,10 +2955,10 @@ Love 4 Detailing Admin System
   async sendPaymentFailedNotification(
     customerEmail: string,
     customerName: string,
-    booking: Booking
+    booking: Partial<Booking>
   ): Promise<{ success: boolean; error?: string }> {
     try {
-      const subject = ` Payment Required - Booking ${booking.booking_reference}`
+      const subject = ` Payment Required - Booking ${booking.booking_reference ?? ''}`
       const htmlContent = this.generatePaymentFailedCustomerHTML(customerName, booking)
       const textContent = this.generatePaymentFailedCustomerText(customerName, booking)
 
@@ -2906,13 +2971,13 @@ Love 4 Detailing Admin System
       })
 
       if (error) {
-        console.error('Payment failed notification email error:', error)
+        logger.error('Payment failed notification email error:', error)
         return { success: false, error: error.message }
       }
       
       return { success: true }
     } catch (error) {
-      console.error('Payment failed notification error:', error)
+      logger.error('Payment failed notification error:', error)
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Failed to send payment failed notification'
@@ -2924,12 +2989,12 @@ Love 4 Detailing Admin System
    * Send admin notification about automatic payment failure
    */
   async sendAdminPaymentFailedNotification(
-    booking: Booking,
+    booking: Partial<Booking>,
     customerEmail: string,
     customerName: string
   ): Promise<{ success: boolean; error?: string }> {
     try {
-      const subject = `Important: Payment Deadline Exceeded - ${booking.booking_reference}`
+      const subject = `Important: Payment Deadline Exceeded - ${booking.booking_reference ?? ''}`
       const htmlContent = this.generatePaymentFailedAdminHTML(booking, customerEmail, customerName)
       const textContent = this.generatePaymentFailedAdminText(booking, customerEmail, customerName)
 
@@ -2942,13 +3007,13 @@ Love 4 Detailing Admin System
       })
 
       if (error) {
-        console.error('Admin payment failed notification email error:', error)
+        logger.error('Admin payment failed notification email error:', error)
         return { success: false, error: error.message }
       }
       
       return { success: true }
     } catch (error) {
-      console.error('Admin payment failed notification error:', error)
+      logger.error('Admin payment failed notification error:', error)
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Failed to send admin payment failed notification'
@@ -2959,19 +3024,28 @@ Love 4 Detailing Admin System
   /**
    * Generate HTML template for customer payment failed notification
    */
-  private generatePaymentFailedCustomerHTML(customerName: string, booking: Booking): string {
-    const bookingAny = booking as any
+  private generatePaymentFailedCustomerHTML(customerName: string, booking: Partial<Booking>): string {
+    type VehicleInfo = { year?: string | number; make?: string; model?: string }
+    type ServiceItem = { name?: string } | string
+    type EmailBookingShape = Partial<Booking> & {
+      services?: ServiceItem[]
+      service?: { name?: string }
+      vehicle_details?: VehicleInfo
+      customer_vehicles?: VehicleInfo
+      scheduled_start_time?: string
+    }
+    const eb = booking as EmailBookingShape
     const bookingDetails = {
       reference: booking.booking_reference || 'N/A',
-      services: Array.isArray(bookingAny.services) 
-        ? bookingAny.services.map((s: any) => s.name || s).join(', ')
-        : bookingAny.service?.name || 'Vehicle Detailing Service',
-      vehicle: bookingAny.vehicle_details || bookingAny.customer_vehicles
-        ? `${bookingAny.vehicle_details?.year || bookingAny.customer_vehicles?.year || ''} ${bookingAny.vehicle_details?.make || bookingAny.customer_vehicles?.make || ''} ${bookingAny.vehicle_details?.model || bookingAny.customer_vehicles?.model || ''}`.trim()
+      services: Array.isArray(eb.services) 
+        ? eb.services.map((s) => (typeof s === 'string' ? s : (s?.name || ''))).filter(Boolean).join(', ')
+        : eb.service?.name || 'Vehicle Detailing Service',
+      vehicle: eb.vehicle_details || eb.customer_vehicles
+        ? `${eb.vehicle_details?.year || eb.customer_vehicles?.year || ''} ${eb.vehicle_details?.make || eb.customer_vehicles?.make || ''} ${eb.vehicle_details?.model || eb.customer_vehicles?.model || ''}`.trim()
         : 'Vehicle not specified',
       date: booking.scheduled_date ? this.formatEmailDate(booking.scheduled_date) : 'Date TBC',
-      time: bookingAny.scheduled_start_time || booking.scheduled_start_time 
-        ? this.formatEmailTime(bookingAny.scheduled_start_time || booking.scheduled_start_time)
+      time: eb.scheduled_start_time || booking.scheduled_start_time 
+        ? this.formatEmailTime(eb.scheduled_start_time || booking.scheduled_start_time)
         : 'Time TBC',
       totalPrice: this.formatPrice(booking.total_price)
     }
@@ -3056,19 +3130,28 @@ Love 4 Detailing Admin System
   /**
    * Generate text template for customer payment failed notification
    */
-  private generatePaymentFailedCustomerText(customerName: string, booking: Booking): string {
-    const bookingAny = booking as any
+  private generatePaymentFailedCustomerText(customerName: string, booking: Partial<Booking>): string {
+    type VehicleInfo = { year?: string | number; make?: string; model?: string }
+    type ServiceItem = { name?: string } | string
+    type EmailBookingShape = Partial<Booking> & {
+      services?: ServiceItem[]
+      service?: { name?: string }
+      vehicle_details?: VehicleInfo
+      customer_vehicles?: VehicleInfo
+      scheduled_start_time?: string
+    }
+    const eb = booking as EmailBookingShape
     const bookingDetails = {
       reference: booking.booking_reference || 'N/A',
-      services: Array.isArray(bookingAny.services) 
-        ? bookingAny.services.map((s: any) => s.name || s).join(', ')
-        : bookingAny.service?.name || 'Vehicle Detailing Service',
-      vehicle: bookingAny.vehicle_details || bookingAny.customer_vehicles
-        ? `${bookingAny.vehicle_details?.year || bookingAny.customer_vehicles?.year || ''} ${bookingAny.vehicle_details?.make || bookingAny.customer_vehicles?.make || ''} ${bookingAny.vehicle_details?.model || bookingAny.customer_vehicles?.model || ''}`.trim()
+      services: Array.isArray(eb.services) 
+        ? eb.services.map((s) => (typeof s === 'string' ? s : (s?.name || ''))).filter(Boolean).join(', ')
+        : eb.service?.name || 'Vehicle Detailing Service',
+      vehicle: eb.vehicle_details || eb.customer_vehicles
+        ? `${eb.vehicle_details?.year || eb.customer_vehicles?.year || ''} ${eb.vehicle_details?.make || eb.customer_vehicles?.make || ''} ${eb.vehicle_details?.model || eb.customer_vehicles?.model || ''}`.trim()
         : 'Vehicle not specified',
       date: booking.scheduled_date ? this.formatEmailDate(booking.scheduled_date) : 'Date TBC',
-      time: bookingAny.scheduled_start_time || booking.scheduled_start_time 
-        ? this.formatEmailTime(bookingAny.scheduled_start_time || booking.scheduled_start_time)
+      time: eb.scheduled_start_time || booking.scheduled_start_time 
+        ? this.formatEmailTime(eb.scheduled_start_time || booking.scheduled_start_time)
         : 'Time TBC',
       totalPrice: this.formatPrice(booking.total_price)
     }
@@ -3116,7 +3199,7 @@ Love 4 Detailing - Premium Mobile Detailing Services
    * Generate HTML template for admin payment failed notification
    */
   private generatePaymentFailedAdminHTML(
-    booking: Booking,
+    booking: Partial<Booking>,
     customerEmail: string,
     customerName: string
   ): string {
@@ -3124,7 +3207,7 @@ Love 4 Detailing - Premium Mobile Detailing Services
     const bookingDetails = {
       reference: booking.booking_reference || 'N/A',
       services: Array.isArray(bookingAny.services) 
-        ? bookingAny.services.map((s: any) => s.name || s).join(', ')
+        ? bookingAny.services.map((s: any) => s?.name || s).join(', ')
         : bookingAny.service?.name || 'Vehicle Detailing Service',
       vehicle: bookingAny.vehicle_details || bookingAny.customer_vehicles
         ? `${bookingAny.vehicle_details?.year || bookingAny.customer_vehicles?.year || ''} ${bookingAny.vehicle_details?.make || bookingAny.customer_vehicles?.make || ''} ${bookingAny.vehicle_details?.model || bookingAny.customer_vehicles?.model || ''}`.trim()
@@ -3218,7 +3301,7 @@ Love 4 Detailing - Premium Mobile Detailing Services
    * Generate text template for admin payment failed notification
    */
   private generatePaymentFailedAdminText(
-    booking: Booking,
+    booking: Partial<Booking>,
     customerEmail: string,
     customerName: string
   ): string {
@@ -3226,7 +3309,7 @@ Love 4 Detailing - Premium Mobile Detailing Services
     const bookingDetails = {
       reference: booking.booking_reference || 'N/A',
       services: Array.isArray(bookingAny.services) 
-        ? bookingAny.services.map((s: any) => s.name || s).join(', ')
+        ? bookingAny.services.map((s: any) => s?.name || s).join(', ')
         : bookingAny.service?.name || 'Vehicle Detailing Service',
       vehicle: bookingAny.vehicle_details || bookingAny.customer_vehicles
         ? `${bookingAny.vehicle_details?.year || bookingAny.customer_vehicles?.year || ''} ${bookingAny.vehicle_details?.make || bookingAny.customer_vehicles?.make || ''} ${bookingAny.vehicle_details?.model || bookingAny.customer_vehicles?.model || ''}`.trim()

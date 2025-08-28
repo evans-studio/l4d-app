@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import { createClientFromRequest } from '@/lib/supabase/server'
 import { ApiResponseHandler } from '@/lib/api/response'
+import { logger } from '@/lib/utils/logger'
 
 type RangeKey = 'week' | 'month' | 'quarter' | 'year'
 
@@ -84,16 +85,19 @@ export async function GET(request: NextRequest) {
       .eq('role', 'customer')
 
     const customersSafe = customers || []
-    const activeCustomers = customersSafe.filter(c => (c as any).is_active).length
+    const activeCustomers = customersSafe.filter((c: { is_active?: boolean }) => c.is_active).length
     const newCustomers = customersSafe.length // within range is not tracked here without created_at; acceptable placeholder
     const retention = 0
 
     // Services popular list
     const serviceCounts = new Map<string, { count: number; revenue: number }>()
-    safeBookings.forEach(b => {
-      const services = (b as any).booking_services || []
+    safeBookings.forEach((b: { 
+      booking_services?: Array<{ service_details?: { name?: string } }>, 
+      total_price?: number 
+    }) => {
+      const services = b.booking_services || []
       const share = (b.total_price || 0) / Math.max(1, services.length)
-      services.forEach((bs: any) => {
+      services.forEach((bs: { service_details?: { name?: string } }) => {
         const name = bs?.service_details?.name || 'Service'
         const current = serviceCounts.get(name) || { count: 0, revenue: 0 }
         current.count += 1
@@ -135,7 +139,7 @@ export async function GET(request: NextRequest) {
 
     return ApiResponseHandler.success(report)
   } catch (error) {
-    console.error('Reports error:', error)
+    logger.error('Reports error:', error instanceof Error ? error : undefined)
     return ApiResponseHandler.serverError('Failed to fetch reports')
   }
 }

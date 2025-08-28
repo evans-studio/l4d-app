@@ -5,9 +5,9 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/primitives/Button'
 import { AdminLayout } from '@/components/layouts/AdminLayout'
 import { AdminRoute } from '@/components/ProtectedRoute'
-import { 
-  ArrowLeftIcon,
-  SaveIcon,
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb'
+import { logger } from '@/lib/utils/logger'
+import {
   PackageIcon,
   DollarSignIcon,
   ClockIcon,
@@ -74,7 +74,7 @@ function NewServicePage() {
           setVehicleSizes(vehicleSizesData.data || [])
         }
       } catch (error) {
-        console.error('Failed to fetch data:', error)
+        logger.error('Failed to fetch data:', error instanceof Error ? error : undefined)
       } finally {
         setIsLoading(false)
       }
@@ -123,7 +123,7 @@ function NewServicePage() {
         displayOrder: formData.display_order
       }
 
-      console.log('Creating service with payload:', servicePayload)
+      logger.debug('Creating service with payload:', servicePayload)
 
       const serviceResponse = await fetch('/api/services', {
         method: 'POST',
@@ -132,10 +132,10 @@ function NewServicePage() {
       })
 
       const serviceData = await serviceResponse.json()
-      console.log('Service creation response:', serviceData)
+      logger.debug('Service creation response:', serviceData)
       
       if (!serviceData.success) {
-        console.error('Service creation failed with response:', serviceData)
+        logger.error('Service creation failed with response:', serviceData)
         setErrors({ 
           submit: serviceData.error?.message || 
                   `Failed to create service (${serviceResponse.status}: ${serviceResponse.statusText})` 
@@ -158,13 +158,13 @@ function NewServicePage() {
 
         const pricingData = await pricingResponse.json()
         if (!pricingData.success) {
-          console.warn('Service created but pricing failed to save:', pricingData.error?.message)
+          logger.warn('Service created but pricing failed to save:', pricingData.error?.message)
         }
       }
       
       router.push('/admin/services')
     } catch (error) {
-      console.error('Failed to create service:', error)
+      logger.error('Failed to create service:', error instanceof Error ? error : undefined)
       setErrors({ submit: 'Failed to create service. Please try again.' })
     } finally {
       setIsSaving(false)
@@ -200,17 +200,28 @@ function NewServicePage() {
     <AdminLayout>
       <div className="max-w-4xl mx-auto">
         {/* Header */}
+        <div className="mb-4">
+          <Breadcrumb>
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbLink href="/admin">Admin</BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbLink href="/admin/services">Services</BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbPage>New</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+        </div>
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-[var(--text-primary)] mb-2">
-              Create New Service
-            </h1>
-            <p className="text-[var(--text-secondary)]">
-              Add a new detailing service with custom pricing
-            </p>
+            <h1 className="text-3xl font-bold text-[var(--text-primary)] mb-2">Create New Service</h1>
+            <p className="text-[var(--text-secondary)]">Add a new detailing service with custom pricing</p>
           </div>
-          
-          {/* Back button removed as requested */}
         </div>
 
         {/* Form */}
@@ -485,21 +496,14 @@ function NewServicePage() {
               >
                 Cancel
               </Button>
-              <Button
-                type="submit"
-                disabled={isSaving}
-                className="flex items-center gap-2"
-              >
+              <Button type="submit" disabled={isSaving} className="flex items-center gap-2">
                 {isSaving ? (
                   <>
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                     Creating...
                   </>
                 ) : (
-                  <>
-                    <SaveIcon className="w-4 h-4" />
-                    Create Service
-                  </>
+                  <>Create Service</>
                 )}
               </Button>
             </div>

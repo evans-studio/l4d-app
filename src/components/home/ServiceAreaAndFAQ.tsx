@@ -15,7 +15,9 @@ import {
   ChevronDown
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { isNewUIEnabled } from '@/lib/config/feature-flags'
 import { calculateDistance as calculateDistanceKm } from '@/lib/services/distance'
+import { logger } from '@/lib/utils/logger'
 
 // Real postcode validation using postcodes.io (via our distance service)
 const FREE_RADIUS_MILES = 17.5
@@ -108,7 +110,7 @@ export function ServiceAreaAndFAQ() {
       setResult(validationResult)
       setShowResult(true)
     } catch (error) {
-      console.error('Postcode validation error:', error)
+      logger.error('Postcode validation error:', error)
       setResult({ valid: false, covered: false })
       setShowResult(true)
     } finally {
@@ -136,6 +138,7 @@ export function ServiceAreaAndFAQ() {
     <section 
       ref={sectionRef}
       className="relative overflow-hidden py-20 lg:py-28"
+      data-ui={isNewUIEnabled() ? 'new' : 'old'}
     >
       <Container>
         <div className="max-w-4xl mx-auto">

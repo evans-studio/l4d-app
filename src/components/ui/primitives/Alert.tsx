@@ -2,7 +2,9 @@
 
 import React, { forwardRef } from 'react'
 import { cva, type VariantProps } from 'class-variance-authority'
-import { 
+import { isNewUIEnabled } from '@/lib/config/feature-flags'
+import { logger } from '@/lib/utils/logger'
+import {
   CheckCircle, 
   AlertTriangle, 
   Info, 
@@ -97,6 +99,9 @@ export const Alert = forwardRef<HTMLDivElement, AlertProps>(
         ref={ref}
         role="alert"
         className={alertVariants({ variant, size, className })}
+        data-ui={isNewUIEnabled() ? 'new' : 'old'}
+        data-variant={variant}
+        data-size={size}
         {...props}
       >
         {getIcon()}
@@ -276,7 +281,7 @@ export const AlertDemo = () => {
             title="Booking Failed"
             description="Unable to process your booking. Please check your details and try again."
             dismissible
-            onDismiss={() => console.log('Alert dismissed')}
+            onDismiss={() => logger.debug('Alert dismissed')}
           />
         </div>
       </div>

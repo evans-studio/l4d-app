@@ -2,9 +2,17 @@ import React from 'react'
 import { render, screen } from '@testing-library/react'
 import HomePage from '@/app/page'
 
+interface MockLinkProps {
+  children: React.ReactNode
+}
+
+interface MockAuthProviderProps {
+  children: React.ReactNode
+}
+
 jest.mock('next/link', () => ({
   __esModule: true,
-  default: ({ children }: any) => <div>{children}</div>,
+  default: ({ children }: MockLinkProps) => <div>{children}</div>,
 }))
 
 // Mock auth compatibility to avoid provider requirements in test
@@ -16,7 +24,7 @@ jest.mock('@/lib/auth-compat', () => ({
     signOut: jest.fn(),
     signIn: jest.fn(),
   }),
-  AuthProvider: ({ children }: any) => <>{children}</>,
+  AuthProvider: ({ children }: MockAuthProviderProps) => <>{children}</>,
 }))
 
 describe('HomePage', () => {

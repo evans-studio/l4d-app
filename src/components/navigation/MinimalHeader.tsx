@@ -7,16 +7,21 @@ import { useAuth } from '@/lib/auth-compat'
 import { Button } from '@/components/ui/primitives/Button'
 import { Menu, X, User, Settings, LogOut, Home, Calendar } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { isNewUIEnabled } from '@/lib/config/feature-flags'
+import { logger } from '@/lib/utils/logger'
 
 interface MinimalHeaderProps {
   className?: string
   showMobileMenu?: boolean // Control whether to show mobile hamburger menu
 }
 
+type LegacyProfile = { role?: 'admin' | 'super_admin' | 'customer'; first_name?: string; last_name?: string } | null
+type LegacyUser = { email?: string } | null
+
 // User menu dropdown component
 const UserMenu: React.FC<{ 
-  user: any
-  profile: any 
+  user: LegacyUser
+  profile: LegacyProfile 
   onLogout: () => void 
 }> = ({ user, profile, onLogout }) => {
   const [isOpen, setIsOpen] = useState(false)
@@ -76,13 +81,14 @@ const UserMenu: React.FC<{
 
   // Generate user initials for avatar
   const getInitials = () => {
-    if (profile?.first_name && profile?.last_name) {
+    if ((profile?.first_name && profile?.last_name)) {
       return `${profile.first_name[0]}${profile.last_name[0]}`.toUpperCase()
     }
-    if (profile?.first_name) {
-      return profile.first_name[0].toUpperCase()
+    if (profile?.first_name && profile.first_name.length > 0) {
+      return profile.first_name[0]!.toUpperCase()
     }
-    return user?.email?.[0]?.toUpperCase() || '?'
+    const emailInitial = user?.email && user.email.length > 0 ? user.email[0]!.toUpperCase() : undefined
+    return emailInitial || '?'
   }
 
   return (
@@ -169,8 +175,8 @@ const UserMenu: React.FC<{
 const MobileMenu: React.FC<{
   isOpen: boolean
   onClose: () => void
-  user: any
-  profile: any
+  user: LegacyUser
+  profile: LegacyProfile
   onLogout: () => void
 }> = ({ isOpen, onClose, user, profile, onLogout }) => {
   const router = useRouter()
@@ -353,15 +359,15 @@ export const MinimalHeader: React.FC<MinimalHeaderProps> = ({ className, showMob
     } catch (error) {
       if (process.env.NODE_ENV !== 'production') {
         // eslint-disable-next-line no-console
-        console.error('Logout failed:', error)
+        logger.error('Logout failed:', error)
       }
     }
   }
 
   return (
     <>
-      <header className={cn(
-        "sticky top-0 z-40 w-full bg-surface-primary/95 backdrop-blur-sm border-b border-border-secondary",
+      <header data-ui={isNewUIEnabled() ? 'new' : 'old'} className={cn(
+        "sticky top-0 z-[var(--z-header)] w-full bg-surface-primary/90 backdrop-blur supports-[backdrop-filter]:bg-[color:var(--surface-primary)/0.85] border-b border-border-secondary",
         className
       )}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

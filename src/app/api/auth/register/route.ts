@@ -3,12 +3,8 @@ import { supabaseAdmin } from '@/lib/supabase/direct'
 import { RegisterRequestSchema, AuthResponseSchema } from '@/schemas/auth.schema'
 import { EmailService } from '@/lib/services/email'
 import { ApiResponseHandler } from '@/lib/api/response'
-
-// Admin emails that should get admin role
-const ADMIN_EMAILS = [
-  'zell@love4detailing.com',
-  'paul@evans-studio.co.uk'
-]
+import { environment } from '@/lib/config/environment'
+import { logger } from '@/lib/utils/logger'
 
 export async function POST(request: NextRequest) {
   try {
@@ -29,8 +25,8 @@ export async function POST(request: NextRequest) {
 
     const { email, password, firstName, lastName, phone } = validation.data
 
-    // Determine role based on email
-    const role = ADMIN_EMAILS.includes(email.toLowerCase()) ? 'admin' : 'customer'
+    // Determine role based on email using environment configuration
+    const role = environment.auth.adminEmails.includes(email.toLowerCase()) ? 'admin' : 'customer'
 
     // Create user with Supabase Auth - require email verification
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
@@ -74,7 +70,7 @@ export async function POST(request: NextRequest) {
       })
 
     if (profileError) {
-      console.error('Profile creation error:', profileError)
+      logger.error('Profile creation error', profileError instanceof Error ? profileError : undefined)
       // Continue anyway - profile can be created on first login if needed
     }
 
@@ -94,13 +90,13 @@ export async function POST(request: NextRequest) {
       })
       
       if (verificationError) {
-        console.error('Failed to send verification email:', verificationError)
+        logger.error('Failed to send verification email', verificationError instanceof Error ? verificationError : undefined)
         // Continue anyway - user can resend verification if needed
       } else {
-        console.log('Verification email sent to:', email)
+        logger.debug('Verification email sent', { to: email })
       }
     } catch (emailError) {
-      console.error('Failed to send verification email:', emailError)
+      logger.error('Failed to send verification email', emailError instanceof Error ? emailError : undefined)
       // Continue anyway - user can resend verification if needed
     }
 
@@ -121,7 +117,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Registration error:', error)
+    logger.error('Registration error', error instanceof Error ? error : undefined)
     return NextResponse.json(
       {
         success: false,

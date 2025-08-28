@@ -33,6 +33,7 @@ import {
 } from 'lucide-react'
 import { alertManager, type Alert, type AlertSeverity, type AlertCategory } from '@/lib/monitoring/alert-manager'
 import { cn } from '@/lib/utils'
+import { logger } from '@/lib/utils/logger'
 
 interface MonitoringStats {
   activeAlerts: number
@@ -93,7 +94,7 @@ export function MonitoringDashboard() {
         
         setLoading(false)
       } catch (error) {
-        console.error('Failed to fetch monitoring data:', error)
+        logger.error('Failed to fetch monitoring data:', error)
         setLoading(false)
       }
     }

@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, ui-refresh ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, ui-refresh ]
 
 jobs:
   build-and-test:
@@ -22,20 +22,27 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Set environment variables for tests
+      - name: Set environment variables for tests (non-sensitive)
         run: |
+          echo "NODE_ENV=test" >> $GITHUB_ENV
+          echo "NEXT_PUBLIC_NEW_UI=true" >> $GITHUB_ENV
+          echo "NEXT_PUBLIC_APP_URL=http://localhost:3000" >> $GITHUB_ENV
+          echo "ALLOW_SKIP_ENV_VALIDATION=true" >> $GITHUB_ENV
+          echo "ALLOW_SKIP_ENV_VALIDATION=true" >> $GITHUB_ENV
+          # Minimal Supabase vars to satisfy dev-only code paths
           echo "NEXT_PUBLIC_SUPABASE_URL=https://test.supabase.co" >> $GITHUB_ENV
           echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=dummy" >> $GITHUB_ENV
           echo "SUPABASE_SERVICE_ROLE_KEY=dummy" >> $GITHUB_ENV
-          echo "ACCESS_TOKEN_SECRET=0123456789abcdef0123456789abcdef" >> $GITHUB_ENV
-          echo "REFRESH_TOKEN_SECRET=abcdef0123456789abcdef0123456789" >> $GITHUB_ENV
-          echo "RESEND_API_KEY=dummy" >> $GITHUB_ENV
-          echo "NODE_ENV=test" >> $GITHUB_ENV
+          echo "RESEND_API_KEY=re_mock_key" >> $GITHUB_ENV
+          # Generate ephemeral secrets to satisfy env validation without storing secrets in repo
+          echo "ACCESS_TOKEN_SECRET=$(node -e 'console.log(require("crypto").randomBytes(48).toString("base64url"))')" >> $GITHUB_ENV
+          echo "REFRESH_TOKEN_SECRET=$(node -e 'console.log(require("crypto").randomBytes(48).toString("base64url"))')" >> $GITHUB_ENV
+          echo "NEXTAUTH_SECRET=$(node -e 'console.log(require("crypto").randomBytes(48).toString("base64url"))')" >> $GITHUB_ENV
 
       - name: Build
         run: npm run build
 
-      - name: Test
+      - name: Test (Jest only)
         run: npm test -- --ci --coverage --watchAll=false
 
 

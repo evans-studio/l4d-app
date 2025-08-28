@@ -2,9 +2,11 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { AdminLayout } from '@/components/layouts/AdminLayout'
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb'
 import { AdminRoute } from '@/components/ProtectedRoute'
 import { Button } from '@/components/ui/primitives/Button'
-import { 
+import { logger } from '@/lib/utils/logger'
+import {
   TrendingUpIcon,
   TrendingDownIcon,
   DollarSignIcon,
@@ -125,7 +127,7 @@ function AdminAnalyticsPage() {
         setAnalyticsData(data.data)
       }
     } catch (error) {
-      console.error('Failed to load analytics data:', error)
+      logger.error('Failed to load analytics data:', error instanceof Error ? error : undefined)
     } finally {
       setIsLoading(false)
     }
@@ -151,7 +153,7 @@ function AdminAnalyticsPage() {
         document.body.removeChild(a)
       }
     } catch (error) {
-      console.error('Export failed:', error)
+      logger.error('Export failed:', error instanceof Error ? error : undefined)
     }
   }
 
@@ -208,45 +210,58 @@ function AdminAnalyticsPage() {
     <AdminLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-text-primary">Business Analytics</h1>
-            <p className="text-text-secondary mt-2">
-              Comprehensive insights into your business performance
-            </p>
-          </div>
-          <div className="flex items-center gap-3 mt-4 sm:mt-0">
-            {/* Date Range Selector */}
-            <select
-              value={dateRanges.findIndex(r => r.start === selectedRange.start && r.end === selectedRange.end)}
-              onChange={(e) => {
-                const range = dateRanges[parseInt(e.target.value)]
-                if (range) setSelectedRange(range)
-              }}
-              className="min-h-[44px] px-4 py-3 bg-surface-secondary border border-border-secondary rounded-md text-text-primary focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-600/20 touch-manipulation"
-            >
-              {dateRanges.map((range, index) => (
-                <option key={index} value={index}>{range.label}</option>
-              ))}
-            </select>
-            
-            <Button
-              variant="outline"
-              onClick={exportAnalytics}
-              className="flex items-center gap-2"
-            >
-              <DownloadIcon className="w-4 h-4" />
-              Export
-            </Button>
-            
-            <Button
-              variant="outline"
-              onClick={loadAnalyticsData}
-              className="flex items-center gap-2"
-            >
-              <RefreshCwIcon className="w-4 h-4" />
-              Refresh
-            </Button>
+        <div className="space-y-3">
+          <Breadcrumb>
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbLink href="/admin">Admin</BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbPage>Analytics</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-text-primary">Business Analytics</h1>
+              <p className="text-text-secondary mt-2">
+                Comprehensive insights into your business performance
+              </p>
+            </div>
+            <div className="flex items-center gap-3 mt-4 sm:mt-0">
+              {/* Date Range Selector */}
+              <select
+                value={dateRanges.findIndex(r => r.start === selectedRange.start && r.end === selectedRange.end)}
+                onChange={(e) => {
+                  const range = dateRanges[parseInt(e.target.value)]
+                  if (range) setSelectedRange(range)
+                }}
+                className="min-h-[44px] px-4 py-3 bg-surface-secondary border border-border-secondary rounded-md text-text-primary focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-600/20 touch-manipulation"
+              >
+                {dateRanges.map((range, index) => (
+                  <option key={index} value={index}>{range.label}</option>
+                ))}
+              </select>
+              
+              <Button
+                variant="outline"
+                onClick={exportAnalytics}
+                className="flex items-center gap-2"
+              >
+                <DownloadIcon className="w-4 h-4" />
+                Export
+              </Button>
+              
+              <Button
+                variant="outline"
+                onClick={loadAnalyticsData}
+                className="flex items-center gap-2"
+              >
+                <RefreshCwIcon className="w-4 h-4" />
+                Refresh
+              </Button>
+            </div>
           </div>
         </div>
 

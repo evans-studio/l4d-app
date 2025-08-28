@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { supabaseAdmin } from '@/lib/supabase/direct'
 import { ApiResponseHandler } from '@/lib/api/response'
 import { EmailService } from '@/lib/services/email'
+import { logger } from '@/lib/utils/logger'
 
 export async function POST(
   request: NextRequest,
@@ -86,7 +87,7 @@ export async function POST(
       .single()
 
     if (createRequestError) {
-      console.error('Error creating reschedule request:', createRequestError)
+      logger.error('Error creating reschedule request:', createRequestError)
       return ApiResponseHandler.serverError('Failed to submit reschedule request')
     }
 
@@ -116,7 +117,7 @@ export async function POST(
       })
 
     if (logError) {
-      console.error('Error logging reschedule request action:', logError)
+      logger.error('Error logging reschedule request action:', logError)
       // Don't fail the request if logging fails
     }
 
@@ -139,7 +140,7 @@ export async function POST(
           reason
         )
       } catch (emailError) {
-        console.error('Failed to send reschedule request confirmation:', emailError)
+        logger.error('Failed to send reschedule request confirmation', emailError instanceof Error ? emailError : undefined)
         // Don't fail the request if email fails
       }
     }
@@ -155,7 +156,7 @@ export async function POST(
     })
 
   } catch (error) {
-    console.error('Submit reschedule request error:', error)
+    logger.error('Submit reschedule request error', error instanceof Error ? error : undefined)
     return ApiResponseHandler.serverError('Failed to submit reschedule request')
   }
 }

@@ -24,6 +24,7 @@ import {
   ExternalLink
 } from 'lucide-react'
 import { formatDistance } from 'date-fns'
+import { logger } from '@/lib/utils/logger'
 
 interface BookingCardProps {
   booking: {
@@ -194,7 +195,7 @@ export function BookingCard({
         await navigator.clipboard.writeText(booking.payment_link)
         // Could add toast notification here
       } catch (error) {
-        console.error('Failed to copy payment link:', error)
+        logger.error('Failed to copy payment link:', error)
       }
     }
   }
@@ -241,7 +242,7 @@ export function BookingCard({
       await initializeRebooking(booking.id)
       router.push('/book')
     } catch (error) {
-      console.error('Rebooking failed:', error)
+      logger.error('Rebooking failed:', error)
     }
   }
 
@@ -294,7 +295,7 @@ export function BookingCard({
                   {booking.services[0]?.name}
                   {booking.services.length > 1 && ` +${booking.services.length - 1} more`}
                 </h3>
-                <Badge variant={config.color as any} size="sm">
+                <Badge variant={config.color as 'default' | 'primary' | 'secondary' | 'success' | 'warning' | 'error' | 'info' | 'outline' | 'ghost'} size="sm">
                   {config.label}
                 </Badge>
               </div>
@@ -357,7 +358,7 @@ export function BookingCard({
                   <span className="text-base font-bold text-brand-500 ml-3">£{booking.total_price}</span>
                 </div>
                 <div className="sm:hidden flex items-center gap-2 mb-2">
-                  <Badge variant={config.color as any} size="sm">{config.label}</Badge>
+                  <Badge variant={config.color as 'default' | 'primary' | 'secondary' | 'success' | 'warning' | 'error' | 'info' | 'outline' | 'ghost'} size="sm">{config.label}</Badge>
                   {(booking.payment_status === 'failed' || isPaymentOverdue()) && (
                     <Badge variant="error" size="sm">{booking.payment_status === 'failed' ? 'Payment Failed' : 'Overdue'}</Badge>
                   )}
@@ -372,7 +373,7 @@ export function BookingCard({
                     {booking.services[0]?.name}
                     {booking.services.length > 1 && ` +${booking.services.length - 1} more`}
                   </h3>
-                  <Badge variant={config.color as any} className="shadow-sm">
+                  <Badge variant={config.color as 'default' | 'primary' | 'secondary' | 'success' | 'warning' | 'error' | 'info' | 'outline' | 'ghost'} className="shadow-sm">
                     {config.label}
                   </Badge>
                   {booking.payment_status && (

@@ -3,7 +3,8 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/primitives/Button'
 import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from '@/components/ui/composites/Modal'
-import { 
+import { logger } from '@/lib/utils/logger'
+import {
   ClockIcon,
   CalendarIcon,
   PlusIcon,
@@ -74,7 +75,7 @@ export function AddSlotModal({ date, onClose, onSuccess }: AddSlotModalProps) {
         setError(data.error?.message || 'Failed to create time slot')
       }
     } catch (error) {
-      console.error('Error creating time slot:', error)
+      logger.error('Error creating time slot:', error)
       setError('Failed to create time slot. Please try again.')
     } finally {
       setIsLoading(false)

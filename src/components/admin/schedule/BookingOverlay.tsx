@@ -1,7 +1,8 @@
 'use client'
 
 import { Button } from '@/components/ui/primitives/Button'
-import { 
+import { logger } from '@/lib/utils/logger'
+import {
   XIcon,
   UserIcon,
   CarIcon,
@@ -91,7 +92,7 @@ export function BookingOverlay({ slot, onClose, onUpdate }: BookingOverlayProps)
         onUpdate()
       }
     } catch (error) {
-      console.error('Error updating slot:', error)
+      logger.error('Error updating slot:', error)
     }
   }
 
@@ -107,7 +108,7 @@ export function BookingOverlay({ slot, onClose, onUpdate }: BookingOverlayProps)
         onUpdate()
       }
     } catch (error) {
-      console.error('Error deleting slot:', error)
+      logger.error('Error deleting slot:', error)
     }
   }
 

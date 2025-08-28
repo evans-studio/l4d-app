@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { createClientFromRequest } from '@/lib/supabase/server'
 import { ApiResponseHandler } from '@/lib/api/response'
 import { EmailService } from '@/lib/services/email'
+import { logger } from '@/lib/utils/logger'
 
 export const runtime = 'nodejs'
 
@@ -44,7 +45,7 @@ export async function PUT(
       .single()
 
     if (slotError) {
-      console.error('Error fetching time slot:', slotError)
+      logger.error('Error fetching time slot:', slotError)
       return ApiResponseHandler.serverError('Failed to fetch time slot')
     }
 
@@ -85,7 +86,7 @@ export async function PUT(
       .single()
 
     if (updateError) {
-      console.error('Error releasing time slot:', updateError)
+      logger.error('Error releasing time slot:', updateError)
       
       // Check if it's a race condition (slot was already released)
       if (updateError.code === 'PGRST116') { // No rows updated
@@ -111,7 +112,7 @@ export async function PUT(
           })
           .eq('id', booking.id)
       } catch (error) {
-        console.error('Failed to update booking status:', error)
+        logger.error('Failed to update booking status:', error)
         // Don't fail the request for booking update errors
       }
 
@@ -128,12 +129,12 @@ export async function PUT(
               cancellation_reason: cancellation_reason || booking.cancellation_reason,
               scheduled_date: slot.slot_date,
               scheduled_start_time: slot.start_time,
-            } as any,
+            } as Partial<import('@/lib/utils/booking-types').Booking>,
             booking.status || 'pending',
             cancellation_reason || 'Time slot released'
           )
           .catch(err => {
-            console.error('Failed to send cancellation email:', err)
+            logger.error('Failed to send cancellation email', err instanceof Error ? err : undefined)
           })
       }
     }
@@ -155,14 +156,14 @@ export async function PUT(
           created_at: new Date().toISOString()
         })
     } catch (error) {
-      console.error('Failed to log release action:', error)
+      logger.error('Failed to log release action:', error)
       // Don't fail the request for audit logging errors
     }
 
     return ApiResponseHandler.success(updatedSlot, 'Time slot released successfully')
 
   } catch (error) {
-    console.error('Release time slot error:', error)
+    logger.error('Release time slot error', error instanceof Error ? error : undefined)
     return ApiResponseHandler.serverError('Failed to release time slot')
   }
 }

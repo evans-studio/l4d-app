@@ -5,12 +5,10 @@ import { EmailService } from '@/lib/services/email'
 import { Database } from '@/lib/db/database.types'
 import { calculatePostcodeDistance } from '@/lib/utils/postcode-distance'
 import { ApiResponseHandler } from '@/lib/api/response'
+import { logger } from '@/lib/utils/logger'
+import { env } from '@/lib/config/environment'
 
-// Admin emails that should get admin role
-const ADMIN_EMAILS = [
-  'zell@love4detailing.com',
-  'paul@evans-studio.co.uk'
-]
+// Determine admin role using configured admin emails
 
 // Generate random password for new users
 function generateRandomPassword(): string {
@@ -63,7 +61,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Determine user role
-    const userRole = ADMIN_EMAILS.includes(bookingData.customer.email.toLowerCase()) ? 'admin' : 'customer'
+    const userRole = env.auth.adminEmails.includes(bookingData.customer.email.toLowerCase()) ? 'admin' : 'customer'
 
     let userId: string
     let vehicleId: string
@@ -116,7 +114,7 @@ export async function POST(request: NextRequest) {
       })
 
       if (authError || !authUser.user) {
-        console.error('Auth user creation error:', authError)
+        logger.error('Auth user creation error', authError instanceof Error ? authError : undefined)
         return ApiResponseHandler.serverError('Failed to create user account')
       }
 
@@ -124,7 +122,7 @@ export async function POST(request: NextRequest) {
       try {
         const redirectUrl = process.env.NODE_ENV === 'development' 
           ? 'http://localhost:3000/auth/callback?next=/dashboard'
-          : `${process.env.NEXT_PUBLIC_APP_URL || 'https://l4d-app.vercel.app'}/auth/callback?next=/dashboard`
+          : `${process.env.NEXT_PUBLIC_APP_URL || 'https://love4detailing.com'}/auth/callback?next=/dashboard`
         
         // Use Supabase's resend method to send verification email
         const { error: verificationError } = await supabaseAdmin.auth.resend({
@@ -136,11 +134,11 @@ export async function POST(request: NextRequest) {
         })
         
         if (verificationError) {
-          console.error('Failed to send Supabase verification email:', verificationError)
+          logger.error('Failed to send Supabase verification email', verificationError instanceof Error ? verificationError : undefined)
           // Continue anyway - user can resend verification if needed
         } 
       } catch (emailError) {
-        console.error('Failed to send Supabase verification email:', emailError)
+        logger.error('Failed to send Supabase verification email', emailError instanceof Error ? emailError : undefined)
         // Continue anyway - user can resend verification if needed
       }
 
@@ -173,7 +171,7 @@ export async function POST(request: NextRequest) {
           .single()
 
         if (profileError || !newProfile) {
-          console.error('Profile creation error:', profileError)
+          logger.error('Profile creation error', profileError instanceof Error ? profileError : undefined)
           return ApiResponseHandler.serverError(
             `Failed to create user profile: ${profileError?.message || 'Unknown error'}`
           )
@@ -218,7 +216,7 @@ export async function POST(request: NextRequest) {
     
     const vehicleSizeInfo = sizeMapping[bookingData.vehicle.vehicleSize]
     if (!vehicleSizeInfo) {
-      console.error('Invalid vehicle size:', bookingData.vehicle.vehicleSize)
+      logger.error('Invalid vehicle size', undefined, { vehicleSize: bookingData.vehicle.vehicleSize })
       return NextResponse.json({
         success: false,
         error: { message: 'Invalid vehicle size', code: 'INVALID_VEHICLE_SIZE' }
@@ -269,7 +267,7 @@ export async function POST(request: NextRequest) {
         .single()
 
       if (vehicleError || !newVehicle) {
-        console.error('Vehicle creation error:', vehicleError)
+        logger.error('Vehicle creation error', vehicleError instanceof Error ? vehicleError : undefined)
         return NextResponse.json({
           success: false,
           error: { message: 'Failed to create vehicle', code: 'VEHICLE_CREATION_FAILED' }
@@ -347,8 +345,8 @@ export async function POST(request: NextRequest) {
         .single()
 
       if (addressError || !newAddress) {
-        console.error('Address creation error:', addressError)
-        console.error('Address data attempted:', {
+        logger.error('Address creation error', addressError instanceof Error ? addressError : undefined)
+        logger.error('Address data attempted', undefined, {
           user_id: userId,
           address_line_1: bookingData.address.addressLine1,
           address_line_2: bookingData.address.addressLine2,
@@ -384,7 +382,7 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (serviceError || !service) {
-      console.error('Service error:', serviceError)
+      logger.error('Service error', serviceError instanceof Error ? serviceError : undefined)
       return NextResponse.json({
         success: false,
         error: { message: 'Invalid service', code: 'INVALID_SERVICE' }
@@ -399,7 +397,7 @@ export async function POST(request: NextRequest) {
       .single()
     
     if (pricingError || !servicePricing) {
-      console.error('Service pricing error:', pricingError)
+      logger.error('Service pricing error', pricingError instanceof Error ? pricingError : undefined)
       return NextResponse.json({
         success: false,
         error: { message: 'Service pricing not found', code: 'PRICING_NOT_FOUND' }
@@ -417,7 +415,7 @@ export async function POST(request: NextRequest) {
     
     const priceColumn = sizePriceMap[bookingData.vehicle.vehicleSize]
     if (!priceColumn) {
-      console.error('Invalid vehicle size for pricing:', bookingData.vehicle.vehicleSize)
+      logger.error('Invalid vehicle size for pricing', undefined, { vehicleSize: bookingData.vehicle.vehicleSize })
       return NextResponse.json({
         success: false,
         error: { message: 'Invalid vehicle size for pricing', code: 'INVALID_SIZE_PRICING' }
@@ -427,7 +425,7 @@ export async function POST(request: NextRequest) {
     const servicePrice = servicePricing[priceColumn] as number
     
     if (servicePrice === null || servicePrice === undefined) {
-      console.error('No price found for service and vehicle size:', { serviceId: service.id, vehicleSize: bookingData.vehicle.vehicleSize })
+      logger.error('No price found for service and vehicle size', undefined, { serviceId: service.id, vehicleSize: bookingData.vehicle.vehicleSize })
       return NextResponse.json({
         success: false,
         error: { message: 'Service pricing not configured for this vehicle size', code: 'PRICING_NOT_CONFIGURED' }
@@ -543,7 +541,7 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (bookingError || !newBooking) {
-      console.error('Booking creation error:', bookingError)
+      logger.error('Booking creation error:', bookingError)
       return NextResponse.json({
         success: false,
         error: { message: 'Failed to create booking', code: 'BOOKING_CREATION_FAILED' }
@@ -645,9 +643,13 @@ export async function POST(request: NextRequest) {
           model: bookingData.vehicle.model,
           year: bookingData.vehicle.year,
           color: bookingData.vehicle.color,
-          registration: bookingData.vehicle.licenseNumber
+          registration: bookingData.vehicle.licenseNumber,
+          size_id: bookingData.vehicle.vehicleSize,
+          size_name: vehicleSizeInfo.name,
+          size_multiplier: vehicleSizeInfo.multiplier
         },
         service_address: {
+          name: bookingData.address.addressLine1,
           address_line_1: bookingData.address.addressLine1,
           address_line_2: bookingData.address.addressLine2,
           city: bookingData.address.city,
@@ -663,49 +665,49 @@ export async function POST(request: NextRequest) {
       
       try {
         if (isNewCustomer) {
-          console.log('📧 Sending welcome booking email to new user:', bookingData.customer.email)
+          logger.debug('📧 Sending welcome booking email to new user', { email: bookingData.customer.email })
           // Send welcome email for new customers with verification reminder
           const customerEmailResult = await emailService.sendWelcomeBookingConfirmation(
             bookingData.customer.email,
             customerName,
-            bookingForEmail as any,
+            bookingForEmail,
             needsVerification // Pass whether they need to verify email
           )
           
           if (!customerEmailResult.success) {
-            console.error('Failed to send welcome booking email:', customerEmailResult.error)
+            logger.error('Failed to send welcome booking email', undefined, { error: customerEmailResult.error })
           }
         } else {
-          console.log('📧 Sending standard booking confirmation to existing user:', bookingData.customer.email)
+          logger.debug('📧 Sending standard booking confirmation to existing user', { email: bookingData.customer.email })
           // Send standard booking confirmation for existing customers
           const customerEmailResult = await emailService.sendBookingConfirmation(
             bookingData.customer.email,
             customerName,
-            bookingForEmail as any
+            bookingForEmail
           )
           
           if (!customerEmailResult.success) {
-            console.error('Failed to send standard booking confirmation:', customerEmailResult.error)
+            logger.error('Failed to send standard booking confirmation', undefined, { error: customerEmailResult.error })
           }
         }
       } catch (emailError) {
-        console.error('Error sending customer email:', emailError)
+        logger.error('Error sending customer email', emailError instanceof Error ? emailError : undefined)
       }
     }
     
     // Send admin notification email
     try {
       const adminEmailResult = await emailService.sendAdminBookingNotification(
-        bookingForEmail as any,
+        bookingForEmail,
         bookingData.customer.email,
         `${bookingData.customer.firstName} ${bookingData.customer.lastName}`
       )
       
       if (!adminEmailResult.success) {
-        console.error('Failed to send admin notification email:', adminEmailResult.error)
+        logger.error('Failed to send admin notification email', undefined, { error: adminEmailResult.error })
       }
     } catch (emailError) {
-      console.error('Error sending admin notification email:', emailError)
+      logger.error('Error sending admin notification email', emailError instanceof Error ? emailError : undefined)
     }
 
     // Note: Password setup will be handled via modal/page flow instead of email
@@ -738,7 +740,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Booking creation error:', error)
+    logger.error('Booking creation error', error instanceof Error ? error : undefined)
     return ApiResponseHandler.serverError('Internal server error')
   }
 }

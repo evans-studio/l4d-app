@@ -4,6 +4,7 @@ import { ApiResponseHandler } from '@/lib/api/response'
 import { ApiValidation } from '@/lib/api/validation'
 import { ApiAuth } from '@/lib/api/auth'
 import { z } from 'zod'
+import { logger } from '@/lib/utils/logger'
 
 const confirmBookingSchema = z.object({
   scheduled_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format'),
@@ -53,7 +54,7 @@ export async function POST(
     return ApiResponseHandler.success(result.data)
 
   } catch (error) {
-    console.error('Confirm booking error:', error)
+    logger.error('Confirm booking error', error instanceof Error ? error : undefined)
     return ApiResponseHandler.serverError('Failed to confirm booking')
   }
 }

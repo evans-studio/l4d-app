@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react'
 import { useBookingFlowStore, useBookingStep } from '@/lib/store/bookingFlowStore'
 import { Button } from '@/components/ui/primitives/Button'
+import AppointmentPicker from '@/components/booking/AppointmentPicker'
+import { isNewUIEnabled } from '@/lib/config/feature-flags'
 import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/composites/Card'
 import { ChevronLeftIcon, ChevronRightIcon, CalendarIcon, ClockIcon, CheckCircleIcon, AlertCircleIcon } from 'lucide-react'
 import { addDays, format, startOfWeek, endOfWeek, isSameDay, isAfter, startOfDay, startOfMonth, endOfMonth, addMonths, isSameMonth } from 'date-fns'
@@ -33,7 +35,7 @@ export function TimeSlotSelection() {
     return startOfMonth(addDays(today, 1))
   })
 
-  const [timeSlots, setTimeSlots] = useState<any[]>([])
+  const [timeSlots, setTimeSlots] = useState<Array<{ id: string; start_time: string; is_available: boolean }>>([])
   const [slotsLoading, setSlotsLoading] = useState(false)
   const [slotsError, setSlotsError] = useState<string | null>(null)
 
@@ -140,6 +142,19 @@ export function TimeSlotSelection() {
     }
   }
 
+  // New UI: handle selection payload directly from AppointmentPicker
+  const handlePickerSlotSelect = async (payload: { id: string; date: string; start: string; end: string }) => {
+    const serviceDuration = formData.service?.duration || 60
+    setSlotSelection({
+      slotId: payload.id,
+      slot_date: payload.date,
+      startTime: payload.start,
+      endTime: payload.end || calculateEndTime(payload.start, serviceDuration),
+      duration: serviceDuration,
+    })
+    // Do not auto-advance; allow user to review and click Continue
+  }
+
   // Helper function to calculate end time
   const calculateEndTime = (startTime: string, durationMinutes: number) => {
     const [hours, minutes] = startTime.split(':').map(Number)
@@ -235,178 +250,12 @@ export function TimeSlotSelection() {
         </Card>
       )}
 
-      {/* Booking Notice */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-        <div className="flex items-start gap-2">
-          <AlertCircleIcon className="w-4 h-4 text-blue-600 mt-0.5" />
-          <p className="text-sm text-blue-800">
-            Bookings require at least 30 minutes advance notice. Slots starting within the next 30 minutes cannot be booked.
-          </p>
-        </div>
-      </div>
-
-      {/* Calendar View */}
-        <Card>
-          <CardHeader className="pb-4">
-            {/* Mobile-First Responsive Header */}
-            <div className="space-y-4 sm:space-y-3">
-              {/* Section Title */}
-              <div className="text-center sm:text-left">
-                <h3 className="text-xl sm:text-lg font-semibold text-text-primary">Select Date</h3>
-              </div>
-              
-              {/* Month Navigation - Mobile Centered, Desktop Justified */}
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                {/* Month Display */}
-                <div className="flex items-center justify-center sm:justify-start">
-                  <h4 className="text-2xl sm:text-xl font-bold text-text-primary">
-                    {format(currentMonth, 'MMMM yyyy')}
-                  </h4>
-                </div>
-                
-                {/* Navigation Buttons */}
-                <div className="flex items-center justify-center gap-3 sm:gap-2">
-                  <Button
-                    variant="outline"
-                    size="md"
-                    onClick={() => navigateMonth('prev')}
-                    disabled={isSameMonth(currentMonth, new Date())}
-                    leftIcon={<ChevronLeftIcon className="w-4 h-4" />}
-                    className="whitespace-nowrap min-w-[120px] min-h-[44px] touch-manipulation sm:min-w-[40px] sm:min-h-[36px]"
-                    aria-label="Previous month"
-                  >
-                    <span className="sm:hidden">Previous</span>
-                  </Button>
-                  <Button
-                    variant="outline" 
-                    size="md"
-                    onClick={() => navigateMonth('next')}
-                    disabled={isSameMonth(currentMonth, new Date())}
-                    rightIcon={<ChevronRightIcon className="w-4 h-4" />}
-                    className="whitespace-nowrap min-w-[120px] min-h-[44px] touch-manipulation sm:min-w-[40px] sm:min-h-[36px]"
-                    aria-label="Next month"
-                  >
-                    <span className="sm:hidden">Next</span>
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </CardHeader>
-          
-          <CardContent>
-            {/* Calendar Grid */}
-            <div className="space-y-4">
-              {/* Day headers */}
-              <div className="grid grid-cols-7 gap-2 text-center text-sm font-medium text-text-secondary">
-                <div>Mon</div>
-                <div>Tue</div>
-                <div>Wed</div>
-                <div>Thu</div>
-                <div>Fri</div>
-                <div>Sat</div>
-                <div>Sun</div>
-              </div>
-              
-              {/* Calendar weeks */}
-              {calendarWeeks.map((week, weekIndex) => (
-                <div key={weekIndex} className="grid grid-cols-7 gap-2">
-                  {week.map((day, dayIndex) => (
-                    <button
-                      key={dayIndex}
-                      onClick={() => !day.isPast && day.isCurrentMonth && handleDateSelect(day.dateString)}
-                      disabled={day.isPast || !day.isCurrentMonth}
-                      className={`
-                        min-h-[80px] p-4 rounded-lg transition-all duration-200 border
-                        flex flex-col items-center justify-center gap-1 touch-manipulation
-                        ${!day.isCurrentMonth
-                          ? 'bg-surface-tertiary/50 text-text-muted/50 border-border-secondary/50 cursor-not-allowed'
-                          : day.isPast 
-                            ? 'bg-surface-tertiary text-text-muted border-border-secondary cursor-not-allowed' 
-                            : day.isToday
-                              ? 'bg-blue-100 text-blue-800 border-blue-300 font-semibold'
-                              : day.isSelected
-                                ? 'bg-brand-600 text-white border-brand-600 shadow-purple-lg'
-                                : 'bg-surface-secondary border-border-secondary hover:border-brand-400 hover:bg-brand-600/5'
-                        }
-                      `}
-                    >
-                      <div className={`text-xl font-bold leading-none ${
-                        day.isToday ? 'text-blue-800' : ''
-                      }`}>
-                        {format(day.date, 'd')}
-                      </div>
-                      {!day.isCurrentMonth && (
-                        <div className="text-xs font-medium leading-none opacity-60">
-                          {format(day.date, 'MMM')}
-                        </div>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              ))}
-            </div>
-
-            {/* Selected Date Display */}
-            {selectedDate && (
-              <div className="mt-6 p-4 bg-brand-600/5 border border-brand-200 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <CalendarIcon className="w-5 h-5 text-brand-600" />
-                  <div>
-                    <p className="font-semibold text-text-primary">
-                      {formatDate(new Date(selectedDate))}
-                    </p>
-                    <p className="text-sm text-text-secondary">
-                      {timeSlots.length} slots available
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Available Slots for Selected Date */}
-            {selectedDate && timeSlots.length > 0 && (
-              <div className="mt-6">
-                <h4 className="font-semibold text-text-primary mb-4">Available Times</h4>
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                  {timeSlots.map((slot) => {
-                    const isPast = isSlotInPast(selectedDate, slot.start_time)
-                    const isAvailable = slot.is_available && !isPast
-                    const isSelected = formData.slot?.slotId === slot.id
-                    
-                    return (
-                      <Button
-                        key={slot.id}
-                        variant={isSelected ? 'primary' : 'outline'}
-                        onClick={() => isAvailable && handleSlotSelect(slot.id)}
-                        disabled={!isAvailable}
-                        className={`flex flex-col items-center p-4 h-auto transition-all ${
-                          !isAvailable ? 'opacity-50 cursor-not-allowed' : ''
-                        }`}
-                      >
-                        <ClockIcon className={`w-4 h-4 mb-1 ${!isAvailable ? 'text-text-muted' : ''}`} />
-                        <span className="text-sm font-medium">
-                          {formatTime(slot.start_time)}
-                        </span>
-                        <span className="text-xs opacity-75">
-                          {isPast ? 'Expired' : !slot.is_available ? 'Booked' : formatTime(slot.end_time)}
-                        </span>
-                      </Button>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* No slots message */}
-            {selectedDate && timeSlots.length === 0 && !slotsLoading && (
-              <div className="mt-6 text-center p-8 bg-surface-tertiary rounded-lg">
-                <AlertCircleIcon className="w-8 h-8 mx-auto mb-2 text-text-muted" />
-                <p className="text-text-secondary">No available slots for this date</p>
-                <p className="text-sm text-text-muted">Try selecting a different date</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+      {/* Calendar View: new UI only */}
+      <AppointmentPicker
+        initialDate={new Date()}
+        onSelect={(s) => handlePickerSlotSelect(s)}
+        selectedSlotId={formData.slot?.slotId}
+      />
 
       {/* Loading State */}
       {slotsLoading && (
@@ -432,29 +281,29 @@ export function TimeSlotSelection() {
 
       {/* Selected Slot Summary */}
       {formData.slot && (
-        <Card>
+        <Card className="border-[var(--border-secondary)] bg-[var(--surface-secondary)]">
           <CardHeader>
-            <h3 className="text-lg font-semibold text-text-primary">Selected Appointment</h3>
+            <h3 className="text-lg font-semibold text-[var(--text-primary)]">Selected Appointment</h3>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-lg p-4">
+            <div className="flex items-center justify-between rounded-lg p-4 border border-[var(--border-secondary)] bg-[color:rgba(151,71,255,0.08)]">
               <div className="flex items-center gap-3">
-                <CheckCircleIcon className="w-6 h-6 text-green-600" />
+                <CheckCircleIcon className="w-6 h-6 text-[var(--primary)]" />
                 <div>
-                  <p className="font-semibold text-text-primary">
+                  <p className="font-semibold text-[var(--text-primary)]">
                     {formatDate(new Date(formData.slot.slot_date))}
                   </p>
-                  <p className="text-sm text-text-secondary">
+                  <p className="text-sm text-[var(--text-secondary)]">
                     {formatTime(formData.slot.startTime)} - {formatTime(formData.slot.endTime)}
                   </p>
-                  <p className="text-xs text-text-muted">
+                  <p className="text-xs text-[var(--text-muted)]">
                     Duration: {Math.round(formData.slot.duration / 60)} hours
                   </p>
                 </div>
               </div>
               <div className="text-right">
-                <p className="text-sm text-green-700 font-medium">Slot Reserved</p>
-                <p className="text-xs text-green-600">Ready to confirm booking</p>
+                <p className="text-sm font-medium text-[var(--primary)]">Slot Reserved</p>
+                <p className="text-xs text-[var(--text-secondary)]">Ready to confirm booking</p>
               </div>
             </div>
           </CardContent>

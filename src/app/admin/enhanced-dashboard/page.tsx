@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { AdminLayout } from '@/components/layouts/AdminLayout'
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb'
 import { AdminRoute } from '@/components/ProtectedRoute'
 import { Button } from '@/components/ui/primitives/Button'
 import {
@@ -10,10 +11,11 @@ import {
   SimpleChart,
   RecentActivity,
   QuickStats,
-  BookingCalendar,
   PerformanceTrends
 } from '@/components/admin/widgets'
-import { 
+import { EventCalendar, type CalendarEvent } from '@/components/event-calendar'
+import { logger } from '@/lib/utils/logger'
+import {
   CalendarIcon, 
   DollarSignIcon, 
   UsersIcon, 
@@ -158,7 +160,7 @@ function EnhancedAdminDashboard() {
       })
 
     } catch (error) {
-      console.error('Dashboard data error:', error)
+      logger.error('Dashboard data error', error instanceof Error ? error : undefined)
       setError('Failed to load dashboard data')
     } finally {
       setIsLoading(false)
@@ -213,6 +215,19 @@ function EnhancedAdminDashboard() {
     <AdminLayout>
       <div className="space-y-8">
         {/* Header */}
+        <div className="mb-2">
+          <Breadcrumb>
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbLink href="/admin">Admin</BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbPage>Dashboard</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+        </div>
         <div className="flex justify-between items-start">
           <div>
             <h1 className="text-2xl font-bold text-text-primary">Enhanced Dashboard</h1>
@@ -340,13 +355,34 @@ function EnhancedAdminDashboard() {
             />
 
             {/* Bottom Row - Calendar and Activity */}
+            {(() => {
+              const calendarEvents = (dashboardData.bookingEvents || []).map((e) => ({
+                id: e.id,
+                title: e.title,
+                start: new Date(e.start),
+                end: new Date(e.end),
+                allDay: false,
+                color:
+                  e.status === 'confirmed'
+                    ? 'emerald'
+                    : e.status === 'cancelled'
+                    ? 'rose'
+                    : 'sky',
+              })) as unknown as CalendarEvent[]
+              return (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <BookingCalendar
-                events={dashboardData.bookingEvents}
-                onEventClick={handleEventClick}
-                onDateClick={handleDateClick}
-                loading={isLoading}
-              />
+              <div className="rounded-lg border">
+                <div className="p-4 border-b flex items-center justify-between">
+                  <h3 className="text-sm font-semibold">Bookings</h3>
+                </div>
+                <div className="p-2">
+                  <EventCalendar
+                    readonly
+                    initialView="month"
+                    events={calendarEvents}
+                  />
+                </div>
+              </div>
               
               <RecentActivity
                 activities={dashboardData.recentActivity}
@@ -355,6 +391,8 @@ function EnhancedAdminDashboard() {
                 maxItems={8}
               />
             </div>
+              )
+            })()}
 
             {/* Customer Distribution Pie Chart */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

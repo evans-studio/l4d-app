@@ -3,6 +3,7 @@ import { createClientFromRequest } from '@/lib/supabase/server'
 import { supabaseAdmin } from '@/lib/supabase/direct'
 import { ApiResponseHandler } from '@/lib/api/response'
 import { authenticateAdmin } from '@/lib/api/auth-handler'
+import { logger } from '@/lib/utils/logger'
 
 export async function GET(request: NextRequest) {
   try {
@@ -45,7 +46,7 @@ export async function GET(request: NextRequest) {
       .eq('scheduled_date', todayStr)
 
     if (todayError) {
-      console.error('Today bookings error:', todayError)
+      logger.error('Today bookings error:', todayError)
     }
 
     // Get tomorrow's bookings (counts only)
@@ -55,7 +56,7 @@ export async function GET(request: NextRequest) {
       .eq('scheduled_date', tomorrowStr)
 
     if (tomorrowError) {
-      console.error('Tomorrow bookings error:', tomorrowError)
+      logger.error('Tomorrow bookings error:', tomorrowError)
     }
 
     // Get this week's bookings (for revenue/utilization)
@@ -66,7 +67,7 @@ export async function GET(request: NextRequest) {
       .lte('scheduled_date', endOfWeekStr)
 
     if (weekError) {
-      console.error('Week bookings error:', weekError)
+      logger.error('Week bookings error:', weekError)
     }
 
     // Get previous week's bookings for comparison
@@ -84,7 +85,7 @@ export async function GET(request: NextRequest) {
       .lte('scheduled_date', previousWeekEndStr)
 
     if (previousWeekError) {
-      console.error('Previous week bookings error:', previousWeekError)
+      logger.error('Previous week bookings error:', previousWeekError)
     }
 
     // Get this month's bookings for revenue calculation
@@ -100,7 +101,7 @@ export async function GET(request: NextRequest) {
       .lte('scheduled_date', endOfMonthStr)
 
     if (monthError) {
-      console.error('Month bookings error:', monthError)
+      logger.error('Month bookings error:', monthError)
     }
 
     // Get customer activity data - bookings created this week with customer and services
@@ -116,7 +117,7 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: false })
 
     if (customerError) {
-      console.error('Customer bookings error:', customerError)
+      logger.error('Customer bookings error:', customerError)
     }
 
     // Get unique customers from this week vs previous periods to determine new vs returning
@@ -130,13 +131,14 @@ export async function GET(request: NextRequest) {
       .lte('created_at', endOfWeek.toISOString())
 
     if (profilesError) {
-      console.error('Profiles this week error:', profilesError)
+      logger.error('Profiles this week error:', profilesError)
     }
 
+    type ProfileLite = { id: string; role?: string }
     const signupIdsThisWeek = new Set(
       (thisWeekProfiles || [])
-        .filter((p: any) => !['admin', 'super_admin'].includes(p.role || ''))
-        .map((p: any) => p.id)
+        .filter((p: ProfileLite) => !['admin', 'super_admin'].includes(p.role || ''))
+        .map((p: ProfileLite) => p.id)
     )
     
     const { data: existingCustomers, error: existingCustomersError } = await supabase
@@ -146,7 +148,7 @@ export async function GET(request: NextRequest) {
       .in('customer_id', thisWeekCustomersFromBookings)
 
     if (existingCustomersError) {
-      console.error('Existing customers error:', existingCustomersError)
+      logger.error('Existing customers error:', existingCustomersError)
     }
 
     const existingCustomerIds = [...new Set(existingCustomers?.map(b => b.customer_id) || [])]
@@ -165,7 +167,7 @@ export async function GET(request: NextRequest) {
       .order('scheduled_date', { ascending: true })
 
     if (actionError) {
-      console.error('Action bookings error:', actionError)
+      logger.error('Action bookings error:', actionError)
     }
 
     // Get all pending reschedule requests that require admin action
@@ -176,24 +178,24 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: true })
 
     if (rescheduleError) {
-      console.error('Reschedule requests error:', rescheduleError)
+      logger.error('Reschedule requests error:', rescheduleError)
     }
 
     // Transform today bookings with customer_name and service list
     // Lookup profiles for "today" names
-    const todayCustomerIds = [...new Set((todayBookingsRaw || []).map((b: any) => b.customer_id).filter(Boolean))]
-    let todayProfiles: Record<string, any> = {}
+    const todayCustomerIds = [...new Set((todayBookingsRaw || []).map((b: { customer_id: string }) => b.customer_id).filter(Boolean))]
+    let todayProfiles: Record<string, { id: string; first_name?: string; last_name?: string; email?: string }> = {}
     if (todayCustomerIds.length > 0) {
       const { data: p } = await supabase
         .from('user_profiles')
         .select('id, first_name, last_name, email')
-        .in('id', todayCustomerIds as any)
-      todayProfiles = (p || []).reduce((acc: Record<string, any>, prof: any) => {
+        .in('id', todayCustomerIds)
+      todayProfiles = (p || []).reduce((acc: typeof todayProfiles, prof: { id: string; first_name?: string; last_name?: string; email?: string }) => {
         acc[prof.id] = prof
         return acc
       }, {})
     }
-    const todayBookings = (todayBookingsRaw || []).map((b: any) => {
+    const todayBookings = (todayBookingsRaw || []).map((b: { id: string; status: string; scheduled_start_time: string; total_price: number; booking_reference: string; customer_id: string }) => {
       const profile = todayProfiles[b.customer_id] || null
       const name = profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() : 'Customer'
       return {
@@ -210,10 +212,10 @@ export async function GET(request: NextRequest) {
 
     // Calculate today's schedule stats with completed bookings
     const todayTotal = todayBookings.length || 0
-    const todayCompleted = todayBookings.filter((b: any) => b.status === 'completed')?.length || 0
-    const todayInProgress = todayBookings.filter((b: any) => b.status === 'in_progress')?.length || 0
-    const todayPending = todayBookings.filter((b: any) => ['pending', 'confirmed'].includes(b.status))?.length || 0
-    const todayRevenue = todayBookings.reduce((sum: number, booking: any) => sum + (booking.total_price || 0), 0) || 0
+    const todayCompleted = todayBookings.filter((b) => b.status === 'completed')?.length || 0
+    const todayInProgress = todayBookings.filter((b) => b.status === 'in_progress')?.length || 0
+    const todayPending = todayBookings.filter((b) => ['pending', 'confirmed'].includes(b.status))?.length || 0
+    const todayRevenue = todayBookings.reduce((sum: number, booking) => sum + (booking.total_price || 0), 0) || 0
     
     // Calculate tomorrow's schedule stats
     const tomorrowTotal = tomorrowBookings?.length || 0
@@ -245,21 +247,21 @@ export async function GET(request: NextRequest) {
     const newCustomers = Array.from(newCustomersIds)
     const returningCustomers = thisWeekCustomersFromBookings.filter(customerId => existingCustomerIds.includes(customerId))
     // Resolve names for activity
-    const activityCustomerIds = [...new Set((customerBookingsRaw || []).map((b: any) => b.customer_id).filter(Boolean))]
-    let activityProfiles: Record<string, any> = {}
+    const activityCustomerIds = [...new Set((customerBookingsRaw || []).map((b: { customer_id: string }) => b.customer_id).filter(Boolean))]
+    let activityProfiles: Record<string, { id: string; first_name?: string; last_name?: string; email?: string }> = {}
     if (activityCustomerIds.length > 0) {
       const { data: ap } = await supabase
         .from('user_profiles')
         .select('id, first_name, last_name, email')
-        .in('id', activityCustomerIds as any)
-      activityProfiles = (ap || []).reduce((acc: Record<string, any>, prof: any) => {
+        .in('id', activityCustomerIds)
+      activityProfiles = (ap || []).reduce((acc: typeof activityProfiles, prof: { id: string; first_name?: string; last_name?: string; email?: string }) => {
         acc[prof.id] = prof
         return acc
       }, {})
     }
-    const latestCustomerActivity = (customerBookingsRaw || []).slice(0, 3).map((b: any) => {
-      const profile = activityProfiles[b.customer_id] || null
-      const name = profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() : profile?.email
+    const latestCustomerActivity = (customerBookingsRaw || []).slice(0, 3).map((b: { id: string; customer_id: string; created_at: string }) => {
+      const profile = activityProfiles[b.customer_id] as { id: string; first_name?: string; last_name?: string; email?: string } | undefined
+      const name = profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() : ''
       return {
         id: b.id,
         customer_id: b.customer_id,
@@ -335,7 +337,7 @@ export async function GET(request: NextRequest) {
     return ApiResponseHandler.success(stats)
 
   } catch (error) {
-    console.error('Admin stats error:', error)
+    logger.error('Admin stats error:', error instanceof Error ? error : undefined)
     return ApiResponseHandler.serverError('Failed to fetch admin statistics')
   }
 }
