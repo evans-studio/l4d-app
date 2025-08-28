@@ -722,6 +722,61 @@ function AdminBookingDetailsPage() {
                     Mark as Paid
                   </Button>
                 )}
+                {/* Payment status controls */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={async () => {
+                      if (!booking) return
+                      try {
+                        const res = await fetch(`/api/admin/bookings/${booking.id}/payment-status`, {
+                          method: 'PUT',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ payment_status: 'pending', reason: 'Set by admin' })
+                        })
+                        const json = await res.json()
+                        if (json?.success) setBooking(prev => prev ? { ...prev, payment_status: 'pending' } : prev)
+                      } catch (_) {}
+                    }}
+                  >
+                    Set Pending
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={async () => {
+                      if (!booking) return
+                      try {
+                        const res = await fetch(`/api/admin/bookings/${booking.id}/payment-status`, {
+                          method: 'PUT',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ payment_status: 'payment_failed', reason: 'Set by admin' })
+                        })
+                        const json = await res.json()
+                        if (json?.success) setBooking(prev => prev ? { ...prev, payment_status: 'payment_failed' } : prev)
+                      } catch (_) {}
+                    }}
+                    className="text-red-600 border-red-200 hover:bg-red-50"
+                  >
+                    Mark Failed
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={async () => {
+                      if (!booking) return
+                      try {
+                        const res = await fetch(`/api/admin/bookings/${booking.id}/payment-status`, {
+                          method: 'PUT',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ payment_status: 'refunded', reason: 'Refunded by admin' })
+                        })
+                        const json = await res.json()
+                        if (json?.success) setBooking(prev => prev ? { ...prev, payment_status: 'refunded' } : prev)
+                      } catch (_) {}
+                    }}
+                  >
+                    Mark Refunded
+                  </Button>
+                </div>
                 {booking.status === 'pending' && (
                   <>
                     <Button
