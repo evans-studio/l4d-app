@@ -4,6 +4,11 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/primitives/Button'
 import { logger } from '@/lib/utils/logger'
 import {
+  type BookingStatus,
+  validateTransition,
+  getStatusLabel
+} from '@/lib/utils/status-transitions'
+import {
   CheckCircleIcon, 
   XIcon, 
   ClockIcon, 
@@ -15,32 +20,60 @@ import {
 
 interface BookingStatusManagerProps {
   bookingId: string
-  currentStatus: 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled'
+  currentStatus: BookingStatus
   onStatusUpdate: (newStatus: string) => void
   customerEmail?: string
   customerPhone?: string
 }
 
-const statusFlow = {
+const statusFlow: Partial<Record<BookingStatus, Array<keyof typeof actionConfig>>> = {
   pending: ['confirmed', 'cancelled'],
+  processing: ['confirmed', 'cancelled'],
+  payment_failed: ['cancelled'],
   confirmed: ['in_progress', 'cancelled'],
+  rescheduled: ['in_progress', 'cancelled'],
   in_progress: ['completed', 'cancelled'],
   completed: [],
-  cancelled: []
+  declined: [],
+  cancelled: [],
+  no_show: []
 }
 
-const statusConfig = {
+const statusConfig: Partial<Record<BookingStatus, {
+  label: string
+  color: string
+  bgColor: string
+  icon: typeof CheckCircleIcon
+}>> = {
   pending: {
     label: 'Pending Confirmation',
     color: 'text-[var(--warning)]',
     bgColor: 'bg-[var(--warning-bg)]',
     icon: ClockIcon
   },
+  processing: {
+    label: 'Processing Payment',
+    color: 'text-[var(--info)]',
+    bgColor: 'bg-[var(--info-bg)]',
+    icon: ClockIcon
+  },
+  payment_failed: {
+    label: 'Payment Failed',
+    color: 'text-[var(--error)]',
+    bgColor: 'bg-[var(--error-bg)]',
+    icon: AlertCircleIcon
+  },
   confirmed: {
     label: 'Confirmed',
     color: 'text-[var(--success)]',
     bgColor: 'bg-[var(--success-bg)]',
     icon: CheckCircleIcon
+  },
+  rescheduled: {
+    label: 'Rescheduled',
+    color: 'text-[var(--info)]',
+    bgColor: 'bg-[var(--info-bg)]',
+    icon: AlertCircleIcon
   },
   in_progress: {
     label: 'In Progress',
@@ -54,11 +87,23 @@ const statusConfig = {
     bgColor: 'bg-[var(--success-bg)]',
     icon: CheckCircleIcon
   },
+  declined: {
+    label: 'Declined',
+    color: 'text-[var(--warning)]',
+    bgColor: 'bg-[var(--warning-bg)]',
+    icon: AlertCircleIcon
+  },
   cancelled: {
     label: 'Cancelled',
     color: 'text-[var(--error)]',
     bgColor: 'bg-[var(--error-bg)]',
     icon: XIcon
+  },
+  no_show: {
+    label: 'No Show',
+    color: 'text-[var(--text-muted)]',
+    bgColor: 'bg-[var(--surface-tertiary)]',
+    icon: AlertCircleIcon
   }
 }
 
@@ -100,6 +145,25 @@ export function BookingStatusManager({
   const [showNotes, setShowNotes] = useState(false)
   const [statusNotes, setStatusNotes] = useState('')
 
+  // Admin override controls
+  const ALL_STATUSES: BookingStatus[] = [
+    'pending',
+    'processing',
+    'payment_failed',
+    'confirmed',
+    'rescheduled',
+    'in_progress',
+    'completed',
+    'declined',
+    'cancelled',
+    'no_show'
+  ]
+  const [overrideOpen, setOverrideOpen] = useState(false)
+  const [overrideStatus, setOverrideStatus] = useState<BookingStatus | ''>('')
+  const [overrideReason, setOverrideReason] = useState('')
+  const [overrideNotes, setOverrideNotes] = useState('')
+  const [forceOverride, setForceOverride] = useState(false)
+
   const handleStatusUpdate = async (newStatus: string) => {
     setIsUpdating(true)
     try {
@@ -125,9 +189,50 @@ export function BookingStatusManager({
     }
   }
 
-  const currentConfig = statusConfig[currentStatus]
+  const handleOverrideUpdate = async () => {
+    if (!overrideStatus) return
+    // Validate transition for admin awareness (backend permits; this is for UX)
+    const validation = validateTransition(currentStatus, overrideStatus)
+    if (!validation.valid && !forceOverride) {
+      return
+    }
+
+    setIsUpdating(true)
+    try {
+      const response = await fetch(`/api/admin/bookings/${bookingId}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: overrideStatus,
+          reason: overrideReason || `Admin override to ${overrideStatus}`,
+          notes: overrideNotes
+        })
+      })
+
+      const data = await response.json()
+      if (data.success) {
+        onStatusUpdate(overrideStatus)
+        setOverrideReason('')
+        setOverrideNotes('')
+        setForceOverride(false)
+        setOverrideStatus('')
+        setOverrideOpen(false)
+      }
+    } catch (error) {
+      logger.error('Failed to override status:', error)
+    } finally {
+      setIsUpdating(false)
+    }
+  }
+
+  const currentConfig = statusConfig[currentStatus] || {
+    label: getStatusLabel(currentStatus),
+    color: 'text-[var(--text-primary)]',
+    bgColor: 'bg-[var(--surface-tertiary)]',
+    icon: AlertCircleIcon
+  }
   const CurrentIcon = currentConfig.icon
-  const availableActions = statusFlow[currentStatus]
+  const availableActions = (statusFlow[currentStatus] || []) as Array<keyof typeof actionConfig>
 
   return (
     <div className="bg-[var(--surface-secondary)] rounded-lg p-6 border border-[var(--border-secondary)]">
@@ -151,7 +256,7 @@ export function BookingStatusManager({
           <h4 className="font-medium text-[var(--text-primary)]">Available Actions</h4>
           
           <div className="grid grid-cols-1 gap-3">
-            {availableActions.map((action) => {
+            {availableActions.map((action: keyof typeof actionConfig) => {
               const config = actionConfig[action as keyof typeof actionConfig]
               
               return (
@@ -188,6 +293,91 @@ export function BookingStatusManager({
           </div>
         </div>
       )}
+
+      {/* Admin Override */}
+      <div className="mt-6 pt-4 border-t border-[var(--border-secondary)]">
+        <div className="flex items-center justify-between">
+          <h4 className="font-medium text-[var(--text-primary)]">Admin Override</h4>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setOverrideOpen((v) => !v)}
+          >
+            {overrideOpen ? 'Hide' : 'Show'} Override
+          </Button>
+        </div>
+
+        {overrideOpen && (
+          <div className="mt-4 space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div>
+                <label className="block text-sm text-[var(--text-secondary)] mb-1">Select status</label>
+                <select
+                  className="w-full px-3 py-2 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-md text-[var(--input-text)] focus:border-[var(--input-border-focus)] focus:outline-none"
+                  value={overrideStatus}
+                  onChange={(e) => setOverrideStatus(e.target.value as BookingStatus)}
+                >
+                  <option value="">Choose…</option>
+                  {ALL_STATUSES.map((s) => (
+                    <option key={s} value={s}>
+                      {getStatusLabel(s)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-sm text-[var(--text-secondary)] mb-1">Reason (optional)</label>
+                <input
+                  type="text"
+                  value={overrideReason}
+                  onChange={(e) => setOverrideReason(e.target.value)}
+                  placeholder="Why are you changing this status?"
+                  className="w-full px-3 py-2 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-md text-[var(--input-text)] placeholder-[var(--input-placeholder)] focus:border-[var(--input-border-focus)] focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm text-[var(--text-secondary)] mb-1">Notes (optional)</label>
+              <textarea
+                value={overrideNotes}
+                onChange={(e) => setOverrideNotes(e.target.value)}
+                rows={3}
+                className="w-full px-3 py-2 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-md text-[var(--input-text)] placeholder-[var(--input-placeholder)] focus:border-[var(--input-border-focus)] focus:outline-none resize-none"
+              />
+            </div>
+
+            {/* Validation feedback */}
+            {overrideStatus && (
+              <ValidationBanner fromStatus={currentStatus} toStatus={overrideStatus} force={forceOverride} onToggleForce={setForceOverride} />
+            )}
+
+            <div className="flex gap-2">
+              <Button
+                onClick={handleOverrideUpdate}
+                variant="primary"
+                size="sm"
+                disabled={isUpdating || !overrideStatus || (!validateTransition(currentStatus, overrideStatus).valid && !forceOverride)}
+              >
+                {isUpdating ? 'Updating…' : 'Apply Override'}
+              </Button>
+              <Button
+                onClick={() => {
+                  setOverrideStatus('')
+                  setOverrideReason('')
+                  setOverrideNotes('')
+                  setForceOverride(false)
+                }}
+                variant="outline"
+                size="sm"
+              >
+                Reset
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Status Notes Modal */}
       {showNotes && (
@@ -284,6 +474,49 @@ export function BookingStatusManager({
           </div>
         </div>
       </div>
+    </div>
+  )
+}
+
+// Inline validation banner for admin awareness
+function ValidationBanner({
+  fromStatus,
+  toStatus,
+  force,
+  onToggleForce
+}: {
+  fromStatus: BookingStatus
+  toStatus: BookingStatus
+  force: boolean
+  onToggleForce: (v: boolean) => void
+}) {
+  const v = validateTransition(fromStatus, toStatus)
+  if (v.valid && !v.warning) return null
+
+  return (
+    <div className="p-3 rounded-md border text-sm"
+      style={{
+        backgroundColor: 'var(--surface-tertiary)',
+        borderColor: 'var(--border-secondary)',
+        color: 'var(--text-secondary)'
+      }}
+    >
+      {!v.valid && (
+        <p className="mb-2">{v.reason || 'This transition is not normally allowed.'}</p>
+      )}
+      {v.warning && (
+        <p className="mb-2">{v.warning}</p>
+      )}
+      {(!v.valid || v.requiresConfirmation) && (
+        <label className="inline-flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={force}
+            onChange={(e) => onToggleForce(e.target.checked)}
+          />
+          <span>Force override (bypass validation)</span>
+        </label>
+      )}
     </div>
   )
 }
