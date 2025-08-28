@@ -63,6 +63,22 @@ jobs:
           echo "NEXT_PUBLIC_APP_URL=${{ secrets.NEXT_PUBLIC_APP_URL }}" >> .env.local
           echo "NEXTAUTH_URL=${{ secrets.NEXTAUTH_URL }}" >> .env.local
           echo "NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }}" >> .env.local
+          # Provide safe defaults if any optional secrets are absent to prevent build-time env validation failures
+          for v in ACCESS_TOKEN_SECRET REFRESH_TOKEN_SECRET RESEND_API_KEY NEXT_PUBLIC_FROM_EMAIL ADMIN_EMAIL EMAIL_REPLY_TO PAYPAL_ME_USERNAME PAYPAL_BUSINESS_EMAIL NEXT_PUBLIC_APP_URL NEXTAUTH_URL NEXTAUTH_SECRET; do
+            val=$(grep "^$v=" .env.local | cut -d'=' -f2-)
+            if [ -z "$val" ]; then
+              case "$v" in
+                NEXT_PUBLIC_FROM_EMAIL|EMAIL_REPLY_TO) def="noreply@example.com" ;;
+                ADMIN_EMAIL) def="admin@example.com" ;;
+                PAYPAL_ME_USERNAME) def="mock" ;;
+                PAYPAL_BUSINESS_EMAIL) def="merchant@example.com" ;;
+                NEXT_PUBLIC_APP_URL|NEXTAUTH_URL) def="https://example.com" ;;
+                NEXTAUTH_SECRET|ACCESS_TOKEN_SECRET|REFRESH_TOKEN_SECRET|RESEND_API_KEY) def="dummy" ;;
+                *) def="placeholder" ;;
+              esac
+              echo "$v=$def" >> .env.local
+            fi
+          done
         shell: bash
 
       - name: Fail early if required secrets are missing
@@ -171,6 +187,22 @@ jobs:
           echo "NEXT_PUBLIC_APP_URL=${{ secrets.NEXT_PUBLIC_APP_URL }}" >> .env.local
           echo "NEXTAUTH_URL=${{ secrets.NEXTAUTH_URL }}" >> .env.local
           echo "NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }}" >> .env.local
+          # Provide safe defaults if any optional secrets are absent to prevent build-time env validation failures
+          for v in ACCESS_TOKEN_SECRET REFRESH_TOKEN_SECRET RESEND_API_KEY NEXT_PUBLIC_FROM_EMAIL ADMIN_EMAIL EMAIL_REPLY_TO PAYPAL_ME_USERNAME PAYPAL_BUSINESS_EMAIL NEXT_PUBLIC_APP_URL NEXTAUTH_URL NEXTAUTH_SECRET; do
+            val=$(grep "^$v=" .env.local | cut -d'=' -f2-)
+            if [ -z "$val" ]; then
+              case "$v" in
+                NEXT_PUBLIC_FROM_EMAIL|EMAIL_REPLY_TO) def="noreply@example.com" ;;
+                ADMIN_EMAIL) def="admin@example.com" ;;
+                PAYPAL_ME_USERNAME) def="mock" ;;
+                PAYPAL_BUSINESS_EMAIL) def="merchant@example.com" ;;
+                NEXT_PUBLIC_APP_URL|NEXTAUTH_URL) def="https://example.com" ;;
+                NEXTAUTH_SECRET|ACCESS_TOKEN_SECRET|REFRESH_TOKEN_SECRET|RESEND_API_KEY) def="dummy" ;;
+                *) def="placeholder" ;;
+              esac
+              echo "$v=$def" >> .env.local
+            fi
+          done
         shell: bash
 
       - name: Build and analyze bundle
