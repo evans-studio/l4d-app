@@ -34,6 +34,10 @@ jobs:
           echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=dummy" >> $GITHUB_ENV
           echo "SUPABASE_SERVICE_ROLE_KEY=dummy" >> $GITHUB_ENV
           echo "RESEND_API_KEY=re_mock_key" >> $GITHUB_ENV
+          # Generate ephemeral secrets to satisfy env validation without storing secrets in repo
+          echo "ACCESS_TOKEN_SECRET=$(node -e 'console.log(require("crypto").randomBytes(48).toString("base64url"))')" >> $GITHUB_ENV
+          echo "REFRESH_TOKEN_SECRET=$(node -e 'console.log(require("crypto").randomBytes(48).toString("base64url"))')" >> $GITHUB_ENV
+          echo "NEXTAUTH_SECRET=$(node -e 'console.log(require("crypto").randomBytes(48).toString("base64url"))')" >> $GITHUB_ENV
 
       - name: Build
         run: npm run build
