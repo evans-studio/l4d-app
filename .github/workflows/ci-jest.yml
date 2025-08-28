@@ -19,7 +19,7 @@ jobs:
       NODE_ENV: test
       NEXT_PUBLIC_NEW_UI: '1'
       ALLOW_SKIP_ENV_VALIDATION: 'true'
-      NEXT_PUBLIC_APP_URL: 'https://example.com'
+      NEXT_PUBLIC_APP_URL: 'http://localhost:3000'
       NEXT_PUBLIC_SUPABASE_URL: 'https://example.supabase.co'
       NEXT_PUBLIC_SUPABASE_ANON_KEY: 'test_anon_key'
       ACCESS_TOKEN_SECRET: 'dummy_access_token_secret_at_least_32_chars____'
