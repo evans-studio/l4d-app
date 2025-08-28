@@ -76,7 +76,8 @@ jobs:
                 PAYPAL_ME_USERNAME) def="mock" ;;
                 PAYPAL_BUSINESS_EMAIL) def="merchant@example.com" ;;
                 NEXT_PUBLIC_APP_URL|NEXTAUTH_URL) def="https://example.com" ;;
-                NEXTAUTH_SECRET|ACCESS_TOKEN_SECRET|REFRESH_TOKEN_SECRET|RESEND_API_KEY) def="dummy" ;;
+                NEXTAUTH_SECRET|ACCESS_TOKEN_SECRET|REFRESH_TOKEN_SECRET) def="placeholder_secret_value_at_least_32_chars________" ;;
+                RESEND_API_KEY) def="re_test_placeholder_1234567890" ;;
                 *) def="placeholder" ;;
               esac
               echo "$v=$def" >> .env.local
@@ -212,7 +213,8 @@ jobs:
                 PAYPAL_ME_USERNAME) def="mock" ;;
                 PAYPAL_BUSINESS_EMAIL) def="merchant@example.com" ;;
                 NEXT_PUBLIC_APP_URL|NEXTAUTH_URL) def="https://example.com" ;;
-                NEXTAUTH_SECRET|ACCESS_TOKEN_SECRET|REFRESH_TOKEN_SECRET|RESEND_API_KEY) def="dummy" ;;
+                NEXTAUTH_SECRET|ACCESS_TOKEN_SECRET|REFRESH_TOKEN_SECRET) def="placeholder_secret_value_at_least_32_chars________" ;;
+                RESEND_API_KEY) def="re_test_placeholder_1234567890" ;;
                 *) def="placeholder" ;;
               esac
               echo "$v=$def" >> .env.local
