@@ -188,6 +188,7 @@ Required environment variables for production:
 - `RESEND_API_KEY`
 - `PAYPAL_ME_USERNAME`
 - `PAYPAL_BUSINESS_EMAIL`
+  - Note: Use representative placeholders in docs and CI (e.g., `mock`, `merchant@example.com`) to avoid secret scanners flagging examples.
 - `NEXTAUTH_SECRET`
 - And more... (see `.env.example`)
 

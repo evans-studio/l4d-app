@@ -49,8 +49,9 @@ ADMIN_EMAIL=zell@love4detailing.com
 EMAIL_REPLY_TO=zell@love4detailing.com
 
 # Payment Integration
-PAYPAL_ME_USERNAME=love4detailing
-PAYPAL_BUSINESS_EMAIL=zell@love4detailing.com
+# Use your real values in production; avoid committing secrets. Example placeholders:
+PAYPAL_ME_USERNAME=mock
+PAYPAL_BUSINESS_EMAIL=merchant@example.com
 
 # Monitoring & Analytics (Optional)
 SENTRY_DSN=your_sentry_dsn
