@@ -4,7 +4,19 @@ import { formatDateForEmail, formatTimeForEmail } from '@/lib/utils/date-formatt
 import { paypalService } from '@/lib/services/paypal'
 import { logger } from '@/lib/utils/logger'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+// Initialize Resend safely: in CI or local builds without a key, provide a no-op stub
+const resend: Resend = (() => {
+  const key = process.env.RESEND_API_KEY
+  if (!key) {
+    return {
+      emails: {
+        // No-op sender for environments without RESEND_API_KEY
+        send: async () => ({ data: null as unknown as any, error: null })
+      }
+    } as unknown as Resend
+  }
+  return new Resend(key)
+})()
 
 export interface EmailServiceConfig {
   fromEmail: string

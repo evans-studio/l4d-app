@@ -26,13 +26,14 @@ jobs:
         run: |
           echo "NODE_ENV=test" >> $GITHUB_ENV
           echo "NEXT_PUBLIC_NEW_UI=true" >> $GITHUB_ENV
-          echo "NEXT_PUBLIC_APP_URL=https://example.com" >> $GITHUB_ENV
+          echo "NEXT_PUBLIC_APP_URL=http://localhost:3000" >> $GITHUB_ENV
           echo "ALLOW_SKIP_ENV_VALIDATION=true" >> $GITHUB_ENV
           echo "ALLOW_SKIP_ENV_VALIDATION=true" >> $GITHUB_ENV
           # Minimal Supabase vars to satisfy dev-only code paths
           echo "NEXT_PUBLIC_SUPABASE_URL=https://test.supabase.co" >> $GITHUB_ENV
           echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=dummy" >> $GITHUB_ENV
           echo "SUPABASE_SERVICE_ROLE_KEY=dummy" >> $GITHUB_ENV
+          echo "RESEND_API_KEY=re_mock_key" >> $GITHUB_ENV
 
       - name: Build
         run: npm run build
