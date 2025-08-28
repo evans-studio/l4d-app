@@ -18,6 +18,8 @@ jobs:
       # Minimal env to satisfy build-time checks; values are non-secret placeholders
       NODE_ENV: test
       NEXT_PUBLIC_NEW_UI: '1'
+      ALLOW_SKIP_ENV_VALIDATION: 'true'
+      NEXT_PUBLIC_APP_URL: 'https://example.com'
       NEXT_PUBLIC_SUPABASE_URL: 'https://example.supabase.co'
       NEXT_PUBLIC_SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.mock'
       SUPABASE_SERVICE_ROLE_KEY: 'service-role-mock'
