@@ -174,6 +174,7 @@ export async function GET(
       status: booking.status,
       payment_status: booking.payment_status,
       payment_method: booking.payment_method,
+      payment_reference: booking.payment_reference,
       total_price: booking.total_price,
       special_instructions: booking.special_instructions,
       admin_notes: booking.admin_notes,

@@ -22,12 +22,10 @@ interface MarkAsPaidModalProps {
 }
 
 const paymentMethods = [
-  {
-    id: 'paypal' as const,
-    label: 'PayPal',
-    icon: Smartphone,
-    description: 'PayPal.me payment received'
-  }
+  { id: 'paypal' as const, label: 'PayPal', icon: Smartphone, description: 'PayPal payment received' },
+  { id: 'cash' as const, label: 'Cash', icon: Banknote, description: 'Cash received in person' },
+  { id: 'card' as const, label: 'Card', icon: CreditCard, description: 'Card terminal or link payment' },
+  { id: 'bank_transfer' as const, label: 'Bank transfer', icon: Building2, description: 'Direct bank transfer received' }
 ]
 
 export function MarkAsPaidModal({ 
@@ -37,7 +35,7 @@ export function MarkAsPaidModal({
   onSuccess,
   isLoading = false
 }: MarkAsPaidModalProps) {
-  const [selectedMethod, setSelectedMethod] = useState<'paypal'>('paypal')
+  const [selectedMethod, setSelectedMethod] = useState<'paypal' | 'cash' | 'card' | 'bank_transfer'>('paypal')
   const [paymentReference, setPaymentReference] = useState(booking.booking_reference)
   const [adminNotes, setAdminNotes] = useState('')
   const [sendConfirmationEmail, setSendConfirmationEmail] = useState(true)
@@ -123,18 +121,30 @@ export function MarkAsPaidModal({
           )}
 
           <div className="space-y-6">
-            {/* Payment Method - PayPal Only */}
+            {/* Payment Method */}
             <div>
               <label className="block text-sm font-medium text-text-primary mb-3">
                 Payment Method
               </label>
-              <div className="p-4 border border-border-secondary bg-surface-secondary rounded-lg">
-                <div className="flex items-start gap-3">
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm text-text-primary">PayPal</p>
-                    <p className="text-xs mt-1 text-text-secondary">PayPal.me payment received</p>
-                  </div>
-                </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {paymentMethods.map((m) => {
+                  const Icon = m.icon
+                  const isActive = selectedMethod === m.id
+                  return (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => setSelectedMethod(m.id)}
+                      className={`flex items-start gap-3 p-3 border rounded-md text-left transition-colors ${isActive ? 'border-brand-500 bg-brand-50' : 'border-border-secondary bg-surface-secondary hover:bg-surface-primary'}`}
+                    >
+                      <Icon className={`w-5 h-5 ${isActive ? 'text-brand-600' : 'text-text-secondary'}`} />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm text-text-primary">{m.label}</p>
+                        <p className="text-xs mt-1 text-text-secondary">{m.description}</p>
+                      </div>
+                    </button>
+                  )
+                })}
               </div>
             </div>
 
@@ -217,7 +227,7 @@ export function MarkAsPaidModal({
         <div className="mt-4 p-3 bg-surface-secondary rounded-lg border border-border-secondary">
           <div className="flex items-center gap-2 text-sm">
             <span className="text-text-secondary">
-              This will confirm the booking and mark PayPal payment as received
+              This will confirm the booking and mark {paymentMethods.find(p => p.id === selectedMethod)?.label} payment as received
               {sendConfirmationEmail && ', then send confirmation email to customer'}
             </span>
           </div>
