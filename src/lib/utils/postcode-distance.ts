@@ -86,8 +86,23 @@ async function getPostcodeCoordinates(postcode: string): Promise<PostcodeCoordin
     // Clean and format postcode
     const cleanPostcode = postcode.replace(/\s+/g, '').toUpperCase()
     
-    // For demo purposes, we'll use some common London postcodes
-    // In production, integrate with postcodes.io or similar service
+    // First attempt: real lookup via postcodes.io (exact postcode)
+    try {
+      const res = await fetch(`https://api.postcodes.io/postcodes/${encodeURIComponent(cleanPostcode)}`, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' }
+      })
+      if (res.ok) {
+        const data = await res.json()
+        if (data.status === 200 && data.result) {
+          return { latitude: data.result.latitude, longitude: data.result.longitude }
+        }
+      }
+    } catch (_) {
+      // Swallow and fall back
+    }
+    
+    // For demo and fallback, use some common London postcodes
     const knownPostcodes: Record<string, PostcodeCoordinates> = {
       // Central London
       'SW1A1AA': { latitude: 51.5014, longitude: -0.1419 }, // Westminster
@@ -118,30 +133,34 @@ async function getPostcodeCoordinates(postcode: string): Promise<PostcodeCoordin
       'KT11AA': { latitude: 51.4085, longitude: -0.3064 } // Kingston upon Thames
     }
     
-    // Try exact match first
+    // Try exact match from fallback map
     if (knownPostcodes[cleanPostcode]) {
       return knownPostcodes[cleanPostcode]
     }
     
-    // Try area match (first part of postcode)
+    // Second attempt: outcode (area) using postcodes.io to get centroid
+    try {
+      const outcode = (cleanPostcode.includes(' ') ? cleanPostcode.split(' ')[0] : (cleanPostcode.length > 3 ? cleanPostcode.slice(0, -3) : cleanPostcode)) || cleanPostcode
+      const ocRes = await fetch(`https://api.postcodes.io/outcodes/${encodeURIComponent(outcode)}`, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' }
+      })
+      if (ocRes.ok) {
+        const oc = await ocRes.json()
+        if (oc.status === 200 && oc.result) {
+          return { latitude: oc.result.latitude, longitude: oc.result.longitude }
+        }
+      }
+    } catch (_) {
+      // swallow and continue
+    }
+    
+    // Final attempt: coarse area match to known map
     const area = cleanPostcode.substring(0, 2)
     const areaMatch = Object.keys(knownPostcodes).find(pc => pc.startsWith(area))
     if (areaMatch) {
       return knownPostcodes[areaMatch] || null
     }
-    
-    // If using a real API, call it here:
-    /*
-    const response = await fetch(`https://api.postcodes.io/postcodes/${cleanPostcode}`)
-    const data = await response.json()
-    
-    if (data.status === 200) {
-      return {
-        latitude: data.result.latitude,
-        longitude: data.result.longitude
-      }
-    }
-    */
     
     return null
   } catch (error) {
