@@ -45,6 +45,8 @@ interface BookingDetails {
   end_time?: string
   status: 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled'
   payment_status?: 'pending' | 'awaiting_payment' | 'paid' | 'payment_failed' | 'refunded'
+  payment_method?: 'paypal' | 'cash' | 'card' | 'bank_transfer'
+  payment_reference?: string
   total_price: number
   special_instructions?: string
   admin_notes?: string
@@ -360,6 +362,38 @@ function AdminBookingDetailsPage() {
     }
     const cfg = (map[ps] as { label: string; className: string }) || map['pending']
     return <Badge variant="outline" className={cfg!.className}>{cfg!.label}</Badge>
+  }
+
+  const renderPaymentMeta = () => {
+    const methodMap: Record<string, string> = {
+      paypal: 'PayPal',
+      cash: 'Cash',
+      card: 'Card',
+      bank_transfer: 'Bank transfer',
+    }
+    const method = booking.payment_method ? methodMap[booking.payment_method] || booking.payment_method : null
+    return (
+      <div className="mt-2 space-y-1 text-xs">
+        {method && (
+          <div className="flex items-center justify-between">
+            <span className="text-[var(--text-secondary)]">Method</span>
+            <span className="text-[var(--text-primary)]">{method}</span>
+          </div>
+        )}
+        {booking.payment_reference && (
+          <div className="flex items-center justify-between">
+            <span className="text-[var(--text-secondary)]">Reference</span>
+            <button
+              type="button"
+              onClick={() => navigator.clipboard.writeText(booking.payment_reference || '')}
+              className="text-[var(--text-link)] hover:text-[var(--text-link-hover)] underline-offset-4 hover:underline"
+            >
+              {booking.payment_reference}
+            </button>
+          </div>
+        )}
+      </div>
+    )
   }
 
   return (
@@ -713,6 +747,7 @@ function AdminBookingDetailsPage() {
                 <span className="text-[var(--text-secondary)]">Payment Status</span>
                 {renderPaymentBadge()}
               </div>
+              {renderPaymentMeta()}
               <div className="space-y-3">
                 {booking.payment_status !== 'paid' && (
                   <Button
@@ -722,6 +757,61 @@ function AdminBookingDetailsPage() {
                     Mark as Paid
                   </Button>
                 )}
+                {/* Payment status controls */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={async () => {
+                      if (!booking) return
+                      try {
+                        const res = await fetch(`/api/admin/bookings/${booking.id}/payment-status`, {
+                          method: 'PUT',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ payment_status: 'pending', reason: 'Set by admin' })
+                        })
+                        const json = await res.json()
+                        if (json?.success) setBooking(prev => prev ? { ...prev, payment_status: 'pending' } : prev)
+                      } catch (_) {}
+                    }}
+                  >
+                    Set Pending
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={async () => {
+                      if (!booking) return
+                      try {
+                        const res = await fetch(`/api/admin/bookings/${booking.id}/payment-status`, {
+                          method: 'PUT',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ payment_status: 'payment_failed', reason: 'Set by admin' })
+                        })
+                        const json = await res.json()
+                        if (json?.success) setBooking(prev => prev ? { ...prev, payment_status: 'payment_failed' } : prev)
+                      } catch (_) {}
+                    }}
+                    className="text-red-600 border-red-200 hover:bg-red-50"
+                  >
+                    Mark Failed
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={async () => {
+                      if (!booking) return
+                      try {
+                        const res = await fetch(`/api/admin/bookings/${booking.id}/payment-status`, {
+                          method: 'PUT',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ payment_status: 'refunded', reason: 'Refunded by admin' })
+                        })
+                        const json = await res.json()
+                        if (json?.success) setBooking(prev => prev ? { ...prev, payment_status: 'refunded' } : prev)
+                      } catch (_) {}
+                    }}
+                  >
+                    Mark Refunded
+                  </Button>
+                </div>
                 {booking.status === 'pending' && (
                   <>
                     <Button
