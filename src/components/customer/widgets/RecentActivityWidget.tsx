@@ -14,7 +14,8 @@ import {
   Clock,
   X,
   AlertCircle,
-  ChevronRight
+  ChevronRight,
+  Eye
 } from 'lucide-react'
 
 interface RecentActivityWidgetProps {
@@ -178,10 +179,7 @@ export function RecentActivityWidget({ recentBookings }: RecentActivityWidgetPro
             <div
               key={booking.id}
               className="flex flex-col gap-4 p-5 rounded-xl bg-surface-tertiary border border-border-secondary hover:bg-surface-secondary transition-all duration-200 cursor-pointer min-h-[100px] touch-manipulation"
-              onClick={() => openOverlay({
-                type: 'booking-view',
-                data: { bookingId: booking.id, booking }
-              })}
+              onClick={() => router.push(`/dashboard/bookings/${booking.id}`)}
             >
               {/* Header Row */}
               <div className="flex items-start justify-between gap-4">
@@ -200,7 +198,18 @@ export function RecentActivityWidget({ recentBookings }: RecentActivityWidgetPro
                 </div>
 
                 {/* Price & Status */}
-                <div className="flex-shrink-0 text-right">
+                <div className="flex-shrink-0 text-right flex items-start gap-2">
+                  <button
+                    type="button"
+                    aria-label="Quick view booking"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      openOverlay({ type: 'booking-view', data: { bookingId: booking.id, booking } })
+                    }}
+                    className="inline-flex items-center justify-center w-9 h-9 rounded-md border border-border-secondary bg-surface-secondary hover:bg-surface-primary transition-colors"
+                  >
+                    <Eye className="w-4 h-4 text-text-secondary" />
+                  </button>
                   <p className="font-bold text-brand-600 text-xl whitespace-nowrap mb-1">
                     £{booking.total_price || 0}
                   </p>
