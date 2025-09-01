@@ -14,6 +14,22 @@ interface DistanceResult {
   surchargeAmount: number
 }
 
+// Simple in-memory cache for geocoding results
+const GEO_CACHE = new Map<string, { coords: PostcodeCoordinates; ts: number }>()
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000 // 24 hours
+
+async function fetchJSONWithTimeout(url: string, timeoutMs: number): Promise<any> {
+  const controller = new AbortController()
+  const id = setTimeout(() => controller.abort(), timeoutMs)
+  try {
+    const res = await fetch(url, { method: 'GET', headers: { 'Accept': 'application/json' }, signal: controller.signal })
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    return await res.json()
+  } finally {
+    clearTimeout(id)
+  }
+}
+
 // SW9 approximate center coordinates (Stockwell/Brixton area)
 const BUSINESS_LOCATION: PostcodeCoordinates = {
   latitude: 51.4719,
@@ -85,21 +101,28 @@ async function getPostcodeCoordinates(postcode: string): Promise<PostcodeCoordin
   try {
     // Clean and format postcode
     const cleanPostcode = postcode.replace(/\s+/g, '').toUpperCase()
+    const now = Date.now()
+
+    // Cache hit for exact postcode
+    const cached = GEO_CACHE.get(cleanPostcode)
+    if (cached && (now - cached.ts) < CACHE_TTL_MS) {
+      return cached.coords
+    }
     
     // First attempt: real lookup via postcodes.io (exact postcode)
-    try {
-      const res = await fetch(`https://api.postcodes.io/postcodes/${encodeURIComponent(cleanPostcode)}`, {
-        method: 'GET',
-        headers: { 'Accept': 'application/json' }
-      })
-      if (res.ok) {
-        const data = await res.json()
-        if (data.status === 200 && data.result) {
-          return { latitude: data.result.latitude, longitude: data.result.longitude }
+    const exactUrl = `https://api.postcodes.io/postcodes/${encodeURIComponent(cleanPostcode)}`
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const data = await fetchJSONWithTimeout(exactUrl, 3000)
+        if (data?.status === 200 && data.result) {
+          const coords = { latitude: data.result.latitude, longitude: data.result.longitude }
+          GEO_CACHE.set(cleanPostcode, { coords, ts: now })
+          return coords
         }
+      } catch (_) {
+        // brief backoff on retry
+        await new Promise((r) => setTimeout(r, 150))
       }
-    } catch (_) {
-      // Swallow and fall back
     }
     
     // For demo and fallback, use some common London postcodes
@@ -139,20 +162,24 @@ async function getPostcodeCoordinates(postcode: string): Promise<PostcodeCoordin
     }
     
     // Second attempt: outcode (area) using postcodes.io to get centroid
-    try {
-      const outcode = (cleanPostcode.includes(' ') ? cleanPostcode.split(' ')[0] : (cleanPostcode.length > 3 ? cleanPostcode.slice(0, -3) : cleanPostcode)) || cleanPostcode
-      const ocRes = await fetch(`https://api.postcodes.io/outcodes/${encodeURIComponent(outcode)}`, {
-        method: 'GET',
-        headers: { 'Accept': 'application/json' }
-      })
-      if (ocRes.ok) {
-        const oc = await ocRes.json()
-        if (oc.status === 200 && oc.result) {
-          return { latitude: oc.result.latitude, longitude: oc.result.longitude }
+    const outcode = (cleanPostcode.includes(' ') ? cleanPostcode.split(' ')[0] : (cleanPostcode.length > 3 ? cleanPostcode.slice(0, -3) : cleanPostcode)) || cleanPostcode
+    const outKey = `OUT:${outcode}`
+    const cachedOut = GEO_CACHE.get(outKey)
+    if (cachedOut && (now - cachedOut.ts) < CACHE_TTL_MS) {
+      return cachedOut.coords
+    }
+    const outUrl = `https://api.postcodes.io/outcodes/${encodeURIComponent(outcode)}`
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const oc = await fetchJSONWithTimeout(outUrl, 3000)
+        if (oc?.status === 200 && oc.result) {
+          const coords = { latitude: oc.result.latitude, longitude: oc.result.longitude }
+          GEO_CACHE.set(outKey, { coords, ts: now })
+          return coords
         }
+      } catch (_) {
+        await new Promise((r) => setTimeout(r, 150))
       }
-    } catch (_) {
-      // swallow and continue
     }
     
     // Final attempt: coarse area match to known map
