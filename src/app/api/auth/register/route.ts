@@ -100,6 +100,25 @@ export async function POST(request: NextRequest) {
       // Continue anyway - user can resend verification if needed
     }
 
+    // Notify admin of new customer registration (skip admin signups)
+    try {
+      if (role === 'customer') {
+        const emailService = new EmailService()
+        await emailService.sendAdminNewCustomerNotification({
+          userId: authData.user.id,
+          email,
+          firstName,
+          lastName,
+          phone: phone || null,
+          role,
+          createdAt: new Date().toISOString()
+        })
+      }
+    } catch (notifyError) {
+      logger.error('Failed to send admin new user notification', notifyError instanceof Error ? notifyError : undefined)
+      // Do not block registration on email failures
+    }
+
     return NextResponse.json({
       success: true,
       data: {

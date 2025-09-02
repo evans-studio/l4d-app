@@ -210,6 +210,71 @@ export class EmailService {
     }
   }
 
+  // Send admin notification when a new customer account is created
+  async sendAdminNewCustomerNotification(args: {
+    userId: string,
+    email: string,
+    firstName?: string,
+    lastName?: string,
+    phone?: string | null,
+    role?: string,
+    createdAt?: string
+  }): Promise<{ success: boolean; error?: string }> {
+    try {
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+      const fullName = [args.firstName, args.lastName].filter(Boolean).join(' ') || 'New Customer'
+      const title = 'New Customer Registered'
+
+      const html = this.createUnifiedEmail({
+        title,
+        header: { title, subtitle: fullName, type: 'success' },
+        content: `
+          <p>A new customer account has been created.</p>
+          <ul>
+            <li><strong>Name:</strong> ${fullName}</li>
+            <li><strong>Email:</strong> ${args.email}</li>
+            ${args.phone ? `<li><strong>Phone:</strong> ${args.phone}</li>` : ''}
+            ${args.role ? `<li><strong>Role:</strong> ${args.role}</li>` : ''}
+            <li><strong>User ID:</strong> ${args.userId}</li>
+            ${args.createdAt ? `<li><strong>Created:</strong> ${new Date(args.createdAt).toLocaleString('en-GB')}</li>` : ''}
+            <li><strong>View:</strong> <a href="${appUrl.replace(/\/$/, '')}/admin/customers/${args.userId}">${appUrl.replace(/\/$/, '')}/admin/customers/${args.userId}</a></li>
+          </ul>
+        `,
+      })
+
+      const text = `New customer registered:\n` +
+        `Name: ${fullName}\n` +
+        `Email: ${args.email}\n` +
+        (args.phone ? `Phone: ${args.phone}\n` : '') +
+        (args.role ? `Role: ${args.role}\n` : '') +
+        `User ID: ${args.userId}\n` +
+        (args.createdAt ? `Created: ${new Date(args.createdAt).toLocaleString('en-GB')}\n` : '') +
+        `View: ${appUrl.replace(/\/$/, '')}/admin/customers/${args.userId}`
+
+      const { error } = await resend.emails.send({
+        from: `${this.config.fromName} <${this.config.fromEmail}>`,
+        to: [this.config.adminEmail],
+        replyTo: args.email,
+        subject: `New customer registered: ${fullName}`,
+        html,
+        text
+      })
+
+      if (error) {
+        logger.error('Admin new customer email error:', error)
+        return { success: false, error: error.message }
+      }
+
+      return { success: true }
+    } catch (error) {
+      logger.error('Admin new customer email service error:', error)
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Unknown email error' 
+      }
+    }
+  }
+
   // Send password setup email to new customers
   async sendPasswordSetupEmail(
     customerEmail: string,
